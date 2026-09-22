@@ -163,7 +163,7 @@ async function checkAndExecuteTasks() {
   }
 }
 
-// Parsea fechas en formato DD/MM/AAAA HH:MM adaptado a zona horaria de España (Europe/Madrid)
+// Parsea fechas en formato DD/MM/AAAA HH:MM a timestamp UTC respetando el horario de España
 function parseDateTime(dateStr: string): number | null {
   const parts = dateStr.trim().split(' ');
   if (parts.length !== 2) return null;
@@ -173,24 +173,22 @@ function parseDateTime(dateStr: string): number | null {
 
   if (dateParts.length !== 3 || timeParts.length !== 2) return null;
 
-  const day = dateParts[0].padStart(2, '0');
-  const month = dateParts[1].padStart(2, '0');
-  const year = dateParts[2];
-  const hour = timeParts[0].padStart(2, '0');
-  const minute = timeParts[1].padStart(2, '0');
+  const day = parseInt(dateParts[0], 10);
+  const month = parseInt(dateParts[1], 10) - 1; // Los meses en JS van de 0 a 11
+  const year = parseInt(dateParts[2], 10);
+  const hour = parseInt(timeParts[0], 10);
+  const minute = parseInt(timeParts[1], 10);
 
-  // Construir string compatible con Date y zona horaria de España
-  const dateString = `${year}-${month}-${day}T${hour}:${minute}:00`;
-  const dateInSpain = new Date(new Date(dateString).toLocaleString("en-US", { timeZone: "Europe/Madrid" }));
-  const now = new Date();
-  const nowInSpain = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Madrid" }));
+  if (isNaN(day) || isNaN(month) || isNaN(year) || isNaN(hour) || isNaN(minute)) return null;
 
-  const diffMs = dateInSpain.getTime() - nowInSpain.getTime();
-  const targetTimestamp = Date.now() + diffMs;
+  // Determinar si estamos en horario de verano (CEST = UTC+2) o de invierno (CET = UTC+1)
+  const isDST = month >= 2 && month <= 9; 
+  const offsetHours = isDST ? 2 : 1;
 
-  if (isNaN(targetTimestamp)) return null;
+  // Convertir la hora introducida (hora de España) a UTC restando el offset
+  const utcDate = new Date(Date.UTC(year, month, day, hour - offsetHours, minute));
 
-  return targetTimestamp;
+  return utcDate.getTime();
 }
 
 // Escuchar mensajes (para !setup-buzon y !embed)
@@ -536,5 +534,5 @@ if (!token) {
   console.error('ERROR: No se ha encontrado la variable DISCORD_TOKEN');
 } else {
   client.login(token);
-                   }
-            
+                     }
+                               
