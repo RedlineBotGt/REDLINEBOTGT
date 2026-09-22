@@ -179,10 +179,8 @@ function parseDateTime(dateStr: string): number | null {
   const hour = timeParts[0].padStart(2, '0');
   const minute = timeParts[1].padStart(2, '0');
 
-  // Formato iso
   const isoTarget = `${year}-${month}-${day}T${hour}:${minute}:00`;
 
-  // Crear objeto Date de prueba y obtener el desfase exacto de Europe/Madrid
   const targetDate = new Date(`${isoTarget}Z`);
   if (isNaN(targetDate.getTime())) return null;
 
@@ -207,7 +205,6 @@ function parseDateTime(dateStr: string): number | null {
   const utcAsSpainTime = Date.UTC(yearSpain, monthSpain, daySpain, hourSpain, minuteSpain);
   const offsetMs = utcAsSpainTime - targetDate.getTime();
 
-  // Fecha deseada dada en hora local de España convertida a Timestamp UTC exacto
   const wantedLocalUtc = Date.UTC(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10), parseInt(hour, 10), parseInt(minute, 10));
   
   return wantedLocalUtc - offsetMs;
@@ -355,7 +352,6 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         new ButtonBuilder().setCustomId('embed_repeat_no').setLabel('NO').setStyle(ButtonStyle.Danger)
       );
 
-      // Si es una reedición, responder con actualización
       if (interaction.replied || interaction.deferred) {
         await interaction.followUp({
           content: '¿Deseas que esta publicación se repita de forma periódica?',
@@ -479,6 +475,17 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       return;
     }
 
+    // Botón CANCELAR
+    if (interaction.customId === 'embed_cancel_btn') {
+      creationSessions.delete(interaction.user.id);
+      await interaction.update({
+        content: '🚫 **Publicación cancelada.** No se ha programado ningún mensaje.',
+        embeds: [],
+        components: []
+      });
+      return;
+    }
+
     // Botón PUBLICAR (Confirmación final)
     if (interaction.customId === 'embed_confirm_final') {
       const session = creationSessions.get(interaction.user.id);
@@ -513,7 +520,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
   }
 });
 
-// Muestra vista previa del Embed Rojo con botones PUBLICAR y EDITAR
+// Muestra vista previa del Embed Rojo con botones PUBLICAR, EDITAR y CANCELAR
 async function showEmbedPreviewAndConfirm(interaction: any) {
   const session = creationSessions.get(interaction.user.id);
   if (!session) return;
@@ -540,7 +547,11 @@ async function showEmbedPreviewAndConfirm(interaction: any) {
     new ButtonBuilder()
       .setCustomId('embed_edit_btn')
       .setLabel('EDITAR')
-      .setStyle(ButtonStyle.Secondary)
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('embed_cancel_btn')
+      .setLabel('CANCELAR')
+      .setStyle(ButtonStyle.Danger)
   );
 
   if (interaction.isModalSubmit()) {
@@ -565,5 +576,5 @@ if (!token) {
   console.error('ERROR: No se ha encontrado la variable DISCORD_TOKEN');
 } else {
   client.login(token);
-                                             }
-    
+            }
+  
