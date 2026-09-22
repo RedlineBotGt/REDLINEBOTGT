@@ -33,7 +33,7 @@ http.createServer((_, res) => {
   console.log(`Servidor web activo en puerto ${PORT}`);
 });
 
-// Cliente de Discord con todas las intenciones necesarias
+// Cliente de Discord
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -43,7 +43,7 @@ const client = new Client({
   ],
 });
 
-// Rutas de archivos de persistencia
+// Archivos de almacenamiento
 const DB_FILE = path.join(__dirname, 'scheduled_embeds.json');
 const REPORTS_FILE = path.join(__dirname, 'reports_data.json');
 
@@ -75,7 +75,7 @@ interface ReportsData {
   lastId: number;
 }
 
-// Funciones para leer/guardar archivos
+// Funciones para leer y guardar datos
 function loadScheduledTasks(): ScheduledEmbed[] {
   try {
     if (fs.existsSync(DB_FILE)) {
@@ -148,7 +148,7 @@ client.once('ready', async () => {
   setInterval(checkAndExecuteTasks, 15000);
 });
 
-// Comprobador periódico de mensajes programados (/embed)
+// Comprobador periódico de mensajes programados
 async function checkAndExecuteTasks() {
   const now = Date.now();
   let tasksChanged = false;
@@ -234,7 +234,7 @@ function parseDateTime(dateStr: string): number | null {
   return wantedLocalUtc - offsetMs;
 }
 
-// ESCUCHADOR DE MENSAJES (COMANDOS !PREFIX)
+// Escuchador de Mensajes (!setup-buzon, !setup-reporte, !setup-defensa, !embed)
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
@@ -277,7 +277,7 @@ client.on('messageCreate', async (message) => {
       new ButtonBuilder()
         .setCustomId('btn_iniciar_reporte')
         .setLabel('REPORTE')
-        .setStyle(ButtonStyle.Primary) // Botón Azul
+        .setStyle(ButtonStyle.Primary)
     );
 
     const texto = 
@@ -300,7 +300,7 @@ client.on('messageCreate', async (message) => {
       new ButtonBuilder()
         .setCustomId('btn_iniciar_defensa')
         .setLabel('DEFENSA')
-        .setStyle(ButtonStyle.Success) // Botón Verde
+        .setStyle(ButtonStyle.Success)
     );
 
     const texto = 
@@ -319,10 +319,10 @@ client.on('messageCreate', async (message) => {
     }
     try { await message.delete(); } catch (_) {}
     await startEmbedCreationProcess(message);
+    
   }
 });
-
-// FLUJO DE CREACIÓN /EMBED
+// Flujo de creación de /embed
 async function startEmbedCreationProcess(context: any) {
   const channelSelect = new ChannelSelectMenuBuilder()
     .setCustomId('embed_select_channel')
@@ -366,7 +366,7 @@ async function openEmbedFormModal(interaction: any, defaultText = '', defaultDat
   await interaction.showModal(modal);
 }
 
-// MANEJADOR GENERAL DE INTERACCIONES (BOTONES, MODALES, SLASH)
+// Manejador de interacciones
 client.on('interactionCreate', async (interaction: Interaction) => {
 
   // Slash Command /embed
@@ -379,17 +379,17 @@ client.on('interactionCreate', async (interaction: Interaction) => {
     return;
   }
 
-  // Desplegable de selección de canal para /embed
+  // Desplegable canal /embed
   if (interaction.isChannelSelectMenu() && interaction.customId === 'embed_select_channel') {
     creationSessions.set(interaction.user.id, { channelId: interaction.values[0] });
     await openEmbedFormModal(interaction);
     return;
   }
 
-  // BOTONES INTERACTIVOS
+  // BOTONES
   if (interaction.isButton()) {
 
-    // Botón Sugerencia Buzón
+    // Sugerencia
     if (interaction.customId === 'crear_sugerencia') {
       const guild = interaction.guild;
       const user = interaction.user;
@@ -417,7 +417,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       return;
     }
 
-    // Botón REPORTE (Abre formulario de Reporte)
+    // Modal Reporte
     if (interaction.customId === 'btn_iniciar_reporte') {
       const modal = new ModalBuilder()
         .setCustomId('modal_reporte_submit')
@@ -445,7 +445,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       return;
     }
 
-    // Botón DEFENSA (Abre formulario de Defensa)
+    // Modal Defensa
     if (interaction.customId === 'btn_iniciar_defensa') {
       const modal = new ModalBuilder()
         .setCustomId('modal_defensa_submit')
@@ -473,7 +473,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       return;
     }
 
-    // Botones auxiliares de /embed
+    // Botones /embed
     if (interaction.customId === 'embed_repeat_no') {
       const session = creationSessions.get(interaction.user.id);
       if (session) session.repeat = false;
@@ -536,10 +536,10 @@ client.on('interactionCreate', async (interaction: Interaction) => {
     }
   }
 
-  // RECEPCIÓN DE MODALES SUBMIT
+  // MODALES SUBMIT
   if (interaction.isModalSubmit()) {
 
-    // 1. ENVÍO DEL FORMULARIO DE REPORTE
+    // 1. Submit Reporte
     if (interaction.customId === 'modal_reporte_submit') {
       const jornada = interaction.fields.getTextInputValue('rep_jornada');
       const pilotoReporta = interaction.fields.getTextInputValue('rep_reporta');
@@ -552,14 +552,12 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         return;
       }
 
-      // Incrementar contador para la ID
       const repData = loadReportsData();
       repData.lastId += 1;
       saveReportsData(repData);
 
       const reportIdStr = String(repData.lastId).padStart(3, '0');
 
-      // Buscar roles en el servidor
       const guild = interaction.guild;
       const roleGTCUP = guild?.roles.cache.find(r => r.name.toUpperCase() === 'GTCUP');
       const roleComisario = guild?.roles.cache.find(r => r.name.toLowerCase().includes('comisario'));
@@ -567,10 +565,197 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       const mentionGTCUP = roleGTCUP ? `<@&${roleGTCUP.id}>` : '@GTCUP';
       const mentionComisario = roleComisario ? `<@&${roleComisario.id}>` : '@Comisario';
 
-      // Crear Embed Azul de Reporte
       const embedReporte = new EmbedBuilder()
-        .setColor('#0000FF') // Azul
+        .setColor('#0000FF')
         .setTitle(`🆔 ${reportIdStr}`)
         .addFields(
           { name: 'JORNADA', value: jornada, inline: false },
-          { name: 'PILOTO QUE REPORTA', value: pilotoReporta, inline: false }
+          { name: 'PILOTO QUE REPORTA', value: pilotoReporta, inline: false },
+          { name: 'PILOTO REPORTADO', value: pilotoReportado, inline: false },
+          { name: 'EXPLICACIÓN', value: explicacion, inline: false },
+          { name: 'ENLACE', value: enlace, inline: false }
+        )
+        .setFooter({ text: 'REDLINE GT' })
+        .setTimestamp();
+
+      try {
+        const canalReportes = await client.channels.fetch(CHANNEL_REPORTES_ID) as TextChannel;
+        if (canalReportes) {
+          await canalReportes.send({
+            content: mentionGTCUP,
+            embeds: [embedReporte]
+          });
+        }
+      } catch (e) {
+        console.error('Error al enviar reporte al canal:', e);
+      }
+
+      try {
+        const canalHilos = await client.channels.fetch(CHANNEL_HILOS_ID) as TextChannel;
+        if (canalHilos) {
+          const thread = await canalHilos.threads.create({
+            name: reportIdStr,
+            autoArchiveDuration: 1440,
+            reason: `Hilo para el reporte ${reportIdStr}`
+          });
+
+          await thread.send({
+            content: mentionComisario,
+            embeds: [embedReporte]
+          });
+        }
+      } catch (e) {
+        console.error('Error al crear el hilo:', e);
+      }
+
+      await interaction.reply({ content: `✅ Reporte **${reportIdStr}** registrado con éxito.`, ephemeral: true });
+      return;
+    }
+
+    // 2. Submit Defensa
+    if (interaction.customId === 'modal_defensa_submit') {
+      const rawId = interaction.fields.getTextInputValue('def_id').trim();
+      const reportIdStr = rawId.padStart(3, '0');
+      const pilotoDefensa = interaction.fields.getTextInputValue('def_defiende');
+      const pilotoReporto = interaction.fields.getTextInputValue('def_reporto');
+      const explicacion = interaction.fields.getTextInputValue('def_explicacion');
+      const enlace = interaction.fields.getTextInputValue('def_enlace');
+
+      if (!enlace.startsWith('http://') && !enlace.startsWith('https://')) {
+        await interaction.reply({ content: '❌ El enlace debe comenzar con `http://` o `https://`.', ephemeral: true });
+        return;
+      }
+
+      const embedDefensa = new EmbedBuilder()
+        .setColor('#00FF00')
+        .setTitle(`🛡️ DEFENSA A REPORTE 🆔 ${reportIdStr}`)
+        .addFields(
+          { name: 'PILOTO EN DEFENSA', value: pilotoDefensa, inline: false },
+          { name: 'PILOTO QUE REPORTÓ', value: pilotoReporto, inline: false },
+          { name: 'EXPLICACIÓN', value: explicacion, inline: false },
+          { name: 'ENLACE DE VIDEO', value: enlace, inline: false }
+        )
+        .setFooter({ text: 'REDLINE GT' })
+        .setTimestamp();
+
+      try {
+        const canalReportes = await client.channels.fetch(CHANNEL_REPORTES_ID) as TextChannel;
+        if (canalReportes) {
+          await canalReportes.send({ embeds: [embedDefensa] });
+        }
+      } catch (e) {
+        console.error('Error al publicar defensa:', e);
+      }
+
+      try {
+        const canalHilos = await client.channels.fetch(CHANNEL_HILOS_ID) as TextChannel;
+        if (canalHilos) {
+          const activeThreads = await canalHilos.threads.fetchActive();
+          let targetThread = activeThreads.threads.find(t => t.name === reportIdStr);
+
+          if (!targetThread) {
+            const archivedThreads = await canalHilos.threads.fetchArchived();
+            targetThread = archivedThreads.threads.find(t => t.name === reportIdStr);
+          }
+
+          if (targetThread) {
+            await targetThread.send({ embeds: [embedDefensa] });
+          }
+        }
+      } catch (e) {
+        console.error('Error al enviar defensa al hilo:', e);
+      }
+
+      await interaction.reply({ content: `✅ Defensa para el reporte **${reportIdStr}** enviada correctamente.`, ephemeral: true });
+      return;
+    }
+
+    // Modal Step 1 /embed
+    if (interaction.customId === 'modal_embed_step1') {
+      const textContent = interaction.fields.getTextInputValue('embed_text');
+      const rawDateTime = interaction.fields.getTextInputValue('embed_datetime');
+      const timestamp = parseDateTime(rawDateTime);
+
+      if (!timestamp || isNaN(timestamp)) {
+        await interaction.reply({ content: '❌ Formato de fecha incorrecto. Debe ser: `DD/MM/AAAA HH:MM`.', ephemeral: true });
+        return;
+      }
+
+      const session = creationSessions.get(interaction.user.id) || {};
+      session.textContent = textContent;
+      session.executionTime = timestamp;
+      session.rawDateStr = rawDateTime;
+      creationSessions.set(interaction.user.id, session);
+
+      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId('embed_repeat_yes').setLabel('SÍ').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('embed_repeat_no').setLabel('NO').setStyle(ButtonStyle.Danger)
+      );
+
+      await interaction.reply({ content: '¿Deseas que esta publicación se repita de forma periódica?', components: [row], ephemeral: true });
+      return;
+    }
+
+    // Modal Repetición /embed
+    if (interaction.customId === 'modal_embed_repeat_details') {
+      const intervalDays = parseInt(interaction.fields.getTextInputValue('embed_interval'), 10);
+      const repetitions = parseInt(interaction.fields.getTextInputValue('embed_reps'), 10);
+
+      if (isNaN(intervalDays) || isNaN(repetitions) || intervalDays <= 0 || repetitions <= 0) {
+        await interaction.reply({ content: '❌ Introduce números válidos mayores que 0.', ephemeral: true });
+        return;
+      }
+
+      const session = creationSessions.get(interaction.user.id);
+      if (session) {
+        session.repeat = true;
+        session.intervalDays = intervalDays;
+        session.repetitions = repetitions;
+      }
+
+      await showEmbedPreviewAndConfirm(interaction);
+      return;
+    }
+  }
+});
+
+// Vista previa /embed
+async function showEmbedPreviewAndConfirm(interaction: any) {
+  const session = creationSessions.get(interaction.user.id);
+  if (!session) return;
+
+  const previewEmbed = new EmbedBuilder()
+    .setColor('#FF0000')
+    .setDescription(session.textContent || '')
+    .setFooter({ text: 'REDLINE GT' })
+    .setTimestamp();
+
+  const fechaFormat = new Date(session.executionTime || 0).toLocaleString('es-ES', { timeZone: 'Europe/Madrid' });
+
+  let resumenInfo = `📌 **VISTA PREVIA DE TU MENSAJE PROGRAMADO**\n\n` +
+    `• **Canal de destino:** <#${session.channelId}>\n` +
+    `• **Fecha/Hora de envío (España):** ${fechaFormat}\n` +
+    `• **Repetición:** ${session.repeat ? `SÍ (Cada ${session.intervalDays} días, ${session.repetitions} veces)` : 'NO'}\n\n` +
+    `*Revisa la vista previa del cajón rojo abajo:*`;
+
+  const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder().setCustomId('embed_confirm_final').setLabel('PUBLICAR').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId('embed_edit_btn').setLabel('EDITAR').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('embed_cancel_btn').setLabel('CANCELAR').setStyle(ButtonStyle.Danger)
+  );
+
+  if (interaction.isModalSubmit()) {
+    await interaction.reply({ content: resumenInfo, embeds: [previewEmbed], components: [actionRow], ephemeral: true });
+  } else {
+    await interaction.update({ content: resumenInfo, embeds: [previewEmbed], components: [actionRow] });
+  }
+}
+
+// Iniciar sesión
+const token = process.env.DISCORD_TOKEN;
+if (!token) {
+  console.error('ERROR: No se ha encontrado la variable DISCORD_TOKEN');
+} else {
+  client.login(token);
+      }
+          
