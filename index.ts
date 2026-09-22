@@ -15,7 +15,9 @@ import {
   Interaction,
   TextChannel,
   SlashCommandBuilder,
-  GuildMember
+  GuildMember,
+  ChannelSelectMenuBuilder,
+  ChannelType as DiscordChannelType
 } from 'discord.js';
 import http from 'http';
 import fs from 'fs';
@@ -90,6 +92,7 @@ const creationSessions = new Map<string, {
   channelId?: string;
   textContent?: string;
   executionTime?: number;
+  rawDateStr?: string;
   repeat?: boolean;
   intervalDays?: number;
   repetitions?: number;
@@ -114,8 +117,8 @@ client.once('ready', async () => {
     console.error('Error al registrar comando /embed:', error);
   }
 
-  // Comprobador periódico de mensajes programados (cada 30 segundos)
-  setInterval(checkAndExecuteTasks, 30000);
+  // Comprobador periódico de mensajes programados (cada 15 segundos)
+  setInterval(checkAndExecuteTasks, 15000);
 });
 
 // Comprobar y ejecutar tareas programadas
@@ -217,12 +220,34 @@ client.on('messageCreate', async (message) => {
       return;
     }
     try { await message.delete(); } catch (_) {}
-    await openEmbedModal(message);
+    await startEmbedCreationProcess(message);
   }
 });
 
-// Función auxiliar para mostrar el Modal
-async function openEmbedModal(context: any) {
+// Inicia el proceso mostrando el Desplegable de Canales
+async function startEmbedCreationProcess(context: any) {
+  const channelSelect = new ChannelSelectMenuBuilder()
+    .setCustomId('embed_select_channel')
+    .setPlaceholder('Selecciona el canal de destino...')
+    .setChannelTypes([DiscordChannelType.GuildText]);
+
+  const row = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(channelSelect);
+
+  const replyData = {
+    content: '📢 **Paso 1:** Selecciona en el desplegable el canal donde quieres publicar el mensaje:',
+    components: [row],
+    ephemeral: true
+  };
+
+  if (context.showModal) {
+    await context.reply(replyData);
+  } else {
+    await context.reply(replyData);
+  }
+}
+
+// Muestra el Modal para ingresar texto y fecha
+async function openEmbedFormModal(interaction: any, defaultText = '', defaultDate = '') {
   const modal = new ModalBuilder()
     .setCustomId('modal_embed_step1')
     .setTitle('Programar Embed Rojo');
@@ -232,13 +257,7 @@ async function openEmbedModal(context: any) {
     .setLabel('Texto / Contenido a publicar')
     .setStyle(TextInputStyle.Paragraph)
     .setPlaceholder('Escribe aquí el contenido del mensaje...')
-    .setRequired(true);
-
-  const inputCanal = new TextInputBuilder()
-    .setCustomId('embed_channel')
-    .setLabel('Canal de destino (#canal o ID)')
-    .setStyle(TextInputStyle.Short)
-    .setPlaceholder('Ejemplo: #anuncios o 123456789012345678')
+    .setValue(defaultText)
     .setRequired(true);
 
   const inputFecha = new TextInputBuilder()
@@ -246,18 +265,18 @@ async function openEmbedModal(context: any) {
     .setLabel('Fecha y hora de envío (DD/MM/AAAA HH:MM)')
     .setStyle(TextInputStyle.Short)
     .setPlaceholder('Ejemplo: 25/09/2026 21:00')
+    .setValue(defaultDate)
     .setRequired(true);
 
   modal.addComponents(
     new ActionRowBuilder<TextInputBuilder>().addComponents(inputTexto),
-    new ActionRowBuilder<TextInputBuilder>().addComponents(inputCanal),
     new ActionRowBuilder<TextInputBuilder>().addComponents(inputFecha)
   );
 
-  await context.showModal(modal);
+  await interaction.showModal(modal);
 }
 
-// Escuchar interacciones (Comandos Slash, Modales, Botones)
+// Escuchar interacciones
 client.on('interactionCreate', async (interaction: Interaction) => {
 
   // 1. Comando Slash /embed
@@ -267,20 +286,30 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       await interaction.reply({ content: 'Solo los miembros con el rol **Dirección** pueden usar este comando.', ephemeral: true });
       return;
     }
-    await openEmbedModal(interaction);
+    await startEmbedCreationProcess(interaction);
     return;
   }
 
-  // 2. Recepción de Modales
+  // 2. Selección de Canal en Desplegable
+  if (interaction.isChannelSelectMenu() && interaction.customId === 'embed_select_channel') {
+    const selectedChannelId = interaction.values[0];
+    
+    creationSessions.set(interaction.user.id, {
+      channelId: selectedChannelId
+    });
+
+    await openEmbedFormModal(interaction);
+    return;
+  }
+
+  // 3. Recepción de Modales
   if (interaction.isModalSubmit()) {
 
     // Modal Paso 1
     if (interaction.customId === 'modal_embed_step1') {
       const textContent = interaction.fields.getTextInputValue('embed_text');
-      const rawChannel = interaction.fields.getTextInputValue('embed_channel');
       const rawDateTime = interaction.fields.getTextInputValue('embed_datetime');
 
-      const cleanChannelId = rawChannel.replace(/[<#@>]/g, '').trim();
       const timestamp = parseDateTime(rawDateTime);
 
       if (!timestamp || isNaN(timestamp)) {
@@ -291,11 +320,11 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         return;
       }
 
-      creationSessions.set(interaction.user.id, {
-        channelId: cleanChannelId,
-        textContent,
-        executionTime: timestamp
-      });
+      const session = creationSessions.get(interaction.user.id) || {};
+      session.textContent = textContent;
+      session.executionTime = timestamp;
+      session.rawDateStr = rawDateTime;
+      creationSessions.set(interaction.user.id, session);
 
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('embed_repeat_yes').setLabel('SÍ').setStyle(ButtonStyle.Success),
@@ -310,7 +339,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       return;
     }
 
-    // Modal Paso 2 (Detalles de repetición)
+    // Modal Paso 2 (Repetición)
     if (interaction.customId === 'modal_embed_repeat_details') {
       const rawInterval = interaction.fields.getTextInputValue('embed_interval');
       const rawReps = interaction.fields.getTextInputValue('embed_reps');
@@ -335,10 +364,10 @@ client.on('interactionCreate', async (interaction: Interaction) => {
     }
   }
 
-  // 3. Botones interactivos
+  // 4. Botones interactivos
   if (interaction.isButton()) {
 
-    // Botón de Sugerencias del buzón
+    // Botón de Sugerencias
     if (interaction.customId === 'crear_sugerencia') {
       const guild = interaction.guild;
       const user = interaction.user;
@@ -406,7 +435,18 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       return;
     }
 
-    // Botón Final: Confirmar y Programar
+    // Botón EDITAR
+    if (interaction.customId === 'embed_edit_btn') {
+      const session = creationSessions.get(interaction.user.id);
+      await openEmbedFormModal(
+        interaction, 
+        session?.textContent || '', 
+        session?.rawDateStr || ''
+      );
+      return;
+    }
+
+    // Botón PUBLICAR (Confirmación final)
     if (interaction.customId === 'embed_confirm_final') {
       const session = creationSessions.get(interaction.user.id);
       if (!session || !session.channelId || !session.textContent || !session.executionTime) {
@@ -431,7 +471,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       creationSessions.delete(interaction.user.id);
 
       await interaction.update({
-        content: '✅ **¡Publicación programada correctamente!** El mensaje se enviará automáticamente en la fecha indicada.',
+        content: '✅ **¡Publicación programada correctamente!** El mensaje se enviará automáticamente en el canal seleccionado a la fecha indicada.',
         embeds: [],
         components: []
       });
@@ -440,7 +480,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
   }
 });
 
-// Muestra vista previa del Embed Rojo y el botón de confirmación
+// Muestra vista previa del Embed Rojo con botones PUBLICAR y EDITAR
 async function showEmbedPreviewAndConfirm(interaction: any) {
   const session = creationSessions.get(interaction.user.id);
   if (!session) return;
@@ -457,27 +497,31 @@ async function showEmbedPreviewAndConfirm(interaction: any) {
     `• **Canal de destino:** <#${session.channelId}>\n` +
     `• **Fecha/Hora de envío:** ${fechaFormat}\n` +
     `• **Repetición:** ${session.repeat ? `SÍ (Cada ${session.intervalDays} días, ${session.repetitions} veces)` : 'NO'}\n\n` +
-    `*Revisa la vista previa del cajón rojo abajo antes de confirmar:*`;
+    `*Revisa la vista previa del cajón rojo abajo:*`;
 
-  const confirmRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+  const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId('embed_confirm_final')
-      .setLabel('CONFIRMAR Y PROGRAMAR')
-      .setStyle(ButtonStyle.Success)
+      .setLabel('PUBLICAR')
+      .setStyle(ButtonStyle.Success), // Botón Verde
+    new ButtonBuilder()
+      .setCustomId('embed_edit_btn')
+      .setLabel('EDITAR')
+      .setStyle(ButtonStyle.Secondary) // Botón Amarillo/Gris de Editar
   );
 
   if (interaction.isModalSubmit()) {
     await interaction.reply({
       content: resumenInfo,
       embeds: [previewEmbed],
-      components: [confirmRow],
+      components: [actionRow],
       ephemeral: true
     });
   } else {
     await interaction.update({
       content: resumenInfo,
       embeds: [previewEmbed],
-      components: [confirmRow]
+      components: [actionRow]
     });
   }
 }
@@ -488,5 +532,5 @@ if (!token) {
   console.error('ERROR: No se ha encontrado la variable DISCORD_TOKEN');
 } else {
   client.login(token);
-          }
-  
+                    }
+                    
