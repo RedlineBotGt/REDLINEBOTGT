@@ -163,7 +163,7 @@ async function checkAndExecuteTasks() {
   }
 }
 
-// Parsea fechas en formato DD/MM/AAAA HH:MM
+// Parsea fechas en formato DD/MM/AAAA HH:MM adaptado a zona horaria de España (Europe/Madrid)
 function parseDateTime(dateStr: string): number | null {
   const parts = dateStr.trim().split(' ');
   if (parts.length !== 2) return null;
@@ -173,16 +173,24 @@ function parseDateTime(dateStr: string): number | null {
 
   if (dateParts.length !== 3 || timeParts.length !== 2) return null;
 
-  const day = parseInt(dateParts[0], 10);
-  const month = parseInt(dateParts[1], 10) - 1;
-  const year = parseInt(dateParts[2], 10);
-  const hour = parseInt(timeParts[0], 10);
-  const minute = parseInt(timeParts[1], 10);
+  const day = dateParts[0].padStart(2, '0');
+  const month = dateParts[1].padStart(2, '0');
+  const year = dateParts[2];
+  const hour = timeParts[0].padStart(2, '0');
+  const minute = timeParts[1].padStart(2, '0');
 
-  if (isNaN(day) || isNaN(month) || isNaN(year) || isNaN(hour) || isNaN(minute)) return null;
+  // Construir string compatible con Date y zona horaria de España
+  const dateString = `${year}-${month}-${day}T${hour}:${minute}:00`;
+  const dateInSpain = new Date(new Date(dateString).toLocaleString("en-US", { timeZone: "Europe/Madrid" }));
+  const now = new Date();
+  const nowInSpain = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Madrid" }));
 
-  const date = new Date(year, month, day, hour, minute);
-  return date.getTime();
+  const diffMs = dateInSpain.getTime() - nowInSpain.getTime();
+  const targetTimestamp = Date.now() + diffMs;
+
+  if (isNaN(targetTimestamp)) return null;
+
+  return targetTimestamp;
 }
 
 // Escuchar mensajes (para !setup-buzon y !embed)
@@ -239,11 +247,7 @@ async function startEmbedCreationProcess(context: any) {
     ephemeral: true
   };
 
-  if (context.showModal) {
-    await context.reply(replyData);
-  } else {
-    await context.reply(replyData);
-  }
+  await context.reply(replyData);
 }
 
 // Muestra el Modal para ingresar texto y fecha
@@ -491,11 +495,11 @@ async function showEmbedPreviewAndConfirm(interaction: any) {
     .setFooter({ text: 'REDLINE GT' })
     .setTimestamp();
 
-  const fechaFormat = new Date(session.executionTime || 0).toLocaleString('es-ES');
+  const fechaFormat = new Date(session.executionTime || 0).toLocaleString('es-ES', { timeZone: 'Europe/Madrid' });
 
   let resumenInfo = `📌 **VISTA PREVIA DE TU MENSAJE PROGRAMADO**\n\n` +
     `• **Canal de destino:** <#${session.channelId}>\n` +
-    `• **Fecha/Hora de envío:** ${fechaFormat}\n` +
+    `• **Fecha/Hora de envío (España):** ${fechaFormat}\n` +
     `• **Repetición:** ${session.repeat ? `SÍ (Cada ${session.intervalDays} días, ${session.repetitions} veces)` : 'NO'}\n\n` +
     `*Revisa la vista previa del cajón rojo abajo:*`;
 
@@ -503,11 +507,11 @@ async function showEmbedPreviewAndConfirm(interaction: any) {
     new ButtonBuilder()
       .setCustomId('embed_confirm_final')
       .setLabel('PUBLICAR')
-      .setStyle(ButtonStyle.Success), // Botón Verde
+      .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
       .setCustomId('embed_edit_btn')
       .setLabel('EDITAR')
-      .setStyle(ButtonStyle.Secondary) // Botón Amarillo/Gris de Editar
+      .setStyle(ButtonStyle.Secondary)
   );
 
   if (interaction.isModalSubmit()) {
@@ -532,5 +536,5 @@ if (!token) {
   console.error('ERROR: No se ha encontrado la variable DISCORD_TOKEN');
 } else {
   client.login(token);
-                    }
-                    
+                   }
+            
