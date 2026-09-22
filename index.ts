@@ -7,8 +7,7 @@ import {
   ButtonBuilder, 
   ButtonStyle, 
   ChannelType, 
-  PermissionsBitField, 
-  ComponentType 
+  PermissionsBitField 
 } from 'discord.js';
 import http from 'http';
 
@@ -45,11 +44,11 @@ client.once('ready', async () => {
   }
 });
 
-// Listener de mensajes y botones
+// Listener de mensajes
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
-  // Comando para publicar el panel de sugerencias (Ejecutar en #buzon-de-sugerencias)
+  // Comando para publicar el panel de sugerencias
   if (message.content === '!setup-buzon') {
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
@@ -59,7 +58,7 @@ client.on('messageCreate', async (message) => {
     );
 
     const mensajeTexto = 
-      "1. ¿Quieres hablar con el equipo de REDLINE GT?\n" +
+      "¿Quieres hablar con el equipo de REDLINE GT?\n" +
       "Pincha en el botón rojo y te atenderemos lo antes posible.\n" +
       "¡Gracias!\n\n" +
       "Do you want to talk to the REDLINE GT team?\n" +
@@ -71,7 +70,6 @@ client.on('messageCreate', async (message) => {
       components: [row]
     });
 
-    // Opcional: borrar el mensaje !setup-buzon que escribió el usuario
     if (message.deletable) await message.delete();
   }
 });
@@ -86,30 +84,27 @@ client.on('interactionCreate', async (interaction) => {
 
     if (!guild) return;
 
-    // Buscar la categoría "only dirección" (busca por nombre o crea una)
-    let categoria = guild.channels.cache.find(
-      c => c.type === ChannelType.GuildCategory && c.name.toLowerCase() === 'only dirección'
-    );
+    // ID de la categoría especificada
+    const ID_CATEGORIA = '1470046414607225018';
 
-    // Notificar al usuario que se está creando el canal
     await interaction.reply({ 
       content: 'Creando tu canal privado de sugerencia...', 
       ephemeral: true 
     });
 
     try {
-      // Crear el canal privado para el tiquet
+      // Crear el canal privado para la sugerencia
       const canalTicket = await guild.channels.create({
         name: `sugerencia-${user.username}`,
         type: ChannelType.GuildText,
-        parent: categoria ? categoria.id : undefined,
+        parent: ID_CATEGORIA,
         permissionOverwrites: [
           {
             id: guild.id, // @everyone no puede ver el canal
             deny: [PermissionsBitField.Flags.ViewChannel],
           },
           {
-            id: user.id, // El usuario que pulsa sí puede ver e interactuar
+            id: user.id, // El usuario que pulsa sí lo ve e interactúa
             allow: [
               PermissionsBitField.Flags.ViewChannel,
               PermissionsBitField.Flags.SendMessages,
@@ -119,7 +114,7 @@ client.on('interactionCreate', async (interaction) => {
         ],
       });
 
-      // Mensaje de bienvenida dentro del canal privado
+      // Mensaje de bienvenida con mención al usuario por ID
       const mensajeBienvenida = 
         `Hola <@${user.id}>, cuéntanos, enseguida estamos contigo.\n\n` +
         `Hello <@${user.id}>, tell us, we will be with you shortly.`;
@@ -138,4 +133,4 @@ if (!token) {
   console.error('ERROR: No se ha encontrado la variable DISCORD_TOKEN');
 } else {
   client.login(token);
-    }
+}
