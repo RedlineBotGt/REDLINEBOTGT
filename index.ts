@@ -50,6 +50,13 @@ client.on('messageCreate', async (message) => {
 
   // Comando para publicar el panel de sugerencias
   if (message.content === '!setup-buzon') {
+    // Intentar borrar el mensaje del usuario inmediatamente
+    try {
+      await message.delete();
+    } catch (err) {
+      console.log('No se pudo borrar el mensaje del comando:', err);
+    }
+
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId('crear_sugerencia')
@@ -69,8 +76,6 @@ client.on('messageCreate', async (message) => {
       content: mensajeTexto,
       components: [row]
     });
-
-    if (message.deletable) await message.delete();
   }
 });
 
@@ -84,20 +89,16 @@ client.on('interactionCreate', async (interaction) => {
 
     if (!guild) return;
 
-    // ID de la categoría especificada
-    const ID_CATEGORIA = '1470046414607225018';
-
     await interaction.reply({ 
       content: 'Creando tu canal privado de sugerencia...', 
       ephemeral: true 
     });
 
     try {
-      // Crear el canal privado para la sugerencia
+      // Crear el canal privado fuera de cualquier categoría (parent: null / undefined)
       const canalTicket = await guild.channels.create({
         name: `sugerencia-${user.username}`,
         type: ChannelType.GuildText,
-        parent: ID_CATEGORIA,
         permissionOverwrites: [
           {
             id: guild.id, // @everyone no puede ver el canal
