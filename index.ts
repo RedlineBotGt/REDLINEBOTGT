@@ -1,4 +1,15 @@
-import { Client, GatewayIntentBits, REST, Routes } from 'discord.js';
+import { 
+  Client, 
+  GatewayIntentBits, 
+  REST, 
+  Routes, 
+  ActionRowBuilder, 
+  ButtonBuilder, 
+  ButtonStyle, 
+  ChannelType, 
+  PermissionsBitField, 
+  ComponentType 
+} from 'discord.js';
 import http from 'http';
 
 // Servidor web para mantener vivo el bot en Render
@@ -23,27 +34,101 @@ const client = new Client({
 client.once('ready', async () => {
   console.log(`¡Bot conectado exitosamente como ${client.user?.tag}!`);
 
-  // LIMPIEZA DE COMANDOS VIEJOS DE BOTGHOST
+  // Limpieza de comandos viejos de BotGhost
   try {
     const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN || '');
-    console.log('Eliminando comandos globales de BotGhost...');
-    
-    // Sobreescribe la lista global de comandos con un array vacío []
     if (client.user) {
       await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
-      console.log('¡Todos los comandos viejos de BotGhost han sido eliminados correctamente!');
     }
   } catch (error) {
     console.error('Error al borrar comandos viejos:', error);
   }
 });
 
-// Listener de prueba para el !ping
-client.on('messageCreate', (message) => {
+// Listener de mensajes y botones
+client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
-  if (message.content === '!ping') {
-    message.reply('¡Pong! 🏎️ El bot de REDLINE GT está funcionando perfectamente.');
+  // Comando para publicar el panel de sugerencias (Ejecutar en #buzon-de-sugerencias)
+  if (message.content === '!setup-buzon') {
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setCustomId('crear_sugerencia')
+        .setLabel('SUGERENCIA')
+        .setStyle(ButtonStyle.Danger) // Botón Rojo
+    );
+
+    const mensajeTexto = 
+      "1. ¿Quieres hablar con el equipo de REDLINE GT?\n" +
+      "Pincha en el botón rojo y te atenderemos lo antes posible.\n" +
+      "¡Gracias!\n\n" +
+      "Do you want to talk to the REDLINE GT team?\n" +
+      "Click the red button and we will assist you as soon as possible.\n" +
+      "Thank you!";
+
+    await message.channel.send({
+      content: mensajeTexto,
+      components: [row]
+    });
+
+    // Opcional: borrar el mensaje !setup-buzon que escribió el usuario
+    if (message.deletable) await message.delete();
+  }
+});
+
+// Listener para el click del botón
+client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isButton()) return;
+
+  if (interaction.customId === 'crear_sugerencia') {
+    const guild = interaction.guild;
+    const user = interaction.user;
+
+    if (!guild) return;
+
+    // Buscar la categoría "only dirección" (busca por nombre o crea una)
+    let categoria = guild.channels.cache.find(
+      c => c.type === ChannelType.GuildCategory && c.name.toLowerCase() === 'only dirección'
+    );
+
+    // Notificar al usuario que se está creando el canal
+    await interaction.reply({ 
+      content: 'Creando tu canal privado de sugerencia...', 
+      ephemeral: true 
+    });
+
+    try {
+      // Crear el canal privado para el tiquet
+      const canalTicket = await guild.channels.create({
+        name: `sugerencia-${user.username}`,
+        type: ChannelType.GuildText,
+        parent: categoria ? categoria.id : undefined,
+        permissionOverwrites: [
+          {
+            id: guild.id, // @everyone no puede ver el canal
+            deny: [PermissionsBitField.Flags.ViewChannel],
+          },
+          {
+            id: user.id, // El usuario que pulsa sí puede ver e interactuar
+            allow: [
+              PermissionsBitField.Flags.ViewChannel,
+              PermissionsBitField.Flags.SendMessages,
+              PermissionsBitField.Flags.ReadMessageHistory
+            ],
+          },
+        ],
+      });
+
+      // Mensaje de bienvenida dentro del canal privado
+      const mensajeBienvenida = 
+        `Hola <@${user.id}>, cuéntanos, enseguida estamos contigo.\n\n` +
+        `Hello <@${user.id}>, tell us, we will be with you shortly.`;
+
+      await canalTicket.send(mensajeBienvenida);
+
+    } catch (error) {
+      console.error('Error al crear el canal privado:', error);
+    }
   }
 });
 
@@ -53,5 +138,4 @@ if (!token) {
   console.error('ERROR: No se ha encontrado la variable DISCORD_TOKEN');
 } else {
   client.login(token);
-}
-  
+    }
