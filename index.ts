@@ -14,7 +14,8 @@ import {
   TextInputStyle,
   Interaction,
   TextChannel,
-  SlashCommandBuilder
+  SlashCommandBuilder,
+  GuildMember
 } from 'discord.js';
 import http from 'http';
 import fs from 'fs';
@@ -39,9 +40,15 @@ const client = new Client({
   ],
 });
 
-// ID de usuario autorizada
-const AUTHORIZED_USER_ID = '1462964758071214131';
 const DB_FILE = path.join(__dirname, 'scheduled_embeds.json');
+
+// Función para verificar si un miembro tiene el rol de Dirección
+function isDireccion(member: GuildMember | null): boolean {
+  if (!member) return false;
+  return member.roles.cache.some(role => 
+    role.name.toLowerCase() === 'dirección' || role.name.toLowerCase() === 'direccion'
+  );
+}
 
 // Estructura de tarea programada
 interface ScheduledEmbed {
@@ -98,7 +105,7 @@ client.once('ready', async () => {
       const commands = [
         new SlashCommandBuilder()
           .setName('embed')
-          .setDescription('Programa una publicación con cajón rojo (Solo dirección)')
+          .setDescription('Programa una publicación con cajón rojo (Solo rol Dirección)')
       ];
       await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
       console.log('Comando /embed registrado correctamente.');
@@ -153,7 +160,7 @@ async function checkAndExecuteTasks() {
   }
 }
 
-// Parsea fechas en formato DD/MM/AAAA HH:MM (Hora local de España CET/CEST)
+// Parsea fechas en formato DD/MM/AAAA HH:MM
 function parseDateTime(dateStr: string): number | null {
   const parts = dateStr.trim().split(' ');
   if (parts.length !== 2) return null;
@@ -204,8 +211,9 @@ client.on('messageCreate', async (message) => {
 
   // Comando !embed como alternativa
   if (message.content === '!embed') {
-    if (message.author.id !== AUTHORIZED_USER_ID) {
-      await message.reply('No tienes autorización para usar este comando.');
+    const member = message.member;
+    if (!isDireccion(member)) {
+      await message.reply('Solo los miembros con el rol **Dirección** pueden usar este comando.');
       return;
     }
     try { await message.delete(); } catch (_) {}
@@ -254,8 +262,9 @@ client.on('interactionCreate', async (interaction: Interaction) => {
 
   // 1. Comando Slash /embed
   if (interaction.isChatInputCommand() && interaction.commandName === 'embed') {
-    if (interaction.user.id !== AUTHORIZED_USER_ID) {
-      await interaction.reply({ content: 'No tienes autorización para usar este comando.', ephemeral: true });
+    const member = interaction.member as GuildMember;
+    if (!isDireccion(member)) {
+      await interaction.reply({ content: 'Solo los miembros con el rol **Dirección** pueden usar este comando.', ephemeral: true });
       return;
     }
     await openEmbedModal(interaction);
@@ -271,7 +280,6 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       const rawChannel = interaction.fields.getTextInputValue('embed_channel');
       const rawDateTime = interaction.fields.getTextInputValue('embed_datetime');
 
-      // Extraer ID de canal si viene como mención <#ID>
       const cleanChannelId = rawChannel.replace(/[<#@>]/g, '').trim();
       const timestamp = parseDateTime(rawDateTime);
 
@@ -283,14 +291,12 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         return;
       }
 
-      // Guardar en sesión
       creationSessions.set(interaction.user.id, {
         channelId: cleanChannelId,
         textContent,
         executionTime: timestamp
       });
 
-      // Preguntar por la repetición
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('embed_repeat_yes').setLabel('SÍ').setStyle(ButtonStyle.Success),
         new ButtonBuilder().setCustomId('embed_repeat_no').setLabel('NO').setStyle(ButtonStyle.Danger)
@@ -482,4 +488,5 @@ if (!token) {
   console.error('ERROR: No se ha encontrado la variable DISCORD_TOKEN');
 } else {
   client.login(token);
-}
+          }
+  
