@@ -1,16 +1,33 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
-import * as schema from "./schema";
+import { Client, GatewayIntentBits } from 'discord.js';
+import http from 'http';
 
-const { Pool } = pg;
+// Servidor web para que Render mantenga el bot activo
+const PORT = process.env.PORT || 3000;
+http.createServer((_, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.write('Bot REDLINE GT Online');
+  res.end();
+}).listen(PORT, () => {
+  console.log(`Servidor web activo en puerto ${PORT}`);
+});
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
-}
+// Cliente de Discord
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+  ],
+});
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle(pool, { schema });
+client.once('ready', () => {
+  console.log(`¡Bot conectado exitosamente como ${client.user?.tag}!`);
+});
 
-export * from "./schema";
+// Inicio de sesión con el token
+const token = process.env.DISCORD_TOKEN;
+if (!token) {
+  console.error('ERROR: No se ha encontrado la variable DISCORD_TOKEN');
+} else {
+  client.login(token);
+  }
