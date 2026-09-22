@@ -7,9 +7,18 @@ import {
   ButtonBuilder, 
   ButtonStyle, 
   ChannelType, 
-  PermissionsBitField 
+  PermissionsBitField,
+  EmbedBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  Interaction,
+  TextChannel,
+  SlashCommandBuilder
 } from 'discord.js';
 import http from 'http';
+import fs from 'fs';
+import path from 'path';
 
 // Servidor web para mantener vivo el bot en Render
 const PORT = process.env.PORT || 3000;
@@ -30,38 +39,155 @@ const client = new Client({
   ],
 });
 
+// ID de usuario autorizada
+const AUTHORIZED_USER_ID = '1462964758071214131';
+const DB_FILE = path.join(__dirname, 'scheduled_embeds.json');
+
+// Estructura de tarea programada
+interface ScheduledEmbed {
+  id: string;
+  targetChannelId: string;
+  textContent: string;
+  executionTime: number; // Timestamp UTC ms
+  repeat: boolean;
+  intervalDays?: number;
+  remainingRepetitions?: number;
+  creatorId: string;
+}
+
+// Cargar y guardar programación en archivo JSON
+function loadScheduledTasks(): ScheduledEmbed[] {
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      const data = fs.readFileSync(DB_FILE, 'utf-8');
+      return JSON.parse(data);
+    }
+  } catch (err) {
+    console.error('Error al cargar tareas programadas:', err);
+  }
+  return [];
+}
+
+function saveScheduledTasks(tasks: ScheduledEmbed[]) {
+  try {
+    fs.writeFileSync(DB_FILE, JSON.stringify(tasks, null, 2));
+  } catch (err) {
+    console.error('Error al guardar tareas programadas:', err);
+  }
+}
+
+let scheduledTasks: ScheduledEmbed[] = loadScheduledTasks();
+
+// Memoria temporal para la sesión de creación del embed
+const creationSessions = new Map<string, {
+  channelId?: string;
+  textContent?: string;
+  executionTime?: number;
+  repeat?: boolean;
+  intervalDays?: number;
+  repetitions?: number;
+}>();
+
 client.once('ready', async () => {
   console.log(`¡Bot conectado exitosamente como ${client.user?.tag}!`);
 
-  // Limpieza de comandos viejos de BotGhost
+  // Registrar comando slash /embed en Discord
   try {
     const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN || '');
     if (client.user) {
-      await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
+      const commands = [
+        new SlashCommandBuilder()
+          .setName('embed')
+          .setDescription('Programa una publicación con cajón rojo (Solo dirección)')
+      ];
+      await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
+      console.log('Comando /embed registrado correctamente.');
     }
   } catch (error) {
-    console.error('Error al borrar comandos viejos:', error);
+    console.error('Error al registrar comando /embed:', error);
   }
+
+  // Comprobador periódico de mensajes programados (cada 30 segundos)
+  setInterval(checkAndExecuteTasks, 30000);
 });
 
-// Listener de mensajes
+// Comprobar y ejecutar tareas programadas
+async function checkAndExecuteTasks() {
+  const now = Date.now();
+  let tasksChanged = false;
+
+  for (let i = scheduledTasks.length - 1; i >= 0; i--) {
+    const task = scheduledTasks[i];
+
+    if (now >= task.executionTime) {
+      try {
+        const channel = await client.channels.fetch(task.targetChannelId) as TextChannel;
+        if (channel && channel.isTextBased()) {
+          const embed = new EmbedBuilder()
+            .setColor('#FF0000') // Rojo corporativo REDLINE GT
+            .setDescription(task.textContent)
+            .setFooter({ text: 'REDLINE GT' })
+            .setTimestamp();
+
+          await channel.send({ embeds: [embed] });
+          console.log(`Embed programado publicado con éxito en el canal ${task.targetChannelId}`);
+        }
+      } catch (err) {
+        console.error(`Error al publicar embed programado ${task.id}:`, err);
+      }
+
+      // Gestionar repeticiones si están activadas
+      if (task.repeat && task.intervalDays && task.remainingRepetitions && task.remainingRepetitions > 1) {
+        task.remainingRepetitions -= 1;
+        task.executionTime += task.intervalDays * 24 * 60 * 60 * 1000;
+        console.log(`Tarea ${task.id} reprogramada para dentro de ${task.intervalDays} días. Quedan ${task.remainingRepetitions} envíos.`);
+      } else {
+        scheduledTasks.splice(i, 1);
+      }
+      tasksChanged = true;
+    }
+  }
+
+  if (tasksChanged) {
+    saveScheduledTasks(scheduledTasks);
+  }
+}
+
+// Parsea fechas en formato DD/MM/AAAA HH:MM (Hora local de España CET/CEST)
+function parseDateTime(dateStr: string): number | null {
+  const parts = dateStr.trim().split(' ');
+  if (parts.length !== 2) return null;
+
+  const dateParts = parts[0].split('/');
+  const timeParts = parts[1].split(':');
+
+  if (dateParts.length !== 3 || timeParts.length !== 2) return null;
+
+  const day = parseInt(dateParts[0], 10);
+  const month = parseInt(dateParts[1], 10) - 1;
+  const year = parseInt(dateParts[2], 10);
+  const hour = parseInt(timeParts[0], 10);
+  const minute = parseInt(timeParts[1], 10);
+
+  if (isNaN(day) || isNaN(month) || isNaN(year) || isNaN(hour) || isNaN(minute)) return null;
+
+  const date = new Date(year, month, day, hour, minute);
+  return date.getTime();
+}
+
+// Escuchar mensajes (para !setup-buzon y !embed)
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
-  // Comando para publicar el panel de sugerencias
+  // Comando !setup-buzon
   if (message.content === '!setup-buzon') {
-    // Intentar borrar el mensaje del usuario inmediatamente
-    try {
-      await message.delete();
-    } catch (err) {
-      console.log('No se pudo borrar el mensaje del comando:', err);
-    }
+    try { await message.delete(); } catch (_) {}
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId('crear_sugerencia')
         .setLabel('SUGERENCIA')
-        .setStyle(ButtonStyle.Danger) // Botón Rojo
+        .setStyle(ButtonStyle.Danger)
     );
 
     const mensajeTexto = 
@@ -72,61 +198,283 @@ client.on('messageCreate', async (message) => {
       "Click the red button and we will assist you as soon as possible.\n" +
       "Thank you!";
 
-    await message.channel.send({
-      content: mensajeTexto,
-      components: [row]
-    });
+    await message.channel.send({ content: mensajeTexto, components: [row] });
+    return;
+  }
+
+  // Comando !embed como alternativa
+  if (message.content === '!embed') {
+    if (message.author.id !== AUTHORIZED_USER_ID) {
+      await message.reply('No tienes autorización para usar este comando.');
+      return;
+    }
+    try { await message.delete(); } catch (_) {}
+    await openEmbedModal(message);
   }
 });
 
-// Listener para el click del botón
-client.on('interactionCreate', async (interaction) => {
-  if (!interaction.isButton()) return;
+// Función auxiliar para mostrar el Modal
+async function openEmbedModal(context: any) {
+  const modal = new ModalBuilder()
+    .setCustomId('modal_embed_step1')
+    .setTitle('Programar Embed Rojo');
 
-  if (interaction.customId === 'crear_sugerencia') {
-    const guild = interaction.guild;
-    const user = interaction.user;
+  const inputTexto = new TextInputBuilder()
+    .setCustomId('embed_text')
+    .setLabel('Texto / Contenido a publicar')
+    .setStyle(TextInputStyle.Paragraph)
+    .setPlaceholder('Escribe aquí el contenido del mensaje...')
+    .setRequired(true);
 
-    if (!guild) return;
+  const inputCanal = new TextInputBuilder()
+    .setCustomId('embed_channel')
+    .setLabel('Canal de destino (#canal o ID)')
+    .setStyle(TextInputStyle.Short)
+    .setPlaceholder('Ejemplo: #anuncios o 123456789012345678')
+    .setRequired(true);
 
-    await interaction.reply({ 
-      content: 'Creando tu canal privado de sugerencia...', 
-      ephemeral: true 
-    });
+  const inputFecha = new TextInputBuilder()
+    .setCustomId('embed_datetime')
+    .setLabel('Fecha y hora de envío (DD/MM/AAAA HH:MM)')
+    .setStyle(TextInputStyle.Short)
+    .setPlaceholder('Ejemplo: 25/09/2026 21:00')
+    .setRequired(true);
 
-    try {
-      // Crear el canal privado fuera de cualquier categoría (parent: null / undefined)
-      const canalTicket = await guild.channels.create({
-        name: `sugerencia-${user.username}`,
-        type: ChannelType.GuildText,
-        permissionOverwrites: [
-          {
-            id: guild.id, // @everyone no puede ver el canal
-            deny: [PermissionsBitField.Flags.ViewChannel],
-          },
-          {
-            id: user.id, // El usuario que pulsa sí lo ve e interactúa
-            allow: [
-              PermissionsBitField.Flags.ViewChannel,
-              PermissionsBitField.Flags.SendMessages,
-              PermissionsBitField.Flags.ReadMessageHistory
-            ],
-          },
-        ],
+  modal.addComponents(
+    new ActionRowBuilder<TextInputBuilder>().addComponents(inputTexto),
+    new ActionRowBuilder<TextInputBuilder>().addComponents(inputCanal),
+    new ActionRowBuilder<TextInputBuilder>().addComponents(inputFecha)
+  );
+
+  await context.showModal(modal);
+}
+
+// Escuchar interacciones (Comandos Slash, Modales, Botones)
+client.on('interactionCreate', async (interaction: Interaction) => {
+
+  // 1. Comando Slash /embed
+  if (interaction.isChatInputCommand() && interaction.commandName === 'embed') {
+    if (interaction.user.id !== AUTHORIZED_USER_ID) {
+      await interaction.reply({ content: 'No tienes autorización para usar este comando.', ephemeral: true });
+      return;
+    }
+    await openEmbedModal(interaction);
+    return;
+  }
+
+  // 2. Recepción de Modales
+  if (interaction.isModalSubmit()) {
+
+    // Modal Paso 1
+    if (interaction.customId === 'modal_embed_step1') {
+      const textContent = interaction.fields.getTextInputValue('embed_text');
+      const rawChannel = interaction.fields.getTextInputValue('embed_channel');
+      const rawDateTime = interaction.fields.getTextInputValue('embed_datetime');
+
+      // Extraer ID de canal si viene como mención <#ID>
+      const cleanChannelId = rawChannel.replace(/[<#@>]/g, '').trim();
+      const timestamp = parseDateTime(rawDateTime);
+
+      if (!timestamp || isNaN(timestamp)) {
+        await interaction.reply({ 
+          content: '❌ Formato de fecha incorrecto. Debe ser: `DD/MM/AAAA HH:MM` (ejemplo: `25/09/2026 21:00`).', 
+          ephemeral: true 
+        });
+        return;
+      }
+
+      // Guardar en sesión
+      creationSessions.set(interaction.user.id, {
+        channelId: cleanChannelId,
+        textContent,
+        executionTime: timestamp
       });
 
-      // Mensaje de bienvenida con mención al usuario por ID
-      const mensajeBienvenida = 
-        `Hola <@${user.id}>, cuéntanos, enseguida estamos contigo.\n\n` +
-        `Hello <@${user.id}>, tell us, we will be with you shortly.`;
+      // Preguntar por la repetición
+      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId('embed_repeat_yes').setLabel('SÍ').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('embed_repeat_no').setLabel('NO').setStyle(ButtonStyle.Danger)
+      );
 
-      await canalTicket.send(mensajeBienvenida);
+      await interaction.reply({
+        content: '¿Deseas que esta publicación se repita de forma periódica?',
+        components: [row],
+        ephemeral: true
+      });
+      return;
+    }
 
-    } catch (error) {
-      console.error('Error al crear el canal privado:', error);
+    // Modal Paso 2 (Detalles de repetición)
+    if (interaction.customId === 'modal_embed_repeat_details') {
+      const rawInterval = interaction.fields.getTextInputValue('embed_interval');
+      const rawReps = interaction.fields.getTextInputValue('embed_reps');
+
+      const intervalDays = parseInt(rawInterval, 10);
+      const repetitions = parseInt(rawReps, 10);
+
+      if (isNaN(intervalDays) || isNaN(repetitions) || intervalDays <= 0 || repetitions <= 0) {
+        await interaction.reply({ content: '❌ Introduce números válidos mayores que 0.', ephemeral: true });
+        return;
+      }
+
+      const session = creationSessions.get(interaction.user.id);
+      if (session) {
+        session.repeat = true;
+        session.intervalDays = intervalDays;
+        session.repetitions = repetitions;
+      }
+
+      await showEmbedPreviewAndConfirm(interaction);
+      return;
+    }
+  }
+
+  // 3. Botones interactivos
+  if (interaction.isButton()) {
+
+    // Botón de Sugerencias del buzón
+    if (interaction.customId === 'crear_sugerencia') {
+      const guild = interaction.guild;
+      const user = interaction.user;
+      if (!guild) return;
+
+      await interaction.reply({ content: 'Creando tu canal privado de sugerencia...', ephemeral: true });
+
+      try {
+        const canalTicket = await guild.channels.create({
+          name: `sugerencia-${user.username}`,
+          type: ChannelType.GuildText,
+          permissionOverwrites: [
+            { id: guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+            { id: user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory] }
+          ]
+        });
+
+        const mensajeBienvenida = 
+          `Hola <@${user.id}>, cuéntanos, enseguida estamos contigo.\n\n` +
+          `Hello <@${user.id}>, tell us, we will be with you shortly.`;
+
+        await canalTicket.send(mensajeBienvenida);
+      } catch (error) {
+        console.error('Error al crear el canal privado:', error);
+      }
+      return;
+    }
+
+    // Botón Repetición = NO
+    if (interaction.customId === 'embed_repeat_no') {
+      const session = creationSessions.get(interaction.user.id);
+      if (session) {
+        session.repeat = false;
+      }
+      await showEmbedPreviewAndConfirm(interaction);
+      return;
+    }
+
+    // Botón Repetición = SÍ
+    if (interaction.customId === 'embed_repeat_yes') {
+      const modal = new ModalBuilder()
+        .setCustomId('modal_embed_repeat_details')
+        .setTitle('Configurar Repetición');
+
+      const inputInterval = new TextInputBuilder()
+        .setCustomId('embed_interval')
+        .setLabel('Intervalo entre publicaciones (en días)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Ejemplo: 7 (para publicación semanal)')
+        .setRequired(true);
+
+      const inputReps = new TextInputBuilder()
+        .setCustomId('embed_reps')
+        .setLabel('Número total de repeticiones')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Ejemplo: 4')
+        .setRequired(true);
+
+      modal.addComponents(
+        new ActionRowBuilder<TextInputBuilder>().addComponents(inputInterval),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(inputReps)
+      );
+
+      await interaction.showModal(modal);
+      return;
+    }
+
+    // Botón Final: Confirmar y Programar
+    if (interaction.customId === 'embed_confirm_final') {
+      const session = creationSessions.get(interaction.user.id);
+      if (!session || !session.channelId || !session.textContent || !session.executionTime) {
+        await interaction.reply({ content: '❌ Sesión caducada o datos incompletos. Inicia de nuevo con /embed.', ephemeral: true });
+        return;
+      }
+
+      const newTask: ScheduledEmbed = {
+        id: Date.now().toString(),
+        targetChannelId: session.channelId,
+        textContent: session.textContent,
+        executionTime: session.executionTime,
+        repeat: session.repeat || false,
+        intervalDays: session.intervalDays,
+        remainingRepetitions: session.repetitions,
+        creatorId: interaction.user.id
+      };
+
+      scheduledTasks.push(newTask);
+      saveScheduledTasks(scheduledTasks);
+
+      creationSessions.delete(interaction.user.id);
+
+      await interaction.update({
+        content: '✅ **¡Publicación programada correctamente!** El mensaje se enviará automáticamente en la fecha indicada.',
+        embeds: [],
+        components: []
+      });
+      return;
     }
   }
 });
+
+// Muestra vista previa del Embed Rojo y el botón de confirmación
+async function showEmbedPreviewAndConfirm(interaction: any) {
+  const session = creationSessions.get(interaction.user.id);
+  if (!session) return;
+
+  const previewEmbed = new EmbedBuilder()
+    .setColor('#FF0000') // Rojo corporativo
+    .setDescription(session.textContent || '')
+    .setFooter({ text: 'REDLINE GT' })
+    .setTimestamp();
+
+  const fechaFormat = new Date(session.executionTime || 0).toLocaleString('es-ES');
+
+  let resumenInfo = `📌 **VISTA PREVIA DE TU MENSAJE PROGRAMADO**\n\n` +
+    `• **Canal de destino:** <#${session.channelId}>\n` +
+    `• **Fecha/Hora de envío:** ${fechaFormat}\n` +
+    `• **Repetición:** ${session.repeat ? `SÍ (Cada ${session.intervalDays} días, ${session.repetitions} veces)` : 'NO'}\n\n` +
+    `*Revisa la vista previa del cajón rojo abajo antes de confirmar:*`;
+
+  const confirmRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId('embed_confirm_final')
+      .setLabel('CONFIRMAR Y PROGRAMAR')
+      .setStyle(ButtonStyle.Success)
+  );
+
+  if (interaction.isModalSubmit()) {
+    await interaction.reply({
+      content: resumenInfo,
+      embeds: [previewEmbed],
+      components: [confirmRow],
+      ephemeral: true
+    });
+  } else {
+    await interaction.update({
+      content: resumenInfo,
+      embeds: [previewEmbed],
+      components: [confirmRow]
+    });
+  }
+}
 
 // Inicio de sesión
 const token = process.env.DISCORD_TOKEN;
