@@ -163,7 +163,7 @@ async function checkAndExecuteTasks() {
   }
 }
 
-// Parsea fechas en formato DD/MM/AAAA HH:MM a timestamp UTC respetando el horario de España
+// Convierte la fecha DD/MM/AAAA HH:MM a Timestamp interpretando la hora exacta en España (Europe/Madrid)
 function parseDateTime(dateStr: string): number | null {
   const parts = dateStr.trim().split(' ');
   if (parts.length !== 2) return null;
@@ -173,22 +173,44 @@ function parseDateTime(dateStr: string): number | null {
 
   if (dateParts.length !== 3 || timeParts.length !== 2) return null;
 
-  const day = parseInt(dateParts[0], 10);
-  const month = parseInt(dateParts[1], 10) - 1; // Los meses en JS van de 0 a 11
-  const year = parseInt(dateParts[2], 10);
-  const hour = parseInt(timeParts[0], 10);
-  const minute = parseInt(timeParts[1], 10);
+  const day = dateParts[0].padStart(2, '0');
+  const month = dateParts[1].padStart(2, '0');
+  const year = dateParts[2];
+  const hour = timeParts[0].padStart(2, '0');
+  const minute = timeParts[1].padStart(2, '0');
 
-  if (isNaN(day) || isNaN(month) || isNaN(year) || isNaN(hour) || isNaN(minute)) return null;
+  // Formato iso
+  const isoTarget = `${year}-${month}-${day}T${hour}:${minute}:00`;
 
-  // Determinar si estamos en horario de verano (CEST = UTC+2) o de invierno (CET = UTC+1)
-  const isDST = month >= 2 && month <= 9; 
-  const offsetHours = isDST ? 2 : 1;
+  // Crear objeto Date de prueba y obtener el desfase exacto de Europe/Madrid
+  const targetDate = new Date(`${isoTarget}Z`);
+  if (isNaN(targetDate.getTime())) return null;
 
-  // Convertir la hora introducida (hora de España) a UTC restando el offset
-  const utcDate = new Date(Date.UTC(year, month, day, hour - offsetHours, minute));
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Madrid',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false
+  });
 
-  return utcDate.getTime();
+  const partsFormatted = formatter.formatToParts(targetDate);
+  const map: Record<string, string> = {};
+  partsFormatted.forEach(p => { if (p.type !== 'literal') map[p.type] = p.value; });
+
+  const yearSpain = parseInt(map.year, 10);
+  const monthSpain = parseInt(map.month, 10) - 1;
+  const daySpain = parseInt(map.day, 10);
+  let hourSpain = parseInt(map.hour, 10);
+  if (hourSpain === 24) hourSpain = 0;
+  const minuteSpain = parseInt(map.minute, 10);
+
+  const utcAsSpainTime = Date.UTC(yearSpain, monthSpain, daySpain, hourSpain, minuteSpain);
+  const offsetMs = utcAsSpainTime - targetDate.getTime();
+
+  // Fecha deseada dada en hora local de España convertida a Timestamp UTC exacto
+  const wantedLocalUtc = Date.UTC(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10), parseInt(hour, 10), parseInt(minute, 10));
+  
+  return wantedLocalUtc - offsetMs;
 }
 
 // Escuchar mensajes (para !setup-buzon y !embed)
@@ -333,11 +355,20 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         new ButtonBuilder().setCustomId('embed_repeat_no').setLabel('NO').setStyle(ButtonStyle.Danger)
       );
 
-      await interaction.reply({
-        content: '¿Deseas que esta publicación se repita de forma periódica?',
-        components: [row],
-        ephemeral: true
-      });
+      // Si es una reedición, responder con actualización
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp({
+          content: '¿Deseas que esta publicación se repita de forma periódica?',
+          components: [row],
+          ephemeral: true
+        });
+      } else {
+        await interaction.reply({
+          content: '¿Deseas que esta publicación se repita de forma periódica?',
+          components: [row],
+          ephemeral: true
+        });
+      }
       return;
     }
 
@@ -534,5 +565,5 @@ if (!token) {
   console.error('ERROR: No se ha encontrado la variable DISCORD_TOKEN');
 } else {
   client.login(token);
-                     }
-                               
+                                             }
+    
