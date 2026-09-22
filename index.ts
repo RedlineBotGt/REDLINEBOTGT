@@ -23,7 +23,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 
-// Configuración de Servidor Web para Render
+// Servidor web para mantener vivo el bot en Render
 const PORT = process.env.PORT || 3000;
 http.createServer((_, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -33,24 +33,25 @@ http.createServer((_, res) => {
   console.log(`Servidor web activo en puerto ${PORT}`);
 });
 
-// Cliente Discord
+// Cliente de Discord con todas las intenciones necesarias
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers
   ],
 });
 
-// Archivos de almacenamiento
+// Rutas de archivos de persistencia
 const DB_FILE = path.join(__dirname, 'scheduled_embeds.json');
 const REPORTS_FILE = path.join(__dirname, 'reports_data.json');
 
-// Constantes de IDs de Canales
-const CHANNEL_REPORTES = '1469654237519810687';
-const CHANNEL_HILOS = '1473834354529538079';
+// IDs de los Canales de Reportes e Hilos
+const CHANNEL_REPORTES_ID = '1469654237519810687';
+const CHANNEL_HILOS_ID = '1473834354529538079';
 
-// Función para verificar rol Dirección
+// Comprobar si un usuario tiene el rol Dirección
 function isDireccion(member: GuildMember | null): boolean {
   if (!member) return false;
   return member.roles.cache.some(role => 
@@ -58,7 +59,7 @@ function isDireccion(member: GuildMember | null): boolean {
   );
 }
 
-// Estructura de programación de embeds
+// Estructuras de datos
 interface ScheduledEmbed {
   id: string;
   targetChannelId: string;
@@ -70,11 +71,11 @@ interface ScheduledEmbed {
   creatorId: string;
 }
 
-// Estructura de contador de reportes
 interface ReportsData {
   lastId: number;
 }
 
+// Funciones para leer/guardar archivos
 function loadScheduledTasks(): ScheduledEmbed[] {
   try {
     if (fs.existsSync(DB_FILE)) {
@@ -115,7 +116,7 @@ function saveReportsData(data: ReportsData) {
 
 let scheduledTasks: ScheduledEmbed[] = loadScheduledTasks();
 
-// Memoria temporal para sesión del /embed
+// Sesiones en memoria para el comando /embed
 const creationSessions = new Map<string, {
   channelId?: string;
   textContent?: string;
@@ -147,7 +148,7 @@ client.once('ready', async () => {
   setInterval(checkAndExecuteTasks, 15000);
 });
 
-// Comprobar y ejecutar tareas programadas
+// Comprobador periódico de mensajes programados (/embed)
 async function checkAndExecuteTasks() {
   const now = Date.now();
   let tasksChanged = false;
@@ -186,7 +187,7 @@ async function checkAndExecuteTasks() {
   }
 }
 
-// Convertir fecha DD/MM/AAAA HH:MM a Timestamp UTC
+// Convertir hora de España a Timestamp UTC
 function parseDateTime(dateStr: string): number | null {
   const parts = dateStr.trim().split(' ');
   if (parts.length !== 2) return null;
@@ -233,13 +234,16 @@ function parseDateTime(dateStr: string): number | null {
   return wantedLocalUtc - offsetMs;
 }
 
-// Escuchador de Mensajes para Comandos con Prefix
+// ESCUCHADOR DE MENSAJES (COMANDOS !PREFIX)
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
   // 1. !setup-buzon
   if (message.content === '!setup-buzon') {
-    if (!isDireccion(message.member)) return;
+    if (!isDireccion(message.member)) {
+      await message.reply('Solo el rol **Dirección** puede usar este comando.');
+      return;
+    }
     try { await message.delete(); } catch (_) {}
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -263,14 +267,17 @@ client.on('messageCreate', async (message) => {
 
   // 2. !setup-reporte
   if (message.content === '!setup-reporte') {
-    if (!isDireccion(message.member)) return;
+    if (!isDireccion(message.member)) {
+      await message.reply('Solo el rol **Dirección** puede usar este comando.');
+      return;
+    }
     try { await message.delete(); } catch (_) {}
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId('btn_iniciar_reporte')
         .setLabel('REPORTE')
-        .setStyle(ButtonStyle.Primary)
+        .setStyle(ButtonStyle.Primary) // Botón Azul
     );
 
     const texto = 
@@ -283,14 +290,17 @@ client.on('messageCreate', async (message) => {
 
   // 3. !setup-defensa
   if (message.content === '!setup-defensa') {
-    if (!isDireccion(message.member)) return;
+    if (!isDireccion(message.member)) {
+      await message.reply('Solo el rol **Dirección** puede usar este comando.');
+      return;
+    }
     try { await message.delete(); } catch (_) {}
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId('btn_iniciar_defensa')
         .setLabel('DEFENSA')
-        .setStyle(ButtonStyle.Success)
+        .setStyle(ButtonStyle.Success) // Botón Verde
     );
 
     const texto = 
@@ -304,7 +314,7 @@ client.on('messageCreate', async (message) => {
   // 4. !embed
   if (message.content === '!embed') {
     if (!isDireccion(message.member)) {
-      await message.reply('Solo los miembros con el rol **Dirección** pueden usar este comando.');
+      await message.reply('Solo el rol **Dirección** puede usar este comando.');
       return;
     }
     try { await message.delete(); } catch (_) {}
@@ -312,7 +322,7 @@ client.on('messageCreate', async (message) => {
   }
 });
 
-// Flujo de interacción de /embed
+// FLUJO DE CREACIÓN /EMBED
 async function startEmbedCreationProcess(context: any) {
   const channelSelect = new ChannelSelectMenuBuilder()
     .setCustomId('embed_select_channel')
@@ -356,30 +366,30 @@ async function openEmbedFormModal(interaction: any, defaultText = '', defaultDat
   await interaction.showModal(modal);
 }
 
-// Manejador de Interacciones
+// MANEJADOR GENERAL DE INTERACCIONES (BOTONES, MODALES, SLASH)
 client.on('interactionCreate', async (interaction: Interaction) => {
 
   // Slash Command /embed
   if (interaction.isChatInputCommand() && interaction.commandName === 'embed') {
     if (!isDireccion(interaction.member as GuildMember)) {
-      await interaction.reply({ content: 'Solo miembros con el rol **Dirección** pueden usar este comando.', ephemeral: true });
+      await interaction.reply({ content: 'Solo el rol **Dirección** puede usar este comando.', ephemeral: true });
       return;
     }
     await startEmbedCreationProcess(interaction);
     return;
   }
 
-  // Desplegable canal /embed
+  // Desplegable de selección de canal para /embed
   if (interaction.isChannelSelectMenu() && interaction.customId === 'embed_select_channel') {
     creationSessions.set(interaction.user.id, { channelId: interaction.values[0] });
     await openEmbedFormModal(interaction);
     return;
   }
 
-  // BOTONES
+  // BOTONES INTERACTIVOS
   if (interaction.isButton()) {
 
-    // 1. Botón Sugerencia
+    // Botón Sugerencia Buzón
     if (interaction.customId === 'crear_sugerencia') {
       const guild = interaction.guild;
       const user = interaction.user;
@@ -407,7 +417,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       return;
     }
 
-    // 2. Botón INICIAR REPORTE (Abre Modal de Reporte)
+    // Botón REPORTE (Abre formulario de Reporte)
     if (interaction.customId === 'btn_iniciar_reporte') {
       const modal = new ModalBuilder()
         .setCustomId('modal_reporte_submit')
@@ -435,7 +445,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       return;
     }
 
-    // 3. Botón INICIAR DEFENSA (Abre Modal de Defensa)
+    // Botón DEFENSA (Abre formulario de Defensa)
     if (interaction.customId === 'btn_iniciar_defensa') {
       const modal = new ModalBuilder()
         .setCustomId('modal_defensa_submit')
@@ -463,7 +473,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       return;
     }
 
-    // Botones del sistema /embed
+    // Botones auxiliares de /embed
     if (interaction.customId === 'embed_repeat_no') {
       const session = creationSessions.get(interaction.user.id);
       if (session) session.repeat = false;
@@ -526,10 +536,10 @@ client.on('interactionCreate', async (interaction: Interaction) => {
     }
   }
 
-  // MODALES SUBMIT
+  // RECEPCIÓN DE MODALES SUBMIT
   if (interaction.isModalSubmit()) {
 
-    // 1. Envío Formulario de Reporte
+    // 1. ENVÍO DEL FORMULARIO DE REPORTE
     if (interaction.customId === 'modal_reporte_submit') {
       const jornada = interaction.fields.getTextInputValue('rep_jornada');
       const pilotoReporta = interaction.fields.getTextInputValue('rep_reporta');
@@ -537,20 +547,19 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       const explicacion = interaction.fields.getTextInputValue('rep_explicacion');
       const enlace = interaction.fields.getTextInputValue('rep_enlace');
 
-      // Validación simple de enlace
       if (!enlace.startsWith('http://') && !enlace.startsWith('https://')) {
         await interaction.reply({ content: '❌ El enlace debe comenzar con `http://` o `https://`.', ephemeral: true });
         return;
       }
 
-      // Incrementar y formatear ID (001, 002...)
+      // Incrementar contador para la ID
       const repData = loadReportsData();
       repData.lastId += 1;
       saveReportsData(repData);
 
       const reportIdStr = String(repData.lastId).padStart(3, '0');
 
-      // Buscar ROL GTCUP y Comisario para obtener IDs dinámicamente si es posible
+      // Buscar roles en el servidor
       const guild = interaction.guild;
       const roleGTCUP = guild?.roles.cache.find(r => r.name.toUpperCase() === 'GTCUP');
       const roleComisario = guild?.roles.cache.find(r => r.name.toLowerCase().includes('comisario'));
@@ -558,19 +567,10 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       const mentionGTCUP = roleGTCUP ? `<@&${roleGTCUP.id}>` : '@GTCUP';
       const mentionComisario = roleComisario ? `<@&${roleComisario.id}>` : '@Comisario';
 
-      // Construcción del Embed Azul
+      // Crear Embed Azul de Reporte
       const embedReporte = new EmbedBuilder()
         .setColor('#0000FF') // Azul
         .setTitle(`🆔 ${reportIdStr}`)
         .addFields(
           { name: 'JORNADA', value: jornada, inline: false },
-          { name: 'PILOTO QUE REPORTA', value: pilotoReporta, inline: false },
-          { name: 'PILOTO REPORTADO', value: pilotoReportado, inline: false },
-          { name: 'EXPLICACIÓN', value: explicacion, inline: false },
-          { name: 'ENLACE', value: enlace, inline: false }
-        )
-        .setFooter({ text: 'REDLINE GT' })
-        .setTimestamp();
-
-      // Enviar a Canal Principal de Reportes (1469654237519810687)
-      try 
+          { name: 'PILOTO QUE REPORTA', value: pilotoReporta, inline: false }
