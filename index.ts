@@ -43,11 +43,10 @@ const client = new Client({
   ],
 });
 
-// Archivos de almacenamiento
+// Archivo de almacenamiento para mensajes programados
 const DB_FILE = path.join(__dirname, 'scheduled_embeds.json');
-const REPORTS_FILE = path.join(__dirname, 'reports_data.json');
 
-// IDs de los Canales de Reportes e Hilos
+// IDs de Canales
 const CHANNEL_REPORTES_ID = '1469654237519810687';
 const CHANNEL_HILOS_ID = '1473834354529538079';
 
@@ -59,7 +58,7 @@ function isDireccion(member: GuildMember | null): boolean {
   );
 }
 
-// Estructuras de datos
+// Estructura de programación de embeds
 interface ScheduledEmbed {
   id: string;
   targetChannelId: string;
@@ -71,11 +70,6 @@ interface ScheduledEmbed {
   creatorId: string;
 }
 
-interface ReportsData {
-  lastId: number;
-}
-
-// Funciones para leer y guardar datos
 function loadScheduledTasks(): ScheduledEmbed[] {
   try {
     if (fs.existsSync(DB_FILE)) {
@@ -95,28 +89,9 @@ function saveScheduledTasks(tasks: ScheduledEmbed[]) {
   }
 }
 
-function loadReportsData(): ReportsData {
-  try {
-    if (fs.existsSync(REPORTS_FILE)) {
-      return JSON.parse(fs.readFileSync(REPORTS_FILE, 'utf-8'));
-    }
-  } catch (err) {
-    console.error('Error al cargar datos de reportes:', err);
-  }
-  return { lastId: 0 };
-}
-
-function saveReportsData(data: ReportsData) {
-  try {
-    fs.writeFileSync(REPORTS_FILE, JSON.stringify(data, null, 2));
-  } catch (err) {
-    console.error('Error al guardar datos de reportes:', err);
-  }
-}
-
 let scheduledTasks: ScheduledEmbed[] = loadScheduledTasks();
 
-// Sesiones en memoria para el comando /embed
+// Sesiones en memoria para /embed
 const creationSessions = new Map<string, {
   channelId?: string;
   textContent?: string;
@@ -444,7 +419,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       return;
     }
 
-    // Modal Defensa (CON LINK OPCIONAL)
+    // Modal Defensa
     if (interaction.customId === 'btn_iniciar_defensa') {
       const modal = new ModalBuilder()
         .setCustomId('modal_defensa_submit')
@@ -464,7 +439,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
           new TextInputBuilder().setCustomId('def_explicacion').setLabel('BREVE EXPLICACIÓN').setStyle(TextInputStyle.Paragraph).setRequired(true)
         ),
         new ActionRowBuilder<TextInputBuilder>().addComponents(
-          new TextInputBuilder().setCustomId('def_enlace').setLabel('ENLACE DE VIDEO (OPCIONAL)').setStyle(TextInputStyle.Short).setPlaceholder('https://...').setRequired(false) // OPCIONAL
+          new TextInputBuilder().setCustomId('def_enlace').setLabel('ENLACE DE VIDEO (OPCIONAL)').setStyle(TextInputStyle.Short).setPlaceholder('https://...').setRequired(false)
         )
       );
 
@@ -540,6 +515,8 @@ client.on('interactionCreate', async (interaction: Interaction) => {
 
     // 1. Submit Reporte
     if (interaction.customId === 'modal_reporte_submit') {
+      await interaction.deferReply({ ephemeral: true });
+
       const jornada = interaction.fields.getTextInputValue('rep_jornada');
       const pilotoReporta = interaction.fields.getTextInputValue('rep_reporta');
       const pilotoReportado = interaction.fields.getTextInputValue('rep_reportado');
@@ -547,15 +524,24 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       const enlace = interaction.fields.getTextInputValue('rep_enlace');
 
       if (!enlace.startsWith('http://') && !enlace.startsWith('https://')) {
-        await interaction.reply({ content: '❌ El enlace debe comenzar con `http://` o `https://`.', ephemeral: true });
+        await interaction.editReply({ content: '❌ El enlace debe comenzar con `http://` o `https://`.' });
         return;
       }
 
-      const repData = loadReportsData();
-      repData.lastId += 1;
-      saveReportsData(repData);
-
-      const reportIdStr = String(repData.lastId).padStart(3, '0');
+      let reportIdStr = '001';
+      try {
+        const canalHilos = await client.channels.fetch(CHANNEL_HILOS_ID) as TextChannel;
+        if (canalHilos) {
+          const activeThreads = await canalHilos.threads.fetchActive();
+          const archivedThreads = await canalHilos.threads.fetchArchived();
+          
+          const totalThreadsCount = activeThreads.threads.size + archivedThreads.threads.size;
+          const nextIdNumber = totalThreadsCount + 1;
+          reportIdStr = String(nextIdNumber).padStart(3, '0');
+        }
+      } catch (e) {
+        console.error('Error al obtener hilos para la numeración:', e);
+      }
 
       const guild = interaction.guild;
       const roleGTCUP = guild?.roles.cache.find(r => r.name.toUpperCase() === 'GTCUP');
@@ -577,7 +563,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         .setFooter({ text: 'REDLINE GT' })
         .setTimestamp();
 
-      // Enviar EMBED Y MENCIÓN al canal público de reportes (1469654237519810687)
+      // Enviar MENCIÓN Y EMBED COMPLETO al canal público de reportes (1469654237519810687)
       try {
         const canalReportes = await client.channels.fetch(CHANNEL_REPORTES_ID) as TextChannel;
         if (canalReportes) {
@@ -590,7 +576,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         console.error('Error al enviar reporte al canal público:', e);
       }
 
-      // Crear Hilo en canal 1473834354529538079 y enviar EMBED Y MENCIÓN a Comisarios
+      // Crear Hilo en canal 1473834354529538079 y enviar
       try {
         const canalHilos = await client.channels.fetch(CHANNEL_HILOS_ID) as TextChannel;
         if (canalHilos) {
@@ -609,21 +595,24 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         console.error('Error al crear el hilo:', e);
       }
 
-      await interaction.reply({ content: `✅ Reporte **${reportIdStr}** registrado con éxito.`, ephemeral: true });
+      await interaction.editReply({ content: `✅ Reporte **${reportIdStr}** registrado con éxito.` });
       return;
     }
 
     // 2. Submit Defensa
     if (interaction.customId === 'modal_defensa_submit') {
+      await interaction.deferReply({ ephemeral: true });
+
       const rawId = interaction.fields.getTextInputValue('def_id').trim();
       const reportIdStr = rawId.padStart(3, '0');
       const pilotoDefensa = interaction.fields.getTextInputValue('def_defiende');
       const pilotoReporto = interaction.fields.getTextInputValue('def_reporto');
       const explicacion = interaction.fields.getTextInputValue('def_explicacion');
-      const enlace = interaction.fields.getTextInputValue('def_enlace')?.trim() || 'No aportado';
+      const rawEnlace = interaction.fields.getTextInputValue('def_enlace');
+      const enlace = rawEnlace && rawEnlace.trim() !== '' ? rawEnlace.trim() : 'No aportado';
 
       if (enlace !== 'No aportado' && !enlace.startsWith('http://') && !enlace.startsWith('https://')) {
-        await interaction.reply({ content: '❌ El enlace debe comenzar con `http://` o `https://`.', ephemeral: true });
+        await interaction.editReply({ content: '❌ El enlace debe comenzar con `http://` o `https://`.' });
         return;
       }
 
@@ -639,7 +628,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         .setFooter({ text: 'REDLINE GT' })
         .setTimestamp();
 
-      // A) Publicar en canal público de reportes (1469654237519810687)
+      // Enviar EMBED VERDE COMPLETO al canal público de reportes (1469654237519810687)
       try {
         const canalReportes = await client.channels.fetch(CHANNEL_REPORTES_ID) as TextChannel;
         if (canalReportes) {
@@ -649,7 +638,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         console.error('Error al publicar defensa en canal público:', e);
       }
 
-      // B) Reenviar al Hilo correspondiente en el canal de hilos (1473834354529538079)
+      // Buscar el hilo en 1473834354529538079 y reenviar
       try {
         const canalHilos = await client.channels.fetch(CHANNEL_HILOS_ID) as TextChannel;
         if (canalHilos) {
@@ -663,15 +652,13 @@ client.on('interactionCreate', async (interaction: Interaction) => {
 
           if (targetThread) {
             await targetThread.send({ embeds: [embedDefensa] });
-          } else {
-            console.warn(`No se encontró el hilo con el nombre "${reportIdStr}".`);
           }
         }
       } catch (e) {
         console.error('Error al reenviar la defensa al hilo:', e);
       }
 
-      await interaction.reply({ content: `✅ Defensa para el reporte **${reportIdStr}** enviada correctamente.`, ephemeral: true });
+      await interaction.editReply({ content: `✅ Defensa para el reporte **${reportIdStr}** enviada correctamente.` });
       return;
     }
 
@@ -763,4 +750,4 @@ if (!token) {
 } else {
   client.login(token);
   }
-                                    
+            
