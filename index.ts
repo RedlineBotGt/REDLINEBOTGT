@@ -217,16 +217,21 @@ client.once('ready', async () => {
     
 
     if (guild) {
-      await guild.commands.set([
-        {
-          name: 'embed',
-          description: 'Crea o programa un embed'
-        },
-        {
-          name: 'veredicto',
-          description: 'Abre el formulario de resolución de comisaría'
-        }
-      ]);
+              await guild.commands.set([
+          {
+            name: 'embed',
+            description: 'Crea o programa un embed'
+          },
+          {
+            name: 'veredicto',
+            description: 'Abre el formulario de resolución de comisaría'
+          },
+          {
+            name: 'msn',
+            description: 'Envía un mensaje personalizado con menús y vista previa'
+          }
+        ]);
+      
       console.log('✅ Comandos /embed y /veredicto registrados instantáneamente en el servidor.');
     } else {
       console.error('❌ No se pudo encontrar el servidor para registrar los comandos.');
