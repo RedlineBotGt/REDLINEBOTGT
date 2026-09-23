@@ -33,7 +33,7 @@ http.createServer((_, res) => {
   console.log(`Servidor web activo en puerto ${PORT}`);
 });
 
-// Cliente de Discord
+// Cliente de Discord con intenciones requeridas
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -161,7 +161,6 @@ async function checkAndExecuteTasks() {
     saveScheduledTasks(scheduledTasks);
   }
 }
-
 // Convertir hora de España a Timestamp UTC
 function parseDateTime(dateStr: string): number | null {
   const parts = dateStr.trim().split(' ');
@@ -296,6 +295,7 @@ client.on('messageCreate', async (message) => {
     await startEmbedCreationProcess(message);
   }
 });
+
 // Flujo de creación de /embed
 async function startEmbedCreationProcess(context: any) {
   const channelSelect = new ChannelSelectMenuBuilder()
@@ -338,9 +338,8 @@ async function openEmbedFormModal(interaction: any, defaultText = '', defaultDat
   );
 
   await interaction.showModal(modal);
-}
-
-// Manejador de interacciones
+      }
+    // Manejador de interacciones
 client.on('interactionCreate', async (interaction: Interaction) => {
 
   // Slash Command /embed
@@ -563,7 +562,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         .setFooter({ text: 'REDLINE GT' })
         .setTimestamp();
 
-      // Enviar MENCIÓN Y EMBED COMPLETO al canal público de reportes (1469654237519810687)
+      // PUBLICAR EN CANAL PÚBLICO (1469654237519810687) -> Mención GTCUP + EMBED AZUL COMPLETO
       try {
         const canalReportes = await client.channels.fetch(CHANNEL_REPORTES_ID) as TextChannel;
         if (canalReportes) {
@@ -576,7 +575,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         console.error('Error al enviar reporte al canal público:', e);
       }
 
-      // Crear Hilo en canal 1473834354529538079 y enviar
+      // CREAR HILO Y ENVIAR -> Mención Comisario + EMBED AZUL COMPLETO
       try {
         const canalHilos = await client.channels.fetch(CHANNEL_HILOS_ID) as TextChannel;
         if (canalHilos) {
@@ -628,7 +627,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         .setFooter({ text: 'REDLINE GT' })
         .setTimestamp();
 
-      // Enviar EMBED VERDE COMPLETO al canal público de reportes (1469654237519810687)
+      // PUBLICAR EN CANAL PÚBLICO (1469654237519810687) -> EMBED VERDE COMPLETO
       try {
         const canalReportes = await client.channels.fetch(CHANNEL_REPORTES_ID) as TextChannel;
         if (canalReportes) {
@@ -638,7 +637,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         console.error('Error al publicar defensa en canal público:', e);
       }
 
-      // Buscar el hilo en 1473834354529538079 y reenviar
+      // BUSCAR HILO CORRESPONDIENTE Y REENVIAR
       try {
         const canalHilos = await client.channels.fetch(CHANNEL_HILOS_ID) as TextChannel;
         if (canalHilos) {
@@ -749,5 +748,5 @@ if (!token) {
   console.error('ERROR: No se ha encontrado la variable DISCORD_TOKEN');
 } else {
   client.login(token);
-  }
-            
+                                   }
+          
