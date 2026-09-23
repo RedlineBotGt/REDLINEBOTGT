@@ -364,7 +364,27 @@ client.on('interactionCreate', async (interaction: Interaction) => {
     await startEmbedCreationProcess(interaction);
     return;
   }
-    // Slash Command /veredicto
+   client.once('ready', async () => {
+  console.log(`🤖 Bot conectado como ${client.user?.tag}`);
+  try {
+    if (client.application) {
+      await client.application.commands.set([
+        {
+          name: 'embed',
+          description: 'Crea o programa un embed'
+        },
+        {
+          name: 'veredicto',
+          description: 'Abre el formulario de resolución de comisaría'
+        }
+      ]);
+      console.log('✅ Comandos /embed y /veredicto registrados correctamente en Discord.');
+    }
+  } catch (error) {
+    console.error('❌ Error al registrar comandos:', error);
+  }
+});
+  // Slash Command /veredicto
     if (interaction.isChatInputCommand() && interaction.commandName === 'veredicto') {
       const member = interaction.member as GuildMember;
       const isComisario = member?.roles.cache.some(r => r.name.toLowerCase().includes('comisario'));
