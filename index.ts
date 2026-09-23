@@ -213,7 +213,17 @@ client.once('ready', async () => {
   try {
     console.log('🧹 Limpiando comandos Slash antiguos...');
     if (client.application) {
-      await client.application.commands.set([]);
+       await client.application.commands.set([
+        {
+          name: 'embed',
+          description: 'Crea o programa un embed'
+        },
+        {
+          name: 'veredicto',
+          description: 'Abre el formulario de resolución de comisaría'
+        }
+      ]);
+      
       console.log('✅ Todos los comandos Slash antiguos han sido eliminados de Discord.');
     }
   } catch (error) {
