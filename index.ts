@@ -240,6 +240,31 @@ client.once('ready', async () => {
     console.error('❌ Error al registrar comandos Slash:', error);
   }
 });
+// Manejador del comando /msn
+client.on('interactionCreate', async interaction => {
+  if (!interaction.isChatInputCommand()) return;
+
+  if (interaction.commandName === 'msn') {
+    const member = interaction.member;
+    const isDireccion = member && 'roles' in member && typeof member.roles.cache.has === 'function' 
+      ? member.roles.cache.some(r => r.name.toLowerCase().includes('dirección') || r.name.toLowerCase().includes('direction'))
+      : false;
+
+    // Validación de permisos exclusiva para Dirección
+    if (!isDireccion) {
+      await interaction.reply({ 
+        content: '❌ Solo los miembros de **Dirección** pueden utilizar este comando.', 
+        ephemeral: true 
+      });
+      return;
+    }
+
+    await interaction.reply({ 
+      content: '📢 Iniciando asistente de mensajes de Dirección...', 
+      ephemeral: true 
+    });
+  }
+});
 
 
 // Escuchador de Mensajes (!setup-buzon, !setup-reporte, !setup-defensa, !embed)
