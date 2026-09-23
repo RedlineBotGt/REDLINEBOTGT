@@ -237,7 +237,7 @@ client.once('ready', async () => {
     }
   });
 
-          }
+          
     
       
       console.log('✅ Todos los comandos Slash antiguos han sido eliminados de Discord.');
