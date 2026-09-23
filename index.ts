@@ -210,42 +210,32 @@ function parseDateTime(dateStr: string): number | null {
 // Limpieza de comandos Slash antiguos en Discord
 client.once('ready', async () => {
   console.log(`🤖 Bot conectado como ${client.user?.tag}`);
-  try {
-    console.log('🧹 Limpiando comandos Slash antiguos...');
-      if (client.application) {
-        const GUILD_ID = 'TU_ID_DE_SERVIDOR_AQUÍ'; // 👈 Pon aquí el ID numérico de tu servidor de Discord
-        const guild = client.guilds.cache.get(GUILD_ID);
-        
-        if (guild) {
-          await guild.commands.set([
-            {
-              name: 'embed',
-              description: 'Crea o programa un embed'
-            },
-            {
-              name: 'veredicto',
-              description: 'Abre el formulario de resolución de comisaría'
-            }
-          ]);
-          console.log('✅ Comandos /embed y /veredicto registrados instantáneamente en el servidor.');
-        } else {
-          console.error('❌ No se pudo encontrar el servidor para registrar los comandos.');
-        }
-      }
-    } catch (error) {
-      console.error('❌ Error al registrar comandos Slash:', error);
-    }
-  });
 
-          
+  try {
+    const GUILD_ID = '1462945932390695068'; // 👈 Pon aquí el ID numérico de tu servidor de Discord
+    const guild = client.guilds.cache.get(GUILD_ID);
     
-      
-      console.log('✅ Todos los comandos Slash antiguos han sido eliminados de Discord.');
+
+    if (guild) {
+      await guild.commands.set([
+        {
+          name: 'embed',
+          description: 'Crea o programa un embed'
+        },
+        {
+          name: 'veredicto',
+          description: 'Abre el formulario de resolución de comisaría'
+        }
+      ]);
+      console.log('✅ Comandos /embed y /veredicto registrados instantáneamente en el servidor.');
+    } else {
+      console.error('❌ No se pudo encontrar el servidor para registrar los comandos.');
     }
   } catch (error) {
-    console.error('❌ Error al borrar comandos Slash:', error);
+    console.error('❌ Error al registrar comandos Slash:', error);
   }
 });
+
 
 // Escuchador de Mensajes (!setup-buzon, !setup-reporte, !setup-defensa, !embed)
 client.on('messageCreate', async (message) => {
