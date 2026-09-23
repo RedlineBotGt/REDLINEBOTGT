@@ -237,7 +237,6 @@ client.once('ready', async () => {
     }
   });
 
-        }
           }
     
       
