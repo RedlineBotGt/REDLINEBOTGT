@@ -212,17 +212,27 @@ client.once('ready', async () => {
   console.log(`🤖 Bot conectado como ${client.user?.tag}`);
   try {
     console.log('🧹 Limpiando comandos Slash antiguos...');
-    if (client.application) {
-       await client.application.commands.set([
-        {
-          name: 'embed',
-          description: 'Crea o programa un embed'
-        },
-        {
-          name: 'veredicto',
-          description: 'Abre el formulario de resolución de comisaría'
+          if (client.application) {
+        const GUILD_ID = 'TU_ID_DE_SERVIDOR_AQUÍ'; // 👈 Pon aquí el ID numérico de tu servidor de Discord
+        const guild = client.guilds.cache.get(GUILD_ID);
+        
+        if (guild) {
+          await guild.commands.set([
+            {
+              name: 'embed',
+              description: 'Crea o programa un embed'
+            },
+            {
+              name: 'veredicto',
+              description: 'Abre el formulario de resolución de comisaría'
+            }
+          ]);
+          console.log('✅ Comandos /embed y /veredicto registrados instantáneamente en el servidor.');
+        } else {
+          console.error('❌ No se pudo encontrar el servidor para registrar los comandos.');
         }
-      ]);
+          }
+    
       
       console.log('✅ Todos los comandos Slash antiguos han sido eliminados de Discord.');
     }
