@@ -244,7 +244,7 @@ client.once('ready', async () => {
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
-    if (interaction.commandName === 'msn') {
+      if (interaction.commandName === 'msn') {
     const member = interaction.member;
     const isDireccion = member && 'roles' in member && typeof member.roles.cache.has === 'function' 
       ? member.roles.cache.some(r => r.name.toLowerCase().includes('dirección') || r.name.toLowerCase().includes('direction'))
@@ -258,21 +258,23 @@ client.on('interactionCreate', async interaction => {
       return;
     }
 
-        const djs = require('discord.js');
+    const msn_djs = require('discord.js');
 
-    const channelSelect = new djs.ChannelSelectMenuBuilder()
+    const msn_channelSelect = new msn_djs.ChannelSelectMenuBuilder()
       .setCustomId('msn_select_channel')
       .setPlaceholder('Selecciona el canal de destino...')
-      .addChannelTypes(djs.ChannelType.GuildText);
+      .addChannelTypes(msn_djs.ChannelType.GuildText);
 
-    const row = new djs.ActionRowBuilder()
-      .addComponents(channelSelect);
+    const msn_row = new msn_djs.ActionRowBuilder()
+      .addComponents(msn_channelSelect);
 
     await interaction.reply({ 
       content: '📢 **[1/3]** ¿A qué canal quieres enviar este mensaje?', 
-      components: [row],
+      components: [msn_row],
       ephemeral: true 
     });
+      }
+  
       
       
   
