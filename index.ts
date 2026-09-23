@@ -598,7 +598,6 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       await interaction.editReply({ content: `✅ Reporte **${reportIdStr}** registrado con éxito.` });
       return;
     }
-
     // 2. Submit Defensa
     if (interaction.customId === 'modal_defensa_submit') {
       await interaction.deferReply({ ephemeral: true });
@@ -616,6 +615,14 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         return;
       }
 
+      // Buscar roles para las menciones
+      const guild = interaction.guild;
+      const roleGTCUP = guild?.roles.cache.find(r => r.name.toUpperCase() === 'GTCUP');
+      const roleComisario = guild?.roles.cache.find(r => r.name.toLowerCase().includes('comisario'));
+
+      const mentionGTCUP = roleGTCUP ? `<@&${roleGTCUP.id}>` : '@GTCUP';
+      const mentionComisario = roleComisario ? `<@&${roleComisario.id}>` : '@Comisario';
+
       const embedDefensa = new EmbedBuilder()
         .setColor('#00FF00')
         .setTitle(`🛡️ DEFENSA A REPORTE 🆔 ${reportIdStr}`)
@@ -628,17 +635,21 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         .setFooter({ text: 'REDLINE GT' })
         .setTimestamp();
 
-      // PUBLICAR EN CANAL PÚBLICO (1469654237519810687) -> EMBED VERDE COMPLETO
+      // PUBLICAR EN CANAL PÚBLICO (1469654237519810687) -> Mención GTCUP + EMBED VERDE
       try {
         const canalReportes = await client.channels.fetch(CHANNEL_REPORTES_ID) as TextChannel;
         if (canalReportes) {
-          await canalReportes.send({ embeds: [embedDefensa] });
+          await canalReportes.send({
+            content: `${mentionGTCUP}`,
+            embeds: [embedDefensa],
+            allowedMentions: { parse: ['roles', 'users'] }
+          });
         }
       } catch (e) {
         console.error('Error al publicar defensa en canal público:', e);
       }
 
-      // BUSCAR HILO CORRESPONDIENTE Y REENVIAR
+      // BUSCAR HILO CORRESPONDIENTE Y REENVIAR -> Mención Comisario + EMBED VERDE
       try {
         const canalHilos = await client.channels.fetch(CHANNEL_HILOS_ID) as TextChannel;
         if (canalHilos) {
@@ -651,7 +662,11 @@ client.on('interactionCreate', async (interaction: Interaction) => {
           }
 
           if (targetThread) {
-            await targetThread.send({ embeds: [embedDefensa] });
+            await targetThread.send({
+              content: `${mentionComisario}`,
+              embeds: [embedDefensa],
+              allowedMentions: { parse: ['roles', 'users'] }
+            });
           }
         }
       } catch (e) {
@@ -660,7 +675,8 @@ client.on('interactionCreate', async (interaction: Interaction) => {
 
       await interaction.editReply({ content: `✅ Defensa para el reporte **${reportIdStr}** enviada correctamente.` });
       return;
-    }
+           }
+    
 
     // Modal Step 1 /embed
     if (interaction.customId === 'modal_embed_step1') {
