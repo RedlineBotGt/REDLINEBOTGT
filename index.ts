@@ -212,7 +212,7 @@ client.once('ready', async () => {
   console.log(`🤖 Bot conectado como ${client.user?.tag}`);
   try {
     console.log('🧹 Limpiando comandos Slash antiguos...');
-          if (client.application) {
+      if (client.application) {
         const GUILD_ID = 'TU_ID_DE_SERVIDOR_AQUÍ'; // 👈 Pon aquí el ID numérico de tu servidor de Discord
         const guild = client.guilds.cache.get(GUILD_ID);
         
@@ -230,6 +230,13 @@ client.once('ready', async () => {
           console.log('✅ Comandos /embed y /veredicto registrados instantáneamente en el servidor.');
         } else {
           console.error('❌ No se pudo encontrar el servidor para registrar los comandos.');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error al registrar comandos Slash:', error);
+    }
+  });
+
         }
           }
     
