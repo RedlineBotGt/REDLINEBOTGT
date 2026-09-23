@@ -364,7 +364,166 @@ client.on('interactionCreate', async (interaction: Interaction) => {
     await startEmbedCreationProcess(interaction);
     return;
   }
+    // Slash Command /veredicto
+    if (interaction.isChatInputCommand() && interaction.commandName === 'veredicto') {
+      const member = interaction.member as GuildMember;
+      const isComisario = member?.roles.cache.some(r => r.name.toLowerCase().includes('comisario'));
+      const isDireccion = member?.roles.cache.some(r => r.name.toLowerCase().includes('direccion'));
 
+      if (!isComisario && !isDireccion) {
+        await interaction.reply({ content: '❌ Solo **Dirección** y **Comisarios** pueden gestionar veredictos.', ephemeral: true });
+        return;
+      }
+
+      const modal = new ModalBuilder()
+        .setCustomId('modal_veredicto_submit')
+        .setTitle('⚖️ RESOLUCIÓN DE COMISARÍA');
+
+      const inputId = new TextInputBuilder()
+        .setCustomId('ver_id')
+        .setLabel('🆔 Reporte (ej: 005)')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+      const inputReporto = new TextInputBuilder()
+        .setCustomId('ver_reporto')
+        .setLabel('Piloto que Reportó')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+      const inputReportado = new TextInputBuilder()
+        .setCustomId('ver_reportado')
+        .setLabel('Piloto Reportado')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+      const inputDecision = new TextInputBuilder()
+        .setCustomId('ver_decision')
+        .setLabel('Decisión')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true);
+
+      const inputSancion = new TextInputBuilder()
+        .setCustomId('ver_sancion')
+        .setLabel('Sanción Aplicada')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+      modal.addComponents(
+        new ActionRowBuilder<TextInputBuilder>().addComponents(inputId),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(inputReporto),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(inputReportado),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(inputDecision),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(inputSancion)
+      );
+
+      await interaction.showModal(modal);
+      return;
+    }    // Submit de Veredicto
+    if (interaction.isModalSubmit() && interaction.customId === 'modal_veredicto_submit') {
+      await interaction.deferReply({ ephemeral: true });
+
+      const rawId = interaction.fields.getTextInputValue('ver_id').trim();
+      const reportIdStr = rawId.padStart(3, '0');
+      const pilotoReporto = interaction.fields.getTextInputValue('ver_reporto');
+      const pilotoReportado = interaction.fields.getTextInputValue('ver_reportado');
+      const decision = interaction.fields.getTextInputValue('ver_decision');
+      const sancion = interaction.fields.getTextInputValue('ver_sancion');
+
+      const CHANNEL_VEREDICTOS_ID = '1463096144900001854';
+      const guild = interaction.guild;
+      const roleGTCUP = guild?.roles.cache.find(r => r.name.toUpperCase() === 'GTCUP');
+      const mentionGTCUP = roleGTCUP ? `<@&${roleGTCUP.id}>` : '@GTCUP';
+
+      const embedVeredicto = new EmbedBuilder()
+        .setColor('#0099FF') // Azul
+        .setTitle(`⚖️ RESOLUCIÓN DE COMISARÍA 🆔 ${reportIdStr}`)
+        .addFields(
+          { name: 'PILOTO QUE REPORTÓ', value: pilotoReporto, inline: true },
+          { name: 'PILOTO REPORTADO', value: pilotoReportado, inline: true },
+          { name: 'DECISIÓN', value: decision, inline: false },
+          { name: 'SANCIÓN', value: sancion, inline: false }
+        )
+        .setFooter({ text: 'REDLINE GT' })
+        .setTimestamp();
+
+      try {
+        const canalVeredictos = await client.channels.fetch(CHANNEL_VEREDICTOS_ID) as TextChannel;
+        if (canalVeredictos) {
+          await canalVeredictos.send({
+            content: `${mentionGTCUP}`,
+            embeds: [embedVeredicto],
+            allowedMentions: { parse: ['roles', 'users'] }
+          });
+          await interaction.editReply({ content: `✅ Veredicto para el reporte **${reportIdStr}** publicado con éxito en <#${CHANNEL_VEREDICTOS_ID}>.` });
+        } else {
+          await interaction.editReply({ content: '❌ No se pudo encontrar el canal de veredictos.' });
+        }
+      } catch (e) {
+        console.error('Error al publicar el veredicto:', e);
+        await interaction.editReply({ content: '❌ Ocurrió un error al intentar publicar el veredicto.' });
+      }
+      return;
+          }
+  
+
+    // Botón Veredicto (para cuando lo pulses en el Dashboard)
+    if (interaction.isButton() && interaction.customId === 'btn_abrir_veredicto') {
+      const member = interaction.member as GuildMember;
+      const isComisario = member?.roles.cache.some(r => r.name.toLowerCase().includes('comisario'));
+      const isDireccion = member?.roles.cache.some(r => r.name.toLowerCase().includes('direccion'));
+
+      if (!isComisario && !isDireccion) {
+        await interaction.reply({ content: '❌ Solo **Dirección** y **Comisarios** pueden gestionar veredictos.', ephemeral: true });
+        return;
+      }
+
+      const modal = new ModalBuilder()
+        .setCustomId('modal_veredicto_submit')
+        .setTitle('⚖️ RESOLUCIÓN DE COMISARÍA');
+
+      const inputId = new TextInputBuilder()
+        .setCustomId('ver_id')
+        .setLabel('🆔 Reporte (ej: 005)')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+      const inputReporto = new TextInputBuilder()
+        .setCustomId('ver_reporto')
+        .setLabel('Piloto que Reportó')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+      const inputReportado = new TextInputBuilder()
+        .setCustomId('ver_reportado')
+        .setLabel('Piloto Reportado')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+      const inputDecision = new TextInputBuilder()
+        .setCustomId('ver_decision')
+        .setLabel('Decisión')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true);
+
+      const inputSancion = new TextInputBuilder()
+        .setCustomId('ver_sancion')
+        .setLabel('Sanción Aplicada')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+      modal.addComponents(
+        new ActionRowBuilder<TextInputBuilder>().addComponents(inputId),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(inputReporto),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(inputReportado),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(inputDecision),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(inputSancion)
+      );
+
+      await interaction.showModal(modal);
+      return;
+    }
+  
   // Desplegable canal /embed
   if (interaction.isChannelSelectMenu() && interaction.customId === 'embed_select_channel') {
     creationSessions.set(interaction.user.id, { channelId: interaction.values[0] });
