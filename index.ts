@@ -319,7 +319,6 @@ client.on('messageCreate', async (message) => {
     }
     try { await message.delete(); } catch (_) {}
     await startEmbedCreationProcess(message);
-    
   }
 });
 // Flujo de creación de /embed
@@ -445,7 +444,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       return;
     }
 
-    // Modal Defensa
+    // Modal Defensa (CON LINK OPCIONAL)
     if (interaction.customId === 'btn_iniciar_defensa') {
       const modal = new ModalBuilder()
         .setCustomId('modal_defensa_submit')
@@ -465,7 +464,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
           new TextInputBuilder().setCustomId('def_explicacion').setLabel('BREVE EXPLICACIÓN').setStyle(TextInputStyle.Paragraph).setRequired(true)
         ),
         new ActionRowBuilder<TextInputBuilder>().addComponents(
-          new TextInputBuilder().setCustomId('def_enlace').setLabel('ENLACE DE VIDEO').setStyle(TextInputStyle.Short).setPlaceholder('https://...').setRequired(true)
+          new TextInputBuilder().setCustomId('def_enlace').setLabel('ENLACE DE VIDEO (OPCIONAL)').setStyle(TextInputStyle.Short).setPlaceholder('https://...').setRequired(false) // OPCIONAL
         )
       );
 
@@ -578,6 +577,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         .setFooter({ text: 'REDLINE GT' })
         .setTimestamp();
 
+      // Enviar EMBED Y MENCIÓN al canal público de reportes (1469654237519810687)
       try {
         const canalReportes = await client.channels.fetch(CHANNEL_REPORTES_ID) as TextChannel;
         if (canalReportes) {
@@ -587,9 +587,10 @@ client.on('interactionCreate', async (interaction: Interaction) => {
           });
         }
       } catch (e) {
-        console.error('Error al enviar reporte al canal:', e);
+        console.error('Error al enviar reporte al canal público:', e);
       }
 
+      // Crear Hilo en canal 1473834354529538079 y enviar EMBED Y MENCIÓN a Comisarios
       try {
         const canalHilos = await client.channels.fetch(CHANNEL_HILOS_ID) as TextChannel;
         if (canalHilos) {
@@ -619,9 +620,9 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       const pilotoDefensa = interaction.fields.getTextInputValue('def_defiende');
       const pilotoReporto = interaction.fields.getTextInputValue('def_reporto');
       const explicacion = interaction.fields.getTextInputValue('def_explicacion');
-      const enlace = interaction.fields.getTextInputValue('def_enlace');
+      const enlace = interaction.fields.getTextInputValue('def_enlace')?.trim() || 'No aportado';
 
-      if (!enlace.startsWith('http://') && !enlace.startsWith('https://')) {
+      if (enlace !== 'No aportado' && !enlace.startsWith('http://') && !enlace.startsWith('https://')) {
         await interaction.reply({ content: '❌ El enlace debe comenzar con `http://` o `https://`.', ephemeral: true });
         return;
       }
@@ -638,15 +639,17 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         .setFooter({ text: 'REDLINE GT' })
         .setTimestamp();
 
+      // A) Publicar en canal público de reportes (1469654237519810687)
       try {
         const canalReportes = await client.channels.fetch(CHANNEL_REPORTES_ID) as TextChannel;
         if (canalReportes) {
           await canalReportes.send({ embeds: [embedDefensa] });
         }
       } catch (e) {
-        console.error('Error al publicar defensa:', e);
+        console.error('Error al publicar defensa en canal público:', e);
       }
 
+      // B) Reenviar al Hilo correspondiente en el canal de hilos (1473834354529538079)
       try {
         const canalHilos = await client.channels.fetch(CHANNEL_HILOS_ID) as TextChannel;
         if (canalHilos) {
@@ -660,10 +663,12 @@ client.on('interactionCreate', async (interaction: Interaction) => {
 
           if (targetThread) {
             await targetThread.send({ embeds: [embedDefensa] });
+          } else {
+            console.warn(`No se encontró el hilo con el nombre "${reportIdStr}".`);
           }
         }
       } catch (e) {
-        console.error('Error al enviar defensa al hilo:', e);
+        console.error('Error al reenviar la defensa al hilo:', e);
       }
 
       await interaction.reply({ content: `✅ Defensa para el reporte **${reportIdStr}** enviada correctamente.`, ephemeral: true });
@@ -757,5 +762,5 @@ if (!token) {
   console.error('ERROR: No se ha encontrado la variable DISCORD_TOKEN');
 } else {
   client.login(token);
-      }
-          
+  }
+                                    
