@@ -244,11 +244,38 @@ client.once('ready', async () => {
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
-  if (interaction.commandName === 'msn') {
+    if (interaction.commandName === 'msn') {
     const member = interaction.member;
     const isDireccion = member && 'roles' in member && typeof member.roles.cache.has === 'function' 
       ? member.roles.cache.some(r => r.name.toLowerCase().includes('dirección') || r.name.toLowerCase().includes('direction'))
       : false;
+
+    if (!isDireccion) {
+      await interaction.reply({ 
+        content: '❌ Solo los miembros de **Dirección** pueden utilizar este comando.', 
+        ephemeral: true 
+      });
+      return;
+    }
+
+        const djs = require('discord.js');
+
+    const channelSelect = new djs.ChannelSelectMenuBuilder()
+      .setCustomId('msn_select_channel')
+      .setPlaceholder('Selecciona el canal de destino...')
+      .addChannelTypes(djs.ChannelType.GuildText);
+
+    const row = new djs.ActionRowBuilder()
+      .addComponents(channelSelect);
+
+    await interaction.reply({ 
+      content: '📢 **[1/3]** ¿A qué canal quieres enviar este mensaje?', 
+      components: [row],
+      ephemeral: true 
+    });
+      
+      
+  
 
     // Validación de permisos exclusiva para Dirección
     if (!isDireccion) {
