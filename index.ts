@@ -256,7 +256,38 @@ client.on('interactionCreate', async interaction => {
         content: '❌ Solo los miembros de **Dirección** pueden utilizar este comando.', 
         ephemeral: true 
       });
-      return;
+      return;  
+              const { ActionRowBuilder, ChannelSelectMenuBuilder, ChannelType } = require('discord.js');
+
+    const channelSelect = new ChannelSelectMenuBuilder()
+      .setCustomId('msn_select_channel')
+      .setPlaceholder('Selecciona el canal de destino...')
+      .addChannelTypes(ChannelType.GuildText);
+
+    const row = new ActionRowBuilder().addComponents(channelSelect);
+
+    await interaction.reply({ 
+      content: '📢 **[1/3]** ¿A qué canal quieres enviar este mensaje?', 
+      components: [row],
+      ephemeral: true 
+    });
+      
+      
+
+    // Creamos el menú desplegable para seleccionar canales de texto
+    const channelSelect = new ChannelSelectMenuBuilder()
+      .setCustomId('msn_select_channel')
+      .setPlaceholder('Selecciona el canal de destino...')
+      .addChannelTypes(ChannelType.GuildText);
+
+    const row = new ActionRowBuilder().addComponents(channelSelect);
+
+    await interaction.reply({ 
+      content: '📢 **[1/3]** ¿A qué canal quieres enviar este mensaje?', 
+      components: [row],
+      ephemeral: true 
+    });
+      
     }
 
     await interaction.reply({ 
