@@ -264,6 +264,13 @@ client.on('interactionCreate', async interaction => {
       .setPlaceholder('Selecciona el canal de destino...')
       .addChannelTypes(ChannelType.GuildText);
 
+        const { ActionRowBuilder, ChannelSelectMenuBuilder, ChannelType } = require('discord.js');
+
+    const channelSelect = new ChannelSelectMenuBuilder()
+      .setCustomId('msn_select_channel')
+      .setPlaceholder('Selecciona el canal de destino...')
+      .addChannelTypes(ChannelType.GuildText);
+
     const row = new ActionRowBuilder().addComponents(channelSelect);
 
     await interaction.reply({ 
@@ -271,6 +278,7 @@ client.on('interactionCreate', async interaction => {
       components: [row],
       ephemeral: true 
     });
+      
       
       
 
