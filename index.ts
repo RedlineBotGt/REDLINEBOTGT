@@ -225,6 +225,21 @@ client.once('ready', async () => {
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
+      // Comando por texto !veredicto
+    if (message.content.toLowerCase() === '!veredicto') {
+      const member = message.member;
+      const isComisario = member?.roles.cache.some(r => r.name.toLowerCase().includes('comisario'));
+      const isDireccion = member?.roles.cache.some(r => r.name.toLowerCase().includes('direccion'));
+
+      if (!isComisario && !isDireccion) {
+        await message.reply('❌ Solo **Dirección** y **Comisarios** pueden utilizar este comando.');
+        return;
+      }
+
+      await message.reply('⚖️ Para gestionar veredictos, utiliza el botón **VEREDICTOS** en el Dashboard o el comando `/veredicto`.');
+      return;
+    }
+  
   // 1. !setup-buzon
   if (message.content === '!setup-buzon') {
     if (!isDireccion(message.member)) {
