@@ -207,6 +207,19 @@ function parseDateTime(dateStr: string): number | null {
   
   return wantedLocalUtc - offsetMs;
 }
+// Limpieza de comandos Slash antiguos en Discord
+client.once('ready', async () => {
+  console.log(`🤖 Bot conectado como ${client.user?.tag}`);
+  try {
+    console.log('🧹 Limpiando comandos Slash antiguos...');
+    if (client.application) {
+      await client.application.commands.set([]);
+      console.log('✅ Todos los comandos Slash antiguos han sido eliminados de Discord.');
+    }
+  } catch (error) {
+    console.error('❌ Error al borrar comandos Slash:', error);
+  }
+});
 
 // Escuchador de Mensajes (!setup-buzon, !setup-reporte, !setup-defensa, !embed)
 client.on('messageCreate', async (message) => {
