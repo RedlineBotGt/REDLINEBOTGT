@@ -366,7 +366,26 @@ client.on('interactionCreate', async (interaction: Interaction) => {
   }
    client.once('ready', async () => {
   console.log(`🤖 Bot conectado como ${client.user?.tag}`);
+    // Registrar comandos Slash globalmente o en el servidor
   try {
+    if (client.application) {
+      await client.application.commands.set([
+        {
+          name: 'embed',
+          description: 'Crea o programa un embed'
+        },
+        {
+          name: 'veredicto',
+          description: 'Abre el formulario de resolución de comisaría'
+        }
+      ]);
+      console.log('✅ Comandos /embed y /veredicto registrados correctamente en Discord.');
+    }
+  } catch (error) {
+    console.error('❌ Error al registrar comandos Slash:', error);
+  }
+     
+     try {
     if (client.application) {
       await client.application.commands.set([
         {
