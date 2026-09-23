@@ -562,24 +562,40 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         .setFooter({ text: 'REDLINE GT' })
         .setTimestamp();
 
-      // PUBLICAR EN CANAL PÚBLICO (1469654237519810687) -> Mención GTCUP + EMBED AZUL COMPLETO
+      // PUBLICAR EN CANAL PÚBLICO (1469654237519810687) -> Mención GTCUP + EMBED AZUL
       try {
         const canalReportes = await client.channels.fetch(CHANNEL_REPORTES_ID) as TextChannel;
         if (canalReportes) {
           await canalReportes.send({
-            content: mentionGTCUP,
-            embeds: [embedReporte]
+            content: `${mentionGTCUP}`,
+            embeds: [embedReporte],
+            allowedMentions: { parse: ['roles', 'users'] }
           });
         }
       } catch (e) {
         console.error('Error al enviar reporte al canal público:', e);
       }
 
-      // CREAR HILO Y ENVIAR -> Mención Comisario + EMBED AZUL COMPLETO
+      // CREAR HILO Y ENVIAR -> Mención Comisario + EMBED AZUL
       try {
         const canalHilos = await client.channels.fetch(CHANNEL_HILOS_ID) as TextChannel;
         if (canalHilos) {
           const thread = await canalHilos.threads.create({
+            name: reportIdStr,
+            autoArchiveDuration: 1440,
+            reason: `Hilo para el reporte ${reportIdStr}`
+          });
+
+          await thread.send({
+            content: `${mentionComisario}`,
+            embeds: [embedReporte],
+            allowedMentions: { parse: ['roles', 'users'] }
+          });
+        }
+      } catch (e) {
+        console.error('Error al crear el hilo:', e);
+      }
+
             name: reportIdStr,
             autoArchiveDuration: 1440,
             reason: `Hilo para el reporte ${reportIdStr}`
