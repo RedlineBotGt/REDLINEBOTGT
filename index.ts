@@ -595,21 +595,6 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       } catch (e) {
         console.error('Error al crear el hilo:', e);
       }
-
-            name: reportIdStr,
-            autoArchiveDuration: 1440,
-            reason: `Hilo para el reporte ${reportIdStr}`
-          });
-
-          await thread.send({
-            content: mentionComisario,
-            embeds: [embedReporte]
-          });
-        }
-      } catch (e) {
-        console.error('Error al crear el hilo:', e);
-      }
-
       await interaction.editReply({ content: `✅ Reporte **${reportIdStr}** registrado con éxito.` });
       return;
     }
