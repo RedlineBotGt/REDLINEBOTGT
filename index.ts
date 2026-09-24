@@ -284,7 +284,9 @@ client.on('interactionCreate', async interaction => {
       await interaction.reply({ 
         content: '❌ Solo los miembros de **Dirección** pueden utilizar este comando.', 
         ephemeral: true 
-      
+       });
+    }
+  
     const row = new ActionRowBuilder().addComponents(channelSelect);
 
     await interaction.reply({ 
