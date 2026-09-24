@@ -1172,13 +1172,12 @@ async function showEmbedPreviewAndConfirm(interaction: any) {
   }
 }
 
-// Iniciar sesión
+  // Iniciar sesión
 const token = process.env.DISCORD_TOKEN;
 if (!token) {
-  console.error('ERROR: No se ha encontrado la variable DISCORD_TOKEN');
-    } else {
-      client.login(token);
-    }
-  }
-);
+  console.error('❌ ERROR: No se ha encontrado el token de Discord en las variables de entorno.');
+} else {
+  client.login(token);
+}
+  
 
