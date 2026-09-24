@@ -319,15 +319,22 @@ client.on('interactionCreate', async interaction => {
       components: [row],
       ephemeral: true 
     });
-      
-    }
+      const msn_channelSelect = new ChannelSelectMenuBuilder()
+      .setCustomId('msn_select_channel')
+      .setPlaceholder('Selecciona el canal de destino...')
+      .addChannelTypes(ChannelType.GuildText);
+
+    const msn_row = new ActionRowBuilder<ChannelSelectMenuBuilder>()
+      .addComponents(msn_channelSelect);
 
     await interaction.reply({ 
-      content: '📢 Iniciando asistente de mensajes de Dirección...', 
+      content: '📢 **[1/3]** ¿A qué canal quieres enviar este mensaje?', 
+      components: [msn_row],
       ephemeral: true 
     });
   }
 });
+
 
 
 // Escuchador de Mensajes (!setup-buzon, !setup-reporte, !setup-defensa, !embed)
