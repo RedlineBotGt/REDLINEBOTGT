@@ -1165,13 +1165,13 @@ async function showEmbedPreviewAndConfirm(interaction: any) {
     new ButtonBuilder().setCustomId('embed_cancel_btn').setLabel('CANCELAR').setStyle(ButtonStyle.Danger)
   );
 
-              if (interaction.isModalSubmit()) {
+                      if (interaction.isModalSubmit()) {
             await interaction.reply({ content: resumenInfo, components: [actionRow], ephemeral: true });
         } else {
             await interaction.update({ content: resumenInfo, components: [actionRow], ephemeral: true });
         }
     }
-}); // Cierra el escuchador principal
+}); // Cierra el escuchador principal de interacciones
 
 // Iniciar sesión
 const token = process.env.DISCORD_TOKEN;
@@ -1179,4 +1179,4 @@ if (!token) {
     console.error('❌ ERROR: No se ha encontrado el token.');
 } else {
     client.login(token);
-    }
+              }
