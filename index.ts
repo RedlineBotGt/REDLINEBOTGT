@@ -1178,5 +1178,6 @@ if (!token) {
   console.error('ERROR: No se ha encontrado la variable DISCORD_TOKEN');
 } else {
   client.login(token);
-                                   }
+                       }
 }         
+()});)
