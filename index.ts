@@ -272,6 +272,13 @@ client.on('interactionCreate', async interaction => {
       ephemeral: true 
     });
   }
+      if (interaction.isChannelSelectMenu() && interaction.customId === 'msn_select_channel') {
+        await interaction.update({
+            content: '✅ Canal seleccionado correctamente.',
+            components: []
+        });
+        return;
+      }
   
   
       
