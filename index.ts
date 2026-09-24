@@ -307,16 +307,16 @@ client.on('interactionCreate', async interaction => {
       
 
     // Creamos el menú desplegable para seleccionar canales de texto
-    const channelSelect = new ChannelSelectMenuBuilder()
+    const msn_channelSelect = new ChannelSelectMenuBuilder()
       .setCustomId('msn_select_channel')
       .setPlaceholder('Selecciona el canal de destino...')
       .addChannelTypes(ChannelType.GuildText);
 
-    const row = new ActionRowBuilder().addComponents(channelSelect);
+    const msn_row = new ActionRowBuilder().addComponents(channelSelect);
 
     await interaction.reply({ 
       content: '📢 **[1/3]** ¿A qué canal quieres enviar este mensaje?', 
-      components: [row],
+      components: [msn_row],
       ephemeral: true 
     });
       
