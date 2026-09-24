@@ -1176,8 +1176,9 @@ async function showEmbedPreviewAndConfirm(interaction: any) {
 const token = process.env.DISCORD_TOKEN;
 if (!token) {
   console.error('ERROR: No se ha encontrado la variable DISCORD_TOKEN');
-} else {
-  client.login(token);
-                       }
-}         
-)});
+    } else {
+      client.login(token);
+    }
+  }
+});
+
