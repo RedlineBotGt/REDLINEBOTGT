@@ -1180,5 +1180,5 @@ if (!token) {
       client.login(token);
     }
   }
-});
+);
 
