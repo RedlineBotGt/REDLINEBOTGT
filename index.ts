@@ -244,7 +244,7 @@ client.once('ready', async () => {
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
-      if (interaction.commandName === 'msn') {
+  if (interaction.commandName === 'msn') {
     const member = interaction.member;
     const isDireccion = member && 'roles' in member && typeof member.roles.cache.has === 'function' 
       ? member.roles.cache.some(r => r.name.toLowerCase().includes('dirección') || r.name.toLowerCase().includes('direction'))
@@ -258,14 +258,12 @@ client.on('interactionCreate', async interaction => {
       return;
     }
 
-    const msn_djs = require('discord.js');
-
-    const msn_channelSelect = new msn_djs.ChannelSelectMenuBuilder()
+    const msn_channelSelect = new ChannelSelectMenuBuilder()
       .setCustomId('msn_select_channel')
       .setPlaceholder('Selecciona el canal de destino...')
-      .addChannelTypes(msn_djs.ChannelType.GuildText);
+      .addChannelTypes(ChannelType.GuildText);
 
-    const msn_row = new msn_djs.ActionRowBuilder()
+    const msn_row = new ActionRowBuilder<ChannelSelectMenuBuilder>()
       .addComponents(msn_channelSelect);
 
     await interaction.reply({ 
@@ -273,7 +271,8 @@ client.on('interactionCreate', async interaction => {
       components: [msn_row],
       ephemeral: true 
     });
-      }
+  }
+  
   
       
       
