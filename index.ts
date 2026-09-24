@@ -1175,12 +1175,8 @@ async function showEmbedPreviewAndConfirm(interaction: any) {
 // Iniciar sesión
 const token = process.env.DISCORD_TOKEN;
 if (!token) {
-  console.error('❌ ERROR: No se ha encontrado el token de Discord en las variables de entorno.');
+  console.error('❌ ERROR: No se ha encontrado el token.');
 } else {
   client.login(token);
 }
-  }
-});
-      
   
-
