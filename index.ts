@@ -1171,13 +1171,16 @@ async function showEmbedPreviewAndConfirm(interaction: any) {
     await interaction.update({ content: resumenInfo, embeds: [previewEmbed], components: [actionRow] });
   }
 }
-
-  // Iniciar sesión
+  
+// Iniciar sesión
 const token = process.env.DISCORD_TOKEN;
 if (!token) {
   console.error('❌ ERROR: No se ha encontrado el token de Discord en las variables de entorno.');
 } else {
   client.login(token);
 }
+  }
+});
+      
   
 
