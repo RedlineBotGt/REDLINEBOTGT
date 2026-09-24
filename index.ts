@@ -284,22 +284,7 @@ client.on('interactionCreate', async interaction => {
       await interaction.reply({ 
         content: '❌ Solo los miembros de **Dirección** pueden utilizar este comando.', 
         ephemeral: true 
-      });
-      return;  
-              const { ActionRowBuilder, ChannelSelectMenuBuilder, ChannelType } = require('discord.js');
-
-    const channelSelect = new ChannelSelectMenuBuilder()
-      .setCustomId('msn_select_channel')
-      .setPlaceholder('Selecciona el canal de destino...')
-      .addChannelTypes(ChannelType.GuildText);
-
-        const { ActionRowBuilder, ChannelSelectMenuBuilder, ChannelType } = require('discord.js');
-
-    const channelSelect = new ChannelSelectMenuBuilder()
-      .setCustomId('msn_select_channel')
-      .setPlaceholder('Selecciona el canal de destino...')
-      .addChannelTypes(ChannelType.GuildText);
-
+      
     const row = new ActionRowBuilder().addComponents(channelSelect);
 
     await interaction.reply({ 
