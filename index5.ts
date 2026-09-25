@@ -383,80 +383,89 @@ if (
   );
 
   const session = msnSessions.get(interaction.user.id);
-    if (!session) {
-      await interaction.reply({
-        content: '❌ No encuentro el mensaje que estabas preparando.',
-        ephemeral: true,
-      });
 
-      return;
-    }
-
-    const daysText =
-      interaction.fields.getTextInputValue('redline_msn_days').trim();
-
-    const hoursText =
-      interaction.fields.getTextInputValue('redline_msn_hours').trim();
-
-    const days = daysText === '' ? 0 : Number(daysText);
-    const hours = hoursText === '' ? 0 : Number(hoursText);
-
-    if (
-      !Number.isInteger(days) ||
-      !Number.isInteger(hours) ||
-      days < 0 ||
-      hours < 0
-    ) {
-      await interaction.reply({
-        content:
-          '❌ Introduce únicamente números válidos en días y horas.',
-        ephemeral: true,
-      });
-
-      return;
-    }
-
-    if (days === 0 && hours === 0) {
-      await interaction.reply({
-        content:
-          '❌ Debes indicar al menos días u horas.',
-        ephemeral: true,
-      });
-
-      return;
-    }
-
-    const intervalHours =
-      (days * 24) + hours;
-
-        msnSessions.set(interaction.user.id, {
-      ...session,
-      days: days,
-      hours: hours,
-      intervalHours: intervalHours,
+  if (!session) {
+    await interaction.reply({
+      content:
+        '❌ No encuentro el mensaje que estabas preparando.',
+      ephemeral: true,
     });
 
-    const modal = new ModalBuilder()
-      .setCustomId('redline_msn_repetitions')
-      .setTitle('Número de envíos');
+    return;
+  }
 
-    const repetitionsInput = new TextInputBuilder()
-      .setCustomId('redline_msn_repetitions_value')
-      .setLabel('¿Cuántas veces quieres enviarlo?')
-      .setPlaceholder('Ejemplo: 5')
-      .setStyle(TextInputStyle.Short)
-      .setRequired(true)
-      .setMaxLength(3);
+  const daysText =
+    interaction.fields
+      .getTextInputValue('redline_msn_days')
+      .trim();
 
-    const repetitionsRow =
-      new ActionRowBuilder<TextInputBuilder>()
-        .addComponents(repetitionsInput);
+  const hoursText =
+    interaction.fields
+      .getTextInputValue('redline_msn_hours')
+      .trim();
 
-    modal.addComponents(repetitionsRow);
+  const days =
+    daysText === '' ? 0 : Number(daysText);
 
-    await interaction.showModal(modal);
+  const hours =
+    hoursText === '' ? 0 : Number(hoursText);
+
+  if (
+    !Number.isInteger(days) ||
+    !Number.isInteger(hours) ||
+    days < 0 ||
+    hours < 0
+  ) {
+    await interaction.reply({
+      content:
+        '❌ Introduce únicamente números válidos en días y horas.',
+      ephemeral: true,
+    });
 
     return;
+  }
+
+  if (days === 0 && hours === 0) {
+    await interaction.reply({
+      content:
+        '❌ Debes indicar al menos días u horas.',
+      ephemeral: true,
+    });
+
+    return;
+  }
+
+  const intervalHours =
+    (days * 24) + hours;
+
+  msnSessions.set(interaction.user.id, {
+    ...session,
+    days: days,
+    hours: hours,
+    intervalHours: intervalHours,
+  });
+
+  const repetitionsButton =
+    new ButtonBuilder()
+      .setCustomId('redline_msn_repetitions_button')
+      .setLabel('INDICAR NÚMERO DE ENVÍOS')
+      .setEmoji('🔢')
+      .setStyle(ButtonStyle.Primary);
+
+  const row =
+    new ActionRowBuilder<ButtonBuilder>()
+      .addComponents(repetitionsButton);
+
+  await interaction.reply({
+    content:
+      `📨 **Intervalo configurado**\n\n` +
+      `📅 Cada **${days} días y ${hours} horas**\n\n` +
+      `Ahora indica cuántas veces quieres enviar el mensaje:`,
+    components: [row],
+    ephemeral: true,
+  });
+
+  return;
   }
 
   // =========================
