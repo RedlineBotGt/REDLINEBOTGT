@@ -135,24 +135,40 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       channel.type === ChannelType.GuildText &&
       channel.viewable
   )
-  .first(25);
+  .sort((a, b) => a.position - b.position)
+  .map(channel => channel);
 
-const channelOptions = channels.map(channel => ({
-  label: channel.name,
-  value: channel.id,
-}));
+const channelOptions = channels
+  .slice(0, 25)
+  .map(channel => ({
+    label: channel.name,
+    value: channel.id,
+  }));
 
 const channelMenu = new StringSelectMenuBuilder()
-  .setCustomId('redline_msn_channel')
+  .setCustomId('redline_msn_channel:0')
   .setPlaceholder('Selecciona el canal de destino')
   .addOptions(channelOptions);
 
 const row = new ActionRowBuilder<StringSelectMenuBuilder>()
   .addComponents(channelMenu);
+const navigationRow = new ActionRowBuilder<ButtonBuilder>()
+  .addComponents(
+    new ButtonBuilder()
+      .setCustomId('redline_msn_channels_prev:0')
+      .setLabel('◀️ Anterior')
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(true),
+
+    new ButtonBuilder()
+      .setCustomId('redline_msn_channels_next:0')
+      .setLabel('Siguiente ▶️')
+      .setStyle(ButtonStyle.Secondary)
+  );      
 
 await interaction.reply({
   content: '📨 **/MSN**\n\nSelecciona el canal donde quieres publicar el mensaje:',
-  components: [row],
+  components: [row, navigationRow],
   ephemeral: true,
 });
 
@@ -717,15 +733,118 @@ modal.addComponents(
 
     return;
   }
-    
+  // =========================
+// PAGINACIÓN DE CANALES /MSN
+// =========================
+
+if (
+  interaction.isButton() &&
+  (
+    interaction.customId.startsWith('redline_msn_channels_next:') ||
+    interaction.customId.startsWith('redline_msn_channels_prev:')
+  )
+) {
+
+  const channels = interaction.guild?.channels.cache
+    .filter(
+      channel =>
+        channel.type === ChannelType.GuildText &&
+        channel.viewable
+    )
+    .sort((a, b) => a.position - b.position)
+    .map(channel => channel);
+
+  const currentPage = Number(
+    interaction.customId.split(':')[1]
+  );
+
+  const isNext =
+    interaction.customId.startsWith(
+      'redline_msn_channels_next:'
+    );
+
+  const newPage = isNext
+    ? currentPage + 1
+    : currentPage - 1;
+
+  const pageSize = 25;
+
+  const start = newPage * pageSize;
+
+  const pageChannels = channels.slice(
+    start,
+    start + pageSize
+  );
+
+  if (pageChannels.length === 0) {
+    return;
+  }
+
+  const channelOptions = pageChannels.map(channel => ({
+    label: channel.name,
+    value: channel.id,
+  }));
+
+  const channelMenu = new StringSelectMenuBuilder()
+    .setCustomId(
+      `redline_msn_channel:${newPage}`
+    )
+    .setPlaceholder(
+      'Selecciona el canal de destino'
+    )
+    .addOptions(channelOptions);
+
+  const row =
+    new ActionRowBuilder<StringSelectMenuBuilder>()
+      .addComponents(channelMenu);
+
+  const totalPages =
+    Math.ceil(channels.length / pageSize);
+
+  const navigationRow =
+    new ActionRowBuilder<ButtonBuilder>()
+      .addComponents(
+        new ButtonBuilder()
+          .setCustomId(
+            `redline_msn_channels_prev:${newPage}`
+          )
+          .setLabel('◀️ Anterior')
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(newPage === 0),
+
+        new ButtonBuilder()
+          .setCustomId(
+            `redline_msn_channels_next:${newPage}`
+          )
+          .setLabel('Siguiente ▶️')
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(
+            newPage >= totalPages - 1
+          )
+      );
+
+  await interaction.update({
+    content:
+      `📨 **/MSN**\n\n` +
+      `Selecciona el canal donde quieres publicar el mensaje:\n` +
+      `Página **${newPage + 1}/${totalPages}**`,
+    components: [
+      row,
+      navigationRow,
+    ],
+  });
+
+  return;
+}
+  
   // =========================
   // SELECTOR DE CANAL /MSN
   // =========================
 
   if (
     interaction.isStringSelectMenu() &&
-    interaction.customId === 'redline_msn_channel'
-  ) {
+    interaction.customId.startsWith('redline_msn_channel:')
+    ) {
 
     const selectedChannelId = interaction.values[0];
 
