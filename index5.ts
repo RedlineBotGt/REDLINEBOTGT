@@ -91,7 +91,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         .setColor(0xF39C12)
         .setTitle('REDLINE GT')
         .setDescription(
-          '¿Quieres hablar con el equipo de REDLINE GT?\n' +
+          '¿Quieres hablar con el equipo de Dirección?\n' +
           'Pincha en el botón naranja y te atenderemos lo antes posible.\n' +
           '¡Gracias!\n\n' +
           'Do you want to talk to the team?\n' +
