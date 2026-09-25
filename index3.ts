@@ -162,20 +162,82 @@ client.on('interactionCreate', async (interaction) => {
         const modal = new ModalBuilder()
             .setCustomId('modal_msn')
             .setTitle('Asistente /msn - Redacción de Mensaje');
+// Manejadores de comandos optimizados para respuesta instantánea (Sin tiempos de espera)
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
 
-        const inputTexto = new TextInputBuilder().setCustomId('msn_texto').setLabel('Texto del mensaje').setStyle(TextInputStyle.Paragraph).setRequired(true);
-        const inputCanal = new TextInputBuilder().setCustomId('msn_canal').setLabel('ID del Canal de destino').setStyle(TextInputStyle.Short).setRequired(true);
-        const inputRepeticion = new TextInputBuilder().setCustomId('msn_repetir').setLabel('¿Repetir? (Ej: No o Sí)').setStyle(TextInputStyle.Short).setRequired(true);
+    // Comando Slash /dash
+    if (interaction.commandName === 'dash') {
+        if (!client.verificarDireccion(interaction)) {
+            return interaction.reply({
+                content: '❌ Solo el rol **@Dirección** puede abrir el panel de control.',
+                ephemeral: true
+            });
+        }
+
+        const embedDash = new EmbedBuilder()
+            .setTitle('🏁 REDLINE GT - Panel de Control')
+            .setDescription('Selecciona una opción de gestión utilizando los botones inferiores:')
+            .setColor(0xED1C24);
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('btn_sugerencia').setLabel('Sugerencia').setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId('btn_reporte').setLabel('Reporte').setStyle(ButtonStyle.Danger),
+            new ButtonBuilder().setCustomId('btn_defensa').setLabel('Defensa').setStyle(ButtonStyle.Success)
+        );
+
+        return interaction.reply({ embeds: [embedDash], components: [row], ephemeral: true });
+    }
+
+    // Comando Slash /msn (Desplegable de canales instantáneo)
+    if (interaction.commandName === 'msn') {
+        if (!client.verificarDireccion(interaction)) {
+            return interaction.reply({ content: '❌ Solo el rol **@Dirección** puede usar este comando.', ephemeral: true });
+        }
+
+        const channelSelect = new ChannelSelectMenuBuilder()
+            .setCustomId('select_canal_msn')
+            .setPlaceholder('Selecciona el canal de destino...')
+            .setChannelTypes([ChannelType.GuildText])
+            .setMaxValues(1);
+
+        const row = new ActionRowBuilder().addComponents(channelSelect);
+
+        return interaction.reply({
+            content: '📢 **[1/3]** ¿A qué canal quieres enviar este mensaje?',
+            components: [row],
+            ephemeral: true
+        });
+    }
+
+    // Comando Slash /veredicto (Modal de respuesta instantánea)
+    if (interaction.commandName === 'veredicto') {
+        if (!client.verificarDireccion(interaction)) {
+            return interaction.reply({ content: '❌ Solo el rol **@Dirección** puede usar este comando.', ephemeral: true });
+        }
+
+        const modal = new ModalBuilder()
+            .setCustomId('modal_veredicto')
+            .setTitle('Emitir Veredicto');
+
+        const inputId = new TextInputBuilder().setCustomId('ver_id').setLabel('🆔 de Reporte').setStyle(TextInputStyle.Short).setRequired(true);
+        const inputReporta = new TextInputBuilder().setCustomId('ver_reporta').setLabel('Piloto que Reporta').setStyle(TextInputStyle.Short).setRequired(true);
+        const inputDefiende = new TextInputBuilder().setCustomId('ver_defiende').setLabel('Piloto que Defiende').setStyle(TextInputStyle.Short).setRequired(true);
+        const inputNota = new TextInputBuilder().setCustomId('ver_nota').setLabel('Nota (Markdown soportado)').setStyle(TextInputStyle.Paragraph).setRequired(true);
+        const inputSancion = new TextInputBuilder().setCustomId('ver_sancion').setLabel('Sanción').setStyle(TextInputStyle.Short).setRequired(true);
 
         modal.addComponents(
-            new ActionRowBuilder().addComponents(inputTexto),
-            new ActionRowBuilder().addComponents(inputCanal),
-            new ActionRowBuilder().addComponents(inputRepeticion)
+            new ActionRowBuilder().addComponents(inputId),
+            new ActionRowBuilder().addComponents(inputReporta),
+            new ActionRowBuilder().addComponents(inputDefiende),
+            new ActionRowBuilder().addComponents(inputNota),
+            new ActionRowBuilder().addComponents(inputSancion)
         );
 
         return interaction.showModal(modal);
     }
 });
+            
             
   // Manejadores de Botones del Panel (/dash)
 client.on('interactionCreate', async interaction => {
