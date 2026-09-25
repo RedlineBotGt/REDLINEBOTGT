@@ -558,6 +558,55 @@ await interaction.reply({
     return;
   }
   // =========================
+// BOTÓN NÚMERO DE ENVÍOS /MSN
+// =========================
+
+if (
+  interaction.isButton() &&
+  interaction.customId === 'redline_msn_repetitions_button'
+) {
+
+  const session =
+    msnSessions.get(interaction.user.id);
+
+  if (!session) {
+    await interaction.reply({
+      content:
+        '❌ No encuentro el mensaje que estabas preparando.',
+      ephemeral: true,
+    });
+
+    return;
+  }
+
+  const modal = new ModalBuilder()
+    .setCustomId('redline_msn_repetitions')
+    .setTitle('Número de envíos');
+
+  const repetitionsInput =
+    new TextInputBuilder()
+      .setCustomId(
+        'redline_msn_repetitions_value'
+      )
+      .setLabel(
+        '¿Cuántas veces quieres enviarlo?'
+      )
+      .setPlaceholder('Ejemplo: 5')
+      .setStyle(TextInputStyle.Short)
+      .setRequired(true)
+      .setMaxLength(3);
+
+  const repetitionsRow =
+    new ActionRowBuilder<TextInputBuilder>()
+      .addComponents(repetitionsInput);
+
+  modal.addComponents(repetitionsRow);
+
+  await interaction.showModal(modal);
+
+  return;
+    }
+  // =========================
   // BOTÓN CANCELAR /MSN
   // =========================
 
