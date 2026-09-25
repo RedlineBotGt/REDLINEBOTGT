@@ -180,7 +180,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         ],
       });
 
-      await channel.send(
+            await channel.send(
         `Hola ${user}, de qué quieres hablar? El equipo de ${guild.name} te atenderá enseguida`
       );
 
@@ -189,5 +189,16 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         ephemeral: true,
       });
 
-      console.log(
-       
+      console.log(`📩 Canal de sugerencia creado: ${channel.name} para ${user.tag}`);
+    } catch (error) {
+      console.error("❌ Error al crear el canal de sugerencia:", error);
+
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({
+          content: "❌ Ha ocurrido un error al crear tu canal de sugerencia.",
+          ephemeral: true,
+        });
+      }
+    }
+  }
+});
