@@ -25,7 +25,6 @@ const PORT = process.env.PORT || 3000;
 const msnSessions = new Map();
 
 const client = new Client({
-const client = new Client({
   intents: [GatewayIntentBits.Guilds],
 });
 
