@@ -639,8 +639,13 @@ await interaction.reply({
     });
 
     await channel.send({
-      content: session.messageText,
-    });
+  content: session.messageText,
+  ...(session.imageUrl
+    ? {
+        files: [session.imageUrl],
+      }
+    : {}),
+});
 
     // =========================
     // PROGRAMAR REPETICIONES
