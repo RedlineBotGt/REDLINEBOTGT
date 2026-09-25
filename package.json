@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
-    "start": "npx tsx index4.ts"
+    "start": "npx tsx index5.ts"
   },
   "dependencies": {
     "discord.js": "^14.14.1",
