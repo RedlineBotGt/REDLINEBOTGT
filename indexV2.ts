@@ -28,7 +28,7 @@ client.once('ready', async () => {
     try {
         console.log('Registrando comandos de barra...');
         await rest.put(
-            Routes.applicationCommands(process.env.CLIENT_ID!),
+            Routes.applicationCommands(1551200581190942862),
             { body: commands },
         );
         console.log('Comandos de barra registrados correctamente.');
