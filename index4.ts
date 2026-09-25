@@ -1,6 +1,5 @@
 import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ChannelSelectMenuBuilder, ChannelType } from 'discord.js';
 
-// 1. Inicializar el cliente con los intents necesarios
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -12,10 +11,19 @@ const client = new Client({
     ]
 });
 
-// 2. Evento cuando el bot enciende
-client.once('ready', () => {
+// 2. Evento cuando el bot enciende (¡Mete la limpieza aquí dentro!)
+client.once('ready', async () => {
     console.log(`✅ Bot conectado como ${client.user?.tag}`);
+
+    try {
+        // Borra TODOS los comandos globales antiguos de golpe
+        await client.application?.commands.set([]);
+        console.log('🧹 Todos los comandos antiguos han sido eliminados de Discord.');
+    } catch (error) {
+        console.error('❌ Error al limpiar los comandos:', error);
+    }
 });
+
 
 // 3. Manejador único de interacciones (Comandos y Botones)
 client.on('interactionCreate', async (interaction) => {
