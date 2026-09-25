@@ -294,7 +294,7 @@ await interaction.update({
 
     return;
   }
-    // =========================
+  // =========================
   // BOTÓN SÍ - REPETIR /MSN
   // =========================
 
@@ -671,8 +671,13 @@ await interaction.reply({
           try {
 
             await channel.send({
-              content: session.messageText,
-            });
+  content: session.messageText,
+  ...(session.imageUrl
+    ? {
+        files: [session.imageUrl],
+      }
+    : {}),
+});
 
             console.log(
               `📨 /msn repetición ${i}/${totalRepeats} enviada en ${channel.name}`
