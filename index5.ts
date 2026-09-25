@@ -249,6 +249,61 @@ await interaction.reply({
 
     return;
   }
+    // =========================
+  // BOTÓN SÍ - REPETIR /MSN
+  // =========================
+
+  if (
+    interaction.isButton() &&
+    interaction.customId.startsWith('redline_msn_repeat_yes:')
+  ) {
+
+    const session = msnSessions.get(interaction.user.id);
+
+    if (!session) {
+      await interaction.reply({
+        content: '❌ No encuentro el mensaje que estabas preparando.',
+        ephemeral: true,
+      });
+
+      return;
+    }
+
+    const modal = new ModalBuilder()
+      .setCustomId('redline_msn_interval')
+      .setTitle('Repetir mensaje');
+
+    const daysInput = new TextInputBuilder()
+      .setCustomId('redline_msn_days')
+      .setLabel('¿Cada cuántos días?')
+      .setPlaceholder('Ejemplo: 1')
+      .setStyle(TextInputStyle.Short)
+      .setRequired(true)
+      .setMaxLength(3);
+
+    const hoursInput = new TextInputBuilder()
+      .setCustomId('redline_msn_hours')
+      .setLabel('¿Y cuántas horas adicionales?')
+      .setPlaceholder('Ejemplo: 6')
+      .setStyle(TextInputStyle.Short)
+      .setRequired(true)
+      .setMaxLength(2);
+
+    const daysRow = new ActionRowBuilder<TextInputBuilder>()
+      .addComponents(daysInput);
+
+    const hoursRow = new ActionRowBuilder<TextInputBuilder>()
+      .addComponents(hoursInput);
+
+    modal.addComponents(
+      daysRow,
+      hoursRow
+    );
+
+    await interaction.showModal(modal);
+
+    return;
+      }
   
   // =========================
   // SELECTOR DE CANAL /MSN
