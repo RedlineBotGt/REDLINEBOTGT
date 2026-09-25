@@ -362,23 +362,38 @@ modal.addComponents(
     const intervalHours =
       (days * 24) + hours;
 
-    msnSessions.set(interaction.user.id, {
+        msnSessions.set(interaction.user.id, {
       ...session,
       days: days,
       hours: hours,
       intervalHours: intervalHours,
     });
 
-    await interaction.reply({
-      content:
-        `🔁 **Repetición configurada**\n\n` +
-        `Cada **${days} días y ${hours} horas**.\n\n` +
-        `Ahora vamos a indicar cuántas veces quieres enviarlo.`,
-      ephemeral: true,
-    });
+    const modal = new ModalBuilder()
+      .setCustomId('redline_msn_repetitions')
+      .setTitle('Número de envíos');
+
+    const repetitionsInput = new TextInputBuilder()
+      .setCustomId('redline_msn_repetitions_value')
+      .setLabel('¿Cuántas veces quieres enviarlo?')
+      .setPlaceholder('Ejemplo: 5')
+      .setStyle(TextInputStyle.Short)
+      .setRequired(true)
+      .setMaxLength(3);
+
+    const repetitionsRow =
+      new ActionRowBuilder<TextInputBuilder>()
+        .addComponents(repetitionsInput);
+
+    modal.addComponents(repetitionsRow);
+
+    await interaction.showModal(modal);
 
     return;
   }
+
+  // =========================
+  // SELECTOR DE CANAL /MSN
   
   // =========================
   // SELECTOR DE CANAL /MSN
