@@ -101,13 +101,36 @@ client.on('interactionCreate', async (interaction) => {
         });
     }
 
-    // Comando Slash /veredicto (Restringido a @Dirección)
+    // Manejadores de los comandos /veredicto y /msn (Optimizados para respuesta instantánea)
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
+
+    if (interaction.commandName === 'dash') {
+        if (!client.verificarDireccion(interaction)) {
+            return interaction.reply({
+                content: '❌ Solo el rol **@Dirección** puede abrir el panel de control.',
+                ephemeral: true
+            });
+        }
+
+        const embedDash = new EmbedBuilder()
+            .setTitle('🏁 REDLINE GT - Panel de Control')
+            .setDescription('Selecciona una opción de gestión utilizando los botones inferiores:')
+            .setColor(0xED1C24);
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('btn_sugerencia').setLabel('Sugerencia').setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId('btn_reporte').setLabel('Reporte').setStyle(ButtonStyle.Danger),
+            new ButtonBuilder().setCustomId('btn_defensa').setLabel('Defensa').setStyle(ButtonStyle.Success)
+        );
+
+        return interaction.reply({ embeds: [embedDash], components: [row], ephemeral: true });
+    }
+
     if (interaction.commandName === 'veredicto') {
         if (!client.verificarDireccion(interaction)) {
             return interaction.reply({ content: '❌ Solo el rol **@Dirección** puede usar este comando.', ephemeral: true });
         }
-
-        const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 
         const modal = new ModalBuilder()
             .setCustomId('modal_veredicto')
@@ -127,16 +150,13 @@ client.on('interactionCreate', async (interaction) => {
             new ActionRowBuilder().addComponents(inputSancion)
         );
 
-        await interaction.showModal(modal);
+        return interaction.showModal(modal);
     }
 
-    // Comando Slash /msn (Asistente interactivo de redacción)
     if (interaction.commandName === 'msn') {
         if (!client.verificarDireccion(interaction)) {
             return interaction.reply({ content: '❌ Solo el rol **@Dirección** puede usar este comando.', ephemeral: true });
         }
-
-        const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 
         const modal = new ModalBuilder()
             .setCustomId('modal_msn')
@@ -152,9 +172,10 @@ client.on('interactionCreate', async (interaction) => {
             new ActionRowBuilder().addComponents(inputRepeticion)
         );
 
-        await interaction.showModal(modal);
+        return interaction.showModal(modal);
     }
 });
+            
   // Manejadores de Botones del Panel (/dash)
 client.on('interactionCreate', async interaction => {
     if (interaction.isButton()) {
