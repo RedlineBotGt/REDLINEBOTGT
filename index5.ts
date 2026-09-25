@@ -85,6 +85,7 @@ client.once('ready', async () => {
 client.on('interactionCreate', async (interaction: Interaction) => {
 
   // =========================
+    // =========================
   // COMANDO /SUGERENCIA
   // =========================
 
@@ -117,28 +118,27 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       );
     }
 
-    
+    // =========================
+    // COMANDO /MSN
+    // =========================
 
-  // =========================
-  // COMANDO /MSN
-  // =========================
+    if (interaction.commandName === 'msn') {
 
-  if (interaction.commandName === 'msn') {
+      await interaction.reply({
+        content: '📝 Preparando el sistema de mensajes...',
+        ephemeral: true,
+      });
 
-    await interaction.reply({
-      content: '📝 Preparando el sistema de mensajes...',
-      ephemeral: true,
-    });
+      console.log(
+        `📨 /msn ejecutado por ${interaction.user.tag}`
+      );
 
-    console.log(
-      `📨 /msn ejecutado por ${interaction.user.tag}`
-    );
+      return;
+    }
 
     return;
   }
-return;
-  }
-  
+
   // =========================
   // BOTÓN SUGERENCIA
   // =========================
