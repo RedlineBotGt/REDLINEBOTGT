@@ -219,9 +219,37 @@ await interaction.reply({
     return;
   }
 
+    // =========================
+  // BOTÓN NO - REPETIR /MSN
   // =========================
-  // SELECTOR DE CANAL /MSN
-  // =========================
+
+  if (
+    interaction.isButton() &&
+    interaction.customId.startsWith('redline_msn_repeat_no:')
+  ) {
+
+    const session = msnSessions.get(interaction.user.id);
+
+    if (!session) {
+      await interaction.reply({
+        content: '❌ No encuentro el mensaje que estabas preparando.',
+        ephemeral: true,
+      });
+
+      return;
+    }
+
+    await interaction.update({
+      content:
+        '📨 **Vista previa del mensaje**\n\n' +
+        session.messageText +
+        '\n\n¿Quieres enviarlo?',
+      components: [],
+    });
+
+    return;
+  }
+  
   // =========================
   // SELECTOR DE CANAL /MSN
   // =========================
