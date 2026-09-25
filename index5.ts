@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+
 import {
   Client,
   GatewayIntentBits,
@@ -14,6 +15,7 @@ import {
   PermissionFlagsBits,
   Interaction,
 } from 'discord.js';
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -35,11 +37,14 @@ const clientId = '1551200581190942862';
 if (!token) {
   console.error('Falta la variable DISCORD_TOKEN');
   process.exit(1);
-              }
+}
+
 const commands = [
   new SlashCommandBuilder()
     .setName('sugerencia')
-    .setDescription('Publica el panel para contactar con el equipo de REDLINE GT'),
+    .setDescription(
+      'Publica el panel para contactar con el equipo'
+    ),
 ].map(command => command.toJSON());
 
 const suggestionButton = new ButtonBuilder()
@@ -47,24 +52,36 @@ const suggestionButton = new ButtonBuilder()
   .setLabel('SUGERENCIA')
   .setEmoji('🟧')
   .setStyle(ButtonStyle.Secondary);
+
 client.once('ready', async () => {
-  console.log(`REDLINE BOT GT conectado como ${client.user?.tag}`);
+  console.log(
+    `REDLINE BOT GT conectado como ${client.user?.tag}`
+  );
 
   try {
-    const rest = new REST({ version: '10' }).setToken(token);
+    const rest = new REST({ version: '10' })
+      .setToken(token);
 
     await rest.put(
       Routes.applicationCommands(clientId),
       { body: commands }
     );
 
-    console.log('✅ Comando /sugerencia registrado globalmente.');
+    console.log(
+      '✅ Comando /sugerencia registrado globalmente.'
+    );
   } catch (error) {
-    console.error('❌ Error registrando /sugerencia:', error);
+    console.error(
+      '❌ Error registrando comandos:',
+      error
+    );
   }
 });
-
 client.on('interactionCreate', async (interaction: Interaction) => {
+
+  // =========================
+  // COMANDO /SUGERENCIA
+  // =========================
 
   if (interaction.isChatInputCommand()) {
 
@@ -77,7 +94,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
           '¿Quieres hablar con el equipo de REDLINE GT?\n' +
           'Pincha en el botón naranja y te atenderemos lo antes posible.\n' +
           '¡Gracias!\n\n' +
-          'Do you want to talk to the REDLINE GT team?\n' +
+          'Do you want to talk to the team?\n' +
           'Click the orange button and we will assist you as soon as possible.\n' +
           'Thank you!'
         );
@@ -98,6 +115,10 @@ client.on('interactionCreate', async (interaction: Interaction) => {
     return;
   }
 
+  // =========================
+  // BOTÓN SUGERENCIA
+  // =========================
+
   if (interaction.isButton()) {
 
     if (interaction.customId !== 'redline_sugerencia') {
@@ -106,7 +127,8 @@ client.on('interactionCreate', async (interaction: Interaction) => {
 
     if (!interaction.guild) {
       await interaction.reply({
-        content: '❌ Este botón solo puede utilizarse dentro de un servidor.',
+        content:
+          '❌ Este botón solo puede utilizarse dentro de un servidor.',
         ephemeral: true,
       });
 
@@ -122,14 +144,14 @@ client.on('interactionCreate', async (interaction: Interaction) => {
 
     if (!direccionRole) {
       await interaction.reply({
-        content: '❌ No encuentro el rol @Dirección en este servidor.',
+        content:
+          '❌ No encuentro el rol @Dirección en este servidor.',
         ephemeral: true,
       });
 
       return;
-    }
-
-    const existingChannel = guild.channels.cache.find(
+        }
+        const existingChannel = guild.channels.cache.find(
       channel =>
         channel.type === ChannelType.GuildText &&
         channel.topic === `REDLINE_SUGERENCIA:${user.id}`
@@ -137,7 +159,8 @@ client.on('interactionCreate', async (interaction: Interaction) => {
 
     if (existingChannel) {
       await interaction.reply({
-        content: `Ya tienes una sugerencia abierta: ${existingChannel}`,
+        content:
+          `Ya tienes una sugerencia abierta: ${existingChannel}`,
         ephemeral: true,
       });
 
@@ -180,7 +203,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         ],
       });
 
-            await channel.send(
+      await channel.send(
         `Hola ${user}, de qué quieres hablar? El equipo de ${guild.name} te atenderá enseguida`
       );
 
@@ -189,16 +212,25 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         ephemeral: true,
       });
 
-      console.log(`📩 Canal de sugerencia creado: ${channel.name} para ${user.tag}`);
+      console.log(
+        `📩 Canal de sugerencia creado: ${channel.name} para ${user.tag}`
+      );
+
     } catch (error) {
-      console.error("❌ Error al crear el canal de sugerencia:", error);
+      console.error(
+        '❌ Error al crear el canal de sugerencia:',
+        error
+      );
 
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
-          content: "❌ Ha ocurrido un error al crear tu canal de sugerencia.",
+          content:
+            '❌ Ha ocurrido un error al crear tu canal de sugerencia.',
           ephemeral: true,
         });
       }
     }
   }
 });
+
+client.login(token);
