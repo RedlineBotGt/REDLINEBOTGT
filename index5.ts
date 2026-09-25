@@ -180,11 +180,16 @@ await interaction.reply({
       interaction.customId.split(':')[1];
 
     const messageText =
-      interaction.fields.getTextInputValue('redline_msn_text');
-    msnSessions.set(interaction.user.id, {
-      channelId: selectedChannelId,
-      messageText: messageText,
-    });
+  interaction.fields.getTextInputValue('redline_msn_text');
+
+const imageUrl =
+  interaction.fields.getTextInputValue('redline_msn_image').trim();
+
+msnSessions.set(interaction.user.id, {
+  channelId: selectedChannelId,
+  messageText: messageText,
+  imageUrl: imageUrl,
+});
     const repeatYesButton = new ButtonBuilder()
       .setCustomId(
         `redline_msn_repeat_yes:${selectedChannelId}`
