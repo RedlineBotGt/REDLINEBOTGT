@@ -304,6 +304,81 @@ modal.addComponents(
 
     return;
       }
+
+    // =========================
+  // MODAL INTERVALO /MSN
+  // =========================
+
+  if (
+    interaction.isModalSubmit() &&
+    interaction.customId === 'redline_msn_interval'
+  ) {
+
+    const session = msnSessions.get(interaction.user.id);
+
+    if (!session) {
+      await interaction.reply({
+        content: '❌ No encuentro el mensaje que estabas preparando.',
+        ephemeral: true,
+      });
+
+      return;
+    }
+
+    const daysText =
+      interaction.fields.getTextInputValue('redline_msn_days').trim();
+
+    const hoursText =
+      interaction.fields.getTextInputValue('redline_msn_hours').trim();
+
+    const days = daysText === '' ? 0 : Number(daysText);
+    const hours = hoursText === '' ? 0 : Number(hoursText);
+
+    if (
+      !Number.isInteger(days) ||
+      !Number.isInteger(hours) ||
+      days < 0 ||
+      hours < 0
+    ) {
+      await interaction.reply({
+        content:
+          '❌ Introduce únicamente números válidos en días y horas.',
+        ephemeral: true,
+      });
+
+      return;
+    }
+
+    if (days === 0 && hours === 0) {
+      await interaction.reply({
+        content:
+          '❌ Debes indicar al menos días u horas.',
+        ephemeral: true,
+      });
+
+      return;
+    }
+
+    const intervalHours =
+      (days * 24) + hours;
+
+    msnSessions.set(interaction.user.id, {
+      ...session,
+      days: days,
+      hours: hours,
+      intervalHours: intervalHours,
+    });
+
+    await interaction.reply({
+      content:
+        `🔁 **Repetición configurada**\n\n` +
+        `Cada **${days} días y ${hours} horas**.\n\n` +
+        `Ahora vamos a indicar cuántas veces quieres enviarlo.`,
+      ephemeral: true,
+    });
+
+    return;
+  }
   
   // =========================
   // SELECTOR DE CANAL /MSN
