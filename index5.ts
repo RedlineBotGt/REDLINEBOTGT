@@ -499,7 +499,7 @@ await interaction.reply({
     return;
   }
 
-      // =========================
+  // =========================
   // BOTÓN EDITAR /MSN
   // =========================
 
@@ -547,7 +547,7 @@ await interaction.reply({
     return;
   }
 
-      // =========================
+  // =========================
   // BOTÓN ENVIAR /MSN
   // =========================
 
@@ -568,7 +568,7 @@ await interaction.reply({
       return;
     }
 
-    const channel =
+        const channel =
       interaction.guild?.channels.cache.get(
         session.channelId
       );
@@ -577,7 +577,15 @@ await interaction.reply({
       !channel ||
       channel.type !== ChannelType.GuildText
     ) {
-      
+
+      await interaction.reply({
+        content:
+          '❌ No encuentro el canal de destino.',
+        ephemeral: true,
+      });
+
+      return;
+    }
 
     await interaction.update({
       content:
@@ -589,51 +597,54 @@ await interaction.reply({
       content: session.messageText,
     });
 
-  
+    // =========================
+    // PROGRAMAR REPETICIONES
+    // =========================
 
-// =========================
-// PROGRAMAR REPETICIONES
-// =========================
+    if (
+      session.repetitions &&
+      session.repetitions > 1 &&
+      session.intervalHours
+    ) {
 
-if (
-  session.repetitions &&
-  session.repetitions > 1 &&
-  session.intervalHours
-) {
+      const totalRepeats =
+        session.repetitions - 1;
 
-  const totalRepeats = session.repetitions - 1;
+      for (
+        let i = 1;
+        i <= totalRepeats;
+        i++
+      ) {
 
-  for (let i = 1; i <= totalRepeats; i++) {
+        setTimeout(async () => {
 
-    setTimeout(async () => {
+          try {
 
-      try {
+            await channel.send({
+              content: session.messageText,
+            });
 
-        await channel.send({
-          content: session.messageText,
-        });
+            console.log(
+              `📨 /msn repetición ${i}/${totalRepeats} enviada en ${channel.name}`
+            );
 
-        console.log(
-          `📨 /msn repetición ${i}/${totalRepeats} enviada en ${channel.name}`
-        );
+          } catch (error) {
 
-      } catch (error) {
+            console.error(
+              `❌ Error enviando repetición ${i} de /msn:`,
+              error
+            );
 
-        console.error(
-          `❌ Error enviando repetición ${i} de /msn:`,
-          error
-        );
+          }
 
+        }, session.intervalHours * 60 * 60 * 1000 * i);
       }
+    }
 
-    }, session.intervalHours * 60 * 60 * 1000 * i);
+    msnSessions.delete(interaction.user.id);
+
+    return;
   }
-}
-
-msnSessions.delete(interaction.user.id);
-
-return;
-      }
     
   // =========================
   // SELECTOR DE CANAL /MSN
