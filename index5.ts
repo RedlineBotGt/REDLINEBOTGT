@@ -1,7 +1,19 @@
 import 'dotenv/config';
 import express from 'express';
-import { Client, GatewayIntentBits } from 'discord.js';
-
+import {
+  Client,
+  GatewayIntentBits,
+  REST,
+  Routes,
+  SlashCommandBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  EmbedBuilder,
+  ChannelType,
+  PermissionFlagsBits,
+  Interaction,
+} from 'discord.js';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -9,7 +21,6 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds],
 });
 
-// Health check para Render / Uptime Robot
 app.get('/health', (_req, res) => {
   res.status(200).send('REDLINE BOT GT OK');
 });
@@ -18,15 +29,165 @@ app.listen(PORT, () => {
   console.log(`Health server activo en el puerto ${PORT}`);
 });
 
-client.once('ready', () => {
-  console.log(`REDLINE BOT GT conectado como ${client.user?.tag}`);
-});
-
 const token = process.env.DISCORD_TOKEN;
+const clientId = '1551200581190942862';
 
 if (!token) {
   console.error('Falta la variable DISCORD_TOKEN');
   process.exit(1);
-}
+              }
+const commands = [
+  new SlashCommandBuilder()
+    .setName('sugerencia')
+    .setDescription('Publica el panel para contactar con el equipo de REDLINE GT'),
+].map(command => command.toJSON());
 
-client.login(token);
+const suggestionButton = new ButtonBuilder()
+  .setCustomId('redline_sugerencia')
+  .setLabel('SUGERENCIA')
+  .setEmoji('🟧')
+  .setStyle(ButtonStyle.Secondary);
+client.once('ready', async () => {
+  console.log(`REDLINE BOT GT conectado como ${client.user?.tag}`);
+
+  try {
+    const rest = new REST({ version: '10' }).setToken(token);
+
+    await rest.put(
+      Routes.applicationCommands(clientId),
+      { body: commands }
+    );
+
+    console.log('✅ Comando /sugerencia registrado globalmente.');
+  } catch (error) {
+    console.error('❌ Error registrando /sugerencia:', error);
+  }
+});
+
+client.on('interactionCreate', async (interaction: Interaction) => {
+
+  if (interaction.isChatInputCommand()) {
+
+    if (interaction.commandName === 'sugerencia') {
+
+      const embed = new EmbedBuilder()
+        .setColor(0xF39C12)
+        .setTitle('REDLINE GT')
+        .setDescription(
+          '¿Quieres hablar con el equipo de REDLINE GT?\n' +
+          'Pincha en el botón naranja y te atenderemos lo antes posible.\n' +
+          '¡Gracias!\n\n' +
+          'Do you want to talk to the REDLINE GT team?\n' +
+          'Click the orange button and we will assist you as soon as possible.\n' +
+          'Thank you!'
+        );
+
+      const row = new ActionRowBuilder<ButtonBuilder>()
+        .addComponents(suggestionButton);
+
+      await interaction.reply({
+        embeds: [embed],
+        components: [row],
+      });
+
+      console.log(
+        `📨 Panel de sugerencias publicado en ${interaction.guild?.name}`
+      );
+    }
+
+    return;
+  }
+
+  if (interaction.isButton()) {
+
+    if (interaction.customId !== 'redline_sugerencia') {
+      return;
+    }
+
+    if (!interaction.guild) {
+      await interaction.reply({
+        content: '❌ Este botón solo puede utilizarse dentro de un servidor.',
+        ephemeral: true,
+      });
+
+      return;
+    }
+
+    const guild = interaction.guild;
+    const user = interaction.user;
+
+    const direccionRole = guild.roles.cache.find(
+      role => role.name === 'Dirección'
+    );
+
+    if (!direccionRole) {
+      await interaction.reply({
+        content: '❌ No encuentro el rol @Dirección en este servidor.',
+        ephemeral: true,
+      });
+
+      return;
+    }
+
+    const existingChannel = guild.channels.cache.find(
+      channel =>
+        channel.type === ChannelType.GuildText &&
+        channel.topic === `REDLINE_SUGERENCIA:${user.id}`
+    );
+
+    if (existingChannel) {
+      await interaction.reply({
+        content: `Ya tienes una sugerencia abierta: ${existingChannel}`,
+        ephemeral: true,
+      });
+
+      return;
+    }
+
+    try {
+      const channel = await guild.channels.create({
+        name: `sugerencia-${user.username}`
+          .toLowerCase()
+          .replace(/[^a-z0-9-_]/g, '-'),
+
+        type: ChannelType.GuildText,
+
+        topic: `REDLINE_SUGERENCIA:${user.id}`,
+
+        permissionOverwrites: [
+          {
+            id: guild.roles.everyone.id,
+            deny: [PermissionFlagsBits.ViewChannel],
+          },
+          {
+            id: user.id,
+            allow: [
+              PermissionFlagsBits.ViewChannel,
+              PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.ReadMessageHistory,
+              PermissionFlagsBits.AttachFiles,
+            ],
+          },
+          {
+            id: direccionRole.id,
+            allow: [
+              PermissionFlagsBits.ViewChannel,
+              PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.ReadMessageHistory,
+              PermissionFlagsBits.AttachFiles,
+            ],
+          },
+        ],
+      });
+
+      await channel.send(
+        `Hola ${user}, de qué quieres hablar? El equipo de ${guild.name} te atenderá enseguida`
+      );
+
+      await interaction.reply({
+        content: `✅ Canal creado: ${channel}`,
+        ephemeral: true,
+      });
+
+      console.log(
+       
