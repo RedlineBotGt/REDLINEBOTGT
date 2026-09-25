@@ -166,7 +166,7 @@ await interaction.reply({
 
     return;
   }
-    // =========================
+  // =========================
   // MODAL DE MENSAJE /MSN
   // =========================
 
@@ -180,7 +180,10 @@ await interaction.reply({
 
     const messageText =
       interaction.fields.getTextInputValue('redline_msn_text');
-
+    msnSessions.set(interaction.user.id, {
+      channelId: selectedChannelId,
+      messageText: messageText,
+    });
     const repeatYesButton = new ButtonBuilder()
       .setCustomId(
         `redline_msn_repeat_yes:${selectedChannelId}`
