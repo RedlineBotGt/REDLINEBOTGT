@@ -13,7 +13,6 @@ import {
   EmbedBuilder,
   ChannelType,
   PermissionFlagsBits,
-  Interaction,
 } from 'discord.js';
 
 const app = express();
