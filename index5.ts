@@ -228,7 +228,7 @@ await interaction.reply({
     return;
   }
 
-    // =========================
+  // =========================
   // BOTÓN NO - REPETIR /MSN
   // =========================
 
@@ -524,7 +524,8 @@ await interaction.reply({
   components: [previewRow],
   ephemeral: true,
 });
-
+    return;
+  }
   // =========================
   // BOTÓN CANCELAR /MSN
   // =========================
@@ -571,21 +572,38 @@ await interaction.reply({
       )
       .setTitle('Editar mensaje');
 
-    const messageInput = new TextInputBuilder()
-      .setCustomId('redline_msn_text')
-      .setLabel('Mensaje')
-      .setPlaceholder(
-        'Escribe aquí el mensaje que quieres enviar...'
-      )
-      .setStyle(TextInputStyle.Paragraph)
-      .setRequired(true)
-      .setMaxLength(4000);
+const messageInput = new TextInputBuilder()
+  .setCustomId('redline_msn_text')
+  .setLabel('Mensaje')
+  .setPlaceholder(
+    'Escribe aquí el mensaje que quieres enviar...'
+  )
+  .setStyle(TextInputStyle.Paragraph)
+  .setRequired(true)
+  .setMaxLength(2000);
 
-    const modalRow =
-      new ActionRowBuilder<TextInputBuilder>()
-        .addComponents(messageInput);
+const imageInput = new TextInputBuilder()
+  .setCustomId('redline_msn_image')
+  .setLabel('Enlace de imagen o archivo (opcional)')
+  .setPlaceholder(
+    'Pega aquí el enlace de la imagen o archivo...'
+  )
+  .setStyle(TextInputStyle.Short)
+  .setRequired(false)
+  .setMaxLength(1000);
 
-    modal.addComponents(modalRow);
+const messageRow =
+  new ActionRowBuilder<TextInputBuilder>()
+    .addComponents(messageInput);
+
+const imageRow =
+  new ActionRowBuilder<TextInputBuilder>()
+    .addComponents(imageInput);
+
+modal.addComponents(
+  messageRow,
+  imageRow
+);
 
     await interaction.showModal(modal);
 
