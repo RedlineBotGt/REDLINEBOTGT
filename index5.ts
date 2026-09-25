@@ -210,10 +210,13 @@ msnSessions.set(interaction.user.id, {
         repeatNoButton
       );
 
-    await interaction.reply({
-      content:
-        '📨 **Mensaje preparado**\n\n' +
-        '¿Quieres repetir este mensaje?',
+await interaction.reply({
+  content:
+    '📨 **Mensaje preparado**\n\n' +
+    (imageUrl
+      ? '🖼️ Se ha añadido un enlace de imagen/archivo.\n\n'
+      : '🖼️ Sin imagen/archivo.\n\n') +
+    '¿Quieres repetir este mensaje?',
       components: [row],
       ephemeral: true,
     });
