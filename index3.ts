@@ -61,129 +61,7 @@ client.once('ready', async () => {
         console.error('Error al registrar los comandos:', error);
     }
 });
-   // Manejador del comando /dash (Panel de control con botones)
-client.on('interactionCreate', async (interaction) => {
-    if (!interaction.isChatInputCommand()) return;
-
-    if (interaction.commandName === 'dash') {
-        if (!client.verificarDireccion(interaction)) {
-            return interaction.reply({
-                content: '❌ Solo el rol **@Dirección** puede abrir el panel de control.',
-                ephemeral: true
-            });
-        }
-
-        const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
-
-        const embedDash = new EmbedBuilder()
-            .setTitle('🏁 REDLINE GT - Panel de Control')
-            .setDescription('Selecciona una opción de gestión utilizando los botones inferiores:')
-            .setColor(0xED1C24);
-
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId('btn_sugerencia')
-                .setLabel('Sugerencia')
-                .setStyle(ButtonStyle.Primary),
-            new ButtonBuilder()
-                .setCustomId('btn_reporte')
-                .setLabel('Reporte')
-                .setStyle(ButtonStyle.Danger),
-            new ButtonBuilder()
-                .setCustomId('btn_defensa')
-                .setLabel('Defensa')
-                .setStyle(ButtonStyle.Success)
-        );
-
-        await interaction.reply({
-            embeds: [embedDash],
-            components: [row],
-            ephemeral: true
-        });
-    }
-
-    // Manejadores de los comandos /veredicto y /msn (Optimizados para respuesta instantánea)
-client.on('interactionCreate', async (interaction) => {
-    if (!interaction.isChatInputCommand()) return;
-
-    if (interaction.commandName === 'dash') {
-        if (!client.verificarDireccion(interaction)) {
-            return interaction.reply({
-                content: '❌ Solo el rol **@Dirección** puede abrir el panel de control.',
-                ephemeral: true
-            });
-        }
-
-        const embedDash = new EmbedBuilder()
-            .setTitle('🏁 REDLINE GT - Panel de Control')
-            .setDescription('Selecciona una opción de gestión utilizando los botones inferiores:')
-            .setColor(0xED1C24);
-
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('btn_sugerencia').setLabel('Sugerencia').setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId('btn_reporte').setLabel('Reporte').setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId('btn_defensa').setLabel('Defensa').setStyle(ButtonStyle.Success)
-        );
-
-        return interaction.reply({ embeds: [embedDash], components: [row], ephemeral: true });
-    }
-
-    if (interaction.commandName === 'veredicto') {
-        if (!client.verificarDireccion(interaction)) {
-            return interaction.reply({ content: '❌ Solo el rol **@Dirección** puede usar este comando.', ephemeral: true });
-        }
-
-        const modal = new ModalBuilder()
-            .setCustomId('modal_veredicto')
-            .setTitle('Emitir Veredicto');
-
-        const inputId = new TextInputBuilder().setCustomId('ver_id').setLabel('🆔 de Reporte').setStyle(TextInputStyle.Short).setRequired(true);
-        const inputReporta = new TextInputBuilder().setCustomId('ver_reporta').setLabel('Piloto que Reporta').setStyle(TextInputStyle.Short).setRequired(true);
-        const inputDefiende = new TextInputBuilder().setCustomId('ver_defiende').setLabel('Piloto que Defiende').setStyle(TextInputStyle.Short).setRequired(true);
-        const inputNota = new TextInputBuilder().setCustomId('ver_nota').setLabel('Nota (Markdown soportado)').setStyle(TextInputStyle.Paragraph).setRequired(true);
-        const inputSancion = new TextInputBuilder().setCustomId('ver_sancion').setLabel('Sanción').setStyle(TextInputStyle.Short).setRequired(true);
-
-        modal.addComponents(
-            new ActionRowBuilder().addComponents(inputId),
-            new ActionRowBuilder().addComponents(inputReporta),
-            new ActionRowBuilder().addComponents(inputDefiende),
-            new ActionRowBuilder().addComponents(inputNota),
-            new ActionRowBuilder().addComponents(inputSancion)
-        );
-
-        return interaction.showModal(modal);
-    }
-
-    if (interaction.commandName === 'msn') {
-        if (!client.verificarDireccion(interaction)) {
-            return interaction.reply({ content: '❌ Solo el rol **@Dirección** puede usar este comando.', ephemeral: true });
-        }
-
-        const modal = new ModalBuilder()
-            .setCustomId('modal_msn')
-            .setTitle('Asistente /msn - Redacción de Mensaje');
-// Manejadores de comandos optimizados para respuesta instantánea (Sin tiempos de espera)
-client.on('interactionCreate', async (interaction) => {
-    if (!interaction.isChatInputCommand()) return;
-
-    // Comando Slash /dash
-    if (interaction.commandName === 'dash') {
-        if (!client.verificarDireccion(interaction)) {
-            return interaction.reply({
-                content: '❌ Solo el rol **@Dirección** puede abrir el panel de control.',
-                ephemeral: true
-            });
-        }
-
-        const embedDash = new EmbedBuilder()
-            .setTitle('🏁 REDLINE GT - Panel de Control')
-            .setDescription('Selecciona una opción de gestión utilizando los botones inferiores:')
-            .setColor(0xED1C24);
-
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('btn_sugerencia').setLabel('Sugerencia').setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId('btn_reporte').setLabel('Reporte').setStyle(ButtonStyle.Danger),
-// Manejadores de comandos limpios y ultra rápidos (Sin bloqueos)
+  // Manejadores de comandos limpios y ultra rápidos (Sin bloqueos)
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
 
@@ -243,6 +121,13 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.showModal(modal);
     }
 });
+
+// Manejadores de Botones del Panel (/dash)
+client.on('interactionCreate', async interaction => {
+    if (!interaction.isButton()) return;
+    // (Aquí continúa tu lógica de botones si la tienes más abajo)
+});
+            
 
 // Manejadores de Botones del Panel (/dash)
 client.on('interactionCreate', async interaction => {
