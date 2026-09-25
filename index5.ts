@@ -163,6 +163,59 @@ await interaction.reply({
 
     return;
   }
+    // =========================
+  // MODAL DE MENSAJE /MSN
+  // =========================
+
+  if (
+    interaction.isModalSubmit() &&
+    interaction.customId.startsWith('redline_msn_message:')
+  ) {
+
+    const selectedChannelId =
+      interaction.customId.split(':')[1];
+
+    const messageText =
+      interaction.fields.getTextInputValue('redline_msn_text');
+
+    const repeatYesButton = new ButtonBuilder()
+      .setCustomId(
+        `redline_msn_repeat_yes:${selectedChannelId}`
+      )
+      .setLabel('SÍ')
+      .setStyle(ButtonStyle.Success);
+
+    const repeatNoButton = new ButtonBuilder()
+      .setCustomId(
+        `redline_msn_repeat_no:${selectedChannelId}`
+      )
+      .setLabel('NO')
+      .setStyle(ButtonStyle.Danger);
+
+    const row = new ActionRowBuilder<ButtonBuilder>()
+      .addComponents(
+        repeatYesButton,
+        repeatNoButton
+      );
+
+    await interaction.reply({
+      content:
+        '📨 **Mensaje preparado**\n\n' +
+        '¿Quieres repetir este mensaje?',
+      components: [row],
+      ephemeral: true,
+    });
+
+    console.log(
+      `📨 Mensaje preparado para /msn por ${interaction.user.tag}`
+    );
+
+    return;
+  }
+
+  // =========================
+  // SELECTOR DE CANAL /MSN
+  // =========================
   // =========================
   // SELECTOR DE CANAL /MSN
   // =========================
