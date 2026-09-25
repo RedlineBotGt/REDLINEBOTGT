@@ -14,6 +14,9 @@ import {
   ChannelType,
   PermissionFlagsBits,
   StringSelectMenuBuilder,
+  ModalBuilder,
+TextInputBuilder,
+TextInputStyle,
 } from 'discord.js';
 
 const app = express();
