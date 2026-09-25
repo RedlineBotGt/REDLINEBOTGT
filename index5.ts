@@ -368,17 +368,21 @@ modal.addComponents(
     return;
       }
 
-  // =========================
-  // MODAL INTERVALO /MSN
-  // =========================
+// =========================
+// MODAL INTERVALO /MSN
+// =========================
 
-  if (
-    interaction.isModalSubmit() &&
-    interaction.customId === 'redline_msn_interval'
-  ) {
-console.log('🟢 MODAL INTERVALO /MSN RECIBIDO');
-    const session = msnSessions.get(interaction.user.id);
+if (
+  interaction.isModalSubmit() &&
+  interaction.customId === 'redline_msn_interval'
+) {
 
+  console.log(
+    '🟢 INTERVALO RECIBIDO:',
+    interaction.customId
+  );
+
+  const session = msnSessions.get(interaction.user.id);
     if (!session) {
       await interaction.reply({
         content: '❌ No encuentro el mensaje que estabas preparando.',
