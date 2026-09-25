@@ -119,6 +119,26 @@ client.on('interactionCreate', async (interaction: Interaction) => {
 
     return;
   }
+      return;
+  }
+
+  // =========================
+  // COMANDO /MSN
+  // =========================
+
+  if (interaction.commandName === 'msn') {
+
+    await interaction.reply({
+      content: '📝 Preparando el sistema de mensajes...',
+      ephemeral: true,
+    });
+
+    console.log(
+      `📨 /msn ejecutado por ${interaction.user.tag}`
+    );
+
+    return;
+  }
 
   // =========================
   // BOTÓN SUGERENCIA
