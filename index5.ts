@@ -44,6 +44,12 @@ const commands = [
     .setDescription(
       'Publica el panel para contactar con el equipo'
     ),
+
+  new SlashCommandBuilder()
+    .setName('msn')
+    .setDescription(
+      'Envía un mensaje personalizado a un canal'
+    ),
 ].map(command => command.toJSON());
 
 const suggestionButton = new ButtonBuilder()
