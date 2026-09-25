@@ -166,6 +166,7 @@ await interaction.reply({
 
     return;
   }
+  
   // =========================
   // MODAL DE MENSAJE /MSN
   // =========================
@@ -718,12 +719,28 @@ const messageInput = new TextInputBuilder()
   )
   .setStyle(TextInputStyle.Paragraph)
   .setRequired(true)
-  .setMaxLength(4000);
+  .setMaxLength(2000);
 
-const modalRow = new ActionRowBuilder<TextInputBuilder>()
+const imageInput = new TextInputBuilder()
+  .setCustomId('redline_msn_image')
+  .setLabel('Enlace de imagen o archivo (opcional)')
+  .setPlaceholder(
+    'Pega aquí el enlace de la imagen o archivo...'
+  )
+  .setStyle(TextInputStyle.Short)
+  .setRequired(false)
+  .setMaxLength(1000);
+
+const messageRow = new ActionRowBuilder<TextInputBuilder>()
   .addComponents(messageInput);
 
-modal.addComponents(modalRow);
+const imageRow = new ActionRowBuilder<TextInputBuilder>()
+  .addComponents(imageInput);
+
+modal.addComponents(
+  messageRow,
+  imageRow
+);
 
 await interaction.showModal(modal);
 
