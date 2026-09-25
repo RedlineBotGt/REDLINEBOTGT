@@ -132,7 +132,10 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       const channels = interaction.guild?.channels.cache
   .filter(
     channel =>
-      channel.type === ChannelType.GuildText &&
+      (
+        channel.type === ChannelType.GuildText ||
+        channel.type === ChannelType.GuildAnnouncement
+      ) &&
       channel.viewable
   )
   .sort((a, b) => a.position - b.position)
@@ -747,10 +750,13 @@ if (
 
   const channels = interaction.guild?.channels.cache
     .filter(
-      channel =>
-        channel.type === ChannelType.GuildText &&
-        channel.viewable
-    )
+  channel =>
+    (
+      channel.type === ChannelType.GuildText ||
+      channel.type === ChannelType.GuildAnnouncement
+    ) &&
+    channel.viewable
+)
     .sort((a, b) => a.position - b.position)
     .map(channel => channel);
 
