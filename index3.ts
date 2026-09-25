@@ -183,6 +183,20 @@ client.on('interactionCreate', async (interaction) => {
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('btn_sugerencia').setLabel('Sugerencia').setStyle(ButtonStyle.Primary),
             new ButtonBuilder().setCustomId('btn_reporte').setLabel('Reporte').setStyle(ButtonStyle.Danger),
+// Manejadores de comandos limpios y ultra rápidos (Sin bloqueos)
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
+
+    // Comando Slash /dash
+    if (interaction.commandName === 'dash') {
+        const embedDash = new EmbedBuilder()
+            .setTitle('🏁 REDLINE GT - Panel de Control')
+            .setDescription('Selecciona una opción de gestión utilizando los botones inferiores:')
+            .setColor(0xED1C24);
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('btn_sugerencia').setLabel('Sugerencia').setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId('btn_reporte').setLabel('Reporte').setStyle(ButtonStyle.Danger),
             new ButtonBuilder().setCustomId('btn_defensa').setLabel('Defensa').setStyle(ButtonStyle.Success)
         );
 
@@ -191,10 +205,6 @@ client.on('interactionCreate', async (interaction) => {
 
     // Comando Slash /msn (Desplegable de canales instantáneo)
     if (interaction.commandName === 'msn') {
-        if (!client.verificarDireccion(interaction)) {
-            return interaction.reply({ content: '❌ Solo el rol **@Dirección** puede usar este comando.', ephemeral: true });
-        }
-
         const channelSelect = new ChannelSelectMenuBuilder()
             .setCustomId('select_canal_msn')
             .setPlaceholder('Selecciona el canal de destino...')
@@ -212,10 +222,6 @@ client.on('interactionCreate', async (interaction) => {
 
     // Comando Slash /veredicto (Modal de respuesta instantánea)
     if (interaction.commandName === 'veredicto') {
-        if (!client.verificarDireccion(interaction)) {
-            return interaction.reply({ content: '❌ Solo el rol **@Dirección** puede usar este comando.', ephemeral: true });
-        }
-
         const modal = new ModalBuilder()
             .setCustomId('modal_veredicto')
             .setTitle('Emitir Veredicto');
@@ -237,11 +243,13 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.showModal(modal);
     }
 });
-            
-            
-  // Manejadores de Botones del Panel (/dash)
+
+// Manejadores de Botones del Panel (/dash)
 client.on('interactionCreate', async interaction => {
-    if (interaction.isButton()) {
+    if (!interaction.isButton()) return;
+    // (Aquí continúa tu lógica de botones si la tienes más abajo)
+});
+            
         // 1. Botón de Sugerencia
         if (interaction.customId === 'btn_sugerencia') {
             try {
