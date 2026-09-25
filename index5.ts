@@ -187,16 +187,32 @@ await interaction.reply({
       return;
     }
 
-    await interaction.reply({
-      content:
-        `📨 Canal seleccionado: ${selectedChannel}\n\n` +
-        `Ahora vamos a preparar el mensaje.`,
-      ephemeral: true,
-    });
+   const modal = new ModalBuilder()
+  .setCustomId(`redline_msn_message:${selectedChannel.id}`)
+  .setTitle('Enviar mensaje');
 
-    console.log(
-      `📨 Canal seleccionado para /msn: ${selectedChannel.name} por ${interaction.user.tag}`
-    );
+const messageInput = new TextInputBuilder()
+  .setCustomId('redline_msn_text')
+  .setLabel('Mensaje')
+  .setPlaceholder(
+    'Escribe aquí el mensaje que quieres enviar...'
+  )
+  .setStyle(TextInputStyle.Paragraph)
+  .setRequired(true)
+  .setMaxLength(4000);
+
+const modalRow = new ActionRowBuilder<TextInputBuilder>()
+  .addComponents(messageInput);
+
+modal.addComponents(modalRow);
+
+await interaction.showModal(modal);
+
+console.log(
+  `📨 Canal seleccionado para /msn: ${selectedChannel.name} por ${interaction.user.tag}`
+);
+
+return; 
 
     return;
   }
