@@ -578,7 +578,7 @@ await interaction.reply({
 });
     return;
   }
-  // =========================
+// =========================
 // BOTÓN NÚMERO DE ENVÍOS /MSN
 // =========================
 
@@ -795,7 +795,7 @@ setTimeout(async () => {
 
   try {
 
-    await channel.send({
+        await channel.send({
       content: processMsnMentions(
         interaction.guild,
         session.messageText
@@ -809,12 +809,6 @@ setTimeout(async () => {
           }
         : {}),
     });
-  ...(session.imageUrl
-    ? {
-        files: [session.imageUrl],
-      }
-    : {}),
-});
 
             console.log(
               `📨 /msn repetición ${i}/${totalRepeats} enviada en ${channel.name}`
