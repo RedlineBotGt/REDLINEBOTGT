@@ -21,7 +21,10 @@ TextInputStyle,
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+// Memoria temporal de los procesos /msn
+const msnSessions = new Map();
 
+const client = new Client({
 const client = new Client({
   intents: [GatewayIntentBits.Guilds],
 });
