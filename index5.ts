@@ -123,10 +123,32 @@ client.on('interactionCreate', async (interaction: Interaction) => {
 
     if (interaction.commandName === 'msn') {
 
-      await interaction.reply({
-        content: '📝 Preparando el sistema de mensajes...',
-        ephemeral: true,
-      });
+      const channels = interaction.guild?.channels.cache
+  .filter(
+    channel =>
+      channel.type === ChannelType.GuildText &&
+      channel.viewable
+  )
+  .first(25);
+
+const channelOptions = channels.map(channel => ({
+  label: channel.name,
+  value: channel.id,
+}));
+
+const channelMenu = new StringSelectMenuBuilder()
+  .setCustomId('redline_msn_channel')
+  .setPlaceholder('Selecciona el canal de destino')
+  .addOptions(channelOptions);
+
+const row = new ActionRowBuilder<StringSelectMenuBuilder>()
+  .addComponents(channelMenu);
+
+await interaction.reply({
+  content: '📨 **/MSN**\n\nSelecciona el canal donde quieres publicar el mensaje:',
+  components: [row],
+  ephemeral: true,
+});
 
       console.log(
         `📨 /msn ejecutado por ${interaction.user.tag}`
