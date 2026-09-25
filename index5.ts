@@ -89,7 +89,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
 
       const embed = new EmbedBuilder()
         .setColor(0xF39C12)
-        .setTitle('REDLINE GT')
+        .setTitle('BUZÓN DE SUGERENCIAS')
         .setDescription(
           '¿Quieres hablar con el equipo de Dirección?\n' +
           'Pincha en el botón naranja y te atenderemos lo antes posible.\n' +
