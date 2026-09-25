@@ -23,6 +23,27 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 // Memoria temporal de los procesos /msn
 const msnSessions = new Map();
+function processMsnMentions(guild, text) {
+
+  let processedText = text;
+
+  const roles = [...guild.roles.cache.values()]
+    .filter(role => role.name !== '@everyone')
+    .sort((a, b) => b.name.length - a.name.length);
+
+  for (const role of roles) {
+
+    processedText = processedText.replace(
+      new RegExp(
+        `@${role.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?!\\w)`,
+        'g'
+      ),
+      `<@&${role.id}>`
+    );
+  }
+
+  return processedText;
+}
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds],
@@ -737,7 +758,13 @@ modal.addComponents(
     });
 
     await channel.send({
-  content: session.messageText,
+  content: processMsnMentions(
+    interaction.guild,
+    session.messageText
+  ),
+  allowedMentions: {
+    parse: ['users', 'roles', 'everyone'],
+  },
   ...(session.imageUrl
     ? {
         files: [session.imageUrl],
@@ -764,12 +791,24 @@ modal.addComponents(
         i++
       ) {
 
-        setTimeout(async () => {
+setTimeout(async () => {
 
-          try {
+  try {
 
-            await channel.send({
-  content: session.messageText,
+    await channel.send({
+      content: processMsnMentions(
+        interaction.guild,
+        session.messageText
+      ),
+      allowedMentions: {
+        parse: ['users', 'roles', 'everyone'],
+      },
+      ...(session.imageUrl
+        ? {
+            files: [session.imageUrl],
+          }
+        : {}),
+    });
   ...(session.imageUrl
     ? {
         files: [session.imageUrl],
