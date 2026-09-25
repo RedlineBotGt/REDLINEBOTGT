@@ -160,7 +160,43 @@ await interaction.reply({
 
     return;
   }
+  // =========================
+  // SELECTOR DE CANAL /MSN
+  // =========================
 
+  if (
+    interaction.isStringSelectMenu() &&
+    interaction.customId === 'redline_msn_channel'
+  ) {
+
+    const selectedChannelId = interaction.values[0];
+
+    const selectedChannel = interaction.guild?.channels.cache.get(
+      selectedChannelId
+    );
+
+    if (!selectedChannel || selectedChannel.type !== ChannelType.GuildText) {
+      await interaction.reply({
+        content: '❌ No se ha podido encontrar el canal seleccionado.',
+        ephemeral: true,
+      });
+
+      return;
+    }
+
+    await interaction.reply({
+      content:
+        `📨 Canal seleccionado: ${selectedChannel}\n\n` +
+        `Ahora vamos a preparar el mensaje.`,
+      ephemeral: true,
+    });
+
+    console.log(
+      `📨 Canal seleccionado para /msn: ${selectedChannel.name} por ${interaction.user.tag}`
+    );
+
+    return;
+  }
   // =========================
   // BOTÓN SUGERENCIA
   // =========================
