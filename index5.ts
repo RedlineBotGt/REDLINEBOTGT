@@ -438,16 +438,47 @@ modal.addComponents(
       repetitions: repetitions,
     });
 
-    await interaction.reply({
-      content:
-        `✅ Configuración guardada.\n\n` +
-        `📨 Envíos totales: **${repetitions}**\n` +
-        `🔁 Intervalo: **${session.days} días y ${session.hours} horas**`,
-      ephemeral: true,
-    });
+    const sendButton = new ButtonBuilder()
+  .setCustomId('redline_msn_send')
+  .setLabel('ENVIAR')
+  .setEmoji('🟢')
+  .setStyle(ButtonStyle.Success);
 
-    return;
-          }
+const editButton = new ButtonBuilder()
+  .setCustomId('redline_msn_edit')
+  .setLabel('EDITAR')
+  .setEmoji('⚪')
+  .setStyle(ButtonStyle.Secondary);
+
+const cancelButton = new ButtonBuilder()
+  .setCustomId('redline_msn_cancel')
+  .setLabel('CANCELAR')
+  .setEmoji('🔴')
+  .setStyle(ButtonStyle.Danger);
+
+const previewRow = new ActionRowBuilder<ButtonBuilder>()
+  .addComponents(
+    sendButton,
+    editButton,
+    cancelButton
+  );
+
+msnSessions.set(interaction.user.id, {
+  ...session,
+  repetitions: repetitions,
+});
+
+await interaction.reply({
+  content:
+    `📨 **VISTA PREVIA DEL MENSAJE**\n\n` +
+    `${session.messageText}\n\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `📅 Intervalo: **${session.days} días y ${session.hours} horas**\n` +
+    `🔢 Envíos totales: **${repetitions}**\n` +
+    `📺 Canal: <#${session.channelId}>`,
+  components: [previewRow],
+  ephemeral: true,
+});
   
   // =========================
   // SELECTOR DE CANAL /MSN
