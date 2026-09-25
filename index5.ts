@@ -83,9 +83,8 @@ client.once('ready', async () => {
   }
 });
 client.on('interactionCreate', async (interaction: Interaction) => {
-
+  
   // =========================
-    // =========================
   // COMANDO /SUGERENCIA
   // =========================
 
