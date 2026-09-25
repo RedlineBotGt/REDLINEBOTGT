@@ -498,6 +498,142 @@ await interaction.reply({
 
     return;
   }
+
+      // =========================
+  // BOTÓN EDITAR /MSN
+  // =========================
+
+  if (
+    interaction.isButton() &&
+    interaction.customId === 'redline_msn_edit'
+  ) {
+
+    const session = msnSessions.get(interaction.user.id);
+
+    if (!session) {
+      await interaction.reply({
+        content:
+          '❌ No encuentro el mensaje que estabas preparando.',
+        ephemeral: true,
+      });
+
+      return;
+    }
+
+    const modal = new ModalBuilder()
+      .setCustomId(
+        `redline_msn_message:${session.channelId}`
+      )
+      .setTitle('Editar mensaje');
+
+    const messageInput = new TextInputBuilder()
+      .setCustomId('redline_msn_text')
+      .setLabel('Mensaje')
+      .setPlaceholder(
+        'Escribe aquí el mensaje que quieres enviar...'
+      )
+      .setStyle(TextInputStyle.Paragraph)
+      .setRequired(true)
+      .setMaxLength(4000);
+
+    const modalRow =
+      new ActionRowBuilder<TextInputBuilder>()
+        .addComponents(messageInput);
+
+    modal.addComponents(modalRow);
+
+    await interaction.showModal(modal);
+
+    return;
+  }
+
+      // =========================
+  // BOTÓN ENVIAR /MSN
+  // =========================
+
+  if (
+    interaction.isButton() &&
+    interaction.customId === 'redline_msn_send'
+  ) {
+
+    const session = msnSessions.get(interaction.user.id);
+
+    if (!session) {
+      await interaction.reply({
+        content:
+          '❌ No encuentro el mensaje que estabas preparando.',
+        ephemeral: true,
+      });
+
+      return;
+    }
+
+    const channel =
+      interaction.guild?.channels.cache.get(
+        session.channelId
+      );
+
+    if (
+      !channel ||
+      channel.type !== ChannelType.GuildText
+    ) {
+      
+
+    await interaction.update({
+      content:
+        '⏳ **Enviando mensaje...**',
+      components: [],
+    });
+
+    await channel.send({
+      content: session.messageText,
+    });
+
+  
+
+// =========================
+// PROGRAMAR REPETICIONES
+// =========================
+
+if (
+  session.repetitions &&
+  session.repetitions > 1 &&
+  session.intervalHours
+) {
+
+  const totalRepeats = session.repetitions - 1;
+
+  for (let i = 1; i <= totalRepeats; i++) {
+
+    setTimeout(async () => {
+
+      try {
+
+        await channel.send({
+          content: session.messageText,
+        });
+
+        console.log(
+          `📨 /msn repetición ${i}/${totalRepeats} enviada en ${channel.name}`
+        );
+
+      } catch (error) {
+
+        console.error(
+          `❌ Error enviando repetición ${i} de /msn:`,
+          error
+        );
+
+      }
+
+    }, session.intervalHours * 60 * 60 * 1000 * i);
+  }
+}
+
+msnSessions.delete(interaction.user.id);
+
+return;
+      }
     
   // =========================
   // SELECTOR DE CANAL /MSN
