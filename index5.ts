@@ -214,8 +214,7 @@ console.log(
 
 return; 
 
-    return;
-  }
+  
   // =========================
   // BOTÓN SUGERENCIA
   // =========================
