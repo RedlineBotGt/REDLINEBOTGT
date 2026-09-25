@@ -117,9 +117,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       );
     }
 
-    return;
-  }
-  
+    
 
   // =========================
   // COMANDO /MSN
@@ -138,7 +136,9 @@ client.on('interactionCreate', async (interaction: Interaction) => {
 
     return;
   }
-
+return;
+  }
+  
   // =========================
   // BOTÓN SUGERENCIA
   // =========================
