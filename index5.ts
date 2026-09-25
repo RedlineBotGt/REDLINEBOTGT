@@ -376,7 +376,7 @@ modal.addComponents(
     interaction.isModalSubmit() &&
     interaction.customId === 'redline_msn_interval'
   ) {
-
+console.log('🟢 MODAL INTERVALO /MSN RECIBIDO');
     const session = msnSessions.get(interaction.user.id);
 
     if (!session) {
