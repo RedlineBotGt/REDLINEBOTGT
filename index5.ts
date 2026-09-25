@@ -239,13 +239,49 @@ await interaction.reply({
       return;
     }
 
-    await interaction.update({
-      content:
-        '📨 **Vista previa del mensaje**\n\n' +
-        session.messageText +
-        '\n\n¿Quieres enviarlo?',
-      components: [],
-    });
+    msnSessions.set(interaction.user.id, {
+  ...session,
+  repetitions: 1,
+  days: 0,
+  hours: 0,
+  intervalHours: 0,
+});
+
+const sendButton = new ButtonBuilder()
+  .setCustomId('redline_msn_send')
+  .setLabel('ENVIAR')
+  .setEmoji('🟢')
+  .setStyle(ButtonStyle.Success);
+
+const editButton = new ButtonBuilder()
+  .setCustomId('redline_msn_edit')
+  .setLabel('EDITAR')
+  .setEmoji('⚪')
+  .setStyle(ButtonStyle.Secondary);
+
+const cancelButton = new ButtonBuilder()
+  .setCustomId('redline_msn_cancel')
+  .setLabel('CANCELAR')
+  .setEmoji('🔴')
+  .setStyle(ButtonStyle.Danger);
+
+const previewRow = new ActionRowBuilder<ButtonBuilder>()
+  .addComponents(
+    sendButton,
+    editButton,
+    cancelButton
+  );
+
+await interaction.update({
+  content:
+    `📨 **VISTA PREVIA DEL MENSAJE**\n\n` +
+    `${session.messageText}\n\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `📅 Sin repetición\n` +
+    `🔢 Envíos totales: **1**\n` +
+    `📺 Canal: <#${session.channelId}>`,
+  components: [previewRow],
+});
 
     return;
   }
