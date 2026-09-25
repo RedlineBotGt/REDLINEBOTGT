@@ -392,8 +392,62 @@ modal.addComponents(
     return;
   }
 
+    // =========================
+  // MODAL NÚMERO DE ENVÍOS /MSN
   // =========================
-  // SELECTOR DE CANAL /MSN
+
+  if (
+    interaction.isModalSubmit() &&
+    interaction.customId === 'redline_msn_repetitions'
+  ) {
+
+    const session = msnSessions.get(interaction.user.id);
+
+    if (!session) {
+      await interaction.reply({
+        content:
+          '❌ No encuentro el mensaje que estabas preparando.',
+        ephemeral: true,
+      });
+
+      return;
+    }
+
+    const repetitionsText =
+      interaction.fields
+        .getTextInputValue('redline_msn_repetitions_value')
+        .trim();
+
+    const repetitions = Number(repetitionsText);
+
+    if (
+      !Number.isInteger(repetitions) ||
+      repetitions < 1
+    ) {
+      await interaction.reply({
+        content:
+          '❌ Introduce un número válido de envíos, mínimo 1.',
+        ephemeral: true,
+      });
+
+      return;
+    }
+
+    msnSessions.set(interaction.user.id, {
+      ...session,
+      repetitions: repetitions,
+    });
+
+    await interaction.reply({
+      content:
+        `✅ Configuración guardada.\n\n` +
+        `📨 Envíos totales: **${repetitions}**\n` +
+        `🔁 Intervalo: **${session.days} días y ${session.hours} horas**`,
+      ephemeral: true,
+    });
+
+    return;
+          }
   
   // =========================
   // SELECTOR DE CANAL /MSN
