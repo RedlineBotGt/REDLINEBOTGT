@@ -119,8 +119,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
 
     return;
   }
-      return;
-  }
+  
 
   // =========================
   // COMANDO /MSN
