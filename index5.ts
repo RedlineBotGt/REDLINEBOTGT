@@ -479,7 +479,26 @@ await interaction.reply({
   components: [previewRow],
   ephemeral: true,
 });
-  
+
+      // =========================
+  // BOTÓN CANCELAR /MSN
+  // =========================
+
+  if (
+    interaction.isButton() &&
+    interaction.customId === 'redline_msn_cancel'
+  ) {
+
+    msnSessions.delete(interaction.user.id);
+
+    await interaction.update({
+      content: '❌ **Proceso cancelado.**',
+      components: [],
+    });
+
+    return;
+  }
+    
   // =========================
   // SELECTOR DE CANAL /MSN
   // =========================
