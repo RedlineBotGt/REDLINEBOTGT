@@ -270,35 +270,35 @@ await interaction.reply({
     }
 
     const modal = new ModalBuilder()
-      .setCustomId('redline_msn_interval')
-      .setTitle('Repetir mensaje');
+  .setCustomId('redline_msn_interval')
+  .setTitle('Repetir mensaje');
 
-    const daysInput = new TextInputBuilder()
-      .setCustomId('redline_msn_days')
-      .setLabel('¿Cada cuántos días?')
-      .setPlaceholder('Ejemplo: 1')
-      .setStyle(TextInputStyle.Short)
-      .setRequired(true)
-      .setMaxLength(3);
+const daysInput = new TextInputBuilder()
+  .setCustomId('redline_msn_days')
+  .setLabel('¿Cada cuántos días?')
+  .setPlaceholder('Ejemplo: 1')
+  .setStyle(TextInputStyle.Short)
+  .setRequired(false)
+  .setMaxLength(3);
 
-    const hoursInput = new TextInputBuilder()
-      .setCustomId('redline_msn_hours')
-      .setLabel('¿Y cuántas horas adicionales?')
-      .setPlaceholder('Ejemplo: 6')
-      .setStyle(TextInputStyle.Short)
-      .setRequired(true)
-      .setMaxLength(2);
+const hoursInput = new TextInputBuilder()
+  .setCustomId('redline_msn_hours')
+  .setLabel('¿Y cuántas horas?')
+  .setPlaceholder('Ejemplo: 6')
+  .setStyle(TextInputStyle.Short)
+  .setRequired(false)
+  .setMaxLength(2);
 
-    const daysRow = new ActionRowBuilder<TextInputBuilder>()
-      .addComponents(daysInput);
+const daysRow = new ActionRowBuilder<TextInputBuilder>()
+  .addComponents(daysInput);
 
-    const hoursRow = new ActionRowBuilder<TextInputBuilder>()
-      .addComponents(hoursInput);
+const hoursRow = new ActionRowBuilder<TextInputBuilder>()
+  .addComponents(hoursInput);
 
-    modal.addComponents(
-      daysRow,
-      hoursRow
-    );
+modal.addComponents(
+  daysRow,
+  hoursRow
+);
 
     await interaction.showModal(modal);
 
