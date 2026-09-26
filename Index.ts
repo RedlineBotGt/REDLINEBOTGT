@@ -1,3 +1,4 @@
+console.log('🟢 INDEX.TS SE ESTÁ EJECUTANDO');
 import 'dotenv/config';
 
 import {
