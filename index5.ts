@@ -235,50 +235,7 @@ if (
     imageUrl: imageUrl,
   });
 
-  
-
-  // =========================
-// MODAL DÍA Y HORA /MSN
-// =========================
-
-if (
-  interaction.isModalSubmit() &&
-  interaction.customId.startsWith('redline_msn_datetime:')
-) {
-
-  const selectedChannelId =
-    interaction.customId.split(':')[1];
-
-  const session =
-    msnSessions.get(interaction.user.id);
-
-  if (!session) {
-    await interaction.reply({
-      content:
-        '❌ No encuentro el mensaje que estabas preparando.',
-      ephemeral: true,
-    });
-
-    return;
-  }
-
-  const sendDate =
-    interaction.fields
-      .getTextInputValue('redline_msn_date')
-      .trim();
-
-  const sendTime =
-    interaction.fields
-      .getTextInputValue('redline_msn_time')
-      .trim();
-
-  // Guardamos día y hora
-  msnSessions.set(interaction.user.id, {
-    ...session,
-    channelId: selectedChannelId,
-    sendDate: sendDate,
-    sendTime: sendTime,
-  });
+  ;
 
   // =========================
   // BOTONES REPETIR
