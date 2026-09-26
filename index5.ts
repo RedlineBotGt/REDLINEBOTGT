@@ -916,7 +916,7 @@ setTimeout(async () => {
 
     return;
   }
-  // =========================
+// =========================
 // PAGINACIÓN DE CANALES /MSN
 // =========================
 
@@ -1022,7 +1022,7 @@ if (
 
   return;
 }
-  
+
   // =========================
   // SELECTOR DE CANAL /MSN
   // =========================
@@ -1071,15 +1071,39 @@ const imageInput = new TextInputBuilder()
   .setRequired(false)
   .setMaxLength(1000);
 
+const dayInput = new TextInputBuilder()
+  .setCustomId('redline_msn_day')
+  .setLabel('📅 Día de publicación (DD/MM/AAAA)')
+  .setPlaceholder('Ejemplo: 25/12/2025  ·  Vacío = enviar ya')
+  .setStyle(TextInputStyle.Short)
+  .setRequired(false)
+  .setMaxLength(10);
+
+const hourInput = new TextInputBuilder()
+  .setCustomId('redline_msn_hour')
+  .setLabel('🕐 Hora de publicación (HH:MM)')
+  .setPlaceholder('Ejemplo: 18:30  ·  Vacío = enviar ya')
+  .setStyle(TextInputStyle.Short)
+  .setRequired(false)
+  .setMaxLength(5);
+
 const messageRow = new ActionRowBuilder<TextInputBuilder>()
   .addComponents(messageInput);
 
 const imageRow = new ActionRowBuilder<TextInputBuilder>()
   .addComponents(imageInput);
 
+const dayRow = new ActionRowBuilder<TextInputBuilder>()
+  .addComponents(dayInput);
+
+const hourRow = new ActionRowBuilder<TextInputBuilder>()
+  .addComponents(hourInput);
+
 modal.addComponents(
   messageRow,
-  imageRow
+  imageRow,
+  dayRow,
+  hourRow
 );
 
 await interaction.showModal(modal);
