@@ -15,12 +15,10 @@ import { msnCommand } from './commands/msn';
 // =========================
 
 const token = process.env.DISCORD_TOKEN;
-const clientId = process.env.CLIENT_ID;
-const guildId = process.env.GUILD_ID;
 
-if (!token || !clientId || !guildId) {
+if (!token) {
   throw new Error(
-    '❌ Faltan DISCORD_TOKEN, CLIENT_ID o GUILD_ID en las variables de entorno.'
+    '❌ Falta DISCORD_TOKEN en las variables de entorno.'
   );
 }
 
