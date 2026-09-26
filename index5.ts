@@ -278,7 +278,87 @@ if (
 
   return;
 }
-  
+
+  // =========================
+// MODAL DÍA Y HORA /MSN
+// =========================
+
+if (
+  interaction.isModalSubmit() &&
+  interaction.customId.startsWith('redline_msn_datetime:')
+) {
+
+  const selectedChannelId =
+    interaction.customId.split(':')[1];
+
+  const session =
+    msnSessions.get(interaction.user.id);
+
+  if (!session) {
+    await interaction.reply({
+      content:
+        '❌ No encuentro el mensaje que estabas preparando.',
+      ephemeral: true,
+    });
+
+    return;
+  }
+
+  const sendDate =
+    interaction.fields
+      .getTextInputValue('redline_msn_date')
+      .trim();
+
+  const sendTime =
+    interaction.fields
+      .getTextInputValue('redline_msn_time')
+      .trim();
+
+  // Guardamos día y hora
+  msnSessions.set(interaction.user.id, {
+    ...session,
+    channelId: selectedChannelId,
+    sendDate: sendDate,
+    sendTime: sendTime,
+  });
+
+  // =========================
+  // BOTONES REPETIR
+  // =========================
+
+  const repeatYesButton = new ButtonBuilder()
+    .setCustomId(
+      `redline_msn_repeat_yes:${selectedChannelId}`
+    )
+    .setLabel('SÍ')
+    .setStyle(ButtonStyle.Success);
+
+  const repeatNoButton = new ButtonBuilder()
+    .setCustomId(
+      `redline_msn_repeat_no:${selectedChannelId}`
+    )
+    .setLabel('NO')
+    .setStyle(ButtonStyle.Danger);
+
+  const row =
+    new ActionRowBuilder<ButtonBuilder>()
+      .addComponents(
+        repeatYesButton,
+        repeatNoButton
+      );
+
+  await interaction.reply({
+    content:
+      '📨 **Mensaje preparado**\n\n' +
+      `📅 Día: **${sendDate}**\n` +
+      `🕐 Hora: **${sendTime}**\n\n` +
+      '¿Quieres repetir este mensaje?',
+    components: [row],
+    ephemeral: true,
+  });
+
+  return;
+}
 
   // =========================
   // BOTÓN NO - REPETIR /MSN
