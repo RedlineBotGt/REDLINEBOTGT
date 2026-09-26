@@ -797,66 +797,167 @@ modal.addComponents(
   }
 
   // =========================
-  // BOTÓN ENVIAR /MSN
-  // =========================
+// BOTÓN ENVIAR /MSN
+// =========================
 
-  if (
-    interaction.isButton() &&
-    interaction.customId === 'redline_msn_send'
-  ) {
+if (
+  interaction.isButton() &&
+  interaction.customId === 'redline_msn_send'
+) {
 
-    const session = msnSessions.get(interaction.user.id);
+  const session = msnSessions.get(interaction.user.id);
 
-    if (!session) {
-      await interaction.reply({
-        content:
-          '❌ No encuentro el mensaje que estabas preparando.',
-        ephemeral: true,
-      });
-
-      return;
-    }
-
-        const channel =
-      interaction.guild?.channels.cache.get(
-        session.channelId
-      );
-
-    if (
-      !channel ||
-      channel.type !== ChannelType.GuildText
-    ) {
-
-      await interaction.reply({
-        content:
-          '❌ No encuentro el canal de destino.',
-        ephemeral: true,
-      });
-
-      return;
-    }
-
-    await interaction.update({
+  if (!session) {
+    await interaction.reply({
       content:
-        '⏳ **Enviando mensaje...**',
-      components: [],
+        '❌ No encuentro el mensaje que estabas preparando.',
+      ephemeral: true,
     });
 
-    await channel.send({
-  content: processMsnMentions(
-    interaction.guild,
-    session.messageText
-  ),
-  allowedMentions: {
-    parse: ['users', 'roles', 'everyone'],
-  },
-  ...(session.imageUrl
-    ? {
-        files: [session.imageUrl],
-      }
-    : {}),
-});
+    return;
+  }
 
+      const channel =
+    interaction.guild?.channels.cache.get(
+      session.channelId
+    );
+
+  if (
+    !channel ||
+    channel.type !== ChannelType.GuildText
+  ) {
+
+    await interaction.reply({
+      content:
+        '❌ No encuentro el canal de destino.',
+      ephemeral: true,
+    });
+
+    return;
+  }
+
+  // =========================
+  // CALCULAR RETRASO SI HAY FECHA PROGRAMADA
+  // =========================
+
+  let delayMs = 0;
+  let fechaTexto = 'ahora mismo';
+
+  if (session.publishAt) {
+    delayMs = session.publishAt - Date.now();
+
+    if (delayMs < 0) {
+      await interaction.reply({
+        content:
+          '❌ La fecha/hora indicada ya ha pasado. Edita el mensaje y pon una futura.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    fechaTexto = `<t:${Math.floor(session.publishAt / 1000)}:F>`;
+  }
+
+  await interaction.update({
+    content: delayMs > 0
+      ? `⏳ **Mensaje programado para ${fechaTexto}**`
+      : '⏳ **Enviando mensaje...**',
+    components: [],
+  });
+
+  // =========================
+  // ENVÍO (con espera si hay fecha)
+  // =========================
+
+  setTimeout(async () => {
+
+    try {
+
+      await channel.send({
+        content: processMsnMentions(
+          interaction.guild,
+          session.messageText
+        ),
+        allowedMentions: {
+          parse: ['users', 'roles', 'everyone'],
+        },
+        ...(session.imageUrl
+          ? {
+              files: [session.imageUrl],
+            }
+          : {}),
+      });
+
+    } catch (error) {
+
+      console.error(
+        '❌ Error enviando mensaje /msn:',
+        error
+      );
+
+    }
+
+    // =========================
+    // PROGRAMAR REPETICIONES
+    // =========================
+
+    if (
+      session.repetitions &&
+      session.repetitions > 1 &&
+      session.intervalHours
+    ) {
+
+      const totalRepeats =
+        session.repetitions - 1;
+
+      for (
+        let i = 1;
+        i <= totalRepeats;
+        i++
+      ) {
+
+        setTimeout(async () => {
+
+          try {
+
+            await channel.send({
+              content: processMsnMentions(
+                interaction.guild,
+                session.messageText
+              ),
+              allowedMentions: {
+                parse: ['users', 'roles', 'everyone'],
+              },
+              ...(session.imageUrl
+                ? {
+                    files: [session.imageUrl],
+                  }
+                : {}),
+            });
+
+            console.log(
+              `📨 /msn repetición ${i}/${totalRepeats} enviada en ${channel.name}`
+            );
+
+          } catch (error) {
+
+            console.error(
+              `❌ Error enviando repetición ${i} de /msn:`,
+              error
+            );
+
+          }
+
+        }, session.intervalHours * 60 * 60 * 1000 * i);
+      }
+    }
+
+  }, delayMs);
+
+  msnSessions.delete(interaction.user.id);
+
+  return;
+}
     // =========================
     // PROGRAMAR REPETICIONES
     // =========================
