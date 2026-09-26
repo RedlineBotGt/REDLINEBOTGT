@@ -42,6 +42,44 @@ client.once('ready', async () => {
     `✅ REDLINE Bot GT conectado como ${client.user?.tag}`
   );
 
+  const guild = client.guilds.cache.first();
+
+  if (!guild) {
+    console.error('❌ No se encontró ningún servidor.');
+    return;
+  }
+
+  console.log(`🏠 Servidor encontrado: ${guild.name}`);
+
+  try {
+
+    const rest = new REST({ version: '10' }).setToken(token);
+
+    await rest.put(
+      Routes.applicationGuildCommands(
+        client.user!.id,
+        guild.id
+      ),
+      {
+        body: [
+          msnCommand.toJSON(),
+        ],
+      }
+    );
+
+    console.log('✅ /msn registrado correctamente.');
+
+  } catch (error) {
+
+    console.error(
+      '❌ Error registrando /msn:',
+      error
+    );
+
+  }
+
+});
+
   // =========================
   // REGISTRAR COMANDOS
   // =========================
