@@ -115,34 +115,108 @@ client.on('interactionCreate', async (interaction: Interaction) => {
   // COMANDO /SUGERENCIA
   // =========================
 
-  if (interaction.isChatInputCommand()) {
+  if (
+  interaction.isModalSubmit() &&
+  interaction.customId.startsWith('redline_msn_message:')
+) {
 
-    if (interaction.commandName === 'sugerencia') {
+  const selectedChannelId =
+    interaction.customId.split(':')[1];
 
-      const embed = new EmbedBuilder()
-        .setColor(0xF39C12)
-        .setTitle('BUZÓN DE SUGERENCIAS')
-        .setDescription(
-          '¿Quieres hablar con el equipo de Dirección?\n' +
-          'Pincha en el botón naranja y te atenderemos lo antes posible.\n' +
-          '¡Gracias!\n\n' +
-          'Do you want to talk to the team?\n' +
-          'Click the orange button and we will assist you as soon as possible.\n' +
-          'Thank you!'
-        );
+  const messageText =
+    interaction.fields.getTextInputValue(
+      'redline_msn_text'
+    );
 
-      const row = new ActionRowBuilder<ButtonBuilder>()
-        .addComponents(suggestionButton);
+  const imageUrl =
+    interaction.fields
+      .getTextInputValue('redline_msn_image')
+      .trim();
 
+  const dayText =
+    interaction.fields
+      .getTextInputValue('redline_msn_day')
+      .trim();
+
+  const hourText =
+    interaction.fields
+      .getTextInputValue('redline_msn_hour')
+      .trim();
+
+  // Calculamos la fecha de publicación
+  let publishAt = null;
+
+  if (dayText || hourText) {
+
+    if (!dayText || !hourText) {
       await interaction.reply({
-        embeds: [embed],
-        components: [row],
+        content:
+          '❌ Debes rellenar **día Y hora**, o dejar los dos vacíos.',
+        ephemeral: true,
       });
-
-      console.log(
-        `📨 Panel de sugerencias publicado en ${interaction.guild?.name}`
-      );
+      return;
     }
+
+    const dayMatch = dayText.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    const hourMatch = hourText.match(/^(\d{1,2}):(\d{2})$/);
+
+    if (!dayMatch || !hourMatch) {
+      await interaction.reply({
+        content:
+          '❌ Formato incorrecto.\n📅 Día: **DD/MM/AAAA** (ej: 25/12/2025)\n🕐 Hora: **HH:MM** (ej: 18:30)',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const day = Number(dayMatch[1]);
+    const month = Number(dayMatch[2]) - 1;
+    const year = Number(dayMatch[3]);
+    const hour = Number(hourMatch[1]);
+    const minute = Number(hourMatch[2]);
+
+    if (
+      month < 0 || month > 11 ||
+      day < 1 || day > 31 ||
+      hour < 0 || hour > 23 ||
+      minute < 0 || minute > 59
+    ) {
+      await interaction.reply({
+        content: '❌ La fecha u hora no es válida.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const date = new Date(year, month, day, hour, minute, 0, 0);
+
+    if (isNaN(date.getTime())) {
+      await interaction.reply({
+        content: '❌ La fecha introducida no es válida.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (date.getTime() < Date.now()) {
+      await interaction.reply({
+        content:
+          '❌ La fecha/hora indicada ya ha pasado. Introduce una futura.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    publishAt = date.getTime();
+  }
+
+  // Guardamos el mensaje preparado
+  msnSessions.set(interaction.user.id, {
+    channelId: selectedChannelId,
+    messageText: messageText,
+    imageUrl: imageUrl,
+    publishAt: publishAt,
+  });
 
     // =========================
     // COMANDO /MSN
