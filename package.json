@@ -4,7 +4,8 @@
   "main": "index.ts",
   "scripts": {
     "start": "npx tsx clear-commands.js && npx tsx index5.ts",
-    "clear": "npx tsx clear-commands.js"
+    "clear": "npx tsx clear-commands.js",
+    "register": "npx tsx register-commands.ts"
   },
   "dependencies": {
     "discord.js": "^14.14.1",
