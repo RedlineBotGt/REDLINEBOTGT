@@ -4,7 +4,7 @@ import {
   Client,
   GatewayIntentBits,
 } from 'discord.js';
-
+import { msnCommand } from './commands/msn';
 // =========================
 // CLIENTE DISCORD
 // =========================
