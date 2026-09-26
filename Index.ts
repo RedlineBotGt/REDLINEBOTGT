@@ -9,6 +9,18 @@ import {
 } from 'discord.js';
 
 import { msnCommand } from './commands/msn';
+import express from 'express';
+
+const app = express();
+const PORT = process.env.PORT || 10000;
+
+app.get('/', (_req, res) => {
+  res.send('REDLINE Bot GT activo');
+});
+
+app.listen(PORT, () => {
+  console.log(`Health server activo en el puerto ${PORT}`);
+});
 
 // =========================
 // VARIABLES
