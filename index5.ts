@@ -206,66 +206,79 @@ await interaction.reply({
     return;
   }
   
-  // =========================
-  // MODAL DE MENSAJE /MSN
-  // =========================
+// =========================
+// MODAL DE MENSAJE /MSN
+// =========================
 
-  if (
-    interaction.isModalSubmit() &&
-    interaction.customId.startsWith('redline_msn_message:')
-  ) {
+if (
+  interaction.isModalSubmit() &&
+  interaction.customId.startsWith('redline_msn_message:')
+) {
 
-    const selectedChannelId =
-      interaction.customId.split(':')[1];
+  const selectedChannelId =
+    interaction.customId.split(':')[1];
 
-    const messageText =
-  interaction.fields.getTextInputValue('redline_msn_text');
-
-const imageUrl =
-  interaction.fields.getTextInputValue('redline_msn_image').trim();
-
-msnSessions.set(interaction.user.id, {
-  channelId: selectedChannelId,
-  messageText: messageText,
-  imageUrl: imageUrl,
-});
-    const repeatYesButton = new ButtonBuilder()
-      .setCustomId(
-        `redline_msn_repeat_yes:${selectedChannelId}`
-      )
-      .setLabel('SÍ')
-      .setStyle(ButtonStyle.Success);
-
-    const repeatNoButton = new ButtonBuilder()
-      .setCustomId(
-        `redline_msn_repeat_no:${selectedChannelId}`
-      )
-      .setLabel('NO')
-      .setStyle(ButtonStyle.Danger);
-
-    const row = new ActionRowBuilder<ButtonBuilder>()
-      .addComponents(
-        repeatYesButton,
-        repeatNoButton
-      );
-
-await interaction.reply({
-  content:
-    '📨 **Mensaje preparado**\n\n' +
-    (imageUrl
-      ? '🖼️ Se ha añadido un enlace de imagen/archivo.\n\n'
-      : '🖼️ Sin imagen/archivo.\n\n') +
-    '¿Quieres repetir este mensaje?',
-      components: [row],
-      ephemeral: true,
-    });
-
-    console.log(
-      `📨 Mensaje preparado para /msn por ${interaction.user.tag}`
+  const messageText =
+    interaction.fields.getTextInputValue(
+      'redline_msn_text'
     );
 
-    return;
-  }
+  const imageUrl =
+    interaction.fields
+      .getTextInputValue('redline_msn_image')
+      .trim();
+
+  // Guardamos el mensaje preparado
+  msnSessions.set(interaction.user.id, {
+    channelId: selectedChannelId,
+    messageText: messageText,
+    imageUrl: imageUrl,
+  });
+
+  // =========================
+  // MODAL DÍA Y HORA
+  // =========================
+
+  const dateTimeModal = new ModalBuilder()
+    .setCustomId(
+      `redline_msn_datetime:${selectedChannelId}`
+    )
+    .setTitle('Programar mensaje');
+
+  const dateInput = new TextInputBuilder()
+    .setCustomId('redline_msn_date')
+    .setLabel('Día de envío')
+    .setPlaceholder('Ejemplo: 28/09/2026')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setMaxLength(10);
+
+  const timeInput = new TextInputBuilder()
+    .setCustomId('redline_msn_time')
+    .setLabel('Hora de envío')
+    .setPlaceholder('Ejemplo: 20:30')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setMaxLength(5);
+
+  const dateRow =
+    new ActionRowBuilder<TextInputBuilder>()
+      .addComponents(dateInput);
+
+  const timeRow =
+    new ActionRowBuilder<TextInputBuilder>()
+      .addComponents(timeInput);
+
+  dateTimeModal.addComponents(
+    dateRow,
+    timeRow
+  );
+
+  await interaction.showModal(dateTimeModal);
+
+  return;
+}
+  
 
   // =========================
   // BOTÓN NO - REPETIR /MSN
