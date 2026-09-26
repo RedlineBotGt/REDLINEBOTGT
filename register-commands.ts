@@ -1,41 +1,24 @@
-import 'dotenv/config';
+import { REST, Routes } from 'discord.js';
+import { data as dashCommand } from './commands/dash';
 
-import {
-  REST,
-  Routes,
-} from 'discord.js';
+const commands = [
+    dashCommand.toJSON()
+];
 
-import { msnCommand } from './commands/msn';
+const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
 
-const token = process.env.DISCORD_TOKEN;
-const clientId = process.env.CLIENT_ID;
-const guildId = process.env.GUILD_ID;
+(async () => {
+    try {
+        console.log('🔄 Registrando comandos en la API de Discord...');
 
-if (!token || !clientId || !guildId) {
-  throw new Error(
-    '❌ Faltan DISCORD_TOKEN, CLIENT_ID o GUILD_ID en las variables de entorno.'
-  );
-}
+        // Registro global (aparecerá en todos los servidores donde esté el bot)
+        await rest.put(
+            Routes.applicationCommands(process.env.CLIENT_ID!),
+            { body: commands },
+        );
 
-const rest = new REST({ version: '10' }).setToken(token);
-
-async function registerCommands() {
-  try {
-    console.log('🔄 Registrando comandos...');
-
-    await rest.put(
-      Routes.applicationGuildCommands(clientId, guildId),
-      {
-        body: [
-          msnCommand.toJSON(),
-        ],
-      }
-    );
-
-    console.log('✅ Comando /msn registrado correctamente.');
-  } catch (error) {
-    console.error('❌ Error registrando comandos:', error);
-  }
-}
-
-registerCommands();
+        console.log('✅ ¡Comandos registrados con éxito!');
+    } catch (error) {
+        console.error('❌ Error al registrar comandos:', error);
+    }
+})();
