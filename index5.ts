@@ -235,49 +235,7 @@ if (
     imageUrl: imageUrl,
   });
 
-  // =========================
-  // MODAL DÍA Y HORA
-  // =========================
-
-  const dateTimeModal = new ModalBuilder()
-    .setCustomId(
-      `redline_msn_datetime:${selectedChannelId}`
-    )
-    .setTitle('Programar mensaje');
-
-  const dateInput = new TextInputBuilder()
-    .setCustomId('redline_msn_date')
-    .setLabel('Día de envío')
-    .setPlaceholder('Ejemplo: 28/09/2026')
-    .setStyle(TextInputStyle.Short)
-    .setRequired(true)
-    .setMaxLength(10);
-
-  const timeInput = new TextInputBuilder()
-    .setCustomId('redline_msn_time')
-    .setLabel('Hora de envío')
-    .setPlaceholder('Ejemplo: 20:30')
-    .setStyle(TextInputStyle.Short)
-    .setRequired(true)
-    .setMaxLength(5);
-
-  const dateRow =
-    new ActionRowBuilder<TextInputBuilder>()
-      .addComponents(dateInput);
-
-  const timeRow =
-    new ActionRowBuilder<TextInputBuilder>()
-      .addComponents(timeInput);
-
-  dateTimeModal.addComponents(
-    dateRow,
-    timeRow
-  );
-
-  await interaction.showModal(dateTimeModal);
-
-  return;
-}
+  
 
   // =========================
 // MODAL DÍA Y HORA /MSN
