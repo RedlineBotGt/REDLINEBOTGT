@@ -959,64 +959,7 @@ if (
   return;
 }
     // =========================
-    // PROGRAMAR REPETICIONES
-    // =========================
-
-    if (
-      session.repetitions &&
-      session.repetitions > 1 &&
-      session.intervalHours
-    ) {
-
-      const totalRepeats =
-        session.repetitions - 1;
-
-      for (
-        let i = 1;
-        i <= totalRepeats;
-        i++
-      ) {
-
-setTimeout(async () => {
-
-  try {
-
-        await channel.send({
-      content: processMsnMentions(
-        interaction.guild,
-        session.messageText
-      ),
-      allowedMentions: {
-        parse: ['users', 'roles', 'everyone'],
-      },
-      ...(session.imageUrl
-        ? {
-            files: [session.imageUrl],
-          }
-        : {}),
-    });
-
-            console.log(
-              `📨 /msn repetición ${i}/${totalRepeats} enviada en ${channel.name}`
-            );
-
-          } catch (error) {
-
-            console.error(
-              `❌ Error enviando repetición ${i} de /msn:`,
-              error
-            );
-
-          }
-
-        }, session.intervalHours * 60 * 60 * 1000 * i);
-      }
-    }
-
-    msnSessions.delete(interaction.user.id);
-
-    return;
-  }
+    
 // =========================
 // PAGINACIÓN DE CANALES /MSN
 // =========================
