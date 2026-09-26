@@ -235,7 +235,48 @@ if (
     imageUrl: imageUrl,
   });
 
-  ;
+  // =========================
+  // BOTONES REPETIR
+  // =========================
+
+  const repeatYesButton = new ButtonBuilder()
+    .setCustomId(
+      `redline_msn_repeat_yes:${selectedChannelId}`
+    )
+    .setLabel('SÍ')
+    .setStyle(ButtonStyle.Success);
+
+  const repeatNoButton = new ButtonBuilder()
+    .setCustomId(
+      `redline_msn_repeat_no:${selectedChannelId}`
+    )
+    .setLabel('NO')
+    .setStyle(ButtonStyle.Danger);
+
+  const row =
+    new ActionRowBuilder<ButtonBuilder>()
+      .addComponents(
+        repeatYesButton,
+        repeatNoButton
+      );
+
+  await interaction.reply({
+    content:
+      '📨 **Mensaje preparado**\n\n' +
+      (imageUrl
+        ? '🖼️ Se ha añadido un enlace de imagen/archivo.\n\n'
+        : '🖼️ Sin imagen/archivo.\n\n') +
+      '¿Quieres repetir este mensaje?',
+    components: [row],
+    ephemeral: true,
+  });
+
+  console.log(
+    `📨 Mensaje preparado para /msn por ${interaction.user.tag}`
+  );
+
+  return;
+}
 
   // =========================
   // BOTONES REPETIR
