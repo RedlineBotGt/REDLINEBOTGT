@@ -8,7 +8,10 @@ import {
   Routes,
 } from 'discord.js';
 
-import { msnCommand } from './commands/msn';
+import {
+  msnCommand,
+  msnChannelSelect,
+} from './commands/msn';
 import express from 'express';
 
 const app = express();
