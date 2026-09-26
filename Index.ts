@@ -5,14 +5,24 @@ const client = new Client({
 });
 
 client.once('ready', async () => {
-    console.log(`🧹 Conectado como ${client.user?.tag}. Limpiando comandos antiguos en Discord...`);
+    console.log(`🧹 Conectado como ${client.user?.tag}. Iniciando limpieza profunda...`);
 
     try {
-        // Borra absolutamente todos los comandos globales de la API de Discord
+        // 1. Borrar comandos globales
         await client.application?.commands.set([]);
-        console.log('✅ ¡Limpieza completada! La API de Discord está completamente a cero.');
+        console.log('✅ Comandos globales eliminados.');
+
+        // 2. Borrar comandos específicos de cada servidor (Guild commands)
+        const guilds = await client.guilds.fetch();
+        for (const [guildId] of guilds) {
+            const guild = await client.guilds.fetch(guildId);
+            await guild.commands.set([]);
+            console.log(`✅ Comandos locales eliminados en el servidor: ${guild.name}`);
+        }
+
+        console.log('🎉 ¡Limpieza total completada! Ya no queda rastro de nada.');
     } catch (error) {
-        console.error('❌ Error durante la limpieza:', error);
+        console.error('❌ Error durante la limpieza profunda:', error);
     }
 });
 
