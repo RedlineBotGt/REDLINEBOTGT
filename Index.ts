@@ -1,29 +1,29 @@
 import { Client, GatewayIntentBits } from 'discord.js';
+import { handleInteraction } from './handlers/interactionRouter';
 
-const client = new Client({ 
-    intents: [GatewayIntentBits.Guilds] 
+// 1. Inicialización limpia con los intents multiserver necesarios
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers
+    ]
 });
 
-client.once('ready', async () => {
-    console.log(`🧹 Conectado como ${client.user?.tag}. Iniciando limpieza profunda...`);
+// 2. Evento de arranque (Sin código de limpieza, solo aviso de conexión)
+client.once('ready', () => {
+    console.log(`✅ REDLINE GT Bot conectado y operativo como ${client.user?.tag}`);
+});
 
+// 3. Enrutador ciego: deriva cualquier interacción al sistema modular externo
+client.on('interactionCreate', async (interaction) => {
     try {
-        // 1. Borrar comandos globales
-        await client.application?.commands.set([]);
-        console.log('✅ Comandos globales eliminados.');
-
-        // 2. Borrar comandos específicos de cada servidor (Guild commands)
-        const guilds = await client.guilds.fetch();
-        for (const [guildId] of guilds) {
-            const guild = await client.guilds.fetch(guildId);
-            await guild.commands.set([]);
-            console.log(`✅ Comandos locales eliminados en el servidor: ${guild.name}`);
-        }
-
-        console.log('🎉 ¡Limpieza total completada! Ya no queda rastro de nada.');
+        await handleInteraction(interaction);
     } catch (error) {
-        console.error('❌ Error durante la limpieza profunda:', error);
+        console.error('❌ Error crítico en el enrutador de interacciones:', error);
     }
 });
 
+// 4. Conexión definitiva
 client.login(process.env.DISCORD_TOKEN);
