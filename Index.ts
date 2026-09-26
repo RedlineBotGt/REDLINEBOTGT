@@ -155,21 +155,24 @@ client.on('interactionCreate', async (interaction) => {
   );
 
   if (
-  interaction.isChatInputCommand() &&
-  interaction.commandName === 'msn'
-) {
+    interaction.isChatInputCommand() &&
+    interaction.commandName === 'msn'
+  ) {
 
-  const row =
-    new ActionRowBuilder<ChannelSelectMenuBuilder>()
-      .addComponents(msnChannelSelect);
+    const row =
+      new ActionRowBuilder<ChannelSelectMenuBuilder>()
+        .addComponents(msnChannelSelect);
 
-  await interaction.reply({
-    content: '📢 Selecciona el canal de destino:',
-    components: [row],
-    ephemeral: true,
-  });
+    await interaction.reply({
+      content: '📢 Selecciona el canal de destino:',
+      components: [row],
+      ephemeral: true,
+    });
 
-}
+  }
+
+});
+
 // =========================
 // INICIAR BOT
 // =========================
