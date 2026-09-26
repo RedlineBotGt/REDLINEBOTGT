@@ -171,10 +171,26 @@ client.on('interactionCreate', async (interaction) => {
 
   }
 
+  if (
+    interaction.isChannelSelectMenu() &&
+    interaction.customId === 'msn_select_channel'
+  ) {
+
+    const selectedChannel = interaction.channels.first();
+
+    if (!selectedChannel) {
+      await interaction.reply({
+        content: '❌ No se ha seleccionado ningún canal.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    await interaction.reply({
+      content: `✅ Canal seleccionado: ${selectedChannel}`,
+      ephemeral: true,
+    });
+
+  }
+
 });
-
-// =========================
-// INICIAR BOT
-// =========================
-
-client.login(token);
