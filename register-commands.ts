@@ -3,12 +3,14 @@ import { data as dashCommand } from './commands/dash';
 import { data as reporteCommand } from './commands/reporte';
 import { data as setupdefensaCommand } from './commands/setupdefensa';
 import { data as veredictoCommand } from './commands/veredicto';
+import { data as msnCommand } from './commands/msn';
 
 const commands = [
     dashCommand.toJSON(),
     reporteCommand.toJSON(),
     setupdefensaCommand.toJSON(),
-    veredictoCommand.toJSON()
+    veredictoCommand.toJSON(),
+    msnCommand.toJSON()
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
