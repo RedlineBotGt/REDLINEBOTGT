@@ -1,25 +1,43 @@
-import { REST, Routes } from 'discord.js';
-import { data as dashCommand } from './commands/dash';
-import { data as reporteCommand } from './commands/reporte';
+import { Interaction } from 'discord.js';
+import * as dash from '../commands/dash';
+import * as reporte from '../commands/reporte';
 
-const commands = [
-    dashCommand.toJSON(),
-    reporteCommand.toJSON()
-];
-
-const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
-
-(async () => {
+export async function handleInteraction(interaction: Interaction) {
     try {
-        console.log('🔄 Registrando comandos en la API de Discord...');
+        // 1. Manejo de Comandos de Barra (Slash Commands)
+        if (interaction.isChatInputCommand()) {
+            if (interaction.commandName === 'dash') {
+                await dash.execute(interaction);
+            } else if (interaction.commandName === 'setup-reporte') {
+                await reporte.execute(interaction);
+            }
+            return;
+        }
 
-        await rest.put(
-            Routes.applicationCommands(process.env.CLIENT_ID!),
-            { body: commands },
-        );
+        // 2. Manejo de Botones interactivos
+        if (interaction.isButton()) {
+            if (interaction.customId === 'btn_abrir_reporte') {
+                // Aquí prepararemos el Modal (formulario) en el siguiente paso
+                await interaction.reply({
+                    content: '🚨 ¡Botón pulsado correctamente! Próximamente aquí saltará el formulario de reporte.',
+                    ephemeral: true
+                });
+            }
+            return;
+        }
 
-        console.log('✅ ¡Comandos registrados con éxito!');
     } catch (error) {
-        console.error('❌ Error al registrar comandos:', error);
+        console.error('❌ Error al procesar la interacción:', error);
+        if (interaction.isRepliable()) {
+            const errorMessage = {
+                content: 'Hubo un error al procesar esta acción.',
+                ephemeral: true
+            };
+            if (interaction.deferred || interaction.replied) {
+                await interaction.followUp(errorMessage);
+            } else {
+                await interaction.reply(errorMessage);
+            }
+        }
     }
-})();
+}
