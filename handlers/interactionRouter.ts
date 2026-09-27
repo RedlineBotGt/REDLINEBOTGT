@@ -2,8 +2,10 @@ import { Interaction } from 'discord.js';
 import * as dash from '../commands/dash';
 import * as reporte from '../commands/reporte';
 import * as setupdefensa from '../commands/setupdefensa';
+import * as veredicto from '../commands/veredicto';
 import { handleReportButton, handleReportModalSubmit } from './reportModal';
 import { handleDefensaButton, handleDefensaModalSubmit } from './defensModal';
+import { handleVeredictoModalSubmit } from './veredictoModal';
 
 export async function handleInteraction(interaction: Interaction) {
     try {
@@ -15,6 +17,8 @@ export async function handleInteraction(interaction: Interaction) {
                 await reporte.execute(interaction);
             } else if (interaction.commandName === 'setupdefensa') {
                 await setupdefensa.execute(interaction);
+            } else if (interaction.commandName === 'veredicto') {
+                await veredicto.execute(interaction);
             }
             return;
         }
@@ -39,6 +43,8 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleReportModalSubmit(interaction);
             } else if (interaction.customId === 'modal_envio_defensa') {
                 await handleDefensaModalSubmit(interaction);
+            } else if (interaction.customId.startsWith('modal_veredicto_')) {
+                await handleVeredictoModalSubmit(interaction);
             }
             return;
         }
