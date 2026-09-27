@@ -5,7 +5,7 @@ import * as setupdefensa from '../commands/setupdefensa';
 import * as veredicto from '../commands/veredicto';
 import * as msn from '../commands/msn';
 import * as forms from '../commands/forms';
-import * as colocarForm from '../commands/ColocarForm';
+import * as ColocarForm from '../commands/ColocarForm';
 
 import { handleReportButton, handleReportModalSubmit } from './reportModal';
 import { handleDefensaButton, handleDefensaModalSubmit } from './defensModal';
