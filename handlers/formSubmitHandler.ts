@@ -2,7 +2,7 @@ import {
     ModalSubmitInteraction, 
     TextChannel 
 } from 'discord.js';
-import { obtenerFormularioPorTitulo } from '../utils/formsStorage'; // Ajusta la ruta según tu estructura
+import { obtenerFormularioPorTitulo } from '../utils/formsStorage';
 
 export async function handleFormSubmitModal(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (!interaction.customId.startsWith('submit_form_')) return false;
@@ -28,9 +28,9 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
         resumen += `> **${pregunta}**\n${respuesta}\n\n`;
     });
 
-    // Pie de página exclusivo con {Server}
-    const serverFooter = "{Server}";
-    resumen += `— *${serverFooter}*`;
+    // Pie de página dinámico con el nombre del servidor
+    const serverName = interaction.guild?.name || 'Servidor';
+    resumen += `— *${serverName}*`;
 
     // Buscamos el canal de respuestas configurado al crear el formulario
     const canalRespuestas = await interaction.guild?.channels.fetch(formulario.canalRespuestas) as TextChannel;
