@@ -1,5 +1,17 @@
+import http from 'http';
 import { Client, GatewayIntentBits } from 'discord.js';
 import { handleInteraction } from './handlers/interactionRouter';
+
+// 0. Servidor HTTP auxiliar obligatorio para satisfacer el puerto de Render
+const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('REDLINE GT Bot is active and running!');
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(Number(PORT), '0.0.0.0', () => {
+    console.log(`🌐 Servidor HTTP auxiliar escuchando en el puerto ${PORT}`);
+});
 
 // 1. Inicialización limpia con los intents multiserver necesarios
 const client = new Client({
