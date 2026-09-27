@@ -34,7 +34,7 @@ export async function handleInteraction(interaction: Interaction) {
                 await msn.execute(interaction);
             } else if (interaction.commandName === 'forms') {
                 await forms.execute(interaction);
-            } else if (interaction.commandName === 'colocarform') {
+            } else if (interaction.commandName === 'ColocarForm') {
                 await colocarForm.execute(interaction);
             }
             return;
