@@ -24,9 +24,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     // 2. Creamos el Botón Rojo interactivo
     const botonReporte = new ButtonBuilder()
         .setCustomId('btn_abrir_reporte')
-        .setLabel('Reportar Acción')
+        .setLabel('REPORTE')
         .setStyle(ButtonStyle.Danger) // Color rojo de Discord
-        .setEmoji('🚨');
+        
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(botonReporte);
 
