@@ -4,10 +4,9 @@ import {
     ChatInputCommandInteraction, 
     ChannelType, 
     ActionRowBuilder, 
-    StringSelectMenuBuilder, 
-    StringSelectMenuInteraction 
+    StringSelectMenuBuilder 
 } from 'discord.js';
-import { obtenerFormularios } from '../utils/formsStorage'; // Ajusta la ruta según tu estructura
+import { obtenerFormularios } from '../utils/formsStorage';
 
 export const data = new SlashCommandBuilder()
     .setName('colocarform')
