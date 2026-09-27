@@ -23,7 +23,7 @@ export async function handleMsnModalSubmit(interaction: ModalSubmitInteraction) 
     try {
         const canalDestino = await guild.channels.fetch(canalId) as TextChannel;
         if (canalDestino) {
-            // Buscamos menciones escritas a mano en el texto (ej: @vcube o @usuario)
+            // Buscamos menciones escritas a mano en el texto (ej: @palmero)
             const mentionRegex = /@([a-zA-Z0-9_-]+)/g;
             const roles = guild.roles.cache;
             const members = guild.members.cache;
@@ -31,17 +31,17 @@ export async function handleMsnModalSubmit(interaction: ModalSubmitInteraction) 
             texto = texto.replace(mentionRegex, (match, query) => {
                 const queryLower = query.toLowerCase();
 
-                // 1. Comprobar si coincide con un rol del servidor
+                // 1. Comprobar si coincide con un rol del servidor (se mantiene exacto para evitar conflictos)
                 const foundRole = roles.find(r => r.name.toLowerCase() === queryLower);
                 if (foundRole) {
                     return foundRole.id === guild.id ? '@everyone' : `<@&${foundRole.id}>`;
                 }
 
-                // 2. Comprobar si coincide con un usuario (nombre, apodo o nombre global)
+                // 2. Comprobar si el texto está INCLUIDO en el nombre, apodo o nombre global del usuario
                 const foundMember = members.find(m => 
-                    m.user.username.toLowerCase() === queryLower ||
-                    (m.user.globalName && m.user.globalName.toLowerCase() === queryLower) ||
-                    (m.nickname && m.nickname.toLowerCase() === queryLower)
+                    m.user.username.toLowerCase().includes(queryLower) ||
+                    (m.user.globalName && m.user.globalName.toLowerCase().includes(queryLower)) ||
+                    (m.nickname && m.nickname.toLowerCase().includes(queryLower))
                 );
                 if (foundMember) {
                     return `<@${foundMember.id}>`;
