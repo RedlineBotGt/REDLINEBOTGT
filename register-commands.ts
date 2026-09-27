@@ -4,13 +4,17 @@ import { data as reporteCommand } from './commands/reporte';
 import { data as setupdefensaCommand } from './commands/setupdefensa';
 import { data as veredictoCommand } from './commands/veredicto';
 import { data as msnCommand } from './commands/msn';
+import { data as formsCommand } from './commands/forms';
+import { data as colocarFormCommand } from './commands/colocarForm'; // Asegúrate de que coincida con el nombre exacto de tu archivo en /commands
 
 const commands = [
     dashCommand.toJSON(),
     reporteCommand.toJSON(),
     setupdefensaCommand.toJSON(),
     veredictoCommand.toJSON(),
-    msnCommand.toJSON()
+    msnCommand.toJSON(),
+    formsCommand.toJSON(),
+    colocarFormCommand.toJSON()
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
