@@ -1,6 +1,7 @@
 import { Interaction } from 'discord.js';
 import * as dash from '../commands/dash';
 import * as reporte from '../commands/reporte';
+import { handleReportButton, handleReportModalSubmit } from './reportModal'; // Asegúrate de que la ruta sea correcta según donde guardes el archivo del modal
 
 export async function handleInteraction(interaction: Interaction) {
     try {
@@ -17,11 +18,25 @@ export async function handleInteraction(interaction: Interaction) {
         // 2. Manejo de Botones interactivos
         if (interaction.isButton()) {
             if (interaction.customId === 'btn_abrir_reporte') {
-                // Aquí prepararemos el Modal (formulario) en el siguiente paso
-                await interaction.reply({
-                    content: '🚨 ¡Botón pulsado correctamente! Próximamente aquí saltará el formulario de reporte.',
-                    ephemeral: true
-                });
+                // Lanzamos el formulario Modal de 5 campos
+                const handled = await handleReportButton(interaction);
+                if (handled) return;
+            }
+            return;
+        }
+
+        // 3. Manejo de Envíos de Formularios (Modals)
+        if (interaction.isModalSubmit()) {
+            if (interaction.customId === 'modal_envio_reporte') {
+                // Capturamos los datos del formulario y el ID generado
+                const reportData = await handleReportModalSubmit(interaction);
+                
+                if (reportData) {
+                    // AQUÍ IMPLEMENTAREMOS EL PASO 4 (Salida Dual, Canales, Menciones e Hilos)
+                    // De momento, ya tenemos todos los datos empaquetados en 'reportData':
+                    // reportData.reportId, reportData.jornada, reportData.pilotoReporta, 
+                    // reportData.pilotoAReportar, reportData.descripcion, reportData.enlace
+                }
             }
             return;
         }
