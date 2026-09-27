@@ -138,7 +138,7 @@ export async function handleReportModalSubmit(interaction: ModalSubmitInteractio
             { name: '📝 Descripción', value: descripcion, inline: false },
             { name: '🔗 Pruebas / Enlace', value: enlace, inline: false }
         )
-        .setFooter({ text: guild.name })
+        .setFooter({ text: serverName })
         .setTimestamp();
 
     // --- SALIDA 1: Canal Destino 1 + Mención 1 (Opcional, solo si está configurado) ---
