@@ -26,15 +26,15 @@ function getNextReportId(guildId: string): string {
     if (fs.existsSync(configPath)) {
         configs = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
     }
-    
+
     if (!configs[guildId]) configs[guildId] = {};
-    
+
     let currentCounter = configs[guildId].counter || 0;
     currentCounter++;
     configs[guildId].counter = currentCounter;
-    
+
     fs.writeFileSync(configPath, JSON.stringify(configs, null, 2));
-    
+
     const paddedNum = String(currentCounter).padStart(3, '0');
     return paddedNum; // Sin prefijo RG
 }
@@ -101,9 +101,10 @@ export async function handleReportModalSubmit(interaction: ModalSubmitInteractio
     const guildId = interaction.guildId!;
     const config = getConfig(guildId);
 
-    if (!config || !config.canal1 || !config.canal2 || !config.rol1 || !config.rol2) {
+    // Canal 2 y Rol2 son obligatorios; Canal 1 y Rol 1 ahora son opcionales
+    if (!config || !config.canal2 || !config.rol2) {
         await interaction.reply({
-            content: '❌ Error: El sistema de reportes no está completamente configurado en este servidor. Ejecuta `/setup-reporte` de nuevo.',
+            content: '❌ Error: El sistema de reportes no está completamente configurado (falta el Canal Destino 2 o su rol). Ejecuta `/setup-reporte` de nuevo.',
             ephemeral: true
         });
         return;
@@ -140,35 +141,38 @@ export async function handleReportModalSubmit(interaction: ModalSubmitInteractio
 
     const guild = interaction.guild!;
 
-    // --- SALIDA 1: Canal Destino 1 + Mención 1 ---
-    try {
-        const canal1 = await guild.channels.fetch(config.canal1) as TextChannel;
-        if (canal1) {
-            await canal1.send({
-                content: `📢 <@&${config.rol1}> Nuevo reporte registrado.`,
-                embeds: [embedReporte]
-            });
+    // --- SALIDA 1: Canal Destino 1 + Mención 1 (Opcional, solo si está configurado) ---
+    if (config.canal1 && config.rol1) {
+        try {
+            const canal1 = await guild.channels.fetch(config.canal1) as TextChannel;
+            if (canal1) {
+                await canal1.send({
+                    content: `📢 <@&${config.rol1}> Nuevo reporte registrado.`,
+                    embeds: [embedReporte]
+                });
+            }
+        } catch (error) {
+            console.error('❌ Error al enviar al Canal Destino 1:', error);
         }
-    } catch (error) {
-        console.error('❌ Error al enviar al Canal Destino 1:', error);
     }
 
-    // --- SALIDA 2: Canal Destino 2 + Mención 2 + Hilo Automático ---
+    // --- SALIDA 2: Canal Destino 2 (Crea hilo directamente y manda el embed dentro) ---
     try {
         const canal2 = await guild.channels.fetch(config.canal2) as TextChannel;
         if (canal2) {
-            const mensajeCanal2 = await canal2.send({
-                content: `📢 <@&${config.rol2}> Expediente abierto para revisión.`,
-                embeds: [embedReporte]
-            });
-
-            // Creamos automáticamente el hilo en ese mensaje nombrado con el ID limpio
-            await mensajeCanal2.startThread({
+            // 1. Creamos el hilo directamente en el canal de forma limpia
+            const thread = await canal2.threads.create({
                 name: `Reporte-${reportId}`,
                 autoArchiveDuration: 1440 // 24 horas de inactividad para archivar
             });
+
+            // 2. Enviamos el embed y la mención directamente dentro del hilo creado
+            await thread.send({
+                content: `📢 <@&${config.rol2}> Expediente abierto para revisión.`,
+                embeds: [embedReporte]
+            });
         }
     } catch (error) {
-        console.error('❌ Error al enviar al Canal Destino 2 o crear hilo:', error);
+        console.error('❌ Error al crear el hilo en el Canal Destino 2:', error);
     }
 }
