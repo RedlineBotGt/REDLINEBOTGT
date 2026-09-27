@@ -5,14 +5,14 @@ import * as setupdefensa from '../commands/setupdefensa';
 import * as veredicto from '../commands/veredicto';
 import * as msn from '../commands/msn';
 import * as forms from '../commands/forms';
-import * as colocarForm from '../commands/colocarForm';
+import * as colocarForm from '../commands/ColocarForm';
 
 import { handleReportButton, handleReportModalSubmit } from './reportModal';
 import { handleDefensaButton, handleDefensaModalSubmit } from './defensModal';
 import { handleVeredictoModalSubmit } from './veredictoModal';
 import { handleMsnModalSubmit } from './msnModal';
 
-// Nuevos manejadores de formularios
+// Manejadores de formularios
 import { handleFormCreateModal } from './formCreateModal';
 import { handleFormDeploySelect } from './formDeployHandler';
 import { handleFormButtonClick } from './formButtonHandler';
@@ -34,13 +34,13 @@ export async function handleInteraction(interaction: Interaction) {
                 await msn.execute(interaction);
             } else if (interaction.commandName === 'forms') {
                 await forms.execute(interaction);
-            } else if (interaction.commandName === 'ColocarForm') {
+            } else if (interaction.commandName === 'colocarform') {
                 await colocarForm.execute(interaction);
             }
             return;
         }
 
-        // 2. Manejo de Menús Desplegables (Select Menus) - ¡Nuevo!
+        // 2. Manejo de Menús Desplegables (Select Menus)
         if (interaction.isStringSelectMenu()) {
             if (interaction.customId.startsWith('select_form_deploy_')) {
                 await handleFormDeploySelect(interaction);
