@@ -5,7 +5,7 @@ import { data as setupdefensaCommand } from './commands/setupdefensa';
 import { data as veredictoCommand } from './commands/veredicto';
 import { data as msnCommand } from './commands/msn';
 import { data as formsCommand } from './commands/forms';
-import { data as ColocarFormCommand } from './commands/colocarForm'; // Asegúrate de que coincida con el nombre exacto de tu archivo en /commands
+import { data as colocarFormCommand } from './commands/ColocarForm';
 
 const commands = [
     dashCommand.toJSON(),
