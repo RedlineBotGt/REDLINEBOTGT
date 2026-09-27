@@ -19,12 +19,6 @@ export const data = new SlashCommandBuilder()
             .setDescription('Canal de destino del mensaje')
             .addChannelTypes(ChannelType.GuildText)
             .setRequired(true)
-    )
-    // Desplegable opcional de rol para menciones seguras (como @vcube)
-    .addRoleOption(option =>
-        option.setName('rol')
-            .setDescription('Rol a mencionar (Opcional)')
-            .setRequired(false)
     );
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -38,12 +32,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     }
 
     const canalDestino = interaction.options.getChannel('canal', true);
-    const rolMencion = interaction.options.getRole('rol');
-    const rolId = rolMencion ? rolMencion.id : 'none';
 
-    // Construimos el Modal guardando el ID del canal y el ID del rol en el customId
+    // Construimos el Modal guardando únicamente el ID del canal en el customId
     const modal = new ModalBuilder()
-        .setCustomId(`modal_msn_${canalDestino.id}_${rolId}`)
+        .setCustomId(`modal_msn_${canalDestino.id}`)
         .setTitle('Enviar Mensaje Oficial');
 
     const inputTexto = new TextInputBuilder()
