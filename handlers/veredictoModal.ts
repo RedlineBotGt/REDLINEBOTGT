@@ -28,6 +28,10 @@ export async function handleVeredictoModalSubmit(interaction: ModalSubmitInterac
         ephemeral: true
     });
 
+    // Comprobación de seguridad: Si el rol seleccionado es @everyone (su ID es el ID del servidor),
+    // lo adaptamos para que no pete la API de Discord. Si es un rol normal, usamos la mención de rol.
+    const mentionText = (rolId === guild.id) ? '@everyone' : `<@&${rolId}>`;
+
     // Construimos el Embed Verde oficial de Veredicto
     const embedVeredicto = new EmbedBuilder()
         .setTitle(`⚖️ VEREDICTO OFICIAL - 🆔 ${reportId}`)
@@ -41,12 +45,12 @@ export async function handleVeredictoModalSubmit(interaction: ModalSubmitInterac
         .setFooter({ text: serverName })
         .setTimestamp();
 
-    // Enviamos el resultado al canal elegido con la mención al rol
+    // Enviamos el resultado al canal elegido con la mención correspondiente
     try {
         const canalDestino = await guild.channels.fetch(canalId) as TextChannel;
         if (canalDestino) {
             await canalDestino.send({
-                content: `📢 <@&${rolId}> Nuevo veredicto oficial emitido para el reporte **🆔 ${reportId}**.`,
+                content: `📢 ${mentionText} Nuevo veredicto oficial emitido para el reporte **🆔 ${reportId}**.`,
                 embeds: [embedVeredicto]
             });
         }
