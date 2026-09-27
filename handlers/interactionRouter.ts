@@ -35,7 +35,7 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.commandName === 'forms') {
                 await forms.execute(interaction);
             } else if (interaction.commandName === 'colocarform') {
-                await colocarForm.execute(interaction);
+                await ColocarForm.execute(interaction); // <-- Corregido aquí con la 'C' mayúscula
             }
             return;
         }
