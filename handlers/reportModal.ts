@@ -79,8 +79,8 @@ export async function handleReportButton(interaction: ButtonInteraction) {
         .setCustomId('input_enlace')
         .setLabel('Enlace web (Video / Clip / Pruebas)')
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder('https://youtube.com/... o enlace de Twitch/Drive')
-        .setRequired(true);
+        .setPlaceholder('https://youtube.com/... (Opcional)')
+        .setRequired(false); // <-- ¡Cambiado a falso para que sea opcional!
 
     modal.addComponents(
         new ActionRowBuilder<TextInputBuilder>().addComponents(inputJornada),
@@ -112,12 +112,12 @@ export async function handleReportModalSubmit(interaction: ModalSubmitInteractio
 
     const reportId = getNextReportId(guildId);
 
-    // Capturamos los 5 campos
+    // Capturamos los campos (el enlace puede venir vacío)
     const jornada = interaction.fields.getTextInputValue('input_jornada');
     const pilotoReporta = interaction.fields.getTextInputValue('input_reporta');
     const pilotoAReportar = interaction.fields.getTextInputValue('input_a_reportar');
     const descripcion = interaction.fields.getTextInputValue('input_descripcion');
-    const enlace = interaction.fields.getTextInputValue('input_enlace');
+    const enlace = interaction.fields.getTextInputValue('input_enlace').trim();
 
     // Respondemos de forma privada al usuario al instante
     await interaction.reply({
@@ -126,19 +126,26 @@ export async function handleReportModalSubmit(interaction: ModalSubmitInteractio
     });
 
     const guild = interaction.guild!;
-    const serverName = guild.name; // Declaramos serverName para que el footer funcione correctamente
+    const serverName = guild.name;
 
-    // Construimos el Embed Rojo oficial con el nombre del servidor en el footer
+    // Preparamos los campos base del embed
+    const embedFields: any[] = [
+        { name: '📅 Jornada', value: jornada, inline: true },
+        { name: '👤 Reporta', value: pilotoReporta, inline: true },
+        { name: '🎯 A Reportar', value: pilotoAReportar, inline: true },
+        { name: '📝 Descripción', value: descripcion, inline: false }
+    ];
+
+    // Si el usuario rellenó el enlace, lo añadimos al embed; si lo dejó vacío, se omite limpiamente
+    if (enlace) {
+        embedFields.push({ name: '🔗 Pruebas / Enlace', value: enlace, inline: false });
+    }
+
+    // Construimos el Embed Rojo oficial
     const embedReporte = new EmbedBuilder()
         .setTitle(`🚨 NUEVO REPORTE - 🆔 ${reportId}`)
         .setColor(0xFF0000)
-        .addFields(
-            { name: '📅 Jornada', value: jornada, inline: true },
-            { name: '👤 Reporta', value: pilotoReporta, inline: true },
-            { name: '🎯 A Reportar', value: pilotoAReportar, inline: true },
-            { name: '📝 Descripción', value: descripcion, inline: false },
-            { name: '🔗 Pruebas / Enlace', value: enlace, inline: false }
-        )
+        .addFields(embedFields)
         .setFooter({ text: serverName })
         .setTimestamp();
 
@@ -161,13 +168,11 @@ export async function handleReportModalSubmit(interaction: ModalSubmitInteractio
     try {
         const canal2 = await guild.channels.fetch(config.canal2) as TextChannel;
         if (canal2) {
-            // 1. Creamos el hilo directamente en el canal de forma limpia
             const thread = await canal2.threads.create({
                 name: `Reporte-${reportId}`,
                 autoArchiveDuration: 1440 // 24 horas de inactividad para archivar
             });
 
-            // 2. Enviamos el embed y la mención directamente dentro del hilo creado
             await thread.send({
                 content: `📢 <@&${config.rol2}> Expediente abierto para revisión.`,
                 embeds: [embedReporte]
