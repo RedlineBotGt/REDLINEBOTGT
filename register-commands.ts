@@ -1,10 +1,12 @@
 import { REST, Routes } from 'discord.js';
 import { data as dashCommand } from './commands/dash';
 import { data as reporteCommand } from './commands/reporte';
+import { data as setupdefensaCommand } from './commands/setupdefensa';
 
 const commands = [
     dashCommand.toJSON(),
-    reporteCommand.toJSON()
+    reporteCommand.toJSON(),
+    setupdefensaCommand.toJSON()
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
