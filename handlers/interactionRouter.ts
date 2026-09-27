@@ -4,10 +4,19 @@ import * as reporte from '../commands/reporte';
 import * as setupdefensa from '../commands/setupdefensa';
 import * as veredicto from '../commands/veredicto';
 import * as msn from '../commands/msn';
+import * as forms from '../commands/forms';
+import * as colocarForm from '../commands/colocarForm';
+
 import { handleReportButton, handleReportModalSubmit } from './reportModal';
 import { handleDefensaButton, handleDefensaModalSubmit } from './defensModal';
 import { handleVeredictoModalSubmit } from './veredictoModal';
 import { handleMsnModalSubmit } from './msnModal';
+
+// Nuevos manejadores de formularios
+import { handleFormCreateModal } from './formCreateModal';
+import { handleFormDeploySelect } from './formDeployHandler';
+import { handleFormButtonClick } from './formButtonHandler';
+import { handleFormSubmitModal } from './formSubmitHandler';
 
 export async function handleInteraction(interaction: Interaction) {
     try {
@@ -23,25 +32,38 @@ export async function handleInteraction(interaction: Interaction) {
                 await veredicto.execute(interaction);
             } else if (interaction.commandName === 'msn') {
                 await msn.execute(interaction);
+            } else if (interaction.commandName === 'forms') {
+                await forms.execute(interaction);
+            } else if (interaction.commandName === 'colocarform') {
+                await colocarForm.execute(interaction);
             }
             return;
         }
 
-        // 2. Manejo de Botones interactivos
+        // 2. Manejo de Menús Desplegables (Select Menus) - ¡Nuevo!
+        if (interaction.isStringSelectMenu()) {
+            if (interaction.customId.startsWith('select_form_deploy_')) {
+                await handleFormDeploySelect(interaction);
+            }
+            return;
+        }
+
+        // 3. Manejo de Botones interactivos
         if (interaction.isButton()) {
             if (interaction.customId === 'btn_abrir_reporte') {
-                // Lanzamos el formulario Modal de Reporte
                 const handled = await handleReportButton(interaction);
                 if (handled) return;
             } else if (interaction.customId === 'btn_abrir_defensa') {
-                // Lanzamos el formulario Modal de Defensa
                 const handled = await handleDefensaButton(interaction);
                 if (handled) return;
+            } else if (interaction.customId.startsWith('open_form_')) {
+                // Botón azul del formulario publicado
+                await handleFormButtonClick(interaction);
             }
             return;
         }
 
-        // 3. Manejo de Envíos de Formularios (Modals)
+        // 4. Manejo de Envíos de Formularios (Modals)
         if (interaction.isModalSubmit()) {
             if (interaction.customId === 'modal_envio_reporte') {
                 await handleReportModalSubmit(interaction);
@@ -51,6 +73,12 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleVeredictoModalSubmit(interaction);
             } else if (interaction.customId.startsWith('modal_msn_')) {
                 await handleMsnModalSubmit(interaction);
+            } else if (interaction.customId === 'modal_crear_formulario_preguntas') {
+                // Modal de creación de preguntas (/forms)
+                await handleFormCreateModal(interaction);
+            } else if (interaction.customId.startsWith('submit_form_')) {
+                // Modal que rellena el usuario al hacer clic en el formulario
+                await handleFormSubmitModal(interaction);
             }
             return;
         }
