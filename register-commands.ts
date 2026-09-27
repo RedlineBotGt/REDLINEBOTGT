@@ -1,8 +1,10 @@
 import { REST, Routes } from 'discord.js';
 import { data as dashCommand } from './commands/dash';
+import { data as reporteCommand } from './commands/reporte';
 
 const commands = [
-    dashCommand.toJSON()
+    dashCommand.toJSON(),
+    reporteCommand.toJSON()
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
@@ -11,7 +13,6 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
     try {
         console.log('🔄 Registrando comandos en la API de Discord...');
 
-        // Registro global (aparecerá en todos los servidores donde esté el bot)
         await rest.put(
             Routes.applicationCommands(process.env.CLIENT_ID!),
             { body: commands },
