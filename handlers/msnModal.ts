@@ -6,9 +6,10 @@ import {
 export async function handleMsnModalSubmit(interaction: ModalSubmitInteraction) {
     if (!interaction.customId.startsWith('modal_msn_')) return false;
 
-    // Recuperamos el ID del canal del customId
+    // Recuperamos el ID del canal y del rol del customId
     const parts = interaction.customId.split('_');
     const canalId = parts[2];
+    const rolId = parts[3]; // <-- ¡Aquí recogemos el rol!
 
     const guild = interaction.guild!;
     const texto = interaction.fields.getTextInputValue('input_msn_texto');
@@ -23,8 +24,14 @@ export async function handleMsnModalSubmit(interaction: ModalSubmitInteraction) 
     try {
         const canalDestino = await guild.channels.fetch(canalId) as TextChannel;
         if (canalDestino) {
-            // Construimos el mensaje en crudo (tal cual, sin embeds ni pies de página)
             let mensajeFinal = texto;
+
+            // Si se seleccionó un rol, lo inyectamos arriba de forma segura
+            if (rolId && rolId !== 'none') {
+                const mentionText = (rolId === guild.id) ? '@everyone' : `<@&${rolId}>`;
+                mensajeFinal = `${mentionText}\n${texto}`;
+            }
+
             if (imagen) {
                 mensajeFinal += `\n${imagen}`;
             }
