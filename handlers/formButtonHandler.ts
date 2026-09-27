@@ -5,7 +5,7 @@ import {
     TextInputStyle, 
     ActionRowBuilder 
 } from 'discord.js';
-import { obtenerFormularioPorTitulo } from '../utils/formsStorage'; // Ajusta la ruta según tu estructura
+import { obtenerFormularioPorTitulo } from '../utils/formsStorage';
 
 export async function handleFormButtonClick(interaction: ButtonInteraction): Promise<boolean> {
     if (!interaction.customId.startsWith('open_form_')) return false;
@@ -22,12 +22,12 @@ export async function handleFormButtonClick(interaction: ButtonInteraction): Pro
         return true;
     }
 
-    // Creamos el modal dinámicamente con las 5 preguntas guardadas
+    // Creamos el modal dinámicamente con las preguntas guardadas (máximo 5 por límite de Discord)
     const modal = new ModalBuilder()
         .setCustomId(`submit_form_${encodeURIComponent(tituloFormulario)}`)
         .setTitle(formulario.titulo.substring(0, 45)); // Límite de título de modal en Discord
 
-    formulario.preguntas.forEach((pregunta, index) => {
+    formulario.preguntas.slice(0, 5).forEach((pregunta, index) => {
         const input = new TextInputBuilder()
             .setCustomId(`p_${index}`)
             .setLabel(pregunta.substring(0, 45)) // Límite de caracteres de etiqueta
