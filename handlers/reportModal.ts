@@ -4,14 +4,23 @@ import {
     TextInputStyle, 
     ActionRowBuilder, 
     ButtonInteraction, 
-    ModalSubmitInteraction 
+    ModalSubmitInteraction,
+    EmbedBuilder,
+    TextChannel
 } from 'discord.js';
 import fs from 'fs';
 import path from 'path';
 
 const configPath = path.join(process.cwd(), 'reportConfig.json');
 
-// Función para generar el ID correlativo único (ej. RG-001, RG-002...)
+// Función para obtener la configuración del servidor
+function getConfig(guildId: string) {
+    if (!fs.existsSync(configPath)) return null;
+    const configs = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    return configs[guildId] || null;
+}
+
+// Función para generar el ID correlativo único (ej. RG-001)
 function getNextReportId(guildId: string): string {
     let configs: Record<string, any> = {};
     if (fs.existsSync(configPath)) {
@@ -85,30 +94,81 @@ export async function handleReportButton(interaction: ButtonInteraction) {
     return true;
 }
 
-// 2. Procesar el envío del Modal
+// 2. Procesar el formulario y ejecutar la Salida Dual completa
 export async function handleReportModalSubmit(interaction: ModalSubmitInteraction) {
     if (interaction.customId !== 'modal_envio_reporte') return false;
 
     const guildId = interaction.guildId!;
+    const config = getConfig(guildId);
+
+    if (!config || !config.canal1 || !config.canal2 || !config.rol1 || !config.rol2) {
+        await interaction.reply({
+            content: '❌ Error: El sistema de reportes no está completamente configurado en este servidor. Ejecuta `/setup-reporte` de nuevo.',
+            ephemeral: true
+        });
+        return;
+    }
+
     const reportId = getNextReportId(guildId);
 
+    // Capturamos los 5 campos
     const jornada = interaction.fields.getTextInputValue('input_jornada');
     const pilotoReporta = interaction.fields.getTextInputValue('input_reporta');
     const pilotoAReportar = interaction.fields.getTextInputValue('input_a_reportar');
     const descripcion = interaction.fields.getTextInputValue('input_descripcion');
     const enlace = interaction.fields.getTextInputValue('input_enlace');
 
+    // Respondemos de forma privada al usuario al instante
     await interaction.reply({
-        content: `✅ Reporte recibido correctamente con el identificador **🆔 ${reportId}**. Procesando envío dual...`,
+        content: `✅ ¡Reporte enviado con éxito! Identificador generado: **🆔 ${reportId}**`,
         ephemeral: true
     });
 
-    return {
-        reportId,
-        jornada,
-        pilotoReporta,
-        pilotoAReportar,
-        descripcion,
-        enlace
-    };
+    // Construimos el Embed Rojo oficial
+    const embedReporte = new EmbedBuilder()
+        .setTitle(`🚨 NUEVO REPORTE - 🆔 ${reportId}`)
+        .setColor(0xFF0000)
+        .addFields(
+            { name: '📅 Jornada', value: jornada, inline: true },
+            { name: '👤 Reporta', value: pilotoReporta, inline: true },
+            { name: '🎯 A Reportar', value: pilotoAReportar, inline: true },
+            { name: '📝 Descripción', value: descripcion, inline: false },
+            { name: '🔗 Pruebas / Enlace', value: enlace, inline: false }
+        )
+        .setFooter({ text: 'DISCORDBOT' })
+        .setTimestamp();
+
+    const guild = interaction.guild!;
+
+    // --- SALIDA 1: Canal Destino 1 + Mención 1 ---
+    try {
+        const canal1 = await guild.channels.fetch(config.canal1) as TextChannel;
+        if (canal1) {
+            await canal1.send({
+                content: `📢 <@&${config.rol1}> Nuevo reporte registrado.`,
+                embeds: [embedReporte]
+            });
+        }
+    } catch (error) {
+        console.error('❌ Error al enviar al Canal Destino 1:', error);
+    }
+
+    // --- SALIDA 2: Canal Destino 2 + Mención 2 + Hilo Automático ---
+    try {
+        const canal2 = await guild.channels.fetch(config.canal2) as TextChannel;
+        if (canal2) {
+            const mensajeCanal2 = await canal2.send({
+                content: `📢 <@&${config.rol2}> Expediente abierto para revisión.`,
+                embeds: [embedReporte]
+            });
+
+            // Creamos automáticamente el hilo en ese mensaje nombrado con el ID
+            await mensajeCanal2.startThread({
+                name: `Reporte-${reportId}`,
+                autoArchiveDuration: 1440 // 24 horas de inactividad para archivar
+            });
+        }
+    } catch (error) {
+        console.error('❌ Error al enviar al Canal Destino 2 o crear hilo:', error);
+    }
 }
