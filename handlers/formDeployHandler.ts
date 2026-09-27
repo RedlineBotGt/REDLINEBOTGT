@@ -5,7 +5,7 @@ import {
     ButtonStyle, 
     TextChannel 
 } from 'discord.js';
-import { obtenerFormularioPorTitulo } from '../utils/formsStorage'; // Ajusta la ruta
+import { obtenerFormularioPorTitulo } from '../utils/formsStorage';
 
 export async function handleFormDeploySelect(interaction: StringSelectMenuInteraction): Promise<boolean> {
     if (!interaction.customId.startsWith('select_form_deploy_')) return false;
@@ -32,19 +32,19 @@ export async function handleFormDeploySelect(interaction: StringSelectMenuIntera
         return true;
     }
 
-    // Definimos el pie de página con {Server} (puedes adaptarlo a tu variable de servidor)
-    const serverFooter = "REDLINE GT"; // O tu constante de servidor habitual
+    // Obtenemos el nombre real del servidor de forma dinámica (reemplaza a {Server})
+    const serverName = interaction.guild?.name || 'Servidor';
 
     // Creamos el Botón Azul con el título exacto del formulario
     const botonAzul = new ButtonBuilder()
         .setCustomId(`open_form_${encodeURIComponent(tituloFormulario)}`)
-        .setLabel(tituloFormulario.substring(0, 80)) // Límite de caracteres de etiqueta de botón
-        .setStyle(ButtonStyle.Primary); // ¡Botón azul!
+        .setLabel(tituloFormulario.substring(0, 80))
+        .setStyle(ButtonStyle.Primary);
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(botonAzul);
 
-    // Mensaje final pactado: Texto "FORMULARIOS" + Botón azul + Pie de página
-    const contenidoMensaje = `**FORMULARIOS**\n\n— *${serverFooter}*`;
+    // Mensaje con el nombre del servidor dinámico
+    const contenidoMensaje = `**FORMULARIOS**\n\n— *${serverName}*`;
 
     await canalDestino.send({
         content: contenidoMensaje,
