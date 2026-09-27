@@ -1,6 +1,6 @@
 import { ModalSubmitInteraction } from 'discord.js';
-import { pendingFormCreations } from './forms'; // Importamos el mapa del comando forms.ts
-import { guardarFormulario } from './formsStorage'; // Importamos la función del Paso 1
+import { pendingFormCreations } from '../commands/forms'; // <-- ¡Corregido aquí para subir a la carpeta commands!
+import { guardarFormulario } from '../utils/formsStorage'; // Importamos la función del Paso 1
 
 export async function handleFormCreateModal(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_crear_formulario_preguntas') return false;
