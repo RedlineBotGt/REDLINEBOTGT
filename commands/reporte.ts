@@ -1,3 +1,4 @@
+
 import { 
     SlashCommandBuilder, 
     ChatInputCommandInteraction, 
@@ -35,7 +36,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     const embed = new EmbedBuilder()
         .setTitle('⚙️ CONFIGURACIÓN DE REPORTES (1/4)')
-        .setDescription('Paso 1: Selecciona el **Canal Destino 1** (Donde irá el primer mensaje con el ID).')
+        .setDescription('Paso 1: Selecciona el **Canal Destino 1** (Opcional, o pulsa "Saltar").')
         .setColor(0xFF0000)
         .setFooter({ text: 'DISCORDBOT' });
 
@@ -46,9 +47,16 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             .addChannelTypes(ChannelType.GuildText)
     );
 
+    const rowSkip1 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+            .setCustomId('skip_canal_1')
+            .setLabel('Saltar Canal 1')
+            .setStyle(ButtonStyle.Secondary)
+    );
+
     const response = await interaction.reply({
         embeds: [embed],
-        components: [row],
+        components: [row, rowSkip1],
         ephemeral: true,
         fetchReply: true
     });
@@ -58,15 +66,15 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         time: 300_000 // 5 minutos de tiempo límite
     });
 
-    const configData: { canal1?: string; rol1?: string; canal2?: string; rol2?: string } = {};
+    const configData: { canal1?: string | null; rol1?: string | null; canal2?: string; rol2?: string } = {};
 
     collector.on('collect', async (i) => {
-        if (i.customId === 'setup_canal_1') {
-            configData.canal1 = i.values[0];
+        if (i.customId === 'setup_canal_1' || i.customId === 'skip_canal_1') {
+            configData.canal1 = i.customId === 'skip_canal_1' ? null : i.values[0];
 
             const embed2 = new EmbedBuilder()
                 .setTitle('⚙️ CONFIGURACIÓN DE REPORTES (2/4)')
-                .setDescription('Paso 2: Selecciona la **Mención 1** (Rol que se alertará en el Canal 1).')
+                .setDescription('Paso 2: Selecciona la **Mención 1** (Rol que se alertará en el Canal 1. Opcional).')
                 .setColor(0xFF0000)
                 .setFooter({ text: 'DISCORDBOT' });
 
@@ -76,14 +84,21 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                     .setPlaceholder('Selecciona el Rol de Mención 1...')
             );
 
-            await i.update({ embeds: [embed2], components: [row2] });
+            const rowSkip2 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder()
+                    .setCustomId('skip_rol_1')
+                    .setLabel('Saltar Mención 1')
+                    .setStyle(ButtonStyle.Secondary)
+            );
 
-        } else if (i.customId === 'setup_rol_1') {
-            configData.rol1 = i.values[0];
+            await i.update({ embeds: [embed2], components: [row2, rowSkip2] });
+
+        } else if (i.customId === 'setup_rol_1' || i.customId === 'skip_rol_1') {
+            configData.rol1 = i.customId === 'skip_rol_1' ? null : i.values[0];
 
             const embed3 = new EmbedBuilder()
                 .setTitle('⚙️ CONFIGURACIÓN DE REPORTES (3/4)')
-                .setDescription('Paso 3: Selecciona el **Canal Destino 2** (Donde irá el segundo embed y el hilo automático).')
+                .setDescription('Paso 3: Selecciona el **Canal Destino 2** (Donde se creará el hilo automático).')
                 .setColor(0xFF0000)
                 .setFooter({ text: 'DISCORDBOT' });
 
