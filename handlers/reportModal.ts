@@ -126,6 +126,7 @@ export async function handleReportModalSubmit(interaction: ModalSubmitInteractio
     });
 
     const guild = interaction.guild!;
+    const serverName = guild.name; // Declaramos serverName para que el footer funcione correctamente
 
     // Construimos el Embed Rojo oficial con el nombre del servidor en el footer
     const embedReporte = new EmbedBuilder()
