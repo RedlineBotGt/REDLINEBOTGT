@@ -20,7 +20,7 @@ function getConfig(guildId: string) {
     return configs[guildId] || null;
 }
 
-// Función para generar el ID correlativo único (ej. RG-001)
+// Función para generar el ID correlativo limpio (ej. 001, 002...)
 function getNextReportId(guildId: string): string {
     let configs: Record<string, any> = {};
     if (fs.existsSync(configPath)) {
@@ -36,7 +36,7 @@ function getNextReportId(guildId: string): string {
     fs.writeFileSync(configPath, JSON.stringify(configs, null, 2));
     
     const paddedNum = String(currentCounter).padStart(3, '0');
-    return `RG-${paddedNum}`;
+    return paddedNum; // Sin prefijo RG
 }
 
 // 1. Mostrar el Modal al pulsar el botón REPORTE
@@ -162,7 +162,7 @@ export async function handleReportModalSubmit(interaction: ModalSubmitInteractio
                 embeds: [embedReporte]
             });
 
-            // Creamos automáticamente el hilo en ese mensaje nombrado con el ID
+            // Creamos automáticamente el hilo en ese mensaje nombrado con el ID limpio
             await mensajeCanal2.startThread({
                 name: `Reporte-${reportId}`,
                 autoArchiveDuration: 1440 // 24 horas de inactividad para archivar
