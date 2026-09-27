@@ -10,16 +10,16 @@ import {
 
 export const data = new SlashCommandBuilder()
     .setName('setup-reporte')
-    .setDescription('Despliega el panel oficial de reportes de REDLINE GT')
+    .setDescription('Despliega el panel oficial de reportes')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(interaction: ChatInputCommandInteraction) {
     // 1. Creamos el Embed Rojo con tus textos exactos
     const embedReporte = new EmbedBuilder()
-        .setTitle('🚨 REDLINE GT — REPORTES DE CARRERA')
+        .setTitle('🚨 REPORTES DE CARRERA')
         .setDescription('¿Quieres Reportar una acción en carrera?\nPincha en el botón Rojo y rellena el formulario')
         .setColor(0xFF0000) // Rojo corporativo de alerta
-        .setFooter({ text: 'REDLINE GT' });
+        .setFooter({ text: 'DISCORDBOT' });
 
     // 2. Creamos el Botón Rojo interactivo
     const botonReporte = new ButtonBuilder()
