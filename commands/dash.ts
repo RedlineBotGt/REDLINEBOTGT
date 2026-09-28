@@ -7,38 +7,34 @@ import {
     ButtonStyle, 
     PermissionFlagsBits 
 } from 'discord.js';
-import { obtenerFormularios } from '../utils/formsStorage';
 
 export const data = new SlashCommandBuilder()
     .setName('dash')
-    .setDescription('Panel de Control Centralizado de REDLINE GT')
+    .setDescription('Panel de Control Centralizado')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    if (!interaction.guildId) {
+    if (!interaction.guildId || !interaction.guild) {
         await interaction.reply({ content: '❌ Este comando solo se puede usar dentro de un servidor.', ephemeral: true });
         return;
     }
 
-    // Obtenemos los formularios de este servidor
-    const formularios = await obtenerFormularios(interaction.guildId);
-    const titulos = Object.keys(formularios);
+    // Obtenemos el nombre real del servidor actual
+    const guildName = interaction.guild.name;
 
     const embed = new EmbedBuilder()
         .setColor(0x0055FF)
-        .setTitle('🏁 REDLINE GT — Panel de Control')
-        .setDescription('Bienvenido al centro de administración centralizado. Selecciona una opción a continuación para gestionar formularios, anuncios o herramientas del servidor.')
+        .setTitle(`🏁 ${guildName} — Panel de Control`)
+        .setDescription('Selecciona una opción en los botones inferiores para gestionar el servidor.')
         .addFields(
-            { 
-                name: '📋 Formularios Activos', 
-                value: titulos.length > 0 ? titulos.map(t => `• **${t}** (Canal: <#${formularios[t].canalRespuestas}>)`).join('\n') : '*No hay formularios creados. Usa los botones inferiores.*', 
-                inline: false 
-            }
+            { name: '📋 Gestión de Formularios', value: 'Crear, editar, borrar o colocar formularios.', inline: false },
+            { name: '📢 Comunicaciones (MSN)', value: 'Enviar mensajes oficiales y configurar canales.', inline: false },
+            { name: '⚖️ Sistema de Comisarios', value: 'Gestionar reportes, defensas y veredictos.', inline: false }
         )
         .setTimestamp()
-        .setFooter({ text: 'REDLINE GT Dashboard' });
+        .setFooter({ text: `${guildName} Dashboard` });
 
-    // Fila 1: Gestión de Formularios
+    // Fila 1: Los 4 botones de Formularios (caben juntos en una fila)
     const rowForms = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('dash_btn_crear_form').setLabel('Crear').setStyle(ButtonStyle.Primary).setEmoji('➕'),
         new ButtonBuilder().setCustomId('dash_btn_editar_form').setLabel('Editar').setStyle(ButtonStyle.Secondary).setEmoji('✏️'),
@@ -46,16 +42,16 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         new ButtonBuilder().setCustomId('dash_btn_colocar_form').setLabel('Colocar').setStyle(ButtonStyle.Success).setEmoji('📌')
     );
 
-    // Fila 2: Comunicaciones (Mensaje y Canal)
+    // Fila 2: Los 2 botones de Comunicaciones (MSN)
     const rowMsn = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('dash_btn_msn_mensaje').setLabel('Mensaje').setStyle(ButtonStyle.Primary).setEmoji('💬'),
         new ButtonBuilder().setCustomId('dash_btn_msn_canal').setLabel('Canal').setStyle(ButtonStyle.Secondary).setEmoji('📺')
     );
 
-    // Fila 3: Sistema de Comisarios (Reporte, Defensa y Veredicto)
+    // Fila 3: Los 3 botones de Comisarios
     const rowComisarios = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('dash_btn_setup_reporte').setLabel('Reporte').setStyle(ButtonStyle.Primary).setEmoji('🛡️'),
-        new ButtonBuilder().setCustomId('dash_btn_setup_defensa').setLabel('Defensa').setStyle(ButtonStyle.Primary).setEmoji('⚖️'),
+        new ButtonBuilder().setCustomId('dash_btn_setup_defensa').setLabel('Defensa').setStyle(ButtonStyle.Secondary).setEmoji('⚖️'),
         new ButtonBuilder().setCustomId('dash_btn_veredicto').setLabel('Veredicto').setStyle(ButtonStyle.Success).setEmoji('📜')
     );
 
