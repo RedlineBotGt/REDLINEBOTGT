@@ -21,7 +21,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: ChatInputCommandInteraction) {
     const canalDestino = interaction.options.getChannel('canal', true);
-    const formularios = obtenerFormularios();
+    const formularios = await obtenerFormularios(); // <-- Añadido el await aquí
     const titulos = Object.keys(formularios);
 
     if (titulos.length === 0) {
