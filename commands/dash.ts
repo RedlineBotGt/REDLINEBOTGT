@@ -19,7 +19,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         return;
     }
 
-    // Obtenemos el nombre real del servidor actual
     const guildName = interaction.guild.name;
 
     const embed = new EmbedBuilder()
@@ -34,7 +33,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         .setTimestamp()
         .setFooter({ text: `${guildName} Dashboard` });
 
-    // Fila 1: Los 4 botones de Formularios (caben juntos en una fila)
+    // Fila 1: Los 4 botones de Formularios juntos (Discord permite hasta 5 por fila)
     const rowForms = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('dash_btn_crear_form').setLabel('Crear').setStyle(ButtonStyle.Primary).setEmoji('➕'),
         new ButtonBuilder().setCustomId('dash_btn_editar_form').setLabel('Editar').setStyle(ButtonStyle.Secondary).setEmoji('✏️'),
@@ -42,13 +41,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         new ButtonBuilder().setCustomId('dash_btn_colocar_form').setLabel('Colocar').setStyle(ButtonStyle.Success).setEmoji('📌')
     );
 
-    // Fila 2: Los 2 botones de Comunicaciones (MSN)
+    // Fila 2: Comunicaciones (MSN)
     const rowMsn = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('dash_btn_msn_mensaje').setLabel('Mensaje').setStyle(ButtonStyle.Primary).setEmoji('💬'),
         new ButtonBuilder().setCustomId('dash_btn_msn_canal').setLabel('Canal').setStyle(ButtonStyle.Secondary).setEmoji('📺')
     );
 
-    // Fila 3: Los 3 botones de Comisarios
+    // Fila 3: Sistema de Comisarios
     const rowComisarios = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('dash_btn_setup_reporte').setLabel('Reporte').setStyle(ButtonStyle.Primary).setEmoji('🛡️'),
         new ButtonBuilder().setCustomId('dash_btn_setup_defensa').setLabel('Defensa').setStyle(ButtonStyle.Secondary).setEmoji('⚖️'),
