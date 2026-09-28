@@ -12,7 +12,7 @@ export async function handleFormButtonClick(interaction: ButtonInteraction): Pro
 
     // Extraemos el título del formulario desde el customId del botón
     const tituloFormulario = decodeURIComponent(interaction.customId.replace('open_form_', ''));
-    const formulario = obtenerFormularioPorTitulo(tituloFormulario);
+    const formulario = await obtenerFormularioPorTitulo(tituloFormulario); // <-- Añadido el await aquí
 
     if (!formulario || !formulario.preguntas) {
         await interaction.reply({
