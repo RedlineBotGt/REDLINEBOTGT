@@ -15,7 +15,7 @@ export async function handleFormCreateModal(interaction: ModalSubmitInteraction)
         return true;
     }
 
-    const { titulo, canalRespuestasId } = pendingData;
+    const { guildId, titulo, canalRespuestasId } = pendingData;
 
     // Recogemos las preguntas de forma segura (capturando si algún campo viniera vacío)
     const preguntas: string[] = [];
@@ -30,15 +30,15 @@ export async function handleFormCreateModal(interaction: ModalSubmitInteraction)
         }
     }
 
-    // Guardamos en la base de datos de MongoDB usando await
-    await guardarFormulario(titulo, canalRespuestasId, preguntas);
+    // Guardamos en la base de datos de MongoDB pasando el guildId
+    await guardarFormulario(guildId, titulo, canalRespuestasId, preguntas);
 
     // Limpiamos la memoria temporal
     pendingFormCreations.delete(interaction.user.id);
 
     // Respondemos de forma privada confirmando el guardado
     await interaction.reply({
-        content: `✅ ¡Formulario **"${titulo}"** guardado con éxito en la base de datos!\n- **Canal de respuestas:** <#${canalRespuestasId}>\n- **Preguntas válidas configuradas:** ${preguntas.length}\n\n*(Ya está listo para ser lanzado cuando quieras con /colocarform).*`,
+        content: `✅ ¡Formulario **"${titulo}"** guardado con éxito en la base de datos de este servidor!\n- **Canal de respuestas:** <#${canalRespuestasId}>\n- **Preguntas válidas configuradas:** ${preguntas.length}\n\n*(Ya está listo para ser lanzado cuando quieras con /colocarform).*`,
         ephemeral: true
     });
 
