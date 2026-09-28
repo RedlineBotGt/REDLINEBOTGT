@@ -8,7 +8,7 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
     if (!interaction.customId.startsWith('submit_form_')) return false;
 
     const tituloFormulario = decodeURIComponent(interaction.customId.replace('submit_form_', ''));
-    const formulario = obtenerFormularioPorTitulo(tituloFormulario);
+    const formulario = await obtenerFormularioPorTitulo(tituloFormulario); // <-- ¡Aquí faltaba el await!
 
     if (!formulario) {
         await interaction.reply({
@@ -34,7 +34,7 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
 
     // Buscamos el canal de respuestas configurado al crear el formulario
     const canalRespuestas = await interaction.guild?.channels.fetch(formulario.canalRespuestas) as TextChannel;
-    
+
     if (canalRespuestas) {
         await canalRespuestas.send({ content: resumen });
         await interaction.reply({
