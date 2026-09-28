@@ -10,13 +10,20 @@ import { obtenerFormularioPorTitulo } from '../utils/formsStorage';
 export async function handleFormButtonClick(interaction: ButtonInteraction): Promise<boolean> {
     if (!interaction.customId.startsWith('open_form_')) return false;
 
+    if (!interaction.guildId) {
+        await interaction.reply({ content: '❌ Este botón solo se puede usar dentro de un servidor.', ephemeral: true });
+        return true;
+    }
+
     // Extraemos el título del formulario desde el customId del botón
     const tituloFormulario = decodeURIComponent(interaction.customId.replace('open_form_', ''));
-    const formulario = await obtenerFormularioPorTitulo(tituloFormulario); // <-- Añadido el await aquí
+    
+    // Buscamos el formulario pasando el guildId y el título
+    const formulario = await obtenerFormularioPorTitulo(interaction.guildId, tituloFormulario);
 
     if (!formulario || !formulario.preguntas) {
         await interaction.reply({
-            content: '❌ Lo siento, este formulario ya no está disponible o ha sido eliminado.',
+            content: '❌ Lo siento, este formulario ya no está disponible o ha sido eliminado en este servidor.',
             ephemeral: true
         });
         return true;
