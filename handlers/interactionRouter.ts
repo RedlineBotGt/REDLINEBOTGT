@@ -12,11 +12,13 @@ import { handleDefensaButton, handleDefensaModalSubmit } from './defensModal';
 import { handleVeredictoModalSubmit } from './veredictoModal';
 import { handleMsnModalSubmit } from './msnModal';
 
-// Manejadores de formularios
+// Manejadores de formularios y Dash
 import { handleFormCreateModal } from './formCreateModal';
 import { handleFormDeploySelect } from './formDeployHandler';
 import { handleFormButtonClick } from './formButtonHandler';
 import { handleFormSubmitModal } from './formSubmitHandler';
+import { handleDashDeleteFormSelect } from './dashDeleteHandler'; // Archivo o función para borrar del dash
+import { handleDashMsnChannelSelect } from './dashMsnHandler';     // Archivo o función para el canal MSN del dash
 
 export async function handleInteraction(interaction: Interaction) {
     try {
@@ -35,15 +37,25 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.commandName === 'forms') {
                 await forms.execute(interaction);
             } else if (interaction.commandName === 'colocarform') {
-                await ColocarForm.execute(interaction); // <-- Corregido aquí con la 'C' mayúscula
+                await ColocarForm.execute(interaction);
             }
             return;
         }
 
-        // 2. Manejo de Menús Desplegables (Select Menus)
+        // 2. Manejo de Menús Desplegables de Texto (String Select Menus)
         if (interaction.isStringSelectMenu()) {
             if (interaction.customId.startsWith('select_form_deploy_')) {
                 await handleFormDeploySelect(interaction);
+            } else if (interaction.customId === 'dash_select_eliminar_form') {
+                await handleDashDeleteFormSelect(interaction);
+            }
+            return;
+        }
+
+        // 2.1. Manejo de Menús Desplegables de Canales (Channel Select Menus)
+        if (interaction.isChannelSelectMenu()) {
+            if (interaction.customId === 'dash_select_msn_channel') {
+                await handleDashMsnChannelSelect(interaction);
             }
             return;
         }
@@ -57,7 +69,6 @@ export async function handleInteraction(interaction: Interaction) {
                 const handled = await handleDefensaButton(interaction);
                 if (handled) return;
             } else if (interaction.customId.startsWith('open_form_')) {
-                // Botón azul del formulario publicado
                 await handleFormButtonClick(interaction);
             }
             return;
@@ -74,10 +85,8 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId.startsWith('modal_msn_')) {
                 await handleMsnModalSubmit(interaction);
             } else if (interaction.customId === 'modal_crear_formulario_preguntas') {
-                // Modal de creación de preguntas (/forms)
                 await handleFormCreateModal(interaction);
             } else if (interaction.customId.startsWith('submit_form_')) {
-                // Modal que rellena el usuario al hacer clic en el formulario
                 await handleFormSubmitModal(interaction);
             }
             return;
