@@ -29,7 +29,9 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
         );
 
         console.log('✅ ¡Comandos registrados con éxito!');
+        process.exit(0); // Cierra el proceso para que Render termine el build con éxito
     } catch (error) {
         console.error('❌ Error al registrar comandos:', error);
+        process.exit(1); // Sale con error si falla
     }
 })();
