@@ -13,8 +13,8 @@ export async function handleFormDeploySelect(interaction: StringSelectMenuIntera
     const canalId = interaction.customId.replace('select_form_deploy_', '');
     const tituloFormulario = interaction.values[0];
 
-    // Verificamos que exista el formulario
-    const formulario = obtenerFormularioPorTitulo(tituloFormulario);
+    // Verificamos que exista el formulario usando await
+    const formulario = await obtenerFormularioPorTitulo(tituloFormulario); // <-- Añadido el await aquí
     if (!formulario) {
         await interaction.update({
             content: '❌ El formulario seleccionado ya no existe en la base de datos.',
