@@ -20,13 +20,19 @@ export const data = new SlashCommandBuilder()
     );
 
 export async function execute(interaction: ChatInputCommandInteraction) {
+    if (!interaction.guildId) {
+        await interaction.reply({ content: '❌ Este comando solo se puede usar dentro de un servidor.', ephemeral: true });
+        return;
+    }
+
     const canalDestino = interaction.options.getChannel('canal', true);
-    const formularios = await obtenerFormularios(); // <-- Añadido el await aquí
+    // Pasamos el guildId para obtener solo los formularios de este servidor
+    const formularios = await obtenerFormularios(interaction.guildId);
     const titulos = Object.keys(formularios);
 
     if (titulos.length === 0) {
         await interaction.reply({
-            content: '❌ No hay ningún formulario guardado en la base de datos. Crea uno primero con `/forms`.',
+            content: '❌ No hay ningún formulario guardado en la base de datos de este servidor. Crea uno primero con `/forms`.',
             ephemeral: true
         });
         return;
