@@ -9,8 +9,8 @@ import {
     ChannelType 
 } from 'discord.js';
 
-// Mapa temporal en memoria para retener título y canal mientras el admin rellena el modal
-export const pendingFormCreations = new Map<string, { titulo: string, canalRespuestasId: string }>();
+// Añadimos guildId para saber en qué servidor se inició la creación
+export const pendingFormCreations = new Map<string, { guildId: string, titulo: string, canalRespuestasId: string }>();
 
 export const data = new SlashCommandBuilder()
     .setName('forms')
@@ -29,16 +29,21 @@ export const data = new SlashCommandBuilder()
     );
 
 export async function execute(interaction: ChatInputCommandInteraction) {
+    if (!interaction.guildId) {
+        await interaction.reply({ content: '❌ Este comando solo se puede usar dentro de un servidor.', ephemeral: true });
+        return;
+    }
+
     const titulo = interaction.options.getString('titulo', true);
     const canalRespuestas = interaction.options.getChannel('canal_respuestas', true);
 
-    // Guardamos temporalmente los datos del usuario que ejecuta el comando
+    // Guardamos temporalmente el guildId junto al título y canal
     pendingFormCreations.set(interaction.user.id, {
+        guildId: interaction.guildId,
         titulo,
         canalRespuestasId: canalRespuestas.id
     });
 
-    // Creamos el Modal con los 5 campos de texto opcionales para las preguntas
     const modal = new ModalBuilder()
         .setCustomId('modal_crear_formulario_preguntas')
         .setTitle('Configurar Preguntas del Formulario');
