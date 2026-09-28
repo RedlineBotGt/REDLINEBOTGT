@@ -32,7 +32,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         .addFields(
             { 
                 name: '📋 Formularios Activos', 
-                value: titulos.length > 0 ? titulos.map(t => `• **${t}** (Canal: <#${formularios[t].canalRespuestas}>)`).join('\n') : '*No hay formularios creados. Usa `/forms`.*', 
+                value: titulos.length > 0 ? titulos.map(t => `• **${t}** (Canal de respuestas: <#${formularios[t].canalRespuestas}>)`).join('\n') : '*No hay formularios creados. Usa `/forms`.*', 
                 inline: false 
             }
         )
@@ -41,9 +41,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     const components: ActionRowBuilder<any>[] = [];
 
-    // 1. Fila de Formularios (si existen)
+    // 1. Selector para Eliminar Formularios (si existen)
     if (titulos.length > 0) {
-        const selectForm = new StringSelectMenuBuilder()
+        const selectDelete = new StringSelectMenuBuilder()
             .setCustomId('dash_select_eliminar_form')
             .setPlaceholder('🗑️ [Formularios] Selecciona uno para eliminar...')
             .addOptions(
@@ -53,10 +53,23 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                     description: 'Eliminar este formulario de forma permanente'
                 }))
             );
-        components.push(new ActionRowBuilder().addComponents(selectForm));
+        components.push(new ActionRowBuilder().addComponents(selectDelete));
+
+        // 2. Selector para Editar Formularios (si existen)
+        const selectEdit = new StringSelectMenuBuilder()
+            .setCustomId('dash_select_editar_form')
+            .setPlaceholder('✏️ [Formularios] Selecciona uno para editar...')
+            .addOptions(
+                titulos.slice(0, 25).map(titulo => ({
+                    label: titulo.substring(0, 100),
+                    value: titulo.substring(0, 100),
+                    description: 'Modificar preguntas o canal de respuestas'
+                }))
+            );
+        components.push(new ActionRowBuilder().addComponents(selectEdit));
     }
 
-    // 2. Fila para MSN (Selector de canal directo para enviar anuncio oficial)
+    // 3. Selector de Canales para MSN
     const selectMsnChannel = new ChannelSelectMenuBuilder()
         .setCustomId('dash_select_msn_channel')
         .setPlaceholder('📢 [MSN] Selecciona un canal para enviar anuncio...')
