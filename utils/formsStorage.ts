@@ -1,8 +1,18 @@
-import fs from 'fs';
-import path from 'path';
+import { MongoClient } from 'mongodb';
 
-// Ruta donde se guardará el archivo JSON
-const filePath = path.join(process.cwd(), 'forms.json');
+const uri = process.env.MONGODB_URI || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0";
+const client = new MongoClient(uri);
+
+let dbCollection: any = null;
+
+async function getCollection() {
+    if (!dbCollection) {
+        await client.connect();
+        // Conecta a la base de datos 'redline_bot' y a la colección 'forms'
+        dbCollection = client.db('redline_bot').collection('forms');
+    }
+    return dbCollection;
+}
 
 // Estructura de un formulario
 export interface FormularioData {
@@ -12,34 +22,53 @@ export interface FormularioData {
 }
 
 // 1. Obtener todos los formularios guardados
-export function obtenerFormularios(): Record<string, FormularioData> {
-    if (!fs.existsSync(filePath)) {
-        return {};
-    }
+export async function obtenerFormularios(): Promise<Record<string, FormularioData>> {
     try {
-        const data = fs.readFileSync(filePath, 'utf-8');
-        return JSON.parse(data);
+        const col = await getCollection();
+        const docs = await col.find({}).toArray();
+        const formularios: Record<string, FormularioData> = {};
+        
+        docs.forEach((doc: any) => {
+            formularios[doc.titulo] = {
+                titulo: doc.titulo,
+                canalRespuestas: doc.canalRespuestas,
+                preguntas: doc.preguntas
+            };
+        });
+        return formularios;
     } catch (error) {
-        console.error('❌ Error al leer forms.json:', error);
+        console.error('❌ Error al leer formularios de MongoDB:', error);
         return {};
     }
 }
 
 // 2. Guardar o actualizar un formulario (usando el Título como clave única)
-export function guardarFormulario(titulo: string, canalRespuestas: string, preguntas: string[]) {
-    const formularios = obtenerFormularios();
-
-    formularios[titulo] = {
-        titulo,
-        canalRespuestas,
-        preguntas
-    };
-
-    fs.writeFileSync(filePath, JSON.stringify(formularios, null, 2), 'utf-8');
+export async function guardarFormulario(titulo: string, canalRespuestas: string, preguntas: string[]) {
+    try {
+        const col = await getCollection();
+        await col.updateOne(
+            { titulo },
+            { $set: { titulo, canalRespuestas, preguntas } },
+            { upsert: true }
+        );
+    } catch (error) {
+        console.error('❌ Error al guardar formulario en MongoDB:', error);
+    }
 }
 
 // 3. Buscar un formulario específico por su título
-export function obtenerFormularioPorTitulo(titulo: string): FormularioData | null {
-    const formularios = obtenerFormularios();
-    return formularios[titulo] || null;
+export async function obtenerFormularioPorTitulo(titulo: string): Promise<FormularioData | null> {
+    try {
+        const col = await getCollection();
+        const doc = await col.findOne({ titulo });
+        if (!doc) return null;
+        return {
+            titulo: doc.titulo,
+            canalRespuestas: doc.canalRespuestas,
+            preguntas: doc.preguntas
+        };
+    } catch (error) {
+        console.error('❌ Error al buscar formulario en MongoDB:', error);
+        return null;
+    }
 }
