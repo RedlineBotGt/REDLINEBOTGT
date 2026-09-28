@@ -10,14 +10,19 @@ import { obtenerFormularioPorTitulo } from '../utils/formsStorage';
 export async function handleFormDeploySelect(interaction: StringSelectMenuInteraction): Promise<boolean> {
     if (!interaction.customId.startsWith('select_form_deploy_')) return false;
 
+    if (!interaction.guildId) {
+        await interaction.update({ content: '❌ Este comando solo se puede usar dentro de un servidor.', components: [] });
+        return true;
+    }
+
     const canalId = interaction.customId.replace('select_form_deploy_', '');
     const tituloFormulario = interaction.values[0];
 
-    // Verificamos que exista el formulario usando await
-    const formulario = await obtenerFormularioPorTitulo(tituloFormulario); // <-- Añadido el await aquí
+    // Buscamos el formulario pasando el guildId y el título
+    const formulario = await obtenerFormularioPorTitulo(interaction.guildId, tituloFormulario);
     if (!formulario) {
         await interaction.update({
-            content: '❌ El formulario seleccionado ya no existe en la base de datos.',
+            content: '❌ El formulario seleccionado ya no existe en la base de datos de este servidor.',
             components: []
         });
         return true;
@@ -32,7 +37,7 @@ export async function handleFormDeploySelect(interaction: StringSelectMenuIntera
         return true;
     }
 
-    // Obtenemos el nombre real del servidor de forma dinámica (reemplaza a {Server})
+    // Obtenemos el nombre real del servidor de forma dinámica
     const serverName = interaction.guild?.name || 'Servidor';
 
     // Creamos el Botón Azul con el título exacto del formulario
