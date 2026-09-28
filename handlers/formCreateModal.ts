@@ -30,8 +30,8 @@ export async function handleFormCreateModal(interaction: ModalSubmitInteraction)
         }
     }
 
-    // Guardamos en el archivo .json usando el Título como clave única
-    guardarFormulario(titulo, canalRespuestasId, preguntas);
+    // Guardamos en la base de datos de MongoDB usando await
+    await guardarFormulario(titulo, canalRespuestasId, preguntas);
 
     // Limpiamos la memoria temporal
     pendingFormCreations.delete(interaction.user.id);
