@@ -5,10 +5,17 @@ const client = new MongoClient(uri);
 
 let dbCollection: any = null;
 
+// Conectamos a MongoDB en segundo plano nada más arrancar el bot para evitar bloqueos
+client.connect().then(() => {
+    console.log('📦 [MongoDB] Conectado a la base de datos en la nube con éxito.');
+}).catch(err => {
+    console.error('❌ [MongoDB] Error crítico al conectar:', err);
+});
+
 async function getCollection() {
     if (!dbCollection) {
+        // Aseguramos la conexión por si acaso estuviera pendiente
         await client.connect();
-        // Conecta a la base de datos 'redline_bot' y a la colección 'forms'
         dbCollection = client.db('redline_bot').collection('forms');
     }
     return dbCollection;
@@ -27,7 +34,7 @@ export async function obtenerFormularios(): Promise<Record<string, FormularioDat
         const col = await getCollection();
         const docs = await col.find({}).toArray();
         const formularios: Record<string, FormularioData> = {};
-        
+
         docs.forEach((doc: any) => {
             formularios[doc.titulo] = {
                 titulo: doc.titulo,
@@ -53,6 +60,7 @@ export async function guardarFormulario(titulo: string, canalRespuestas: string,
         );
     } catch (error) {
         console.error('❌ Error al guardar formulario en MongoDB:', error);
+        throw error; // Lanzamos el error para que quede registrado si algo falla
     }
 }
 
