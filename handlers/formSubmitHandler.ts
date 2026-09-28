@@ -7,12 +7,19 @@ import { obtenerFormularioPorTitulo } from '../utils/formsStorage';
 export async function handleFormSubmitModal(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (!interaction.customId.startsWith('submit_form_')) return false;
 
+    if (!interaction.guildId) {
+        await interaction.reply({ content: '❌ Este formulario solo se puede enviar dentro de un servidor.', ephemeral: true });
+        return true;
+    }
+
     const tituloFormulario = decodeURIComponent(interaction.customId.replace('submit_form_', ''));
-    const formulario = await obtenerFormularioPorTitulo(tituloFormulario); // <-- ¡Aquí faltaba el await!
+    
+    // Pasamos el guildId para buscar el formulario exclusivo de este servidor
+    const formulario = await obtenerFormularioPorTitulo(interaction.guildId, tituloFormulario);
 
     if (!formulario) {
         await interaction.reply({
-            content: '❌ Error: No se encontró la configuración de este formulario en la base de datos.',
+            content: '❌ Error: No se encontró la configuración de este formulario en la base de datos de este servidor.',
             ephemeral: true
         });
         return true;
@@ -32,18 +39,26 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
     const serverName = interaction.guild?.name || 'Servidor';
     resumen += `— *${serverName}*`;
 
-    // Buscamos el canal de respuestas configurado al crear el formulario
-    const canalRespuestas = await interaction.guild?.channels.fetch(formulario.canalRespuestas) as TextChannel;
+    try {
+        // Buscamos el canal de respuestas asegurando que pertenece a este servidor
+        const canalRespuestas = await interaction.guild?.channels.fetch(formulario.canalRespuestas) as TextChannel;
 
-    if (canalRespuestas) {
-        await canalRespuestas.send({ content: resumen });
+        if (canalRespuestas) {
+            await canalRespuestas.send({ content: resumen });
+            await interaction.reply({
+                content: '✅ ¡Tus respuestas se han enviado correctamente al staff!',
+                ephemeral: true
+            });
+        } else {
+            await interaction.reply({
+                content: '❌ Las respuestas se han procesado, pero no se pudo encontrar el canal de respuestas configurado.',
+                ephemeral: true
+            });
+        }
+    } catch (error) {
+        console.error('❌ Error al enviar la respuesta al canal:', error);
         await interaction.reply({
-            content: '✅ ¡Tus respuestas se han enviado correctamente al staff!',
-            ephemeral: true
-        });
-    } else {
-        await interaction.reply({
-            content: '❌ Las respuestas se han procesado, pero no se pudo encontrar el canal de respuestas configurado.',
+            content: '❌ Las respuestas se procesaron, pero ocurrió un error al enviarlas al canal (es posible que el canal haya sido eliminado o el bot no tenga permisos).',
             ephemeral: true
         });
     }
