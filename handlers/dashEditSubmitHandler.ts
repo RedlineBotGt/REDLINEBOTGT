@@ -31,7 +31,7 @@ export async function handleDashEditSubmitModal(interaction: ModalSubmitInteract
         return true;
     }
 
-    // Guardamos los cambios actualizando el documento en MongoDB (Orden correcto: canalRespuestas, luego preguntas)
+    // Guardamos los cambios actualizando el documento en MongoDB
     await guardarFormulario(interaction.guildId, tituloFormulario, nuevoCanalRespuestas, nuevasPreguntas);
 
     await interaction.reply({
