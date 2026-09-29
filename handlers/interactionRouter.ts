@@ -18,9 +18,14 @@ import { handleFormDeploySelect } from './formDeployHandler';
 import { handleFormButtonClick } from './formButtonHandler';
 import { handleFormSubmitModal } from './formSubmitHandler';
 import { handleDashDeleteFormSelect } from './dashDeleteHandler'; 
-import { handleDashMsnChannelSelect, handleDashMsnButton } from './dashMsnHandler';     // <-- Añadido handleDashMsnButton aquí
+import { handleDashMsnChannelSelect, handleDashMsnButton } from './dashMsnHandler';     
 import { handleDashEditFormSelect } from './dashEditHandler';           
 import { handleDashEditSubmitModal } from './dashEditSubmitHandler';   
+import { 
+    handleDashVeredictoButton, 
+    handleDashVeredictoChannelSelect, 
+    handleDashVeredictoRoleSelect 
+} from './dashVeredictoHandler'; // <-- Importado el handler de veredicto para el panel
 
 export async function handleInteraction(interaction: Interaction) {
     try {
@@ -60,6 +65,16 @@ export async function handleInteraction(interaction: Interaction) {
         if (interaction.isChannelSelectMenu()) {
             if (interaction.customId === 'dash_select_msn_channel') {
                 await handleDashMsnChannelSelect(interaction);
+            } else if (interaction.customId === 'dash_select_verd_channel') {
+                await handleDashVeredictoChannelSelect(interaction); // <-- Canal para el veredicto
+            }
+            return;
+        }
+
+        // 2.2. Manejo de Menús Desplegables de Roles (Role Select Menus)
+        if (interaction.isRoleSelectMenu()) {
+            if (interaction.customId === 'dash_select_verd_role') {
+                await handleDashVeredictoRoleSelect(interaction); // <-- Rol para el veredicto
             }
             return;
         }
@@ -67,7 +82,9 @@ export async function handleInteraction(interaction: Interaction) {
         // 3. Manejo de Botones interactivos
         if (interaction.isButton()) {
             if (interaction.customId === 'dash_btn_msn_mensaje') {
-                await handleDashMsnButton(interaction); // <-- Nuevo: Dispara el selector de canales del panel dash
+                await handleDashMsnButton(interaction); 
+            } else if (interaction.customId === 'dash_btn_veredicto') {
+                await handleDashVeredictoButton(interaction); // <-- Botón de veredicto del panel dash
             } else if (interaction.customId === 'btn_abrir_reporte') {
                 const handled = await handleReportButton(interaction);
                 if (handled) return;
