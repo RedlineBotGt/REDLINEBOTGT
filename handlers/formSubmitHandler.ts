@@ -13,13 +13,22 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
     }
 
     const tituloFormulario = decodeURIComponent(interaction.customId.replace('submit_form_', ''));
-    
+
     // Pasamos el guildId para buscar el formulario exclusivo de este servidor
     const formulario = await obtenerFormularioPorTitulo(interaction.guildId, tituloFormulario);
 
     if (!formulario) {
         await interaction.reply({
             content: '❌ Error: No se encontró la configuración de este formulario en la base de datos de este servidor.',
+            ephemeral: true
+        });
+        return true;
+    }
+
+    // Verificar si el formulario tiene un canal de respuestas asignado
+    if (!formulario.canalRespuestas) {
+        await interaction.reply({
+            content: '❌ Este formulario no tiene ningún canal de respuestas configurado actualmente. Contacta con un administrador.',
             ephemeral: true
         });
         return true;
