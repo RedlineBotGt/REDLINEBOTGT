@@ -1,6 +1,7 @@
 import { 
     ModalSubmitInteraction, 
-    TextChannel 
+    TextChannel,
+    EmbedBuilder 
 } from 'discord.js';
 
 export async function handleMsnModalSubmit(interaction: ModalSubmitInteraction) {
@@ -61,19 +62,31 @@ export async function handleMsnModalSubmit(interaction: ModalSubmitInteraction) 
                 texto = texto.replace(fullMatch, replacement);
             }
 
-            let mensajeFinal = texto;
+            // Limpieza de seguridad: elimina la URL de la imagen del texto si se coló por error
             if (imagen) {
-                // Si es una URL válida, la ocultamos de forma limpia con Markdown
+                texto = texto.replace(imagen, '').trim();
+            }
+            texto = texto.replace(/https?:\/\/\S*cdn\.discordapp\.com\S*/gi, '').trim();
+
+            // Preparamos las opciones de envío con el texto limpio
+            const mensajeOptions: any = {
+                content: texto
+            };
+
+            // Si hay una imagen válida, la añadimos mediante un Embed limpio sin URLs de texto plano
+            if (imagen) {
                 if (imagen.startsWith('http')) {
-                    mensajeFinal += `\n\n[📎 Ver imagen adjunta](${imagen})`;
+                    const embedImagen = new EmbedBuilder()
+                        .setImage(imagen)
+                        .setColor(0xFF4500); // Color corporativo (puedes cambiar el HEX si lo deseas)
+                    
+                    mensajeOptions.embeds = [embedImagen];
                 } else {
-                    mensajeFinal += `\n\n📎 ${imagen}`;
+                    mensajeOptions.content += `\n\n📎 ${imagen}`;
                 }
             }
 
-            await canalDestino.send({
-                content: mensajeFinal
-            });
+            await canalDestino.send(mensajeOptions);
         }
     } catch (error) {
         console.error('❌ Error al enviar el mensaje personalizado:', error);
