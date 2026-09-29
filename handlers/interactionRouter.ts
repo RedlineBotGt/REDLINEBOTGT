@@ -26,7 +26,8 @@ import {
     handleDashVeredictoChannelSelect, 
     handleDashVeredictoRoleSelect 
 } from './dashVeredictoHandler'; 
-import { handleDashReporteButton } from './dashReporteHandler'; // <-- Importado el handler del reporte para el panel
+import { handleDashReporteButton } from './dashReporteHandler';
+import { handleDashDefensaButton, handleDashDefensaChannelSelect } from './dashDefensaHandler'; // <-- Importado el handler de defensa para el panel
 
 export async function handleInteraction(interaction: Interaction) {
     try {
@@ -68,6 +69,8 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleDashMsnChannelSelect(interaction);
             } else if (interaction.customId === 'dash_select_verd_channel') {
                 await handleDashVeredictoChannelSelect(interaction);
+            } else if (interaction.customId === 'dash_select_defensa_channel') {
+                await handleDashDefensaChannelSelect(interaction); // <-- Canal para el panel de defensa
             }
             return;
         }
@@ -87,17 +90,15 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'dash_btn_veredicto') {
                 await handleDashVeredictoButton(interaction); 
             } else if (interaction.customId === 'dash_btn_setup_reporte') {
-                await handleDashReporteButton(interaction); // <-- Botón de reporte del panel dash
+                await handleDashReporteButton(interaction);
+            } else if (interaction.customId === 'dash_btn_setup_defensa') {
+                await handleDashDefensaButton(interaction); // <-- Botón de defensa del panel dash
             } else if (interaction.customId === 'btn_abrir_reporte') {
                 const handled = await handleReportButton(interaction);
                 if (handled) return;
             } else if (interaction.customId === 'btn_abrir_defensa') {
-                const handled = await handleVeredictoModalSubmit(interaction); 
                 const handledDef = await handleDefensaButton(interaction);
                 if (handledDef) return;
-            } else if (interaction.customId === 'btn_abrir_defensa') {
-                const handled = await handleDefensaButton(interaction);
-                if (handled) return;
             } else if (interaction.customId.startsWith('open_form_')) {
                 await handleFormButtonClick(interaction);
             }
