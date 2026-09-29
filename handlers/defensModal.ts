@@ -8,32 +8,7 @@ import {
     EmbedBuilder,
     TextChannel
 } from 'discord.js';
-import { MongoClient } from 'mongodb';
-
-// Configuración de MongoDB
-const uri = process.env.MONGODB_URI || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
-const client = new MongoClient(uri);
-
-let defensaCollection: any = null;
-
-async function getDefensaCollection() {
-    if (!defensaCollection) {
-        await client.connect();
-        defensaCollection = client.db('redline_bot').collection('defensaConfig');
-    }
-    return defensaCollection;
-}
-
-// Función para obtener la configuración de defensas desde MongoDB
-async function getDefensaConfigFromDB(guildId: string) {
-    try {
-        const col = await getDefensaCollection();
-        return await col.findOne({ guildId });
-    } catch (error) {
-        console.error('❌ Error al leer la configuración de defensas de MongoDB:', error);
-        return null;
-    }
-}
+import { getDefensaConfigFromDB } from './dashDefensaHandler';
 
 // 1. Mostrar el Modal de Defensa al pulsar el botón
 export async function handleDefensaButton(interaction: ButtonInteraction) {
@@ -97,16 +72,16 @@ export async function handleDefensaModalSubmit(interaction: ModalSubmitInteracti
     const guildId = interaction.guildId!;
     const config = await getDefensaConfigFromDB(guildId);
 
-    // Validamos contra canal2 (que es donde el asistente de 4 pasos guarda el canal de los hilos)
-    if (!config || !config.canal2) {
+    // Validamos que el Canal Destino 2 (hilos de reporte) esté configurado
+    if (!config || !config.canal2 || !config.rol2) {
         await interaction.reply({
-            content: '❌ Error: El sistema de defensas no está completamente configurado (Falta el Canal Destino 2). Ejecuta la configuración desde el panel.',
+            content: '❌ Error: El sistema de defensas no está completamente configurado (Falta el Canal 2 o su rol de mención). Reconfigúralo desde el panel.',
             ephemeral: true
         });
         return;
     }
 
-    // Capturamos los campos
+    // Capturamos los campos asegurando el formato de 3 cifras (ej. 001)
     const reportIdInput = interaction.fields.getTextInputValue('input_def_report_id').trim().padStart(3, '0');
     const pilotoReporta = interaction.fields.getTextInputValue('input_def_reporta');
     const pilotoDefensa = interaction.fields.getTextInputValue('input_def_piloto');
@@ -131,6 +106,7 @@ export async function handleDefensaModalSubmit(interaction: ModalSubmitInteracti
         embedFields.push({ name: '🔗 Pruebas / Enlace', value: enlaceInput, inline: false });
     }
 
+    // Embed verde oficial de defensa
     const embedDefensa = new EmbedBuilder()
         .setTitle(`🛡️ DEFENSA PRESENTADA - 🆔 ${reportIdInput}`)
         .setColor(0x00FF00)
@@ -154,29 +130,33 @@ export async function handleDefensaModalSubmit(interaction: ModalSubmitInteracti
         }
     }
 
-    // --- SALIDA 2: Búsqueda del hilo en el Canal Destino 2 ---
+    // --- SALIDA 2: Búsqueda del hilo en el Canal Destino 2 mediante las 3 cifras ---
     try {
         const canal2 = await guild.channels.fetch(config.canal2) as TextChannel;
         
         if (canal2) {
+            // Buscamos entre los hilos activos del servidor
             const activeThreads = await guild.channels.fetchActiveThreads();
             let targetThread = activeThreads.threads.find(thread => 
                 thread.parentId === canal2.id && thread.name.includes(reportIdInput)
             );
 
+            // Si no está activo, buscamos en los hilos archivados del canal
             if (!targetThread) {
                 const archivedThreads = await canal2.threads.fetchArchived();
                 targetThread = archivedThreads.threads.find(thread => thread.name.includes(reportIdInput));
             }
 
             if (targetThread) {
-                const mentionText2 = config.rol2 ? `📢 <@&${config.rol2}> El piloto **${pilotoDefensa}** ha presentado su defensa para este reporte.` : `📢 El piloto **${pilotoDefensa}** ha presentado su defensa para este reporte.`;
+                // Publicamos dentro del hilo encontrado con la Mención 2
+                const mentionText2 = `📢 <@&${config.rol2}> El piloto **${pilotoDefensa}** ha presentado su defensa para este reporte.`;
                 await targetThread.send({
                     content: mentionText2,
                     embeds: [embedDefensa]
                 });
             } else {
-                const mentionTextFallback = config.rol2 ? `📢 <@&${config.rol2}> Defensa de **${pilotoDefensa}** (⚠️ No se encontró el hilo **Reporte-${reportIdInput}**):` : `📢 Defensa de **${pilotoDefensa}**:`;
+                // Si por lo que sea no encuentra el hilo, lo mandamos al canal principal 2 con advertencia
+                const mentionTextFallback = `📢 <@&${config.rol2}> Defensa de **${pilotoDefensa}** (⚠️ No se encontró el hilo correspondiente al reporte **${reportIdInput}**):`;
                 await canal2.send({
                     content: mentionTextFallback,
                     embeds: [embedDefensa]
