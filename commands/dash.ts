@@ -27,7 +27,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         .setDescription('Selecciona una opción en los botones inferiores para gestionar el servidor.')
         .addFields(
             { name: '📋 Gestión de Formularios', value: 'Crear, editar, borrar o colocar formularios.', inline: false },
-            { name: '📢 Comunicaciones', value: 'Enviar mensajes oficiales y Crear Botones.', inline: false },
+            { name: '📢 Comunicaciones', value: 'Enviar mensajes oficiales y crear botones interactivos.', inline: false },
             { name: '⚖️ Sistema de Comisarios', value: 'Gestionar reportes, defensas y veredictos.', inline: false }
         )
         .setTimestamp()
@@ -41,9 +41,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         new ButtonBuilder().setCustomId('dash_btn_colocar_form').setLabel('Colocar F').setStyle(ButtonStyle.Success).setEmoji('📌')
     );
 
-    // Fila 2: Comunicaciones (Únicamente el botón de Mensaje)
+    // Fila 2: Comunicaciones (EnviarMensaje y CrearBotón)
     const rowMsn = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('dash_btn_msn_mensaje').setLabel('EnviarMensaje').setStyle(ButtonStyle.Primary).setEmoji('💬')
+        new ButtonBuilder().setCustomId('dash_btn_msn_mensaje').setLabel('EnviarMensaje').setStyle(ButtonStyle.Primary).setEmoji('💬'),
+        new ButtonBuilder().setCustomId('dash_btn_crear_boton').setLabel('CrearBotón').setStyle(ButtonStyle.Success).setEmoji('🎟️')
     );
 
     // Fila 3: Sistema de Comisarios
