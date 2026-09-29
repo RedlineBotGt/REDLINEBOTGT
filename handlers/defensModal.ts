@@ -8,18 +8,34 @@ import {
     EmbedBuilder,
     TextChannel
 } from 'discord.js';
-import fs from 'fs';
-import path from 'path';
+import { MongoClient } from 'mongodb';
 
-const configPath = path.join(process.cwd(), 'defensaConfig.json');
+// Configuración de MongoDB
+const uri = process.env.MONGODB_URI || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
+const client = new MongoClient(uri);
 
-function getConfig(guildId: string) {
-    if (!fs.existsSync(configPath)) return null;
-    const configs = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-    return configs[guildId] || null;
+let defensaCollection: any = null;
+
+async function getDefensaCollection() {
+    if (!defensaCollection) {
+        await client.connect();
+        defensaCollection = client.db('redline_bot').collection('defensaConfig');
+    }
+    return defensaCollection;
 }
 
-// 1. Mostrar el Modal de Defensa al pulsar el botón verde
+// Función para obtener la configuración de defensas desde MongoDB
+async function getDefensaConfigFromDB(guildId: string) {
+    try {
+        const col = await getDefensaCollection();
+        return await col.findOne({ guildId });
+    } catch (error) {
+        console.error('❌ Error al leer la configuración de defensas de MongoDB:', error);
+        return null;
+    }
+}
+
+// 1. Mostrar el Modal de Defensa al pulsar el botón
 export async function handleDefensaButton(interaction: ButtonInteraction) {
     if (interaction.customId !== 'btn_abrir_defensa') return false;
 
@@ -60,7 +76,7 @@ export async function handleDefensaButton(interaction: ButtonInteraction) {
         .setLabel('Enlace (Opcional)')
         .setStyle(TextInputStyle.Short)
         .setPlaceholder('https://youtube.com/... (opcional)')
-        .setRequired(false); // Opcional tal como pediste
+        .setRequired(false);
 
     modal.addComponents(
         new ActionRowBuilder<TextInputBuilder>().addComponents(inputReportId),
@@ -79,91 +95,82 @@ export async function handleDefensaModalSubmit(interaction: ModalSubmitInteracti
     if (interaction.customId !== 'modal_envio_defensa') return false;
 
     const guildId = interaction.guildId!;
-    const config = getConfig(guildId);
+    const config = await getDefensaConfigFromDB(guildId);
 
-    if (!config || !config.canal2 || !config.rol2) {
+    if (!config || !config.channelId) {
         await interaction.reply({
-            content: '❌ Error: El sistema de defensas no está completamente configurado (falta el Canal Destino 2 o su rol). Ejecuta `/setupdefensa` de nuevo.',
+            content: '❌ Error: El sistema de defensas no está completamente configurado. Ejecuta el comando de setup de defensas desde el panel.',
             ephemeral: true
         });
         return;
     }
 
     // Capturamos los campos
-    const reportIdInput = interaction.fields.getTextInputValue('input_def_report_id').trim().padStart(3, '0'); // Asegura formato 3 cifras (ej. 001)
+    const reportIdInput = interaction.fields.getTextInputValue('input_def_report_id').trim().padStart(3, '0');
     const pilotoReporta = interaction.fields.getTextInputValue('input_def_reporta');
     const pilotoDefensa = interaction.fields.getTextInputValue('input_def_piloto');
     const explicacion = interaction.fields.getTextInputValue('input_def_explicacion');
-    const enlace = interaction.fields.getTextInputValue('input_def_enlace') || 'Sin enlace adjunto';
+    const enlaceInput = interaction.fields.getTextInputValue('input_def_enlace').trim();
+    const enlace = enlaceInput || 'Sin enlace adjunto';
 
     const guild = interaction.guild!;
     const serverName = guild.name;
 
-    // Respondemos de forma privada al instante
     await interaction.reply({
         content: `✅ ¡Defensa registrada con éxito para el reporte **🆔 ${reportIdInput}**!`,
         ephemeral: true
     });
 
-    // Construimos el Embed Verde oficial de Defensa
+    const embedFields: any[] = [
+        { name: '👤 Reportó', value: pilotoReporta, inline: true },
+        { name: '🛡️ En Defensa', value: pilotoDefensa, inline: true },
+        { name: '📝 Explicación / Alegación', value: explicacion, inline: false }
+    ];
+
+    if (enlaceInput) {
+        embedFields.push({ name: '🔗 Pruebas / Enlace', value: enlaceInput, inline: false });
+    }
+
     const embedDefensa = new EmbedBuilder()
         .setTitle(`🛡️ DEFENSA PRESENTADA - 🆔 ${reportIdInput}`)
-        .setColor(0x00FF00) // Verde
-        .addFields(
-            { name: '👤 Reportó', value: pilotoReporta, inline: true },
-            { name: '🛡️ En Defensa', value: pilotoDefensa, inline: true },
-            { name: '📝 Explicación / Alegación', value: explicacion, inline: false },
-            { name: '🔗 Pruebas / Enlace', value: enlace, inline: false }
-        )
+        .setColor(0x00FF00)
+        .addFields(embedFields)
         .setFooter({ text: serverName })
         .setTimestamp();
 
-    // --- SALIDA 1: Canal Destino 1 + Mención 1 (Opcional) ---
-    if (config.canal1 && config.rol1) {
-        try {
-            const canal1 = await guild.channels.fetch(config.canal1) as TextChannel;
-            if (canal1) {
-                await canal1.send({
-                    content: `📢 <@&${config.rol1}> Nueva defensa presentada para el reporte **🆔 ${reportIdInput}**.`,
-                    embeds: [embedDefensa]
-                });
-            }
-        } catch (error) {
-            console.error('❌ Error al enviar defensa al Canal Destino 1:', error);
-        }
-    }
-
-    // --- SALIDA 2: Búsqueda del hilo en Canal 2 mediante las 3 cifras ---
+    // --- Búsqueda del hilo en el canal de reportes / canal destino correspondiente ---
     try {
-        const canal2 = await guild.channels.fetch(config.canal2) as TextChannel;
-        if (canal2) {
-            // Buscamos entre los hilos activos del servidor / canal
+        // Nota: Si el sistema de defensas comparte canal con el de reportes (canal2), 
+        // buscamos el hilo por sus 3 cifras tal como lo tenías estructurado.
+        const targetChannelId = config.canal2 || config.channelId;
+        const canalDestino = await guild.channels.fetch(targetChannelId) as TextChannel;
+        
+        if (canalDestino) {
             const activeThreads = await guild.channels.fetchActiveThreads();
             let targetThread = activeThreads.threads.find(thread => 
-                thread.parentId === canal2.id && thread.name.includes(reportIdInput)
+                thread.parentId === canalDestino.id && thread.name.includes(reportIdInput)
             );
 
-            // Si no está en los activos, intentamos buscar en los hilos archivados del canal 2
             if (!targetThread) {
-                const archivedThreads = await canal2.threads.fetchArchived();
+                const archivedThreads = await canalDestino.threads.fetchArchived();
                 targetThread = archivedThreads.threads.find(thread => thread.name.includes(reportIdInput));
             }
 
             if (targetThread) {
-                // Publicamos dentro del hilo encontrado con la mención 2
+                const mentionText = config.rol2 ? `📢 <@&${config.rol2}> El piloto **${pilotoDefensa}** ha presentado su defensa para este reporte.` : `📢 El piloto **${pilotoDefensa}** ha presentado su defensa para este reporte.`;
                 await targetThread.send({
-                    content: `📢 <@&${config.rol2}> El piloto **${pilotoDefensa}** ha presentado su defensa para este reporte.`,
+                    content: mentionText,
                     embeds: [embedDefensa]
                 });
             } else {
-                // Si por lo que sea no encuentra el hilo, lo mandamos directo al canal 2 para no perder la defensa
-                await canal2.send({
-                    content: `⚠️ (No se encontró el hilo **Reporte-${reportIdInput}**)\n📢 <@&${config.rol2}> Defensa de **${pilotoDefensa}**:`,
+                const mentionText = config.rol2 ? `📢 <@&${config.rol2}> Defensa de **${pilotoDefensa}** (No se encontró el hilo **Reporte-${reportIdInput}**):` : `📢 Defensa de **${pilotoDefensa}**:`;
+                await canalDestino.send({
+                    content: mentionText,
                     embeds: [embedDefensa]
                 });
             }
         }
     } catch (error) {
-        console.error('❌ Error al buscar el hilo o enviar la defensa al Canal Destino 2:', error);
+        console.error('❌ Error al buscar el hilo o enviar la defensa:', error);
     }
 }
