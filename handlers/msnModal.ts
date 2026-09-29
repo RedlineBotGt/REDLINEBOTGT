@@ -63,7 +63,12 @@ export async function handleMsnModalSubmit(interaction: ModalSubmitInteraction) 
 
             let mensajeFinal = texto;
             if (imagen) {
-                mensajeFinal += `\n${imagen}`;
+                // Si es una URL válida, la ocultamos de forma limpia con Markdown
+                if (imagen.startsWith('http')) {
+                    mensajeFinal += `\n\n[📎 Ver imagen adjunta](${imagen})`;
+                } else {
+                    mensajeFinal += `\n\n📎 ${imagen}`;
+                }
             }
 
             await canalDestino.send({
