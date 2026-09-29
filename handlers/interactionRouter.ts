@@ -42,12 +42,13 @@ import {
     handleDashOpenPreguntasButton 
 } from './dashCreateFormHandler'; 
 
-// 🎟️ NUEVO: Importamos los manejadores del sistema de tickets
+// 🎟️ NUEVO: Importamos los manejadores del sistema de tickets (incluyendo el cierre)
 import { 
     handleDashCrearBotonButton, 
     handleTicketModalSubmit, 
     handleTicketChannelSelect, 
     handleTicketButtonClick, 
+    handleCloseTicketButton, 
     activeTicketButtons 
 } from './ticketButtonHandler';
 
@@ -125,7 +126,7 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'dash_btn_colocar_form') {
                 await handleDashColocarButton(interaction); 
             } else if (interaction.customId === 'dash_btn_crear_boton') {
-                // 🎟️ NUEVO: Botón del dash para iniciar la creación del ticket
+                // 🎟️️ NUEVO: Botón del dash para iniciar la creación del ticket
                 await handleDashCrearBotonButton(interaction);
             } else if (interaction.customId.startsWith('dash_confirm_borrar_')) {
                 await handleDashDeleteConfirmButton(interaction); 
@@ -137,6 +138,9 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleDashReporteButton(interaction);
             } else if (interaction.customId === 'dash_btn_setup_defensa') {
                 await handleDashDefensaButton(interaction);
+            } else if (interaction.customId === 'close_ticket') {
+                // 🎟️ NUEVO: Captura el clic para cerrar y borrar el ticket
+                await handleCloseTicketButton(interaction);
             } else if (interaction.customId === 'btn_abrir_reporte') {
                 const handled = await handleReportButton(interaction);
                 if (handled) return;
