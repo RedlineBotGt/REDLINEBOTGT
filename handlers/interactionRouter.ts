@@ -52,14 +52,16 @@ import {
     activeTicketButtons 
 } from './ticketButtonHandler';
 
-// 📅 NUEVO: Importamos los manejadores del sistema de Mensajes Programados
+// 📅 NUEVO: Importamos los manejadores del sistema de Mensajes Programados (incluyendo repetición por días/horas)
 import { 
     handleDashScheduledButton,
     handleSchedContentSubmit,
     handleSchedChannelSelect,
     handleSchedRoleSelection,
     handleSchedDatetimeSubmit,
-    handleSchedFinalize
+    handleSchedRepeatYes,
+    handleSchedFinalizeNo,
+    handleSchedRepeatModalSubmit
 } from './scheduledMessage';
 
 // 🎭 NUEVO: Importamos los manejadores del sistema de Roles por Reacción persistentes
@@ -165,9 +167,12 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'sched_skip_role') {
                 // 📅 NUEVO: Salta la selección de rol en el programador
                 await handleSchedRoleSelection(interaction);
-            } else if (interaction.customId === 'sched_repeat_yes' || interaction.customId === 'sched_repeat_no') {
-                // 📅 NUEVO: Finaliza y guarda el mensaje programado en MongoDB (con o sin repetición)
-                await handleSchedFinalize(interaction);
+            } else if (interaction.customId === 'sched_repeat_yes') {
+                // 📅 NUEVO: Abre el modal para configurar días y horas de repetición
+                await handleSchedRepeatYes(interaction);
+            } else if (interaction.customId === 'sched_repeat_no') {
+                // 📅 NUEVO: Finaliza y guarda como mensaje de única vez
+                await handleSchedFinalizeNo(interaction);
             } else if (interaction.customId.startsWith('dash_confirm_borrar_')) {
                 await handleDashDeleteConfirmButton(interaction); 
             } else if (interaction.customId === 'dash_btn_msn_mensaje') {
@@ -210,6 +215,9 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'modal_sched_datetime') {
                 // 📅 NUEVO: Procesa la fecha y hora del mensaje programado (Paso 4)
                 await handleSchedDatetimeSubmit(interaction);
+            } else if (interaction.customId === 'modal_sched_repeat') {
+                // 📅 NUEVO: Procesa los días y horas de repetición y guarda en MongoDB
+                await handleSchedRepeatModalSubmit(interaction);
             } else if (interaction.customId === 'rr_modal_content') {
                 // 🎭 NUEVO: Procesa el mensaje y el emoji del rol por reacción (Paso 1)
                 await handleRrContentSubmit(interaction);
