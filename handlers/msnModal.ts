@@ -23,33 +23,43 @@ export async function handleMsnModalSubmit(interaction: ModalSubmitInteraction) 
     try {
         const canalDestino = await guild.channels.fetch(canalId) as TextChannel;
         if (canalDestino) {
-            // Buscamos menciones escritas a mano en el texto (ej: @palmero)
+            // Buscamos menciones escritas a mano en el texto (ej: @palmero_gt7)
             const mentionRegex = /@([a-zA-Z0-9_-]+)/g;
-            const roles = guild.roles.cache;
-            const members = guild.members.cache;
+            const matches = [...texto.matchAll(mentionRegex)];
 
-            texto = texto.replace(mentionRegex, (match, query) => {
+            for (const match of matches) {
+                const fullMatch = match[0]; // ej: @palmero_gt7
+                const query = match[1];      // ej: palmero_gt7
                 const queryLower = query.toLowerCase();
 
-                // 1. Comprobar si coincide con un rol del servidor (se mantiene exacto para evitar conflictos)
-                const foundRole = roles.find(r => r.name.toLowerCase() === queryLower);
+                let replacement = fullMatch; // Si no encuentra nada, se queda igual
+
+                // 1. Comprobar si coincide con un rol del servidor
+                const foundRole = guild.roles.cache.find(r => r.name.toLowerCase() === queryLower);
                 if (foundRole) {
-                    return foundRole.id === guild.id ? '@everyone' : `<@&${foundRole.id}>`;
+                    replacement = foundRole.id === guild.id ? '@everyone' : `<@&${foundRole.id}>`;
+                } else {
+                    // 2. Buscar al miembro directamente en la API de Discord (soluciona el problema de la caché)
+                    try {
+                        const fetchedMembers = await guild.members.fetch({ query: query, limit: 5 });
+                        const foundMember = fetchedMembers.find(m => 
+                            m.user.username.toLowerCase() === queryLower ||
+                            (m.user.globalName && m.user.globalName.toLowerCase() === queryLower) ||
+                            (m.nickname && m.nickname.toLowerCase() === queryLower) ||
+                            m.user.username.toLowerCase().includes(queryLower)
+                        );
+
+                        if (foundMember) {
+                            replacement = `<@${foundMember.id}>`;
+                        }
+                    } catch (fetchError) {
+                        console.error(`❌ Error al buscar el miembro ${query}:`, fetchError);
+                    }
                 }
 
-                // 2. Comprobar si el texto está INCLUIDO en el nombre, apodo o nombre global del usuario
-                const foundMember = members.find(m => 
-                    m.user.username.toLowerCase().includes(queryLower) ||
-                    (m.user.globalName && m.user.globalName.toLowerCase().includes(queryLower)) ||
-                    (m.nickname && m.nickname.toLowerCase().includes(queryLower))
-                );
-                if (foundMember) {
-                    return `<@${foundMember.id}>`;
-                }
-
-                // Si no coincide con nadie, se deja tal cual lo escribió
-                return match;
-            });
+                // Reemplazamos el texto plano por la mención real de Discord
+                texto = texto.replace(fullMatch, replacement);
+            }
 
             let mensajeFinal = texto;
             if (imagen) {
