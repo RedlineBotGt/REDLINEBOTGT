@@ -50,7 +50,7 @@ export async function handleDashCrearBotonButton(interaction: ButtonInteraction)
 
     const inputStyle = new TextInputBuilder()
         .setCustomId('ticket_style')
-        .setLabel('2. Color (Primary, Success, Danger)') // Etiqueta recortada a <45 caracteres
+        .setLabel('2. Color (Primary, Success, Danger)')
         .setPlaceholder('Ej: Success, Danger, Primary...')
         .setStyle(TextInputStyle.Short)
         .setValue('Success')
@@ -58,7 +58,7 @@ export async function handleDashCrearBotonButton(interaction: ButtonInteraction)
 
     const inputRole = new TextInputBuilder()
         .setCustomId('ticket_role')
-        .setLabel('3. Rol a mencionar (Nombre o ID)') // Etiqueta recortada a <45 caracteres
+        .setLabel('3. Rol a mencionar (Nombre o ID)')
         .setPlaceholder('Ej: Comisarios, Staff o @rol')
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
@@ -194,7 +194,10 @@ export async function handleTicketButtonClick(interaction: ButtonInteraction): P
         const guild = interaction.guild;
         const member = interaction.member;
 
-        const roleQueryLower = config.roleQuery.toLowerCase().replace('@', '');
+        // Aseguramos cargar todos los roles del servidor para evitar fallos de caché
+        await guild.roles.fetch();
+
+        const roleQueryLower = config.roleQuery.toLowerCase().replace('@', '').trim();
         const role = guild.roles.cache.find(r => 
             r.id === config.roleQuery || 
             r.name.toLowerCase() === roleQueryLower
@@ -209,20 +212,30 @@ export async function handleTicketButtonClick(interaction: ButtonInteraction): P
             type: ChannelType.GuildText,
             permissionOverwrites: [
                 {
-                    id: guild.id,
+                    id: guild.id, // @everyone sin acceso
                     deny: [PermissionsBitField.Flags.ViewChannel],
                 },
                 {
-                    id: interaction.user.id,
+                    id: interaction.client.user.id, // 🔑 Acceso explícito al BOT para poder escribir y gestionar
+                    allow: [
+                        PermissionsBitField.Flags.ViewChannel, 
+                        PermissionsBitField.Flags.SendMessages, 
+                        PermissionsBitField.Flags.ReadMessageHistory,
+                        PermissionsBitField.Flags.ManageChannels
+                    ],
+                },
+                {
+                    id: interaction.user.id, // Acceso al usuario que abrió el ticket
                     allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory],
                 },
                 ...(role ? [{
-                    id: role.id,
+                    id: role.id, // Acceso al rol configurado
                     allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory],
                 }] : [])
             ]
         });
 
+        // Enviamos el mensaje inicial en el canal recién creado
         await ticketChannel.send({
             content: `Hola <@${interaction.user.id}>, bienvenido.\n${roleMention}\n\n${config.privateMsg}`
         });
@@ -232,9 +245,9 @@ export async function handleTicketButtonClick(interaction: ButtonInteraction): P
         });
 
     } catch (error) {
-        console.error('❌ Error al crear el canal de ticket:', error);
+        console.error('❌ Error detallado al crear el canal de ticket:', error);
         await interaction.editReply({
-            content: '❌ Hubo un error al intentar crear el canal del ticket.'
+            content: '❌ Hubo un error al intentar crear el canal del ticket. Revisa la consola.'
         });
     }
 
