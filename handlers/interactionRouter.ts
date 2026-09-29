@@ -25,7 +25,8 @@ import {
     handleDashVeredictoButton, 
     handleDashVeredictoChannelSelect, 
     handleDashVeredictoRoleSelect 
-} from './dashVeredictoHandler'; // <-- Importado el handler de veredicto para el panel
+} from './dashVeredictoHandler'; 
+import { handleDashReporteButton } from './dashReporteHandler'; // <-- Importado el handler del reporte para el panel
 
 export async function handleInteraction(interaction: Interaction) {
     try {
@@ -66,7 +67,7 @@ export async function handleInteraction(interaction: Interaction) {
             if (interaction.customId === 'dash_select_msn_channel') {
                 await handleDashMsnChannelSelect(interaction);
             } else if (interaction.customId === 'dash_select_verd_channel') {
-                await handleDashVeredictoChannelSelect(interaction); // <-- Canal para el veredicto
+                await handleDashVeredictoChannelSelect(interaction);
             }
             return;
         }
@@ -74,7 +75,7 @@ export async function handleInteraction(interaction: Interaction) {
         // 2.2. Manejo de Menús Desplegables de Roles (Role Select Menus)
         if (interaction.isRoleSelectMenu()) {
             if (interaction.customId === 'dash_select_verd_role') {
-                await handleDashVeredictoRoleSelect(interaction); // <-- Rol para el veredicto
+                await handleDashVeredictoRoleSelect(interaction);
             }
             return;
         }
@@ -84,7 +85,9 @@ export async function handleInteraction(interaction: Interaction) {
             if (interaction.customId === 'dash_btn_msn_mensaje') {
                 await handleDashMsnButton(interaction); 
             } else if (interaction.customId === 'dash_btn_veredicto') {
-                await handleDashVeredictoButton(interaction); // <-- Botón de veredicto del panel dash
+                await handleDashVeredictoButton(interaction); 
+            } else if (interaction.customId === 'dash_btn_setup_reporte') {
+                await handleDashReporteButton(interaction); // <-- Botón de reporte del panel dash
             } else if (interaction.customId === 'btn_abrir_reporte') {
                 const handled = await handleReportButton(interaction);
                 if (handled) return;
