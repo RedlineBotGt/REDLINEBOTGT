@@ -18,9 +18,9 @@ import { handleFormDeploySelect } from './formDeployHandler';
 import { handleFormButtonClick } from './formButtonHandler';
 import { handleFormSubmitModal } from './formSubmitHandler';
 import { handleDashDeleteFormSelect } from './dashDeleteHandler'; 
-import { handleDashMsnChannelSelect } from './dashMsnHandler';     
-import { handleDashEditFormSelect } from './dashEditHandler';           // <-- Nuevo para editar
-import { handleDashEditSubmitModal } from './dashEditSubmitHandler';   // <-- Nuevo para guardar la edición
+import { handleDashMsnChannelSelect, handleDashMsnButton } from './dashMsnHandler';     // <-- Añadido handleDashMsnButton aquí
+import { handleDashEditFormSelect } from './dashEditHandler';           
+import { handleDashEditSubmitModal } from './dashEditSubmitHandler';   
 
 export async function handleInteraction(interaction: Interaction) {
     try {
@@ -51,7 +51,7 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'dash_select_eliminar_form') {
                 await handleDashDeleteFormSelect(interaction);
             } else if (interaction.customId === 'dash_select_editar_form') {
-                await handleDashEditFormSelect(interaction); // <-- Nuevo enrutador de edición
+                await handleDashEditFormSelect(interaction);
             }
             return;
         }
@@ -66,11 +66,13 @@ export async function handleInteraction(interaction: Interaction) {
 
         // 3. Manejo de Botones interactivos
         if (interaction.isButton()) {
-            if (interaction.customId === 'btn_abrir_reporte') {
+            if (interaction.customId === 'dash_btn_msn_mensaje') {
+                await handleDashMsnButton(interaction); // <-- Nuevo: Dispara el selector de canales del panel dash
+            } else if (interaction.customId === 'btn_abrir_reporte') {
                 const handled = await handleReportButton(interaction);
                 if (handled) return;
             } else if (interaction.customId === 'btn_abrir_defensa') {
-                const handled = await handleVeredictoModalSubmit(interaction); // (o defensa modal)
+                const handled = await handleVeredictoModalSubmit(interaction); 
                 const handledDef = await handleDefensaButton(interaction);
                 if (handledDef) return;
             } else if (interaction.customId === 'btn_abrir_defensa') {
@@ -97,7 +99,7 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId.startsWith('submit_form_')) {
                 await handleFormSubmitModal(interaction);
             } else if (interaction.customId.startsWith('modal_editar_form_')) {
-                await handleDashEditSubmitModal(interaction); // <-- Nuevo procesador del modal de edición
+                await handleDashEditSubmitModal(interaction); 
             }
             return;
         }
