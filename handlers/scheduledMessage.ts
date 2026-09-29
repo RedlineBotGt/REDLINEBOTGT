@@ -90,7 +90,7 @@ export async function handleDashScheduledButton(interaction: ButtonInteraction):
 
     const inputImagen = new TextInputBuilder()
         .setCustomId('sched_image')
-        .setLabel('🖼️️ URL de la imagen (Opcional)')
+        .setLabel('🖼 URL de la imagen (Opcional)')
         .setStyle(TextInputStyle.Short)
         .setPlaceholder('https://... (dejar en blanco si no hay imagen)')
         .setRequired(false);
@@ -293,7 +293,7 @@ export async function handleSchedFinalizeNo(interaction: ButtonInteraction): Pro
     return true;
 }
 
-// 6B. Si selecciona SÍ repetir -> Abre el Modal para días y horas
+// 6B. Si selecciona SÍ repetir -> Abre el Modal para días, horas y número de veces
 export async function handleSchedRepeatYes(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'sched_repeat_yes') return false;
 
@@ -315,29 +315,48 @@ export async function handleSchedRepeatYes(interaction: ButtonInteraction): Prom
         .setPlaceholder('Ej: 12 (Opcional)')
         .setRequired(false);
 
+    const timesInput = new TextInputBuilder()
+        .setCustomId('sched_repeat_times')
+        .setLabel('Nº de repeticiones (contando el 1º)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Ej: 5 (Mínimo 2)')
+        .setRequired(true);
+
     modal.addComponents(
         new ActionRowBuilder<TextInputBuilder>().addComponents(daysInput),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(hoursInput)
+        new ActionRowBuilder<TextInputBuilder>().addComponents(hoursInput),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(timesInput)
     );
 
     await interaction.showModal(modal);
     return true;
 }
 
-// 6C. Procesa el Modal de Repetición (Valida mínimo 1 marcado) y guarda en MongoDB
+// 6C. Procesa el Modal de Repetición, valida y guarda en MongoDB
 export async function handleSchedRepeatModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_sched_repeat') return false;
 
     const daysStr = interaction.fields.getTextInputValue('sched_repeat_days').trim();
     const hoursStr = interaction.fields.getTextInputValue('sched_repeat_hours').trim();
+    const timesStr = interaction.fields.getTextInputValue('sched_repeat_times').trim();
 
     const days = daysStr ? parseInt(daysStr, 10) : 0;
     const hours = hoursStr ? parseInt(hoursStr, 10) : 0;
+    const totalTimes = timesStr ? parseInt(timesStr, 10) : 0;
 
     // Validación: Ambos opcionales, pero mínimo 1 marcado y mayor que 0
     if ((isNaN(days) || days < 0) || (isNaN(hours) || hours < 0) || (days === 0 && hours === 0)) {
         await interaction.reply({ 
             content: '❌ Debes indicar al menos un valor válido mayor a 0 (en días o en horas) para que la repetición funcione.', 
+            ephemeral: true 
+        });
+        return true;
+    }
+
+    // Validación de número de repeticiones (mínimo 2, contando el primer envío)
+    if (isNaN(totalTimes) || totalTimes < 2) {
+        await interaction.reply({ 
+            content: '❌ El número total de repeticiones debe ser al menos 2 (contando el primer envío).', 
             ephemeral: true 
         });
         return true;
@@ -364,6 +383,7 @@ export async function handleSchedRepeatModalSubmit(interaction: ModalSubmitInter
             repeats: true,
             repeatDays: days,
             repeatHours: hours,
+            remainingTimes: totalTimes, // Guardamos las veces totales restantes
             status: 'pending',
             createdAt: new Date()
         });
@@ -375,7 +395,7 @@ export async function handleSchedRepeatModalSubmit(interaction: ModalSubmitInter
         if (hours > 0) repeatText.push(`${hours} hora(s)`);
 
         await interaction.reply({
-            content: `✅ **¡Mensaje programado y recurrente configurado!**\n• Primer envío: **${session.date}** a las **${session.time}**\n• Se repetirá cada: **${repeatText.join(' y ')}**\n• Guardado en MongoDB Atlas.`,
+            content: `✅ **¡Mensaje programado y recurrente configurado!**\n• Primer envío: **${session.date}** a las **${session.time}**\n• Se repetirá cada: **${repeatText.join(' y ')}**\n• Total de envíos: **${totalTimes}**\n• Guardado en MongoDB Atlas.`,
             ephemeral: true
         });
     } catch (error) {
@@ -438,8 +458,8 @@ export function startScheduledWorker(client: Client) {
 
                     await channel.send(messageOptions);
 
-                    if (msg.repeats) {
-                        // Calcular la siguiente fecha sumando los días y/o horas configurados
+                    // Si se repite y aún le quedan envíos pendientes (remainingTimes > 1)
+                    if (msg.repeats && msg.remainingTimes > 1) {
                         const currentScheduled = new Date(msg.scheduledAt);
                         const addDays = (msg.repeatDays || 0) * 24 * 60 * 60 * 1000;
                         const addHours = (msg.repeatHours || 0) * 60 * 60 * 1000;
@@ -447,15 +467,18 @@ export function startScheduledWorker(client: Client) {
 
                         await col.updateOne(
                             { _id: msg._id },
-                            { $set: { scheduledAt: nextDate } }
+                            { 
+                                $set: { scheduledAt: nextDate },$inc: { remainingTimes: -1 } // Restamos 1 al contador restante
+                            }
                         );
-                        console.log(`🔄 [Worker] Mensaje repetitivo reprogramado para: ${nextDate}`);
+                        console.log(`🔄 [Worker] Mensaje repetitivo reprogramado para: ${nextDate}. Quedan ${msg.remainingTimes - 1} envíos.`);
                     } else {
+                        // Última repetición o mensaje único completado
                         await col.updateOne(
                             { _id: msg._id },
                             { $set: { status: 'sent', sentAt: new Date() } }
                         );
-                        console.log(`✅ [Worker] Mensaje programado enviado con éxito en ${guild.name}`);
+                        console.log(`✅ [Worker] Mensaje programado finalizado (completadas todas las repeticiones) en ${guild.name}`);
                     }
 
                 } catch (err) {
