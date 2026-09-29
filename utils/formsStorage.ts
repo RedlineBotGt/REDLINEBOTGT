@@ -22,7 +22,7 @@ async function getCollection() {
 export interface FormularioData {
     guildId: string;
     titulo: string;
-    canalRespuestas: string;
+    canalRespuestas: string | null; // Permitimos que sea null inicialmente
     preguntas: string[];
 }
 
@@ -37,7 +37,7 @@ export async function obtenerFormularios(guildId: string): Promise<Record<string
             formularios[doc.titulo] = {
                 guildId: doc.guildId,
                 titulo: doc.titulo,
-                canalRespuestas: doc.canalRespuestas,
+                canalRespuestas: doc.canalRespuestas || null,
                 preguntas: doc.preguntas
             };
         });
@@ -48,8 +48,8 @@ export async function obtenerFormularios(guildId: string): Promise<Record<string
     }
 }
 
-// 2. Guardar o actualizar un formulario asociado a un servidor
-export async function guardarFormulario(guildId: string, titulo: string, canalRespuestas: string, preguntas: string[]) {
+// 2. Guardar o actualizar un formulario asociado a un servidor (canalRespuestas puede ser null al crearlo)
+export async function guardarFormulario(guildId: string, titulo: string, canalRespuestas: string | null = null, preguntas: string[]) {
     try {
         const col = await getCollection();
         await col.updateOne(
@@ -72,7 +72,7 @@ export async function obtenerFormularioPorTitulo(guildId: string, titulo: string
         return {
             guildId: doc.guildId,
             titulo: doc.titulo,
-            canalRespuestas: doc.canalRespuestas,
+            canalRespuestas: doc.canalRespuestas || null,
             preguntas: doc.preguntas
         };
     } catch (error) {
