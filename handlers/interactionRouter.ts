@@ -19,8 +19,7 @@ import { handleFormButtonClick } from './formButtonHandler';
 import { handleFormSubmitModal } from './formSubmitHandler';
 import { handleDashDeleteFormSelect } from './dashDeleteHandler'; 
 import { handleDashMsnChannelSelect, handleDashMsnButton } from './dashMsnHandler';     
-import { handleDashEditButton, handleDashEditFormSelect } from './dashEditHandler';           
-import { handleDashEditSubmitModal } from './dashEditSubmitHandler';   
+import { handleDashEditButton, handleDashEditFormSelect, handleModalEditFormSubmit } from './dashEditHandler';           
 import { 
     handleDashVeredictoButton, 
     handleDashVeredictoChannelSelect, 
@@ -32,7 +31,7 @@ import {
     handleDashCreateFormButton, 
     handleDashCreateFormChannelSelect, 
     handleDashFormTituloModal,
-    handleDashOpenPreguntasButton // <-- ¡Añadida la función del botón intermedio!
+    handleDashOpenPreguntasButton 
 } from './dashCreateFormHandler'; 
 
 export async function handleInteraction(interaction: Interaction) {
@@ -96,7 +95,7 @@ export async function handleInteraction(interaction: Interaction) {
             if (interaction.customId === 'dash_btn_crear_form') {
                 await handleDashCreateFormButton(interaction); 
             } else if (interaction.customId === 'dash_btn_abrir_preguntas') {
-                await handleDashOpenPreguntasButton(interaction); // <-- ¡Captura el clic y abre el modal de preguntas!
+                await handleDashOpenPreguntasButton(interaction); 
             } else if (interaction.customId === 'dash_btn_editar_form') {
                 await handleDashEditButton(interaction); 
             } else if (interaction.customId === 'dash_btn_msn_mensaje') {
@@ -136,7 +135,7 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId.startsWith('submit_form_')) {
                 await handleFormSubmitModal(interaction);
             } else if (interaction.customId.startsWith('modal_editar_form_')) {
-                await handleDashEditSubmitModal(interaction); 
+                await handleModalEditFormSubmit(interaction); 
             }
             return;
         }
