@@ -36,7 +36,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     // Fila 1: Los 4 botones de Formularios juntos
     const rowForms = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('dash_btn_crear_form').setLabel('Crear').setStyle(ButtonStyle.Primary).setEmoji('➕'),
-        new ButtonBuilder().setCustomId('dash_btn_editar_form').setLabel('Editar').setStyle(ButtonStyle.Secondary).setEmoji('✏️️'),
+        new ButtonBuilder().setCustomId('dash_btn_editar_form').setLabel('Editar').setStyle(ButtonStyle.Secondary).setEmoji('📝'),
         new ButtonBuilder().setCustomId('dash_btn_borrar_form').setLabel('Borrar').setStyle(ButtonStyle.Danger).setEmoji('🗑️'),
         new ButtonBuilder().setCustomId('dash_btn_colocar_form').setLabel('Colocar').setStyle(ButtonStyle.Success).setEmoji('📌')
     );
@@ -48,9 +48,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     // Fila 3: Sistema de Comisarios
     const rowComisarios = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('dash_btn_setup_reporte').setLabel('Editar Reporte').setStyle(ButtonStyle.Primary).setEmoji('🛡️'),
+        new ButtonBuilder().setCustomId('dash_btn_setup_reporte').setLabel('Editar Reporte').setStyle(ButtonStyle.Primary).setEmoji('🛡️️'),
         new ButtonBuilder().setCustomId('dash_btn_setup_defensa').setLabel('Editar Defensa').setStyle(ButtonStyle.Secondary).setEmoji('⚖️'),
-        new ButtonBuilder().setCustomId('dash_btn_veredicto').setLabel('EnviarVeredicto').setStyle(ButtonStyle.Success).setEmoji('📜')
+        new ButtonBuilder().setCustomId('dash_btn_veredicto').setLabel('Veredicto').setStyle(ButtonStyle.Success).setEmoji('📜')
     );
 
     await interaction.reply({
