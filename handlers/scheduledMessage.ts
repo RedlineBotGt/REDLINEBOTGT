@@ -30,7 +30,7 @@ async function getScheduledCollection() {
     return scheduledCollection;
 }
 
-// 🌍 Función para convertir la hora local de España (Madrid) a un objeto UTC Date real
+// 🌍 Función simplificada para crear la fecha local exacta introducida por el usuario
 function parseMadridDateTime(dateStr: string, timeStr: string): Date | null {
     try {
         const [day, month, year] = dateStr.split('/').map(Number);
@@ -38,32 +38,9 @@ function parseMadridDateTime(dateStr: string, timeStr: string): Date | null {
 
         if (!day || !month || !year || isNaN(hour) || isNaN(minute)) return null;
 
-        const tentativeUtc = Date.UTC(year, month - 1, day, hour, minute);
-        
-        const formatter = new Intl.DateTimeFormat('en-US', {
-            timeZone: 'Europe/Madrid',
-            year: 'numeric',
-            month: 'numeric',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: 'numeric',
-            hour12: false
-        });
-
-        const tempDate = new Date(tentativeUtc);
-        const parts = formatter.formatToParts(tempDate);
-        const getPart = (type: string) => parseInt(parts.find(p => p.type === type)?.value || '0', 10);
-        
-        const madridYear = getPart('year');
-        const madridMonth = getPart('month');
-        const madridDay = getPart('day');
-        const madridHour = getPart('hour') === 24 ? 0 : getPart('hour');
-        const madridMinute = getPart('minute');
-
-        const madridAsUtc = Date.UTC(madridYear, madridMonth - 1, madridDay, madridHour, madridMinute);
-        const offsetMs = madridAsUtc - tentativeUtc;
-
-        return new Date(tentativeUtc - offsetMs);
+        // Creamos la fecha directamente con los valores locales
+        const targetDate = new Date(year, month - 1, day, hour, minute, 0);
+        return isNaN(targetDate.getTime()) ? null : targetDate;
     } catch (error) {
         console.error('❌ Error al parsear fecha y hora:', error);
         return null;
@@ -177,7 +154,6 @@ export async function handleSchedRoleSelection(interaction: any): Promise<boolea
         session.roleId = null;
     }
 
-    // Lanzamos modal para Fecha y Hora
     const modal = new ModalBuilder()
         .setCustomId('modal_sched_datetime')
         .setTitle('📅 Programar Mensaje (4/5: Fecha y Hora)');
@@ -205,7 +181,7 @@ export async function handleSchedRoleSelection(interaction: any): Promise<boolea
     return true;
 }
 
-// 5. Guardar fecha/hora traducida y preguntar por repetición
+// 5. Guardar fecha/hora y preguntar por repetición
 export async function handleSchedDatetimeSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_sched_datetime') return false;
 
@@ -218,11 +194,10 @@ export async function handleSchedDatetimeSubmit(interaction: ModalSubmitInteract
         return true;
     }
 
-    // Convertimos la hora peninsular a UTC exacto
     const targetDate = parseMadridDateTime(dateStr, timeStr);
-    if (!targetDate || isNaN(targetDate.getTime())) {
+    if (!targetDate || isNaN(targetDate.getTime()) || targetDate.getTime() <= Date.now()) {
         await interaction.reply({
-            content: '❌ Formato de fecha u hora inválido. Usa estrictamente `DD/MM/YYYY` para la fecha y `HH:MM` para la hora. Vuelve a intentarlo.',
+            content: '❌ Fecha u hora inválida, o es una hora que ya ha pasado. Usa `DD/MM/YYYY` y `HH:MM`.',
             ephemeral: true
         });
         return true;
@@ -232,7 +207,6 @@ export async function handleSchedDatetimeSubmit(interaction: ModalSubmitInteract
     session.date = dateStr;
     session.time = timeStr;
 
-    // Preguntamos si desea repetir
     const rowRepeat = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('sched_repeat_yes').setLabel('🔄 Sí, configurar repetición').setStyle(ButtonStyle.Primary),
         new ButtonBuilder().setCustomId('sched_repeat_no').setLabel('❌ No repetir (Única vez)').setStyle(ButtonStyle.Secondary)
@@ -283,11 +257,7 @@ export async function handleSchedFinalizeNo(interaction: ButtonInteraction): Pro
         });
     } catch (error) {
         console.error('❌ Error al guardar mensaje programado:', error);
-        await interaction.update({
-            content: '❌ Hubo un error al guardar el mensaje programado en MongoDB.',
-            components: [],
-            embeds: []
-        });
+        await interaction.update({ content: '❌ Hubo un error al guardar en MongoDB.', components: [] });
     }
 
     return true;
@@ -312,14 +282,14 @@ export async function handleSchedRepeatYes(interaction: ButtonInteraction): Prom
         .setCustomId('sched_repeat_hours')
         .setLabel('¿Cada cuántas horas?')
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: 12 (Opcional)')
+        .setPlaceholder('Ej: 1 (Opcional)')
         .setRequired(false);
 
     const timesInput = new TextInputBuilder()
         .setCustomId('sched_repeat_times')
         .setLabel('Nº de repeticiones (contando el 1º)')
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: 5 (Mínimo 2)')
+        .setPlaceholder('Ej: 2 (Mínimo 2)')
         .setRequired(true);
 
     modal.addComponents(
@@ -344,21 +314,13 @@ export async function handleSchedRepeatModalSubmit(interaction: ModalSubmitInter
     const hours = hoursStr ? parseInt(hoursStr, 10) : 0;
     const totalTimes = timesStr ? parseInt(timesStr, 10) : 0;
 
-    // Validación: Ambos opcionales, pero mínimo 1 marcado y mayor que 0
     if ((isNaN(days) || days < 0) || (isNaN(hours) || hours < 0) || (days === 0 && hours === 0)) {
-        await interaction.reply({ 
-            content: '❌ Debes indicar al menos un valor válido mayor a 0 (en días o en horas) para que la repetición funcione.', 
-            ephemeral: true 
-        });
+        await interaction.reply({ content: '❌ Debes indicar al menos un valor válido mayor a 0 (en días o en horas).', ephemeral: true });
         return true;
     }
 
-    // Validación de número de repeticiones (mínimo 2, contando el primer envío)
     if (isNaN(totalTimes) || totalTimes < 2) {
-        await interaction.reply({ 
-            content: '❌ El número total de repeticiones debe ser al menos 2 (contando el primer envío).', 
-            ephemeral: true 
-        });
+        await interaction.reply({ content: '❌ El número total de repeticiones debe ser al menos 2.', ephemeral: true });
         return true;
     }
 
@@ -383,7 +345,7 @@ export async function handleSchedRepeatModalSubmit(interaction: ModalSubmitInter
             repeats: true,
             repeatDays: days,
             repeatHours: hours,
-            remainingTimes: totalTimes, // Guardamos las veces totales restantes
+            remainingTimes: totalTimes,
             status: 'pending',
             createdAt: new Date()
         });
@@ -395,18 +357,18 @@ export async function handleSchedRepeatModalSubmit(interaction: ModalSubmitInter
         if (hours > 0) repeatText.push(`${hours} hora(s)`);
 
         await interaction.reply({
-            content: `✅ **¡Mensaje programado y recurrente configurado!**\n• Primer envío: **${session.date}** a las **${session.time}**\n• Se repetirá cada: **${repeatText.join(' y ')}**\n• Total de envíos: **${totalTimes}**\n• Guardado en MongoDB Atlas.`,
+            content: `✅ **¡Mensaje programado y recurrente configurado!**\n• Primer envío: **${session.date}** a las **${session.time}**\n• Se repetirá cada: **${repeatText.join(' y ')}**\n• Total de envíos: **${totalTimes}**`,
             ephemeral: true
         });
     } catch (error) {
-        console.error('❌ Error al guardar mensaje programado recurrente:', error);
+        console.error('❌ Error al guardar mensaje repetitivo:', error);
         await interaction.reply({ content: '❌ Error al guardar en la base de datos.', ephemeral: true });
     }
 
     return true;
 }
 
-// 7. ⏰ WORKER EN SEGUNDO PLANO (Para enviar los mensajes automáticamente a su hora)
+// 7. ⏰ WORKER EN SEGUNDO PLANO
 export function startScheduledWorker(client: Client) {
     console.log('⏰ [Worker] Sistema de mensajes programados iniciado en segundo plano.');
 
@@ -458,7 +420,6 @@ export function startScheduledWorker(client: Client) {
 
                     await channel.send(messageOptions);
 
-                    // Si se repite y aún le quedan envíos pendientes (remainingTimes > 1)
                     if (msg.repeats && msg.remainingTimes > 1) {
                         const currentScheduled = new Date(msg.scheduledAt);
                         const addDays = (msg.repeatDays || 0) * 24 * 60 * 60 * 1000;
@@ -468,17 +429,16 @@ export function startScheduledWorker(client: Client) {
                         await col.updateOne(
                             { _id: msg._id },
                             { 
-                                $set: { scheduledAt: nextDate },$inc: { remainingTimes: -1 } // Restamos 1 al contador restante
+                                $set: { scheduledAt: nextDate },$inc: { remainingTimes: -1 }
                             }
                         );
                         console.log(`🔄 [Worker] Mensaje repetitivo reprogramado para: ${nextDate}. Quedan ${msg.remainingTimes - 1} envíos.`);
                     } else {
-                        // Última repetición o mensaje único completado
                         await col.updateOne(
                             { _id: msg._id },
                             { $set: { status: 'sent', sentAt: new Date() } }
                         );
-                        console.log(`✅ [Worker] Mensaje programado finalizado (completadas todas las repeticiones) en ${guild.name}`);
+                        console.log(`✅ [Worker] Mensaje programado finalizado en ${guild.name}`);
                     }
 
                 } catch (err) {
@@ -487,7 +447,7 @@ export function startScheduledWorker(client: Client) {
             }
 
         } catch (error) {
-            console.error('❌ [Worker] Error general en el bucle de mensajes programados:', error);
+            console.error('❌ [Worker] Error general en el bucle:', error);
         }
     }, 60000);
 }
