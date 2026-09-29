@@ -27,7 +27,8 @@ import {
     handleDashVeredictoRoleSelect 
 } from './dashVeredictoHandler'; 
 import { handleDashReporteButton } from './dashReporteHandler';
-import { handleDashDefensaButton, handleDashDefensaChannelSelect } from './dashDefensaHandler'; // <-- Importado el handler de defensa para el panel
+import { handleDashDefensaButton, handleDashDefensaChannelSelect } from './dashDefensaHandler'; 
+import { handleDashCreateFormButton } from './dashCreateFormHandler'; // <-- Importado el handler para crear formulario
 
 export async function handleInteraction(interaction: Interaction) {
     try {
@@ -70,7 +71,7 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'dash_select_verd_channel') {
                 await handleDashVeredictoChannelSelect(interaction);
             } else if (interaction.customId === 'dash_select_defensa_channel') {
-                await handleDashDefensaChannelSelect(interaction); // <-- Canal para el panel de defensa
+                await handleDashDefensaChannelSelect(interaction);
             }
             return;
         }
@@ -85,14 +86,16 @@ export async function handleInteraction(interaction: Interaction) {
 
         // 3. Manejo de Botones interactivos
         if (interaction.isButton()) {
-            if (interaction.customId === 'dash_btn_msn_mensaje') {
+            if (interaction.customId === 'dash_btn_crear_form') {
+                await handleDashCreateFormButton(interaction); // <-- Botón de crear formulario del panel dash
+            } else if (interaction.customId === 'dash_btn_msn_mensaje') {
                 await handleDashMsnButton(interaction); 
             } else if (interaction.customId === 'dash_btn_veredicto') {
                 await handleDashVeredictoButton(interaction); 
             } else if (interaction.customId === 'dash_btn_setup_reporte') {
                 await handleDashReporteButton(interaction);
             } else if (interaction.customId === 'dash_btn_setup_defensa') {
-                await handleDashDefensaButton(interaction); // <-- Botón de defensa del panel dash
+                await handleDashDefensaButton(interaction);
             } else if (interaction.customId === 'btn_abrir_reporte') {
                 const handled = await handleReportButton(interaction);
                 if (handled) return;
