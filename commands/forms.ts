@@ -1,79 +1,39 @@
 import { 
-    ButtonInteraction, 
-    ModalSubmitInteraction, 
-    ActionRowBuilder, 
+    SlashCommandBuilder, 
+    PermissionFlagsBits, 
+    ChatInputCommandInteraction, 
     ModalBuilder, 
     TextInputBuilder, 
-    TextInputStyle,
-    ButtonBuilder,
-    ButtonStyle 
+    TextInputStyle, 
+    ActionRowBuilder 
 } from 'discord.js';
 
-// Importamos el mapa compartido desde el archivo del comando /forms usando la ruta correcta
-import { pendingFormCreations } from '../commands/forms';
+// Mapa compartido para guardar temporalmente la creación del formulario
+export const pendingFormCreations = new Map<string, { guildId: string, titulo: string }>();
 
-// 1. Maneja el clic en el botón "Crear" del panel /dash (abre el modal del título)
-export async function handleDashCreateFormButton(interaction: ButtonInteraction): Promise<boolean> {
-    if (interaction.customId !== 'dash_btn_crear_form') return false;
-
-    const modal = new ModalBuilder()
-        .setCustomId('modal_dash_form_titulo')
-        .setTitle('Título del Formulario');
-
-    const inputTitulo = new TextInputBuilder()
-        .setCustomId('input_dash_form_titulo_text')
-        .setLabel('Título (Texto del botón azul)')
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: Inscripción de Equipos / Sanciones')
-        .setRequired(true);
-
-    modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(inputTitulo));
-
-    await interaction.showModal(modal);
-    return true;
-}
-
-// 2. Recoge el título del modal del botón, lo guarda en el mapa compartido y muestra el botón intermedio
-export async function handleDashFormTituloModal(interaction: ModalSubmitInteraction): Promise<boolean> {
-    if (interaction.customId !== 'modal_dash_form_titulo') return false;
-
-    const titulo = interaction.fields.getTextInputValue('input_dash_form_titulo_text');
-    const guildId = interaction.guildId;
-
-    if (!guildId) {
-        await interaction.reply({ content: '❌ Este comando solo se puede usar dentro de un servidor.', ephemeral: true });
-        return true;
-    }
-
-    // Guardamos los datos exactamente igual que lo hace /forms
-    pendingFormCreations.set(interaction.user.id, { guildId, titulo });
-
-    // NOTA TÉCNICA: Discord prohíbe abrir un modal directamente desde otro modal.
-    // Por eso, aquí mandamos un mensaje efímero con un botón para abrir el modal de preguntas.
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder()
-            .setCustomId('dash_btn_abrir_preguntas')
-            .setLabel('Continuar con las Preguntas')
-            .setStyle(ButtonStyle.Primary)
+export const data = new SlashCommandBuilder()
+    .setName('forms')
+    .setDescription('Crea un nuevo formulario personalizado (Solo Administradores)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addStringOption(option =>
+        option.setName('titulo')
+            .setDescription('Título del formulario (será el texto del botón azul)')
+            .setRequired(true)
     );
 
-    await interaction.reply({
-        content: `✅ Título guardado: **${titulo}**. Haz clic en el botón de abajo para configurar las preguntas:`,
-        components: [row],
-        ephemeral: true
-    });
-
-    return true;
-}
-
-// 3. Maneja el clic en el botón intermedio para abrir por fin el modal de preguntas (p1 a p5)
-export async function handleDashOpenPreguntasButton(interaction: ButtonInteraction): Promise<boolean> {
-    if (interaction.customId !== 'dash_btn_abrir_preguntas') return false;
-
-    if (!pendingFormCreations.has(interaction.user.id)) {
-        await interaction.reply({ content: '❌ No se encontró ningún título pendiente. Empieza de nuevo.', ephemeral: true });
-        return true;
+export async function execute(interaction: ChatInputCommandInteraction) {
+    if (!interaction.guildId) {
+        await interaction.reply({ content: '❌ Este comando solo se puede usar dentro de un servidor.', ephemeral: true });
+        return;
     }
+
+    const titulo = interaction.options.getString('titulo', true);
+
+    // Guardamos temporalmente el guildId y el título
+    pendingFormCreations.set(interaction.user.id, {
+        guildId: interaction.guildId,
+        titulo
+    });
 
     const modal = new ModalBuilder()
         .setCustomId('modal_crear_formulario_preguntas')
@@ -94,5 +54,4 @@ export async function handleDashOpenPreguntasButton(interaction: ButtonInteracti
     );
 
     await interaction.showModal(modal);
-    return true;
 }
