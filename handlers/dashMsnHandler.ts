@@ -1,5 +1,35 @@
-import { ChannelSelectMenuInteraction, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } from 'discord.js';
+import { 
+    ButtonInteraction,
+    ChannelSelectMenuInteraction, 
+    ModalBuilder, 
+    TextInputBuilder, 
+    TextInputStyle, 
+    ActionRowBuilder,
+    ChannelSelectMenuBuilder,
+    ChannelType
+} from 'discord.js';
 
+// 1. Maneja el clic en el botón "Mensaje" del panel /dash
+export async function handleDashMsnButton(interaction: ButtonInteraction): Promise<boolean> {
+    if (interaction.customId !== 'dash_btn_msn_mensaje') return false;
+
+    const selectMsnChannel = new ChannelSelectMenuBuilder()
+        .setCustomId('dash_select_msn_channel')
+        .setPlaceholder('📢 [MSN] Selecciona un canal para enviar anuncio...')
+        .addChannelTypes(ChannelType.GuildText);
+
+    const row = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(selectMsnChannel);
+
+    await interaction.reply({
+        content: '📢 **Sistema MSN:** Selecciona a continuación el canal de destino para el mensaje oficial:',
+        components: [row],
+        ephemeral: true
+    });
+
+    return true;
+}
+
+// 2. Maneja la selección del canal en el menú (Tu código original intacto)
 export async function handleDashMsnChannelSelect(interaction: ChannelSelectMenuInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_select_msn_channel') return false;
 
