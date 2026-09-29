@@ -62,6 +62,14 @@ import {
     handleSchedFinalize
 } from './scheduledMessage';
 
+// 🎭 NUEVO: Importamos los manejadores del sistema de Roles por Reacción persistentes
+import { 
+    handleDashRrButton,
+    handleRrContentSubmit,
+    handleRrChannelSelect,
+    handleRrRoleSelect
+} from './reactionRoles';
+
 export async function handleInteraction(interaction: Interaction) {
     try {
         // 1. Manejo de Comandos de Barra (Slash Commands)
@@ -113,6 +121,9 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'sched_select_channel') {
                 // 📅 NUEVO: Selecciona el canal de destino del mensaje programado
                 await handleSchedChannelSelect(interaction);
+            } else if (interaction.customId === 'rr_select_channel') {
+                // 🎭 NUEVO: Selecciona el canal de destino para el rol por reacción
+                await handleRrChannelSelect(interaction);
             }
             return;
         }
@@ -124,6 +135,9 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'sched_select_role') {
                 // 📅 NUEVO: Selecciona el rol a mencionar en el mensaje programado
                 await handleSchedRoleSelection(interaction);
+            } else if (interaction.customId === 'rr_select_role') {
+                // 🎭 NUEVO: Selecciona el rol a otorgar al reaccionar
+                await handleRrRoleSelect(interaction);
             }
             return;
         }
@@ -145,6 +159,9 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'dash_btn_scheduled_msg') {
                 // 📅 NUEVO: Abre el modal inicial del programador de mensajes desde el Dash
                 await handleDashScheduledButton(interaction);
+            } else if (interaction.customId === 'rr_btn_create') {
+                // 🎭 NUEVO: Abre el modal de contenido y emoji para roles por reacción desde el Dash
+                await handleDashRrButton(interaction);
             } else if (interaction.customId === 'sched_skip_role') {
                 // 📅 NUEVO: Salta la selección de rol en el programador
                 await handleSchedRoleSelection(interaction);
@@ -193,6 +210,9 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'modal_sched_datetime') {
                 // 📅 NUEVO: Procesa la fecha y hora del mensaje programado (Paso 4)
                 await handleSchedDatetimeSubmit(interaction);
+            } else if (interaction.customId === 'rr_modal_content') {
+                // 🎭 NUEVO: Procesa el mensaje y el emoji del rol por reacción (Paso 1)
+                await handleRrContentSubmit(interaction);
             } else if (interaction.customId === 'modal_crear_ticket_config') {
                 await handleTicketModalSubmit(interaction);
             } else if (interaction.customId === 'modal_dash_form_titulo') {
