@@ -82,12 +82,12 @@ export async function handleDashEditFormSelect(interaction: StringSelectMenuInte
         .setValue(formulario.preguntas.join('\n'))
         .setRequired(true);
 
-    // Campo de canal pre-llenado con el ID actual
+    // Campo de canal pre-llenado con el ID actual (protegido por si es null)
     const inputCanal = new TextInputBuilder()
         .setCustomId('input_edit_canal')
         .setLabel('📺 ID del Canal de Respuestas')
         .setStyle(TextInputStyle.Short)
-        .setValue(formulario.canalRespuestas)
+        .setValue(formulario.canalRespuestas || '')
         .setRequired(true);
 
     modal.addComponents(
