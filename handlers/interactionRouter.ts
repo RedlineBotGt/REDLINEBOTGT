@@ -14,7 +14,11 @@ import { handleMsnModalSubmit } from './msnModal';
 
 // Manejadores de formularios y Dash
 import { handleFormCreateModal } from './formCreateModal';
-import { handleFormDeploySelect } from './formDeployHandler';
+import { 
+    handleDashColocarButton, 
+    handleDashColocarFormSelect, 
+    handleDashColocarChannelSelect 
+} from './formDeployHandler';
 import { handleFormButtonClick } from './formButtonHandler';
 import { handleFormSubmitModal } from './formSubmitHandler';
 import { 
@@ -62,8 +66,8 @@ export async function handleInteraction(interaction: Interaction) {
 
         // 2. Manejo de Menús Desplegables de Texto (String Select Menus)
         if (interaction.isStringSelectMenu()) {
-            if (interaction.customId.startsWith('select_form_deploy_')) {
-                await handleFormDeploySelect(interaction);
+            if (interaction.customId === 'dash_select_colocar_form') {
+                await handleDashColocarFormSelect(interaction);
             } else if (interaction.customId === 'dash_select_eliminar_form') {
                 await handleDashDeleteFormSelect(interaction);
             } else if (interaction.customId === 'dash_select_editar_form') {
@@ -82,6 +86,8 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleDashDefensaChannelSelect(interaction);
             } else if (interaction.customId === 'dash_select_form_create_channel') {
                 await handleDashCreateFormChannelSelect(interaction);
+            } else if (interaction.customId.startsWith('dash_channel_colocar_')) {
+                await handleDashColocarChannelSelect(interaction);
             }
             return;
         }
@@ -104,6 +110,8 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleDashEditButton(interaction); 
             } else if (interaction.customId === 'dash_btn_borrar_form') {
                 await handleDashDeleteButton(interaction); 
+            } else if (interaction.customId === 'dash_btn_colocar_form') {
+                await handleDashColocarButton(interaction); // 📌 NUEVO: Abre la lista de formularios para colocar
             } else if (interaction.customId.startsWith('dash_confirm_borrar_')) {
                 await handleDashDeleteConfirmButton(interaction); 
             } else if (interaction.customId === 'dash_btn_msn_mensaje') {
