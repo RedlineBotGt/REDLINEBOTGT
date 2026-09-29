@@ -11,7 +11,8 @@ import {
     ChannelSelectMenuBuilder,
     ChannelType,
     TextChannel,
-    PermissionsBitField
+    PermissionsBitField,
+    MessageFlags
 } from 'discord.js';
 
 // Almacenamiento temporal en memoria para la configuración del ticket mientras se selecciona el canal
@@ -49,15 +50,15 @@ export async function handleDashCrearBotonButton(interaction: ButtonInteraction)
 
     const inputStyle = new TextInputBuilder()
         .setCustomId('ticket_style')
-        .setLabel('2. Color (Primary, Secondary, Success, Danger)')
-        .setPlaceholder('Ej: Success (Verde), Danger (Rojo)...')
+        .setLabel('2. Color (Primary, Success, Danger)') // Etiqueta recortada a <45 caracteres
+        .setPlaceholder('Ej: Success, Danger, Primary...')
         .setStyle(TextInputStyle.Short)
         .setValue('Success')
         .setRequired(true);
 
     const inputRole = new TextInputBuilder()
         .setCustomId('ticket_role')
-        .setLabel('3. Rol a mencionar (Nombre exacto o ID)')
+        .setLabel('3. Rol a mencionar (Nombre o ID)') // Etiqueta recortada a <45 caracteres
         .setPlaceholder('Ej: Comisarios, Staff o @rol')
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
@@ -116,7 +117,7 @@ export async function handleTicketModalSubmit(interaction: ModalSubmitInteractio
     await interaction.reply({
         content: `✅ Configuración guardada.\nAhora selecciona en el desplegable **dónde deseas ubicar este botón**:`,
         components: [row],
-        ephemeral: true
+        flags: [MessageFlags.Ephemeral]
     });
 
     return true;
@@ -183,11 +184,11 @@ export async function handleTicketButtonClick(interaction: ButtonInteraction): P
     if (!config) return false;
 
     if (!interaction.guildId || !interaction.guild) {
-        await interaction.reply({ content: '❌ Error fuera de un servidor.', ephemeral: true });
+        await interaction.reply({ content: '❌ Error fuera de un servidor.', flags: [MessageFlags.Ephemeral] });
         return true;
     }
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
     try {
         const guild = interaction.guild;
