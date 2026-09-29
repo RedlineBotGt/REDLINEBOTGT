@@ -42,6 +42,15 @@ import {
     handleDashOpenPreguntasButton 
 } from './dashCreateFormHandler'; 
 
+// 🎟️ NUEVO: Importamos los manejadores del sistema de tickets
+import { 
+    handleDashCrearBotonButton, 
+    handleTicketModalSubmit, 
+    handleTicketChannelSelect, 
+    handleTicketButtonClick, 
+    activeTicketButtons 
+} from './ticketButtonHandler';
+
 export async function handleInteraction(interaction: Interaction) {
     try {
         // 1. Manejo de Comandos de Barra (Slash Commands)
@@ -88,6 +97,9 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleDashCreateFormChannelSelect(interaction);
             } else if (interaction.customId.startsWith('dash_channel_colocar_')) {
                 await handleDashColocarChannelSelect(interaction);
+            } else if (interaction.customId.startsWith('ticket_deploy_channel_')) {
+                // 🎟️ NUEVO: Maneja la selección de canal para ubicar el botón de ticket
+                await handleTicketChannelSelect(interaction);
             }
             return;
         }
@@ -111,7 +123,10 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'dash_btn_borrar_form') {
                 await handleDashDeleteButton(interaction); 
             } else if (interaction.customId === 'dash_btn_colocar_form') {
-                await handleDashColocarButton(interaction); // 📌 NUEVO: Abre la lista de formularios para colocar
+                await handleDashColocarButton(interaction); 
+            } else if (interaction.customId === 'dash_btn_crear_boton') {
+                // 🎟️ NUEVO: Botón del dash para iniciar la creación del ticket
+                await handleDashCrearBotonButton(interaction);
             } else if (interaction.customId.startsWith('dash_confirm_borrar_')) {
                 await handleDashDeleteConfirmButton(interaction); 
             } else if (interaction.customId === 'dash_btn_msn_mensaje') {
@@ -130,6 +145,9 @@ export async function handleInteraction(interaction: Interaction) {
                 if (handledDef) return;
             } else if (interaction.customId.startsWith('open_form_')) {
                 await handleFormButtonClick(interaction);
+            } else if (activeTicketButtons.has(interaction.customId)) {
+                // 🎟️ NUEVO: Captura el clic de los usuarios en el botón de ticket desplegado
+                await handleTicketButtonClick(interaction);
             }
             return;
         }
@@ -144,6 +162,9 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleVeredictoModalSubmit(interaction);
             } else if (interaction.customId.startsWith('modal_msn_')) {
                 await handleMsnModalSubmit(interaction);
+            } else if (interaction.customId === 'modal_crear_ticket_config') {
+                // 🎟️ NUEVO: Procesa la configuración introducida en el modal de tickets
+                await handleTicketModalSubmit(interaction);
             } else if (interaction.customId === 'modal_dash_form_titulo') {
                 await handleDashFormTituloModal(interaction); 
             } else if (interaction.customId === 'modal_crear_formulario_preguntas') {
