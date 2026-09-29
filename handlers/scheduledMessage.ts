@@ -24,9 +24,49 @@ async function getScheduledCollection() {
     if (!scheduledCollection) {
         await client.connect();
         scheduledCollection = client.db('redline_bot').collection('scheduled_messages');
-        console.log('⏰ [MongoDB] Conectado a la colección de mensajes programados.');
+        console.log('⏰ [MongoDB] Conectado al sistema de mensajes programados.');
     }
     return scheduledCollection;
+}
+
+// 🌍 Función para convertir la hora local de España (Madrid) a un objeto UTC Date real
+function parseMadridDateTime(dateStr: string, timeStr: string): Date | null {
+    try {
+        const [day, month, year] = dateStr.split('/').map(Number);
+        const [hour, minute] = timeStr.split(':').map(Number);
+
+        if (!day || !month || !year || isNaN(hour) || isNaN(minute)) return null;
+
+        const tentativeUtc = Date.UTC(year, month - 1, day, hour, minute);
+        
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'Europe/Madrid',
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: 'numeric',
+            hour12: false
+        });
+
+        const tempDate = new Date(tentativeUtc);
+        const parts = formatter.formatToParts(tempDate);
+        const getPart = (type: string) => parseInt(parts.find(p => p.type === type)?.value || '0', 10);
+        
+        const madridYear = getPart('year');
+        const madridMonth = getPart('month');
+        const madridDay = getPart('day');
+        const madridHour = getPart('hour') === 24 ? 0 : getPart('hour');
+        const madridMinute = getPart('minute');
+
+        const madridAsUtc = Date.UTC(madridYear, madridMonth - 1, madridDay, madridHour, madridMinute);
+        const offsetMs = madridAsUtc - tentativeUtc;
+
+        return new Date(tentativeUtc - offsetMs);
+    } catch (error) {
+        console.error('❌ Error al parsear fecha y hora:', error);
+        return null;
+    }
 }
 
 // 1. Botón del Dashboard para iniciar la programación
@@ -124,11 +164,17 @@ export async function handleSchedRoleSelection(interaction: any): Promise<boolea
 
     const session = scheduledSessions.get(interaction.user.id);
     if (!session) {
-        await interaction.update({ content: '❌ Sesión caducada.', components: [], embeds: [] });
+        if (interaction.isRepliable()) {
+            await interaction.update({ content: '❌ Sesión caducada.', components: [], embeds: [] });
+        }
         return true;
     }
 
-    session.roleId = interaction.customId === 'sched_skip_role' ? null : interaction.values[0];
+    if (interaction.isRoleSelectMenu()) {
+        session.roleId = interaction.values[0];
+    } else {
+        session.roleId = null;
+    }
 
     // Lanzamos modal para Fecha y Hora
     const modal = new ModalBuilder()
@@ -144,7 +190,7 @@ export async function handleSchedRoleSelection(interaction: any): Promise<boolea
 
     const inputTime = new TextInputBuilder()
         .setCustomId('sched_time')
-        .setLabel('⏰ Hora de envío (Formato 24h HH:MM)')
+        .setLabel('⏰ Hora peninsular (Formato 24h HH:MM)')
         .setStyle(TextInputStyle.Short)
         .setPlaceholder('Ej: 21:30')
         .setRequired(true);
@@ -158,7 +204,7 @@ export async function handleSchedRoleSelection(interaction: any): Promise<boolea
     return true;
 }
 
-// 5. Guardar fecha/hora y preguntar por repetición
+// 5. Guardar fecha/hora traducida y preguntar por repetición
 export async function handleSchedDatetimeSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_sched_datetime') return false;
 
@@ -171,6 +217,17 @@ export async function handleSchedDatetimeSubmit(interaction: ModalSubmitInteract
         return true;
     }
 
+    // Convertimos la hora peninsular a UTC exacto
+    const targetDate = parseMadridDateTime(dateStr, timeStr);
+    if (!targetDate || isNaN(targetDate.getTime())) {
+        await interaction.reply({
+            content: '❌ Formato de fecha u hora inválido. Usa estrictamente `DD/MM/YYYY` para la fecha y `HH:MM` para la hora. Vuelve a intentarlo.',
+            ephemeral: true
+        });
+        return true;
+    }
+
+    session.scheduledAt = targetDate;
     session.date = dateStr;
     session.time = timeStr;
 
@@ -181,7 +238,7 @@ export async function handleSchedDatetimeSubmit(interaction: ModalSubmitInteract
     );
 
     await interaction.reply({
-        content: `📅 **Programador (5/5):** Fecha programada para el **${dateStr} a las ${timeStr}**.\n¿Deseas que este mensaje se repita automáticamente?`,
+        content: `📅 **Programador (5/5):** Fecha programada para el **${dateStr} a las ${timeStr}** (Hora Peninsular).\n¿Deseas que este mensaje se repita automáticamente?`,
         components: [rowRepeat],
         ephemeral: true
     });
@@ -213,14 +270,16 @@ export async function handleSchedFinalize(interaction: any): Promise<boolean> {
             roleId: session.roleId,
             date: session.date,
             time: session.time,
+            scheduledAt: session.scheduledAt, // UTC exacto para los disparadores y comparativas
             repeats: session.repeats,
+            status: 'pending',
             createdAt: new Date()
         });
 
         scheduledSessions.delete(interaction.user.id);
 
         await interaction.update({
-            content: `✅ **¡Mensaje programado con éxito!**\nSe enviará el **${session.date}** a las **${session.time}** en el canal seleccionado. Quedará registrado en la base de datos de MongoDB.`,
+            content: `✅ **¡Mensaje programado con éxito!**\nSe enviará el **${session.date}** a las **${session.time}** (hora peninsular). Quedará guardado de forma segura en MongoDB Atlas.`,
             components: [],
             embeds: []
         });
