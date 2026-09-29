@@ -7,9 +7,10 @@ import {
     TextInputStyle, 
     ActionRowBuilder 
 } from 'discord.js';
+import { guardarFormulario } from '../utils/formsStorage';
 
-// Mapa compartido para guardar temporalmente la creación del formulario
-export const pendingFormCreations = new Map<string, { guildId: string, titulo: string }>();
+// Mapa simple que guarda el título activo por usuario para el flujo de preguntas
+export const activeFormTitles = new Map<string, string>();
 
 export const data = new SlashCommandBuilder()
     .setName('forms')
@@ -29,11 +30,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     const titulo = interaction.options.getString('titulo', true);
 
-    // Guardamos temporalmente el guildId y el título
-    pendingFormCreations.set(interaction.user.id, {
-        guildId: interaction.guildId,
-        titulo
-    });
+    // Guardamos un borrador inicial en MongoDB y registramos el título activo
+    await guardarFormulario(interaction.guildId, titulo, null, []);
+    activeFormTitles.set(interaction.user.id, titulo);
 
     const modal = new ModalBuilder()
         .setCustomId('modal_crear_formulario_preguntas')
