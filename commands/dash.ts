@@ -50,7 +50,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const rowComisarios = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('dash_btn_setup_reporte').setLabel('Editar Reporte').setStyle(ButtonStyle.Primary).setEmoji('🛡️️'),
         new ButtonBuilder().setCustomId('dash_btn_setup_defensa').setLabel('Editar Defensa').setStyle(ButtonStyle.Secondary).setEmoji('⚖️'),
-        new ButtonBuilder().setCustomId('dash_btn_veredicto').setLabel('Veredicto').setStyle(ButtonStyle.Success).setEmoji('📜')
+        new ButtonBuilder().setCustomId('dash_btn_veredicto').setLabel('EmitirVeredicto').setStyle(ButtonStyle.Success).setEmoji('📜')
     );
 
     await interaction.reply({
