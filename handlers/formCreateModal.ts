@@ -9,13 +9,13 @@ export async function handleFormCreateModal(interaction: ModalSubmitInteraction)
     const pendingData = pendingFormCreations.get(interaction.user.id);
     if (!pendingData) {
         await interaction.reply({
-            content: '❌ No se encontraron los datos temporales de este formulario. Por favor, vuelve a ejecutar `/forms`.',
+            content: '❌ No se encontraron los datos temporales de este formulario. *(Asegúrate de que el bot no se haya reiniciado mientras rellenabas el modal)*. Vuelve a iniciar la creación.',
             ephemeral: true
         });
         return true;
     }
 
-    const { guildId, titulo, canalRespuestasId } = pendingData;
+    const { guildId, titulo } = pendingData; // Ya no necesitamos canalRespuestasId aquí
 
     // Recogemos las preguntas de forma segura (capturando si algún campo viniera vacío)
     const preguntas: string[] = [];
@@ -30,15 +30,15 @@ export async function handleFormCreateModal(interaction: ModalSubmitInteraction)
         }
     }
 
-    // Guardamos en la base de datos de MongoDB pasando el guildId
-    await guardarFormulario(guildId, titulo, canalRespuestasId, preguntas);
+    // Guardamos en la base de datos pasando el guildId, título y preguntas (sin canal fijo todavía)
+    await guardarFormulario(guildId, titulo, null, preguntas);
 
     // Limpiamos la memoria temporal
     pendingFormCreations.delete(interaction.user.id);
 
     // Respondemos de forma privada confirmando el guardado
     await interaction.reply({
-        content: `✅ ¡Formulario **"${titulo}"** guardado con éxito en la base de datos de este servidor!\n- **Canal de respuestas:** <#${canalRespuestasId}>\n- **Preguntas válidas configuradas:** ${preguntas.length}\n\n*(Ya está listo para ser lanzado cuando quieras con /colocarform).*`,
+        content: `✅ ¡Formulario **"${titulo}"** guardado con éxito en la base de datos de este servidor!\n- **Preguntas válidas configuradas:** ${preguntas.length}\n\n*(Ya está listo para ser lanzado cuando quieras con /colocarform).*`,
         ephemeral: true
     });
 
