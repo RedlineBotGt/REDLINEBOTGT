@@ -5,12 +5,11 @@ import {
     ModalBuilder, 
     TextInputBuilder, 
     TextInputStyle, 
-    ActionRowBuilder, 
-    ChannelType 
+    ActionRowBuilder 
 } from 'discord.js';
 
-// Añadimos guildId para saber en qué servidor se inició la creación
-export const pendingFormCreations = new Map<string, { guildId: string, titulo: string, canalRespuestasId: string }>();
+// Guardamos temporalmente el guildId junto al título mientras se rellenan las preguntas
+export const pendingFormCreations = new Map<string, { guildId: string, titulo: string }>();
 
 export const data = new SlashCommandBuilder()
     .setName('forms')
@@ -19,12 +18,6 @@ export const data = new SlashCommandBuilder()
     .addStringOption(option =>
         option.setName('titulo')
             .setDescription('Título del formulario (será el texto del botón azul)')
-            .setRequired(true)
-    )
-    .addChannelOption(option =>
-        option.setName('canal_respuestas')
-            .setDescription('Canal donde el bot enviará las respuestas rellenadas')
-            .addChannelTypes(ChannelType.GuildText)
             .setRequired(true)
     );
 
@@ -35,13 +28,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     }
 
     const titulo = interaction.options.getString('titulo', true);
-    const canalRespuestas = interaction.options.getChannel('canal_respuestas', true);
 
-    // Guardamos temporalmente el guildId junto al título y canal
+    // Guardamos temporalmente el guildId y el título
     pendingFormCreations.set(interaction.user.id, {
         guildId: interaction.guildId,
-        titulo,
-        canalRespuestasId: canalRespuestas.id
+        titulo
     });
 
     const modal = new ModalBuilder()
