@@ -19,7 +19,7 @@ import { handleFormButtonClick } from './formButtonHandler';
 import { handleFormSubmitModal } from './formSubmitHandler';
 import { handleDashDeleteFormSelect } from './dashDeleteHandler'; 
 import { handleDashMsnChannelSelect, handleDashMsnButton } from './dashMsnHandler';     
-import { handleDashEditFormSelect } from './dashEditHandler';           
+import { handleDashEditButton, handleDashEditFormSelect } from './dashEditHandler';           
 import { handleDashEditSubmitModal } from './dashEditSubmitHandler';   
 import { 
     handleDashVeredictoButton, 
@@ -94,6 +94,8 @@ export async function handleInteraction(interaction: Interaction) {
         if (interaction.isButton()) {
             if (interaction.customId === 'dash_btn_crear_form') {
                 await handleDashCreateFormButton(interaction); // <-- Botón de crear formulario
+            } else if (interaction.customId === 'dash_btn_editar_form') {
+                await handleDashEditButton(interaction); // <-- Botón de editar formulario en el Dash
             } else if (interaction.customId === 'dash_btn_msn_mensaje') {
                 await handleDashMsnButton(interaction); 
             } else if (interaction.customId === 'dash_btn_veredicto') {
