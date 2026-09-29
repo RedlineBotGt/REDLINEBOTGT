@@ -70,6 +70,9 @@ function parseMadridDateTime(dateStr: string, timeStr: string): Date | null {
     }
 }
 
+// Estructura temporal para almacenar los datos mientras el usuario avanza en el asistente
+const scheduledSessions = new Map<string, any>();
+
 // 1. Botón del Dashboard para iniciar la programación
 export async function handleDashScheduledButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_scheduled_msg') return false;
@@ -87,7 +90,7 @@ export async function handleDashScheduledButton(interaction: ButtonInteraction):
 
     const inputImagen = new TextInputBuilder()
         .setCustomId('sched_image')
-        .setLabel('🖼️ URL de la imagen (Opcional)')
+        .setLabel('🖼️️ URL de la imagen (Opcional)')
         .setStyle(TextInputStyle.Short)
         .setPlaceholder('https://... (dejar en blanco si no hay imagen)')
         .setRequired(false);
@@ -100,9 +103,6 @@ export async function handleDashScheduledButton(interaction: ButtonInteraction):
     await interaction.showModal(modal);
     return true;
 }
-
-// Estructura temporal para almacenar los datos mientras el usuario avanza en el asistente
-const scheduledSessions = new Map<string, any>();
 
 // 2. Procesar el contenido y pasar a la selección de canal
 export async function handleSchedContentSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
@@ -247,18 +247,15 @@ export async function handleSchedDatetimeSubmit(interaction: ModalSubmitInteract
     return true;
 }
 
-// 6. Finalizar almacenamiento en MongoDB
-export async function handleSchedFinalize(interaction: any): Promise<boolean> {
-    if (interaction.customId !== 'sched_repeat_yes' && interaction.customId !== 'sched_repeat_no') return false;
+// 6A. Finalizar si selecciona NO repetir
+export async function handleSchedFinalizeNo(interaction: ButtonInteraction): Promise<boolean> {
+    if (interaction.customId !== 'sched_repeat_no') return false;
 
     const session = scheduledSessions.get(interaction.user.id);
     if (!session) {
         await interaction.update({ content: '❌ Sesión caducada.', components: [], embeds: [] });
         return true;
     }
-
-    const repeats = interaction.customId === 'sched_repeat_yes';
-    session.repeats = repeats;
 
     try {
         const col = await getScheduledCollection();
@@ -271,8 +268,8 @@ export async function handleSchedFinalize(interaction: any): Promise<boolean> {
             roleId: session.roleId,
             date: session.date,
             time: session.time,
-            scheduledAt: session.scheduledAt, // UTC exacto para los disparadores y comparativas
-            repeats: session.repeats,
+            scheduledAt: session.scheduledAt,
+            repeats: false,
             status: 'pending',
             createdAt: new Date()
         });
@@ -280,7 +277,7 @@ export async function handleSchedFinalize(interaction: any): Promise<boolean> {
         scheduledSessions.delete(interaction.user.id);
 
         await interaction.update({
-            content: `✅ **¡Mensaje programado con éxito!**\nSe enviará el **${session.date}** a las **${session.time}** (hora peninsular). Quedará guardado de forma segura en MongoDB Atlas.`,
+            content: `✅ **¡Mensaje programado con éxito!**\nSe enviará el **${session.date}** a las **${session.time}** (hora peninsular).`,
             components: [],
             embeds: []
         });
@@ -291,6 +288,99 @@ export async function handleSchedFinalize(interaction: any): Promise<boolean> {
             components: [],
             embeds: []
         });
+    }
+
+    return true;
+}
+
+// 6B. Si selecciona SÍ repetir -> Abre el Modal para días y horas
+export async function handleSchedRepeatYes(interaction: ButtonInteraction): Promise<boolean> {
+    if (interaction.customId !== 'sched_repeat_yes') return false;
+
+    const modal = new ModalBuilder()
+        .setCustomId('modal_sched_repeat')
+        .setTitle('Configurar Frecuencia de Repetición');
+
+    const daysInput = new TextInputBuilder()
+        .setCustomId('sched_repeat_days')
+        .setLabel('¿Cada cuántos días?')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Ej: 7 (Opcional)')
+        .setRequired(false);
+
+    const hoursInput = new TextInputBuilder()
+        .setCustomId('sched_repeat_hours')
+        .setLabel('¿Cada cuántas horas?')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Ej: 12 (Opcional)')
+        .setRequired(false);
+
+    modal.addComponents(
+        new ActionRowBuilder<TextInputBuilder>().addComponents(daysInput),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(hoursInput)
+    );
+
+    await interaction.showModal(modal);
+    return true;
+}
+
+// 6C. Procesa el Modal de Repetición (Valida mínimo 1 marcado) y guarda en MongoDB
+export async function handleSchedRepeatModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
+    if (interaction.customId !== 'modal_sched_repeat') return false;
+
+    const daysStr = interaction.fields.getTextInputValue('sched_repeat_days').trim();
+    const hoursStr = interaction.fields.getTextInputValue('sched_repeat_hours').trim();
+
+    const days = daysStr ? parseInt(daysStr, 10) : 0;
+    const hours = hoursStr ? parseInt(hoursStr, 10) : 0;
+
+    // Validación: Ambos opcionales, pero mínimo 1 marcado y mayor que 0
+    if ((isNaN(days) || days < 0) || (isNaN(hours) || hours < 0) || (days === 0 && hours === 0)) {
+        await interaction.reply({ 
+            content: '❌ Debes indicar al menos un valor válido mayor a 0 (en días o en horas) para que la repetición funcione.', 
+            ephemeral: true 
+        });
+        return true;
+    }
+
+    const session = scheduledSessions.get(interaction.user.id);
+    if (!session) {
+        await interaction.reply({ content: '❌ Sesión caducada.', ephemeral: true });
+        return true;
+    }
+
+    try {
+        const col = await getScheduledCollection();
+        await col.insertOne({
+            guildId: interaction.guildId,
+            userId: interaction.user.id,
+            text: session.text,
+            image: session.image,
+            channelId: session.channelId,
+            roleId: session.roleId,
+            date: session.date,
+            time: session.time,
+            scheduledAt: session.scheduledAt,
+            repeats: true,
+            repeatDays: days,
+            repeatHours: hours,
+            status: 'pending',
+            createdAt: new Date()
+        });
+
+        scheduledSessions.delete(interaction.user.id);
+
+        let repeatText = [];
+        if (days > 0) repeatText.push(`${days} día(s)`);
+        if (hours > 0) repeatText.push(`${hours} hora(s)`);
+
+        await interaction.reply({
+            content: `✅ **¡Mensaje programado y recurrente configurado!**\n• Primer envío: **${session.date}** a las **${session.time}**\n• Se repetirá cada: **${repeatText.join(' y ')}**\n• Guardado en MongoDB Atlas.`,
+            ephemeral: true
+        });
+    } catch (error) {
+        console.error('❌ Error al guardar mensaje programado recurrente:', error);
+        await interaction.reply({ content: '❌ Error al guardar en la base de datos.', ephemeral: true });
     }
 
     return true;
@@ -349,7 +439,12 @@ export function startScheduledWorker(client: Client) {
                     await channel.send(messageOptions);
 
                     if (msg.repeats) {
-                        const nextDate = new Date(msg.scheduledAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+                        // Calcular la siguiente fecha sumando los días y/o horas configurados
+                        const currentScheduled = new Date(msg.scheduledAt);
+                        const addDays = (msg.repeatDays || 0) * 24 * 60 * 60 * 1000;
+                        const addHours = (msg.repeatHours || 0) * 60 * 60 * 1000;
+                        const nextDate = new Date(currentScheduled.getTime() + addDays + addHours);
+
                         await col.updateOne(
                             { _id: msg._id },
                             { $set: { scheduledAt: nextDate } }
