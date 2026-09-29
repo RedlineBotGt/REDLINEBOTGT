@@ -8,35 +8,51 @@ import {
     EmbedBuilder,
     TextChannel
 } from 'discord.js';
-import fs from 'fs';
-import path from 'path';
+import { MongoClient } from 'mongodb';
 
-const configPath = path.join(process.cwd(), 'reportConfig.json');
+// Configuración de MongoDB
+const uri = process.env.MONGODB_URI || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
+const client = new MongoClient(uri);
 
-// Función para obtener la configuración del servidor
-function getConfig(guildId: string) {
-    if (!fs.existsSync(configPath)) return null;
-    const configs = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-    return configs[guildId] || null;
+let reportCollection: any = null;
+
+async function getReportCollection() {
+    if (!reportCollection) {
+        await client.connect();
+        reportCollection = client.db('redline_bot').collection('reportConfig');
+    }
+    return reportCollection;
 }
 
-// Función para generar el ID correlativo limpio (ej. 001, 002...)
-function getNextReportId(guildId: string): string {
-    let configs: Record<string, any> = {};
-    if (fs.existsSync(configPath)) {
-        configs = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+// Función para obtener la configuración del servidor desde MongoDB
+async function getConfigFromDB(guildId: string) {
+    try {
+        const col = await getReportCollection();
+        return await col.findOne({ guildId });
+    } catch (error) {
+        console.error('❌ Error al leer la configuración de reportes de MongoDB:', error);
+        return null;
     }
+}
 
-    if (!configs[guildId]) configs[guildId] = {};
+// Función para generar y actualizar el ID correlativo de forma persistente en MongoDB
+async function getNextReportIdFromDB(guildId: string): Promise<string> {
+    try {
+        const col = await getReportCollection();
+        const doc = await col.findOne({ guildId });
+        let currentCounter = doc?.counter ? doc.counter + 1 : 1;
 
-    let currentCounter = configs[guildId].counter || 0;
-    currentCounter++;
-    configs[guildId].counter = currentCounter;
+        await col.updateOne(
+            { guildId },
+            { $set: { counter: currentCounter } },
+            { upsert: true }
+        );
 
-    fs.writeFileSync(configPath, JSON.stringify(configs, null, 2));
-
-    const paddedNum = String(currentCounter).padStart(3, '0');
-    return paddedNum; // Sin prefijo RG
+        return String(currentCounter).padStart(3, '0');
+    } catch (error) {
+        console.error('❌ Error al generar el ID correlativo en MongoDB:', error);
+        return '001';
+    }
 }
 
 // 1. Mostrar el Modal al pulsar el botón REPORTE
@@ -80,7 +96,7 @@ export async function handleReportButton(interaction: ButtonInteraction) {
         .setLabel('Enlace web (Video / Clip / Pruebas)')
         .setStyle(TextInputStyle.Short)
         .setPlaceholder('https://youtube.com/... (Opcional)')
-        .setRequired(false); // <-- ¡Cambiado a falso para que sea opcional!
+        .setRequired(false);
 
     modal.addComponents(
         new ActionRowBuilder<TextInputBuilder>().addComponents(inputJornada),
@@ -99,9 +115,9 @@ export async function handleReportModalSubmit(interaction: ModalSubmitInteractio
     if (interaction.customId !== 'modal_envio_reporte') return false;
 
     const guildId = interaction.guildId!;
-    const config = getConfig(guildId);
+    const config = await getConfigFromDB(guildId);
 
-    // Canal 2 y Rol2 son obligatorios; Canal 1 y Rol 1 ahora son opcionales
+    // Canal 2 y Rol 2 siguen siendo obligatorios
     if (!config || !config.canal2 || !config.rol2) {
         await interaction.reply({
             content: '❌ Error: El sistema de reportes no está completamente configurado (falta el Canal Destino 2 o su rol). Ejecuta `/setup-reporte` de nuevo.',
@@ -110,16 +126,14 @@ export async function handleReportModalSubmit(interaction: ModalSubmitInteractio
         return;
     }
 
-    const reportId = getNextReportId(guildId);
+    const reportId = await getNextReportIdFromDB(guildId);
 
-    // Capturamos los campos (el enlace puede venir vacío)
     const jornada = interaction.fields.getTextInputValue('input_jornada');
     const pilotoReporta = interaction.fields.getTextInputValue('input_reporta');
     const pilotoAReportar = interaction.fields.getTextInputValue('input_a_reportar');
     const descripcion = interaction.fields.getTextInputValue('input_descripcion');
     const enlace = interaction.fields.getTextInputValue('input_enlace').trim();
 
-    // Respondemos de forma privada al usuario al instante
     await interaction.reply({
         content: `✅ ¡Reporte enviado con éxito! Identificador generado: **🆔 ${reportId}**`,
         ephemeral: true
@@ -128,7 +142,6 @@ export async function handleReportModalSubmit(interaction: ModalSubmitInteractio
     const guild = interaction.guild!;
     const serverName = guild.name;
 
-    // Preparamos los campos base del embed
     const embedFields: any[] = [
         { name: '📅 Jornada', value: jornada, inline: true },
         { name: '👤 Reporta', value: pilotoReporta, inline: true },
@@ -136,12 +149,10 @@ export async function handleReportModalSubmit(interaction: ModalSubmitInteractio
         { name: '📝 Descripción', value: descripcion, inline: false }
     ];
 
-    // Si el usuario rellenó el enlace, lo añadimos al embed; si lo dejó vacío, se omite limpiamente
     if (enlace) {
         embedFields.push({ name: '🔗 Pruebas / Enlace', value: enlace, inline: false });
     }
 
-    // Construimos el Embed Rojo oficial
     const embedReporte = new EmbedBuilder()
         .setTitle(`🚨 NUEVO REPORTE - 🆔 ${reportId}`)
         .setColor(0xFF0000)
@@ -149,13 +160,14 @@ export async function handleReportModalSubmit(interaction: ModalSubmitInteractio
         .setFooter({ text: serverName })
         .setTimestamp();
 
-    // --- SALIDA 1: Canal Destino 1 + Mención 1 (Opcional, solo si está configurado) ---
-    if (config.canal1 && config.rol1) {
+    // --- SALIDA 1: Canal Destino 1 (Opcional, con o sin mención) ---
+    if (config.canal1) {
         try {
             const canal1 = await guild.channels.fetch(config.canal1) as TextChannel;
             if (canal1) {
+                const mentionText = config.rol1 ? `📢 <@&${config.rol1}> Nuevo reporte registrado.` : `📢 Nuevo reporte registrado.`;
                 await canal1.send({
-                    content: `📢 <@&${config.rol1}> Nuevo reporte registrado.`,
+                    content: mentionText,
                     embeds: [embedReporte]
                 });
             }
@@ -170,7 +182,7 @@ export async function handleReportModalSubmit(interaction: ModalSubmitInteractio
         if (canal2) {
             const thread = await canal2.threads.create({
                 name: `Reporte-${reportId}`,
-                autoArchiveDuration: 1440 // 24 horas de inactividad para archivar
+                autoArchiveDuration: 1440 // 24 horas
             });
 
             await thread.send({
