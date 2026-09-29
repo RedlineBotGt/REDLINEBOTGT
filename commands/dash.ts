@@ -48,7 +48,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     // Fila 3: Sistema de Comisarios
     const rowComisarios = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('dash_btn_setup_reporte').setLabel('Editar Reporte').setStyle(ButtonStyle.Primary).setEmoji('🛡️️'),
+        new ButtonBuilder().setCustomId('dash_btn_setup_reporte').setLabel('Editar Reporte').setStyle(ButtonStyle.Primary).setEmoji('🛡️'),
         new ButtonBuilder().setCustomId('dash_btn_setup_defensa').setLabel('Editar Defensa').setStyle(ButtonStyle.Secondary).setEmoji('⚖️'),
         new ButtonBuilder().setCustomId('dash_btn_veredicto').setLabel('EmitirVeredicto').setStyle(ButtonStyle.Success).setEmoji('📜')
     );
