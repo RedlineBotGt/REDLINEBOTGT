@@ -8,19 +8,45 @@ import {
     ButtonStyle,
     ChannelType 
 } from 'discord.js';
-import fs from 'fs';
-import path from 'path';
+import { MongoClient } from 'mongodb';
 
-// Ruta para guardar la configuración de canales y roles por servidor
-const configPath = path.join(process.cwd(), 'reportConfig.json');
+// Configuración de MongoDB (misma conexión que usas en el proyecto)
+const uri = process.env.MONGODB_URI || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
+const client = new MongoClient(uri);
 
-function saveConfig(guildId: string, data: any) {
-    let configs: Record<string, any> = {};
-    if (fs.existsSync(configPath)) {
-        configs = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+let reportCollection: any = null;
+
+async function getReportCollection() {
+    if (!reportCollection) {
+        await client.connect();
+        reportCollection = client.db('redline_bot').collection('reportConfig');
+        console.log('📋 [MongoDB] Conectado a la colección de reportes con éxito.');
     }
-    configs[guildId] = data;
-    fs.writeFileSync(configPath, JSON.stringify(configs, null, 2));
+    return reportCollection;
+}
+
+// Funciones para guardar y leer la configuración en MongoDB
+async function saveConfigToDB(guildId: string, data: any) {
+    try {
+        const col = await getReportCollection();
+        await col.updateOne(
+            { guildId },
+            { $set: { guildId, ...data } },
+            { upsert: true }
+        );
+    } catch (error) {
+        console.error('❌ Error al guardar la configuración de reportes en MongoDB:', error);
+    }
+}
+
+export async function getConfigFromDB(guildId: string) {
+    try {
+        const col = await getReportCollection();
+        return await col.findOne({ guildId });
+    } catch (error) {
+        console.error('❌ Error al leer la configuración de reportes de MongoDB:', error);
+        return null;
+    }
 }
 
 export async function handleDashReporteButton(interaction: ButtonInteraction): Promise<boolean> {
@@ -125,7 +151,8 @@ export async function handleDashReporteButton(interaction: ButtonInteraction): P
         } else if (i.customId === 'setup_rol_2') {
             configData.rol2 = i.values[0];
 
-            saveConfig(guildId, configData);
+            // 💾 Guardamos de forma persistente en MongoDB
+            await saveConfigToDB(guildId, configData);
 
             const embedPanel = new EmbedBuilder()
                 .setTitle('🚨 REPORTES DE CARRERA')
@@ -146,7 +173,7 @@ export async function handleDashReporteButton(interaction: ButtonInteraction): P
             });
 
             await i.update({
-                content: '✅ ¡Configuración completada con éxito! Canales y roles guardados, y panel de reportes desplegado.',
+                content: '✅ ¡Configuración completada con éxito! Canales y roles guardados en MongoDB y panel de reportes desplegado.',
                 embeds: [],
                 components: []
             });
