@@ -7,15 +7,23 @@ import { data as msnCommand } from './commands/msn';
 import { data as formsCommand } from './commands/forms';
 import { data as colocarFormCommand } from './commands/ColocarForm';
 
-const commands = [
-    dashCommand.toJSON(),
-    reporteCommand.toJSON(),
-    setupdefensaCommand.toJSON(),
-    veredictoCommand.toJSON(),
-    msnCommand.toJSON(),
-    formsCommand.toJSON(),
-    colocarFormCommand.toJSON()
+// Mapeamos los comandos con su nombre para validar que ninguno llegue undefined
+const commandList = [
+    { name: 'dash', data: dashCommand },
+    { name: 'reporte', data: reporteCommand },
+    { name: 'setupdefensa', data: setupdefensaCommand },
+    { name: 'veredicto', data: veredictoCommand },
+    { name: 'msn', data: msnCommand },
+    { name: 'forms', data: formsCommand },
+    { name: 'colocarForm', data: colocarFormCommand },
 ];
+
+const commands = commandList.map(cmd => {
+    if (!cmd.data || typeof cmd.data.toJSON !== 'function') {
+        throw new Error(`❌ El comando en './commands/${cmd.name}' no está exportando 'data' correctamente (export const data = ...). Revisa ese archivo.`);
+    }
+    return cmd.data.toJSON();
+});
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
 
