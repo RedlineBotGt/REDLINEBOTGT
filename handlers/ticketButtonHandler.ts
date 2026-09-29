@@ -178,7 +178,7 @@ export async function handleTicketChannelSelect(interaction: ChannelSelectMenuIn
     return true;
 }
 
-// 4. Cuando un usuario pulsa el botón desplegado, se abre el canal privado
+// 4. Cuando un usuario pulsa el botón desplegado, se abre el canal privado con su botón de cerrar
 export async function handleTicketButtonClick(interaction: ButtonInteraction): Promise<boolean> {
     const config = activeTicketButtons.get(interaction.customId);
     if (!config) return false;
@@ -194,7 +194,6 @@ export async function handleTicketButtonClick(interaction: ButtonInteraction): P
         const guild = interaction.guild;
         const member = interaction.member;
 
-        // Aseguramos cargar todos los roles del servidor para evitar fallos de caché
         await guild.roles.fetch();
 
         const roleQueryLower = config.roleQuery.toLowerCase().replace('@', '').trim();
@@ -212,11 +211,11 @@ export async function handleTicketButtonClick(interaction: ButtonInteraction): P
             type: ChannelType.GuildText,
             permissionOverwrites: [
                 {
-                    id: guild.id, // @everyone sin acceso
+                    id: guild.id,
                     deny: [PermissionsBitField.Flags.ViewChannel],
                 },
                 {
-                    id: interaction.client.user.id, // 🔑 Acceso explícito al BOT para poder escribir y gestionar
+                    id: interaction.client.user.id,
                     allow: [
                         PermissionsBitField.Flags.ViewChannel, 
                         PermissionsBitField.Flags.SendMessages, 
@@ -225,19 +224,29 @@ export async function handleTicketButtonClick(interaction: ButtonInteraction): P
                     ],
                 },
                 {
-                    id: interaction.user.id, // Acceso al usuario que abrió el ticket
+                    id: interaction.user.id,
                     allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory],
                 },
                 ...(role ? [{
-                    id: role.id, // Acceso al rol configurado
+                    id: role.id,
                     allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory],
                 }] : [])
             ]
         });
 
-        // Enviamos el mensaje inicial en el canal recién creado
+        // Creamos el botón de cerrar ticket
+        const closeButton = new ButtonBuilder()
+            .setCustomId('close_ticket')
+            .setLabel('Cerrar Ticket')
+            .setStyle(ButtonStyle.Danger)
+            .setEmoji('🔒');
+
+        const closeRow = new ActionRowBuilder<ButtonBuilder>().addComponents(closeButton);
+
+        // Enviamos el mensaje inicial junto con el botón de cierre
         await ticketChannel.send({
-            content: `Hola <@${interaction.user.id}>, bienvenido.\n${roleMention}\n\n${config.privateMsg}`
+            content: `Hola <@${interaction.user.id}>, bienvenido.\n${roleMention}\n\n${config.privateMsg}`,
+            components: [closeRow]
         });
 
         await interaction.editReply({
@@ -250,6 +259,30 @@ export async function handleTicketButtonClick(interaction: ButtonInteraction): P
             content: '❌ Hubo un error al intentar crear el canal del ticket. Revisa la consola.'
         });
     }
+
+    return true;
+}
+
+// 5. Cuando se pulsa el botón de cerrar ticket dentro del canal privado
+export async function handleCloseTicketButton(interaction: ButtonInteraction): Promise<boolean> {
+    if (interaction.customId !== 'close_ticket') return false;
+
+    if (!interaction.guildId || !interaction.channel || !(interaction.channel instanceof TextChannel)) {
+        await interaction.reply({ content: '❌ Esta acción solo se puede realizar en un canal de texto.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    await interaction.reply({
+        content: `🔒 **Ticket cerrado por <@${interaction.user.id}>.** Este canal se eliminará en 3 segundos...`
+    });
+
+    setTimeout(async () => {
+        try {
+            await interaction.channel?.delete();
+        } catch (error) {
+            console.error('❌ Error al eliminar el canal del ticket:', error);
+        }
+    }, 3000);
 
     return true;
 }
