@@ -27,13 +27,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         .setDescription('Selecciona una opción en los botones inferiores para gestionar el servidor.')
         .addFields(
             { name: '📋 Gestión de Formularios', value: 'Crear, editar, borrar o colocar formularios.', inline: false },
-            { name: '📢 Comunicaciones (MSN)', value: 'Enviar mensajes oficiales y configurar canales.', inline: false },
+            { name: '📢 Comunicaciones (MSN)', value: 'Enviar mensajes oficiales al servidor.', inline: false },
             { name: '⚖️ Sistema de Comisarios', value: 'Gestionar reportes, defensas y veredictos.', inline: false }
         )
         .setTimestamp()
         .setFooter({ text: `${guildName} Dashboard` });
 
-    // Fila 1: Los 4 botones de Formularios juntos (Discord permite hasta 5 por fila)
+    // Fila 1: Los 4 botones de Formularios juntos
     const rowForms = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('dash_btn_crear_form').setLabel('Crear').setStyle(ButtonStyle.Primary).setEmoji('➕'),
         new ButtonBuilder().setCustomId('dash_btn_editar_form').setLabel('Editar').setStyle(ButtonStyle.Secondary).setEmoji('✏️'),
@@ -41,10 +41,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         new ButtonBuilder().setCustomId('dash_btn_colocar_form').setLabel('Colocar').setStyle(ButtonStyle.Success).setEmoji('📌')
     );
 
-    // Fila 2: Comunicaciones (MSN)
+    // Fila 2: Comunicaciones (Únicamente el botón de Mensaje)
     const rowMsn = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('dash_btn_msn_mensaje').setLabel('Mensaje').setStyle(ButtonStyle.Primary).setEmoji('💬'),
-        new ButtonBuilder().setCustomId('dash_btn_msn_canal').setLabel('Canal').setStyle(ButtonStyle.Secondary).setEmoji('📺')
+        new ButtonBuilder().setCustomId('dash_btn_msn_mensaje').setLabel('Mensaje').setStyle(ButtonStyle.Primary).setEmoji('💬')
     );
 
     // Fila 3: Sistema de Comisarios
