@@ -52,6 +52,16 @@ import {
     activeTicketButtons 
 } from './ticketButtonHandler';
 
+// 📅 NUEVO: Importamos los manejadores del sistema de Mensajes Programados
+import { 
+    handleDashScheduledButton,
+    handleSchedContentSubmit,
+    handleSchedChannelSelect,
+    handleSchedRoleSelection,
+    handleSchedDatetimeSubmit,
+    handleSchedFinalize
+} from './scheduledMessage';
+
 export async function handleInteraction(interaction: Interaction) {
     try {
         // 1. Manejo de Comandos de Barra (Slash Commands)
@@ -99,8 +109,10 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId.startsWith('dash_channel_colocar_')) {
                 await handleDashColocarChannelSelect(interaction);
             } else if (interaction.customId.startsWith('ticket_deploy_channel_')) {
-                // 🎟️ NUEVO: Maneja la selección de canal para ubicar el botón de ticket
                 await handleTicketChannelSelect(interaction);
+            } else if (interaction.customId === 'sched_select_channel') {
+                // 📅 NUEVO: Selecciona el canal de destino del mensaje programado
+                await handleSchedChannelSelect(interaction);
             }
             return;
         }
@@ -109,6 +121,9 @@ export async function handleInteraction(interaction: Interaction) {
         if (interaction.isRoleSelectMenu()) {
             if (interaction.customId === 'dash_select_verd_role') {
                 await handleDashVeredictoRoleSelect(interaction);
+            } else if (interaction.customId === 'sched_select_role') {
+                // 📅 NUEVO: Selecciona el rol a mencionar en el mensaje programado
+                await handleSchedRoleSelection(interaction);
             }
             return;
         }
@@ -126,8 +141,16 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'dash_btn_colocar_form') {
                 await handleDashColocarButton(interaction); 
             } else if (interaction.customId === 'dash_btn_crear_boton') {
-                // 🎟️️ NUEVO: Botón del dash para iniciar la creación del ticket
                 await handleDashCrearBotonButton(interaction);
+            } else if (interaction.customId === 'dash_btn_scheduled_msg') {
+                // 📅 NUEVO: Abre el modal inicial del programador de mensajes desde el Dash
+                await handleDashScheduledButton(interaction);
+            } else if (interaction.customId === 'sched_skip_role') {
+                // 📅 NUEVO: Salta la selección de rol en el programador
+                await handleSchedRoleSelection(interaction);
+            } else if (interaction.customId === 'sched_repeat_yes' || interaction.customId === 'sched_repeat_no') {
+                // 📅 NUEVO: Finaliza y guarda el mensaje programado en MongoDB (con o sin repetición)
+                await handleSchedFinalize(interaction);
             } else if (interaction.customId.startsWith('dash_confirm_borrar_')) {
                 await handleDashDeleteConfirmButton(interaction); 
             } else if (interaction.customId === 'dash_btn_msn_mensaje') {
@@ -139,7 +162,6 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'dash_btn_setup_defensa') {
                 await handleDashDefensaButton(interaction);
             } else if (interaction.customId === 'close_ticket') {
-                // 🎟️ NUEVO: Captura el clic para cerrar y borrar el ticket
                 await handleCloseTicketButton(interaction);
             } else if (interaction.customId === 'btn_abrir_reporte') {
                 const handled = await handleReportButton(interaction);
@@ -150,7 +172,6 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId.startsWith('open_form_')) {
                 await handleFormButtonClick(interaction);
             } else if (activeTicketButtons.has(interaction.customId)) {
-                // 🎟️ NUEVO: Captura el clic de los usuarios en el botón de ticket desplegado
                 await handleTicketButtonClick(interaction);
             }
             return;
@@ -166,8 +187,13 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleVeredictoModalSubmit(interaction);
             } else if (interaction.customId.startsWith('modal_msn_')) {
                 await handleMsnModalSubmit(interaction);
+            } else if (interaction.customId === 'modal_sched_content') {
+                // 📅 NUEVO: Procesa el texto e imagen del mensaje programado (Paso 1)
+                await handleSchedContentSubmit(interaction);
+            } else if (interaction.customId === 'modal_sched_datetime') {
+                // 📅 NUEVO: Procesa la fecha y hora del mensaje programado (Paso 4)
+                await handleSchedDatetimeSubmit(interaction);
             } else if (interaction.customId === 'modal_crear_ticket_config') {
-                // 🎟️ NUEVO: Procesa la configuración introducida en el modal de tickets
                 await handleTicketModalSubmit(interaction);
             } else if (interaction.customId === 'modal_dash_form_titulo') {
                 await handleDashFormTituloModal(interaction); 
