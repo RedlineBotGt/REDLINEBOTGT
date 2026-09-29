@@ -17,7 +17,11 @@ import { handleFormCreateModal } from './formCreateModal';
 import { handleFormDeploySelect } from './formDeployHandler';
 import { handleFormButtonClick } from './formButtonHandler';
 import { handleFormSubmitModal } from './formSubmitHandler';
-import { handleDashDeleteFormSelect } from './dashDeleteHandler'; 
+import { 
+    handleDashDeleteButton, 
+    handleDashDeleteFormSelect, 
+    handleDashDeleteConfirmButton 
+} from './dashDeleteHandler'; 
 import { handleDashMsnChannelSelect, handleDashMsnButton } from './dashMsnHandler';     
 import { handleDashEditButton, handleDashEditFormSelect, handleModalEditFormSubmit } from './dashEditHandler';           
 import { 
@@ -98,6 +102,10 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleDashOpenPreguntasButton(interaction); 
             } else if (interaction.customId === 'dash_btn_editar_form') {
                 await handleDashEditButton(interaction); 
+            } else if (interaction.customId === 'dash_btn_borrar_form') {
+                await handleDashDeleteButton(interaction); 
+            } else if (interaction.customId.startsWith('dash_confirm_borrar_')) {
+                await handleDashDeleteConfirmButton(interaction); 
             } else if (interaction.customId === 'dash_btn_msn_mensaje') {
                 await handleDashMsnButton(interaction); 
             } else if (interaction.customId === 'dash_btn_veredicto') {
