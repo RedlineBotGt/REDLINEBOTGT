@@ -8,7 +8,7 @@ import {
     TextInputStyle,
     ModalSubmitInteraction 
 } from 'discord.js';
-import { obtenerFormularios, obtenerFormularioPorTitulo, guardarFormulario } from '../utils/formsStorage';
+import { obtenerFormularios, obtenerFormularioPorTitulo, guardarFormulario, eliminarFormulario } from '../utils/formsStorage';
 
 // 1. Maneja el clic en el botón "Editar" del panel /dash
 export async function handleDashEditButton(interaction: ButtonInteraction): Promise<boolean> {
@@ -39,14 +39,14 @@ export async function handleDashEditButton(interaction: ButtonInteraction): Prom
         selectMenu.addOptions({
             label: titulo,
             value: titulo,
-            description: `Canal ID: ${form.canalRespuestas || 'No asignado'}`
+            description: `Preguntas: ${form.preguntas.length}`
         });
     }
 
     const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
 
     await interaction.reply({
-        content: '✏️ **Editar Formulario:** Selecciona de la lista el formulario cuyas preguntas quieres modificar:',
+        content: '✏️ **Editar Formulario:** Selecciona de la lista el formulario que deseas modificar:',
         components: [row],
         ephemeral: true
     });
@@ -54,7 +54,7 @@ export async function handleDashEditButton(interaction: ButtonInteraction): Prom
     return true;
 }
 
-// 2. Maneja la selección del formulario del menú y abre el modal
+// 2. Maneja la selección del formulario del menú y abre el modal (Solo Título y Preguntas)
 export async function handleDashEditFormSelect(interaction: StringSelectMenuInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_select_editar_form') return false;
 
@@ -73,9 +73,17 @@ export async function handleDashEditFormSelect(interaction: StringSelectMenuInte
 
     const modal = new ModalBuilder()
         .setCustomId(`modal_editar_form_${encodeURIComponent(tituloFormulario)}`)
-        .setTitle(`Editar: ${tituloFormulario}`.substring(0, 45));
+        .setTitle(`Editar Formulario`.substring(0, 45));
 
-    // Campo de preguntas pre-llenado con las actuales (una por línea)
+    // Campo 1: Editar Título
+    const inputTitulo = new TextInputBuilder()
+        .setCustomId('input_edit_titulo')
+        .setLabel('🏷️ Título del Formulario')
+        .setStyle(TextInputStyle.Short)
+        .setValue(formulario.titulo)
+        .setRequired(true);
+
+    // Campo 2: Preguntas (1 por línea)
     const inputPreguntas = new TextInputBuilder()
         .setCustomId('input_edit_preguntas')
         .setLabel('📋 Preguntas (1 por línea)')
@@ -83,24 +91,16 @@ export async function handleDashEditFormSelect(interaction: StringSelectMenuInte
         .setValue(formulario.preguntas.join('\n'))
         .setRequired(true);
 
-    // Campo de canal pre-llenado con el ID actual (protegido por si es null)
-    const inputCanal = new TextInputBuilder()
-        .setCustomId('input_edit_canal')
-        .setLabel('📺 ID del Canal de Respuestas')
-        .setStyle(TextInputStyle.Short)
-        .setValue(formulario.canalRespuestas || '')
-        .setRequired(true);
-
     modal.addComponents(
-        new ActionRowBuilder<TextInputBuilder>().addComponents(inputPreguntas),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(inputCanal)
+        new ActionRowBuilder<TextInputBuilder>().addComponents(inputTitulo),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(inputPreguntas)
     );
 
     await interaction.showModal(modal);
     return true;
 }
 
-// 3. Maneja el envío del modal con las modificaciones del formulario y las guarda en MongoDB
+// 3. Maneja el envío del modal (Guarda título y preguntas, conservando el canal previo en segundo plano)
 export async function handleModalEditFormSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (!interaction.customId.startsWith('modal_editar_form_')) return false;
 
@@ -109,32 +109,39 @@ export async function handleModalEditFormSubmit(interaction: ModalSubmitInteract
         return true;
     }
 
-    // Extraer y decodificar el título del formulario desde el customId
     const encodedTitle = interaction.customId.replace('modal_editar_form_', '');
-    const tituloFormulario = decodeURIComponent(encodedTitle);
+    const tituloOriginal = decodeURIComponent(encodedTitle);
 
-    // Obtener los valores ingresados en el modal
+    // Recuperar el formulario actual para conservar el canal de respuestas que ya tuviera asignado
+    const formularioActual = await obtenerFormularioPorTitulo(interaction.guildId, tituloOriginal);
+    const canalRespuestasActual = formularioActual ? formularioActual.canalRespuestas : null;
+
+    // Obtener los valores del modal
+    const nuevoTitulo = interaction.fields.getTextInputValue('input_edit_titulo').trim();
     const preguntasTexto = interaction.fields.getTextInputValue('input_edit_preguntas');
-    const canalRespuestas = interaction.fields.getTextInputValue('input_edit_canal');
 
-    // Convertir el texto plano en un array de preguntas (separadas por salto de línea, ignorando vacías)
     const preguntas = preguntasTexto
         .split('\n')
         .map(p => p.trim())
         .filter(p => p.length > 0);
 
-    // Guardar o actualizar el formulario en MongoDB
+    // Si cambió el título, eliminamos el registro antiguo para evitar duplicados
+    if (nuevoTitulo !== tituloOriginal) {
+        await eliminarFormulario(interaction.guildId, tituloOriginal);
+    }
+
+    // Guardar o actualizar en MongoDB manteniendo el canal previo intacto
     await guardarFormulario(
         interaction.guildId,
-        tituloFormulario,
-        canalRespuestas,
+        nuevoTitulo,
+        canalRespuestasActual,
         preguntas
     );
 
     await interaction.reply({
-        content: `✅ ¡El formulario **"${tituloFormulario}"** se ha actualizado correctamente!\n\n` +
-                 `📋 **Total de preguntas:** ${preguntas.length}\n` +
-                 `📺 **Canal de Respuestas ID:** ${canalRespuestas}`,
+        content: `✅ ¡El formulario se ha actualizado correctamente!\n\n` +
+                 `🏷️ **Título:** ${nuevoTitulo}\n` +
+                 `📋 **Total de preguntas:** ${preguntas.length}`,
         ephemeral: true
     });
 
