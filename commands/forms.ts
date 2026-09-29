@@ -9,8 +9,8 @@ import {
     ButtonStyle 
 } from 'discord.js';
 
-// Importamos el mapa compartido desde tu archivo del comando /forms (ajusta la ruta si es necesario)
-import { pendingFormCreations } from './forms'; // O la ruta relativa correcta hacia tu archivo de comandos
+// Importamos el mapa compartido desde el archivo del comando /forms usando la ruta correcta
+import { pendingFormCreations } from '../commands/forms';
 
 // 1. Maneja el clic en el botón "Crear" del panel /dash (abre el modal del título)
 export async function handleDashCreateFormButton(interaction: ButtonInteraction): Promise<boolean> {
