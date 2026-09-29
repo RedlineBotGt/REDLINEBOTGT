@@ -14,55 +14,31 @@ import {
     PermissionsBitField,
     MessageFlags
 } from 'discord.js';
-import * as fs from 'fs';
-import * as path from 'path';
 
-// Ruta del archivo JSON donde se guardarán los botones de forma persistente
-const DATA_FILE_PATH = path.join(process.cwd(), 'activeTickets.json');
-
-// Estructura de la configuración del ticket
-type TicketConfig = {
-    label: string;
-    style: ButtonStyle;
-    roleQuery: string;
-    publicMsg: string;
-    privateMsg: string;
-};
+// Importamos el gestor de base de datos de tickets en MongoDB
+import { obtenerTickets, guardarTicket, TicketConfig } from '../utils/ticketStorage';
 
 // Almacenamiento temporal en memoria para la configuración del ticket mientras se selecciona el canal
 const tempTicketConfigs = new Map<string, TicketConfig>();
 
-// Almacén global para los botones de tickets desplegados (exportado y respaldado por JSON)
+// Almacén global en memoria para los botones de tickets desplegados (exportado para el router)
 export const activeTicketButtons = new Map<string, TicketConfig>();
 
-// Función para cargar los botones guardados desde el archivo JSON al iniciar el bot
-function loadActiveTickets() {
+// Función autoejecutable para cargar los tickets de MongoDB al arrancar el bot
+async function loadTicketsFromDB() {
     try {
-        if (fs.existsSync(DATA_FILE_PATH)) {
-            const fileData = fs.readFileSync(DATA_FILE_PATH, 'utf-8');
-            const jsonData = JSON.parse(fileData);
-            for (const [key, value] of Object.entries(jsonData)) {
-                activeTicketButtons.set(key, value as TicketConfig);
-            }
+        const tickets = await obtenerTickets();
+        for (const [key, value] of Object.entries(tickets)) {
+            activeTicketButtons.set(key, value);
         }
+        console.log(`🎟️ [Tickets] ${activeTicketButtons.size} botones de tickets cargados desde MongoDB.`);
     } catch (error) {
-        console.error('❌ Error al cargar activeTickets.json:', error);
+        console.error('❌ Error al cargar los tickets desde la base de datos:', error);
     }
 }
 
-// Función para guardar un nuevo botón en el Map y sincronizarlo con el archivo JSON
-function saveActiveTicket(uniqueId: string, config: TicketConfig) {
-    activeTicketButtons.set(uniqueId, config);
-    try {
-        const obj = Object.fromEntries(activeTicketButtons);
-        fs.writeFileSync(DATA_FILE_PATH, JSON.stringify(obj, null, 2), 'utf-8');
-    } catch (error) {
-        console.error('❌ Error al guardar en activeTickets.json:', error);
-    }
-}
-
-// Cargamos los tickets almacenados previamente al arrancar el archivo
-loadActiveTickets();
+// Cargamos los tickets al iniciar
+loadTicketsFromDB();
 
 // 1. Al hacer clic en "CrearBotón" en el dash, se abre el modal con los 5 campos
 export async function handleDashCrearBotonButton(interaction: ButtonInteraction): Promise<boolean> {
@@ -120,7 +96,7 @@ export async function handleDashCrearBotonButton(interaction: ButtonInteraction)
     return true;
 }
 
-// 2. Al enviar el modal, guardamos los datos y pedimos el canal de ubicación mediante un desplegable
+// 2. Al enviar el modal, guardamos los datos temporalmente y pedimos el canal de ubicación
 export async function handleTicketModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_crear_ticket_config') return false;
 
@@ -154,7 +130,7 @@ export async function handleTicketModalSubmit(interaction: ModalSubmitInteractio
     return true;
 }
 
-// 3. Al seleccionar el canal de destino, se publica el mensaje y se guarda permanentemente
+// 3. Al seleccionar el canal de destino, se publica el mensaje y se guarda en MongoDB
 export async function handleTicketChannelSelect(interaction: ChannelSelectMenuInteraction): Promise<boolean> {
     if (!interaction.customId.startsWith('ticket_deploy_channel_')) return false;
 
@@ -185,8 +161,9 @@ export async function handleTicketChannelSelect(interaction: ChannelSelectMenuIn
 
     const uniqueTicketId = `open_ticket_${Date.now()}`;
     
-    // 💾 Guardamos en el Map y persistimos en el JSON
-    saveActiveTicket(uniqueTicketId, config);
+    // 💾 Guardamos en memoria y en MongoDB de forma permanente
+    activeTicketButtons.set(uniqueTicketId, config);
+    await guardarTicket(uniqueTicketId, config);
 
     const button = new ButtonBuilder()
         .setCustomId(uniqueTicketId)
@@ -204,7 +181,7 @@ export async function handleTicketChannelSelect(interaction: ChannelSelectMenuIn
     tempTicketConfigs.delete(configId);
 
     await interaction.update({
-        content: `✅ ¡Botón **"${config.label}"** colocado con éxito en <#${canalId}> y guardado de forma permanente!`,
+        content: `✅ ¡Botón **"${config.label}"** colocado con éxito en <#${canalId}> y guardado en MongoDB de forma permanente!`,
         components: []
     });
 
