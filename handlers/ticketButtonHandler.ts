@@ -253,9 +253,9 @@ export async function handleTicketButtonClick(interaction: ButtonInteraction): P
 
         const closeRow = new ActionRowBuilder<ButtonBuilder>().addComponents(closeButton);
 
-        // Enviamos el mensaje inicial junto con el botón de cierre
+        // Mensaje simplificado: Menciones de usuario y rol + tu mensaje personalizado
         await ticketChannel.send({
-            content: `Hola <@${interaction.user.id}>, bienvenido.\n${roleMention}\n\n${config.privateMsg}`,
+            content: `<@${interaction.user.id}> ${roleMention}\n\n${config.privateMsg}`,
             components: [closeRow]
         });
 
