@@ -31,8 +31,9 @@ import { handleDashDefensaButton, handleDashDefensaChannelSelect } from './dashD
 import { 
     handleDashCreateFormButton, 
     handleDashCreateFormChannelSelect, 
-    handleDashFormTituloModal 
-} from './dashCreateFormHandler'; // <-- Importado todo el flujo de creación de formularios
+    handleDashFormTituloModal,
+    handleDashOpenPreguntasButton // <-- ¡Añadida la función del botón intermedio!
+} from './dashCreateFormHandler'; 
 
 export async function handleInteraction(interaction: Interaction) {
     try {
@@ -77,7 +78,7 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'dash_select_defensa_channel') {
                 await handleDashDefensaChannelSelect(interaction);
             } else if (interaction.customId === 'dash_select_form_create_channel') {
-                await handleDashCreateFormChannelSelect(interaction); // <-- Canal de respuestas del formulario
+                await handleDashCreateFormChannelSelect(interaction);
             }
             return;
         }
@@ -93,9 +94,11 @@ export async function handleInteraction(interaction: Interaction) {
         // 3. Manejo de Botones interactivos
         if (interaction.isButton()) {
             if (interaction.customId === 'dash_btn_crear_form') {
-                await handleDashCreateFormButton(interaction); // <-- Botón de crear formulario
+                await handleDashCreateFormButton(interaction); 
+            } else if (interaction.customId === 'dash_btn_abrir_preguntas') {
+                await handleDashOpenPreguntasButton(interaction); // <-- ¡Captura el clic y abre el modal de preguntas!
             } else if (interaction.customId === 'dash_btn_editar_form') {
-                await handleDashEditButton(interaction); // <-- Botón de editar formulario en el Dash
+                await handleDashEditButton(interaction); 
             } else if (interaction.customId === 'dash_btn_msn_mensaje') {
                 await handleDashMsnButton(interaction); 
             } else if (interaction.customId === 'dash_btn_veredicto') {
@@ -127,7 +130,7 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId.startsWith('modal_msn_')) {
                 await handleMsnModalSubmit(interaction);
             } else if (interaction.customId === 'modal_dash_form_titulo') {
-                await handleDashFormTituloModal(interaction); // <-- Modal del título del nuevo formulario
+                await handleDashFormTituloModal(interaction); 
             } else if (interaction.customId === 'modal_crear_formulario_preguntas') {
                 await handleFormCreateModal(interaction);
             } else if (interaction.customId.startsWith('submit_form_')) {
