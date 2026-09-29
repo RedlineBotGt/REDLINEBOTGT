@@ -27,7 +27,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         .setDescription('Selecciona una opción en los botones inferiores para gestionar el servidor.')
         .addFields(
             { name: '📋 Gestión de Formularios', value: 'Crear, editar, borrar o colocar formularios.', inline: false },
-            { name: '📢 Comunicaciones (MSN)', value: 'Enviar mensajes oficiales al servidor.', inline: false },
+            { name: '📢 Comunicaciones', value: 'Enviar mensajes oficiales y Crear Botones.', inline: false },
             { name: '⚖️ Sistema de Comisarios', value: 'Gestionar reportes, defensas y veredictos.', inline: false }
         )
         .setTimestamp()
