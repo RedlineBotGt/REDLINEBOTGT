@@ -1,6 +1,7 @@
 import http from 'http';
 import { Client, GatewayIntentBits } from 'discord.js';
 import { handleInteraction } from './handlers/interactionRouter';
+import { startScheduledWorker } from './handlers/scheduledMessage'; // ⏰ NUEVO: Importamos el worker de mensajes
 
 // 0. Servidor HTTP auxiliar obligatorio para satisfacer el puerto de Render
 const server = http.createServer((req, res) => {
@@ -23,9 +24,12 @@ const client = new Client({
     ]
 });
 
-// 2. Evento de arranque (Sin código de limpieza, solo aviso de conexión)
+// 2. Evento de arranque (Arrancamos el worker de mensajes programados)
 client.once('ready', () => {
     console.log(`✅ REDLINE GT Bot conectado y operativo como ${client.user?.tag}`);
+    
+    // ⏰ Activamos el bucle en segundo plano para enviar los mensajes a su hora
+    startScheduledWorker(client);
 });
 
 // 3. Enrutador ciego: deriva cualquier interacción al sistema modular externo
