@@ -10,6 +10,7 @@ import {
     ButtonStyle, 
     ChannelType, 
     ModalSubmitInteraction, 
+    Client,
     TextChannel, 
     EmbedBuilder 
 } from 'discord.js';
@@ -293,4 +294,82 @@ export async function handleSchedFinalize(interaction: any): Promise<boolean> {
     }
 
     return true;
+}
+
+// 7. ⏰ WORKER EN SEGUNDO PLANO (Para enviar los mensajes automáticamente a su hora)
+export function startScheduledWorker(client: Client) {
+    console.log('⏰ [Worker] Sistema de mensajes programados iniciado en segundo plano.');
+
+    setInterval(async () => {
+        try {
+            const col = await getScheduledCollection();
+            const now = new Date();
+
+            const pendingMessages = await col.find({
+                status: 'pending',
+                scheduledAt: { $lte: now }
+            }).toArray();
+
+            if (pendingMessages.length === 0) return;
+
+            for (const msg of pendingMessages) {
+                try {
+                    const guild = await client.guilds.fetch(msg.guildId).catch(() => null);
+                    if (!guild) {
+                        await col.updateOne({ _id: msg._id }, { $set: { status: 'guild_not_found' } });
+                        continue;
+                    }
+
+                    const channel = await guild.channels.fetch(msg.channelId).catch(() => null) as TextChannel;
+                    if (!channel || !channel.isTextBased()) {
+                        await col.updateOne({ _id: msg._id }, { $set: { status: 'channel_not_found' } });
+                        continue;
+                    }
+
+                    let finalContent = msg.text;
+                    let messageOptions: any = {};
+
+                    if (msg.image) {
+                        const embed = new EmbedBuilder()
+                            .setDescription(finalContent)
+                            .setImage(msg.image)
+                            .setColor(0xED4245);
+                        
+                        messageOptions = {
+                            content: msg.roleId ? `<@&${msg.roleId}>` : undefined,
+                            embeds: [embed]
+                        };
+                    } else {
+                        if (msg.roleId) {
+                            finalContent = `<@&${msg.roleId}>\n\n${finalContent}`;
+                        }
+                        messageOptions = { content: finalContent };
+                    }
+
+                    await channel.send(messageOptions);
+
+                    if (msg.repeats) {
+                        const nextDate = new Date(msg.scheduledAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+                        await col.updateOne(
+                            { _id: msg._id },
+                            { $set: { scheduledAt: nextDate } }
+                        );
+                        console.log(`🔄 [Worker] Mensaje repetitivo reprogramado para: ${nextDate}`);
+                    } else {
+                        await col.updateOne(
+                            { _id: msg._id },
+                            { $set: { status: 'sent', sentAt: new Date() } }
+                        );
+                        console.log(`✅ [Worker] Mensaje programado enviado con éxito en ${guild.name}`);
+                    }
+
+                } catch (err) {
+                    console.error(`❌ [Worker] Error enviando mensaje ID ${msg._id}:`, err);
+                }
+            }
+
+        } catch (error) {
+            console.error('❌ [Worker] Error general en el bucle de mensajes programados:', error);
+        }
+    }, 60000);
 }
