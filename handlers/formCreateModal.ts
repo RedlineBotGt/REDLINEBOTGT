@@ -1,21 +1,25 @@
 import { ModalSubmitInteraction } from 'discord.js';
-import { pendingFormCreations } from '../commands/forms'; 
+import { activeFormTitles } from '../commands/forms'; 
 import { guardarFormulario } from '../utils/formsStorage'; 
 
 export async function handleFormCreateModal(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_crear_formulario_preguntas') return false;
 
-    // Recuperamos los datos temporales del admin que inició el comando
-    const pendingData = pendingFormCreations.get(interaction.user.id);
-    if (!pendingData) {
+    const guildId = interaction.guildId;
+    if (!guildId) {
+        await interaction.reply({ content: '❌ Este comando solo se puede usar dentro de un servidor.', ephemeral: true });
+        return true;
+    }
+
+    // Recuperamos el título activo del usuario
+    const titulo = activeFormTitles.get(interaction.user.id);
+    if (!titulo) {
         await interaction.reply({
-            content: '❌ No se encontraron los datos temporales de este formulario. *(Asegúrate de que el bot no se haya reiniciado mientras rellenabas el modal)*. Vuelve a iniciar la creación.',
+            content: '❌ No se encontró el título activo para este formulario. Vuelve a iniciar la creación.',
             ephemeral: true
         });
         return true;
     }
-
-    const { guildId, titulo } = pendingData; // Ya no necesitamos canalRespuestasId aquí
 
     // Recogemos las preguntas de forma segura (capturando si algún campo viniera vacío)
     const preguntas: string[] = [];
@@ -30,11 +34,11 @@ export async function handleFormCreateModal(interaction: ModalSubmitInteraction)
         }
     }
 
-    // Guardamos en la base de datos pasando el guildId, título y preguntas (sin canal fijo todavía)
+    // Actualizamos el documento en MongoDB con las preguntas definitivas
     await guardarFormulario(guildId, titulo, null, preguntas);
 
     // Limpiamos la memoria temporal
-    pendingFormCreations.delete(interaction.user.id);
+    activeFormTitles.delete(interaction.user.id);
 
     // Respondemos de forma privada confirmando el guardado
     await interaction.reply({
