@@ -4,7 +4,7 @@ import {
     TextChannel 
 } from 'discord.js';
 
-export async function handleVeredictoModalSubmit(interaction: ModalSubmitInteraction) {
+export async function handleVeredictoModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (!interaction.customId.startsWith('modal_veredicto_')) return false;
 
     // Recuperamos el ID del canal y del rol que guardamos en el customId
@@ -15,7 +15,7 @@ export async function handleVeredictoModalSubmit(interaction: ModalSubmitInterac
     const guild = interaction.guild!;
     const serverName = guild.name;
 
-    // Capturamos los 5 campos del formulario
+    // Capturamos los campos del formulario
     const reportId = interaction.fields.getTextInputValue('input_verd_report_id').trim();
     const pilotoReporta = interaction.fields.getTextInputValue('input_verd_reporta');
     const pilotoDefendio = interaction.fields.getTextInputValue('input_verd_defendio');
@@ -28,8 +28,7 @@ export async function handleVeredictoModalSubmit(interaction: ModalSubmitInterac
         ephemeral: true
     });
 
-    // Comprobación de seguridad: Si el rol seleccionado es @everyone (su ID es el ID del servidor),
-    // lo adaptamos para que no pete la API de Discord. Si es un rol normal, usamos la mención de rol.
+    // Comprobación de seguridad: Si el rol seleccionado es @everyone (su ID coincide con el del servidor)
     const mentionText = (rolId === guild.id) ? '@everyone' : `<@&${rolId}>`;
 
     // Construimos el Embed Verde oficial de Veredicto
