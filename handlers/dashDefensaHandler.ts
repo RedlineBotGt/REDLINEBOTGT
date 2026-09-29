@@ -39,7 +39,7 @@ async function saveConfigToDB(guildId: string, data: any) {
     }
 }
 
-// Función exportada para que el modal de defensas consulte la configuración
+// Función exportada para que el modal consulte la configuración
 export async function getDefensaConfigFromDB(guildId: string) {
     try {
         const col = await getDefensaCollection();
@@ -50,7 +50,7 @@ export async function getDefensaConfigFromDB(guildId: string) {
     }
 }
 
-// 1. Maneja el clic en el botón de setup de defensas del panel /dash
+// 1. Iniciar el asistente de 4 pasos al pulsar el botón de setup en el dash
 export async function handleDashDefensaButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_setup_defensa') return false;
 
@@ -58,7 +58,7 @@ export async function handleDashDefensaButton(interaction: ButtonInteraction): P
 
     const embed = new EmbedBuilder()
         .setTitle('🛡️ CONFIGURACIÓN DE DEFENSAS (1/4)')
-        .setDescription('Paso 1: Selecciona el **Canal Destino 1** (Opcional, o pulsa "Saltar").')
+        .setDescription('Paso 1: Selecciona el **Canal Destino 1** (Opcional - Registro, o pulsa "Saltar").')
         .setColor(0xFF4500)
         .setFooter({ text: interaction.guild?.name || 'DISCORDBOT' });
 
@@ -85,7 +85,7 @@ export async function handleDashDefensaButton(interaction: ButtonInteraction): P
 
     const collector = response.createMessageComponentCollector({
         filter: i => i.user.id === interaction.user.id,
-        time: 300_000 // 5 minutos de tiempo límite
+        time: 300_000 // 5 minutos
     });
 
     const configData: { canal1?: string | null; rol1?: string | null; canal2?: string; rol2?: string } = {};
@@ -127,7 +127,7 @@ export async function handleDashDefensaButton(interaction: ButtonInteraction): P
             const row3 = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(
                 new ChannelSelectMenuBuilder()
                     .setCustomId('def_setup_canal_2')
-                    .setPlaceholder('Selecciona Canal Destino 2...')
+                    .setPlaceholder('Selecciona el canal de los hilos de reporte...')
                     .addChannelTypes(ChannelType.GuildText)
             );
 
@@ -153,7 +153,7 @@ export async function handleDashDefensaButton(interaction: ButtonInteraction): P
         } else if (i.customId === 'def_setup_rol_2') {
             configData.rol2 = i.values[0];
 
-            // Guardamos todo en MongoDB de forma persistente
+            // 💾 Guardamos de forma persistente en MongoDB
             await saveConfigToDB(guildId, configData);
 
             const embedPanel = new EmbedBuilder()
@@ -169,7 +169,7 @@ export async function handleDashDefensaButton(interaction: ButtonInteraction): P
 
             const rowPanel = new ActionRowBuilder<ButtonBuilder>().addComponents(botonDefensa);
 
-            // Desplegamos el botón en el canal actual donde se ejecutó el comando
+            // Desplegamos el panel en el canal actual
             await interaction.channel?.send({
                 embeds: [embedPanel],
                 components: [rowPanel]
