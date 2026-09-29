@@ -8,9 +8,8 @@ import {
     ButtonBuilder,
     ButtonStyle 
 } from 'discord.js';
-
-// Declaramos y exportamos el mapa aquí para que tu comando /forms pueda importarlo desde este archivo
-export const pendingFormCreations = new Map<string, { guildId: string, titulo: string }>();
+import { activeFormTitles } from '../commands/forms';
+import { guardarFormulario } from '../utils/formsStorage';
 
 // 1. Maneja el clic en el botón "Crear" del panel /dash (abre el modal del título)
 export async function handleDashCreateFormButton(interaction: ButtonInteraction): Promise<boolean> {
@@ -33,7 +32,7 @@ export async function handleDashCreateFormButton(interaction: ButtonInteraction)
     return true;
 }
 
-// 2. Recoge el título del modal, lo guarda y manda un mensaje efímero con un botón para continuar
+// 2. Recoge el título del modal, lo guarda inmediatamente como borrador en MongoDB y manda un mensaje efímero con un botón para continuar
 export async function handleDashFormTituloModal(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_dash_form_titulo') return false;
 
@@ -45,8 +44,9 @@ export async function handleDashFormTituloModal(interaction: ModalSubmitInteract
         return true;
     }
 
-    // Guardamos el título y el guildId asociado al usuario
-    pendingFormCreations.set(interaction.user.id, { guildId, titulo });
+    // Guardamos un borrador inicial en MongoDB y registramos el título activo del usuario
+    await guardarFormulario(guildId, titulo, null, []);
+    activeFormTitles.set(interaction.user.id, titulo);
 
     // Como Discord NO permite abrir un modal directamente desde otro modal, 
     // enviamos un mensaje efímero con un botón para dar el salto final al modal de preguntas.
@@ -70,7 +70,7 @@ export async function handleDashFormTituloModal(interaction: ModalSubmitInteract
 export async function handleDashOpenPreguntasButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_abrir_preguntas') return false;
 
-    if (!pendingFormCreations.has(interaction.user.id)) {
+    if (!activeFormTitles.has(interaction.user.id)) {
         await interaction.reply({ content: '❌ No se encontró ningún título pendiente. Empieza de nuevo.', ephemeral: true });
         return true;
     }
