@@ -27,7 +27,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         .setDescription('Selecciona una opción en los botones inferiores para gestionar el servidor.')
         .addFields(
             { name: '📋 Gestión de Formularios', value: 'Crear, editar, borrar o colocar formularios.', inline: false },
-            { name: '📢 Comunicaciones', value: 'Enviar mensajes oficiales, programar anuncios, crear botones interactivos y roles por reacción.', inline: false },
+            { name: '📢 Comunicaciones y Ajustes', value: 'Enviar mensajes, programar anuncios, botones, roles por reacción y bienvenidas.', inline: false },
             { name: '⚖️ Sistema de Comisarios', value: 'Gestionar reportes, defensas y veredicto.', inline: false }
         )
         .setTimestamp()
@@ -41,17 +41,18 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         new ButtonBuilder().setCustomId('dash_btn_colocar_form').setLabel('Colocar F').setStyle(ButtonStyle.Success).setEmoji('📌')
     );
 
-    // Fila 2: Comunicaciones (Incluye el nuevo botón de Roles por Reacción con customId 'rr_btn_create')
+    // Fila 2: Comunicaciones y Ajustes (Incluye el botón de Bienvenidas)
     const rowMsn = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('dash_btn_msn_mensaje').setLabel('EnviarMensaje').setStyle(ButtonStyle.Primary).setEmoji('💬'),
         new ButtonBuilder().setCustomId('dash_btn_scheduled_msg').setLabel('Prog. Mensaje').setStyle(ButtonStyle.Secondary).setEmoji('📅'),
         new ButtonBuilder().setCustomId('dash_btn_crear_boton').setLabel('CrearBotón').setStyle(ButtonStyle.Success).setEmoji('🎟️'),
-        new ButtonBuilder().setCustomId('rr_btn_create').setLabel('Rol Reacción').setStyle(ButtonStyle.Success).setEmoji('🎭')
+        new ButtonBuilder().setCustomId('rr_btn_create').setLabel('Rol Reacción').setStyle(ButtonStyle.Success).setEmoji('🎭'),
+        new ButtonBuilder().setCustomId('dash_btn_welcome_config').setLabel('Bienvenidas').setStyle(ButtonStyle.Secondary).setEmoji('👋')
     );
 
     // Fila 3: Sistema de Comisarios
     const rowComisarios = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('dash_btn_setup_reporte').setLabel('Editar Reporte').setStyle(ButtonStyle.Primary).setEmoji('🛡️'),
+        new ButtonBuilder().setCustomId('dash_btn_setup_reporte').setLabel('Editar Reporte').setStyle(ButtonStyle.Primary).setEmoji('🛡️️'),
         new ButtonBuilder().setCustomId('dash_btn_setup_defensa').setLabel('Editar Defensa').setStyle(ButtonStyle.Secondary).setEmoji('⚖️'),
         new ButtonBuilder().setCustomId('dash_btn_veredicto').setLabel('EmitirVeredicto').setStyle(ButtonStyle.Success).setEmoji('📜')
     );
