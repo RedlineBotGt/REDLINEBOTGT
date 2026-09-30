@@ -17,7 +17,9 @@ import {
     ModalSubmitInteraction,
     TextChannel, 
     EmbedBuilder,
-    MessageFlags 
+    MessageFlags,
+    ButtonBuilder,
+    ButtonStyle
 } from 'discord.js';
 import { MongoClient as MongoDriver } from 'mongodb';
 
@@ -166,7 +168,7 @@ export async function handleRrExistingSelect(interaction: StringSelectMenuIntera
             .setCustomId('rr_btn_create')
             .setLabel('Volver al Menú')
             .setStyle(ButtonStyle.Secondary)
-            .setEmoji('⬅️')
+            .setEmoji('⬅️️')
     );
 
     await interaction.update({
@@ -195,12 +197,12 @@ export async function handleRrDeleteConfig(interaction: ButtonInteraction): Prom
     return true;
 }
 
-// 4. Botón "Crear Nuevo" -> Abre el modal original de texto y emoji
+// 4. Botón "Crear Nuevo" -> Abre el modal de texto y emoji
 export async function handleRrStartCreate(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'rr_btn_start_create') return false;
 
     const modal = new ModalBuilder()
-        .setCustomId('rr_modal_content')
+        .setCustomId('modal_rr_content') // 👈 Coincide exactamente con el router
         .setTitle('🎭 Rol por Reacción (1/3: Mensaje y Emoji)');
 
     const inputMsg = new TextInputBuilder()
@@ -212,7 +214,7 @@ export async function handleRrStartCreate(interaction: ButtonInteraction): Promi
 
     const inputEmoji = new TextInputBuilder()
         .setCustomId('rr_emoji')
-        .setLabel('⭐ Emoji obligatorio (Ej: 🏎️️)')
+        .setLabel('⭐ Emoji obligatorio (Ej: 🏎)')
         .setStyle(TextInputStyle.Short)
         .setPlaceholder('🏎️')
         .setRequired(true);
@@ -232,7 +234,7 @@ export async function handleRrStartCreate(interaction: ButtonInteraction): Promi
 
 // Paso 2: Al enviar el Modal -> Guarda texto/emoji temporalmente y muestra Desplegable de Canales
 export async function handleRrContentSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
-    if (interaction.customId !== 'rr_modal_content') return false;
+    if (interaction.customId !== 'modal_rr_content') return false;
 
     const text = interaction.fields.getTextInputValue('rr_text');
     const emoji = interaction.fields.getTextInputValue('rr_emoji').trim();
