@@ -30,7 +30,7 @@ async function getScheduledCollection() {
     return scheduledCollection;
 }
 
-// 🌍 Función simplificada para crear la fecha local exacta introducida por el usuario
+// 🌍 Función corregida para calcular la hora exacta en la península (Madrid) adaptándose a UTC y DST
 function parseMadridDateTime(dateStr: string, timeStr: string): Date | null {
     try {
         const [day, month, year] = dateStr.split('/').map(Number);
@@ -38,13 +38,41 @@ function parseMadridDateTime(dateStr: string, timeStr: string): Date | null {
 
         if (!day || !month || !year || isNaN(hour) || isNaN(minute)) return null;
 
-        // Creamos la fecha directamente con los valores locales
-        const targetDate = new Date(year, month - 1, day, hour, minute, 0);
+        const targetString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00Z`;
+        const tempDate = new Date(targetString);
+        if (isNaN(tempDate.getTime())) return null;
+
+        const madridOffsetMinutes = getMadridOffsetMinutes(tempDate);
+        const finalTimestamp = tempDate.getTime() - (madridOffsetMinutes * 60 * 1000);
+
+        const targetDate = new Date(finalTimestamp);
         return isNaN(targetDate.getTime()) ? null : targetDate;
     } catch (error) {
-        console.error('❌ Error al parsear fecha y hora:', error);
+        console.error('❌ Error al parsear fecha y hora de Madrid:', error);
         return null;
     }
+}
+
+// Función auxiliar para obtener los minutos de desfase de la zona Europe/Madrid en una fecha dada
+function getMadridOffsetMinutes(date: Date): number {
+    const madridDateStr = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Europe/Madrid',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    }).format(date);
+
+    const [datePart, timePart] = madridDateStr.split(', ');
+    const [m, d, y] = datePart.split('/').map(Number);
+    const [h, min] = timePart.split(':').map(Number);
+
+    const asUTC = Date.UTC(y, m - 1, d, h, min, 0);
+    const diffMs = asUTC - date.getTime();
+    return Math.round(diffMs / (1000 * 60));
 }
 
 // Estructura temporal para almacenar los datos mientras el usuario avanza en el asistente
@@ -406,7 +434,7 @@ export function startScheduledWorker(client: Client) {
                             .setDescription(finalContent)
                             .setImage(msg.image)
                             .setColor(0xED4245);
-                        
+
                         messageOptions = {
                             content: msg.roleId ? `<@&${msg.roleId}>` : undefined,
                             embeds: [embed]
