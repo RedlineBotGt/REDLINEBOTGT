@@ -13,6 +13,15 @@ import { handleDefensaButton, handleDefensaModalSubmit } from './defensModal';
 import { handleVeredictoModalSubmit } from './veredictoModal';
 import { handleMsnModalSubmit } from './msnModal';
 
+// 👋 NUEVO: Importamos los manejadores del sistema de Bienvenidas y Despedidas
+import { 
+    handleDashWelcomeButton, 
+    handleWelcomeChannelSelect, 
+    handleWelcomeModalSubmit, 
+    handleGoodbyeChannelSelect, 
+    handleGoodbyeModalSubmit 
+} from './welcomeSystem';
+
 // Manejadores de formularios y Dash
 import { handleFormCreateModal } from './formCreateModal';
 import { 
@@ -127,6 +136,10 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleSchedChannelSelect(interaction);
             } else if (interaction.customId === 'rr_select_channel') {
                 await handleRrChannelSelect(interaction);
+            } else if (interaction.customId === 'welcome_select_welcome_channel') {
+                await handleWelcomeChannelSelect(interaction); // 👋 Canal de Bienvenida
+            } else if (interaction.customId === 'welcome_select_goodbye_channel') {
+                await handleGoodbyeChannelSelect(interaction); // ⚠️ Canal de Despedidas
             }
             return;
         }
@@ -161,6 +174,8 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleDashScheduledButton(interaction);
             } else if (interaction.customId === 'rr_btn_create') {
                 await handleDashRrButton(interaction);
+            } else if (interaction.customId === 'dash_btn_welcome_config') {
+                await handleDashWelcomeButton(interaction); // 👋 Botón principal de bienvenida en el Dash
             } else if (interaction.customId === 'sched_skip_role') {
                 await handleSchedRoleSelection(interaction);
             } else if (interaction.customId === 'sched_repeat_yes') {
@@ -209,8 +224,12 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleSchedDatetimeSubmit(interaction);
             } else if (interaction.customId === 'modal_sched_repeat') {
                 await handleSchedRepeatModalSubmit(interaction);
-            } else if (interaction.customId === 'modal_rr_content') { // Corregido por consistencia si aplica
+            } else if (interaction.customId === 'modal_rr_content') { 
                 await handleRrContentSubmit(interaction);
+            } else if (interaction.customId === 'modal_welcome_text') {
+                await handleWelcomeModalSubmit(interaction); // 👋 Modal de texto de Bienvenida
+            } else if (interaction.customId === 'modal_goodbye_text') {
+                await handleGoodbyeModalSubmit(interaction); // ⚠️ Modal de texto de Despedida
             } else if (interaction.customId === 'modal_crear_ticket_config') {
                 await handleTicketModalSubmit(interaction);
             } else if (interaction.customId === 'modal_dash_form_titulo') {
