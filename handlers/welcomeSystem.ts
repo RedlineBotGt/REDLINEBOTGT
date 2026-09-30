@@ -28,19 +28,32 @@ async function getSettingsCollection() {
     return settingsCollection;
 }
 
-// 1. Botón del Dash para iniciar la configuración
+// 1. Al pulsar el botón principal en el Dash -> Muestra opción de elegir qué editar por separado
 export async function handleDashWelcomeButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_welcome_config') return false;
 
-    const selectChannel = new ChannelSelectMenuBuilder()
-        .setCustomId('welcome_select_welcome_channel')
-        .setPlaceholder('📢 Selecciona el canal de BIENVENIDA...')
-        .addChannelTypes(ChannelType.GuildText);
+    const embed = new EmbedBuilder()
+        .setColor(0x0055FF)
+        .setTitle('👋 Gestión de Bienvenidas y Despedidas')
+        .setDescription('Selecciona qué módulo deseas configurar o modificar de forma independiente:')
+        .setFooter({ text: 'REDLINE GT' })
+        .setTimestamp();
 
-    const row = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(selectChannel);
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+            .setCustomId('welcome_menu_bienvenida')
+            .setLabel('Configurar Bienvenidas')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('🟢'),
+        new ButtonBuilder()
+            .setCustomId('welcome_menu_despedida')
+            .setLabel('Configurar Despedidas')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('🔴')
+    );
 
     await interaction.reply({
-        content: '👋 **Asistente (Paso 1/4):** Selecciona el canal donde se publicarán las **bienvenidas**:',
+        embeds: [embed],
         components: [row],
         ephemeral: true
     });
@@ -48,7 +61,45 @@ export async function handleDashWelcomeButton(interaction: ButtonInteraction): P
     return true;
 }
 
-// 2. Selecciona canal de bienvenida -> Pide texto de bienvenida mediante modal
+// --- FLUJO INDEPENDIENTE: BIENVENIDAS ---
+
+export async function handleWelcomeMenuButton(interaction: ButtonInteraction): Promise<boolean> {
+    if (interaction.customId === 'welcome_menu_bienvenida') {
+        const selectChannel = new ChannelSelectMenuBuilder()
+            .setCustomId('welcome_select_welcome_channel')
+            .setPlaceholder('📢 Selecciona el canal de BIENVENIDA...')
+            .addChannelTypes(ChannelType.GuildText);
+
+        const row = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(selectChannel);
+
+        await interaction.update({
+            content: '🟢 **Configuración de Bienvenidas:** Selecciona el canal:',
+            embeds: [],
+            components: [row]
+        });
+        return true;
+    }
+
+    if (interaction.customId === 'welcome_menu_despedida') {
+        const selectChannel = new ChannelSelectMenuBuilder()
+            .setCustomId('welcome_select_goodbye_channel')
+            .setPlaceholder('⚠️ Selecciona el canal de DESPEDIDAS...')
+            .addChannelTypes(ChannelType.GuildText);
+
+        const row = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(selectChannel);
+
+        await interaction.update({
+            content: '🔴 **Configuración de Despedidas:** Selecciona el canal:',
+            embeds: [],
+            components: [row]
+        });
+        return true;
+    }
+
+    return false;
+}
+
+// Seleccionó canal de bienvenida -> Abre modal de texto de bienvenida
 export async function handleWelcomeChannelSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'welcome_select_welcome_channel') return false;
 
@@ -57,7 +108,7 @@ export async function handleWelcomeChannelSelect(interaction: any): Promise<bool
 
     const modal = new ModalBuilder()
         .setCustomId('modal_welcome_text')
-        .setTitle('👋 Mensaje de Bienvenida (Paso 2/4)');
+        .setTitle('Personalizar Bienvenida');
 
     const inputMsg = new TextInputBuilder()
         .setCustomId('welcome_text_input')
@@ -71,52 +122,58 @@ export async function handleWelcomeChannelSelect(interaction: any): Promise<bool
     return true;
 }
 
-// 3. Recibe texto de bienvenida -> Pide canal de despedidas
+// Guarda solo Bienvenidas en MongoDB
 export async function handleWelcomeModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_welcome_text') return false;
 
     const welcomeMessage = interaction.fields.getTextInputValue('welcome_text_input');
     const session = welcomeSessions.get(interaction.user.id);
 
-    if (!session) {
+    if (!session || !session.welcomeChannelId) {
         await interaction.reply({ content: '❌ Sesión caducada.', ephemeral: true });
         return true;
     }
 
-    session.welcomeMessage = welcomeMessage;
+    try {
+        const col = await getSettingsCollection();
+        await col.updateOne(
+            { guildId: interaction.guildId },
+            { 
+                $set: { 
+                    welcomeChannelId: session.welcomeChannelId,
+                    welcomeMessage: welcomeMessage 
+                } 
+            },
+            { upsert: true }
+        );
 
-    const selectChannel = new ChannelSelectMenuBuilder()
-        .setCustomId('welcome_select_goodbye_channel')
-        .setPlaceholder('⚠️ Selecciona el canal de DESPEDIDAS...')
-        .addChannelTypes(ChannelType.GuildText);
+        welcomeSessions.delete(interaction.user.id);
 
-    const row = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(selectChannel);
-
-    await interaction.reply({
-        content: '👋 **Asistente (Paso 3/4):** Selecciona ahora el canal donde se publicarán las **despedidas**:',
-        components: [row],
-        ephemeral: true
-    });
+        await interaction.reply({
+            content: '✅ **¡Bienvenidas actualizadas con éxito!** (Las despedidas no se han modificado).',
+            ephemeral: true
+        });
+    } catch (error) {
+        console.error('❌ Error al guardar bienvenida:', error);
+        await interaction.reply({ content: '❌ Error al guardar en la base de datos.', ephemeral: true });
+    }
 
     return true;
 }
 
-// 4. Selecciona canal de despedidas -> Pide texto de despedida mediante modal
+
+// --- FLUJO INDEPENDIENTE: DESPEDIDAS ---
+
+// Seleccionó canal de despedida -> Abre modal de texto de despedida
 export async function handleGoodbyeChannelSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'welcome_select_goodbye_channel') return false;
 
     const channelId = interaction.values[0];
-    const session = welcomeSessions.get(interaction.user.id);
-    if (!session) {
-        await interaction.update({ content: '❌ Sesión caducada.', components: [] });
-        return true;
-    }
-
-    session.goodbyeChannelId = channelId;
+    welcomeSessions.set(interaction.user.id, { goodbyeChannelId: channelId });
 
     const modal = new ModalBuilder()
         .setCustomId('modal_goodbye_text')
-        .setTitle('⚠️ Mensaje de Despedida (Paso 4/4)');
+        .setTitle('Personalizar Despedida');
 
     const inputMsg = new TextInputBuilder()
         .setCustomId('goodbye_text_input')
@@ -130,14 +187,14 @@ export async function handleGoodbyeChannelSelect(interaction: any): Promise<bool
     return true;
 }
 
-// 5. Recibe texto de despedida -> Guarda toda la configuración unificada en MongoDB
+// Guarda solo Despedidas en MongoDB
 export async function handleGoodbyeModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_goodbye_text') return false;
 
     const goodbyeMessage = interaction.fields.getTextInputValue('goodbye_text_input');
     const session = welcomeSessions.get(interaction.user.id);
 
-    if (!session) {
+    if (!session || !session.goodbyeChannelId) {
         await interaction.reply({ content: '❌ Sesión caducada.', ephemeral: true });
         return true;
     }
@@ -148,8 +205,6 @@ export async function handleGoodbyeModalSubmit(interaction: ModalSubmitInteracti
             { guildId: interaction.guildId },
             { 
                 $set: { 
-                    welcomeChannelId: session.welcomeChannelId,
-                    welcomeMessage: session.welcomeMessage,
                     goodbyeChannelId: session.goodbyeChannelId,
                     goodbyeMessage: goodbyeMessage 
                 } 
@@ -160,18 +215,18 @@ export async function handleGoodbyeModalSubmit(interaction: ModalSubmitInteracti
         welcomeSessions.delete(interaction.user.id);
 
         await interaction.reply({
-            content: '✅ **¡Configuración guardada con éxito!**\nTanto las bienvenidas como las despedidas han quedado configuradas y activas en la base de datos.',
+            content: '✅ **¡Despedidas actualizadas con éxito!** (Las bienvenidas no se han modificado).',
             ephemeral: true
         });
     } catch (error) {
-        console.error('❌ Error al guardar configuración de bienvenida/despedida:', error);
+        console.error('❌ Error al guardar despedida:', error);
         await interaction.reply({ content: '❌ Error al guardar en la base de datos.', ephemeral: true });
     }
 
     return true;
 }
 
-// 6. Eventos automáticos de Discord (Worker de entradas y salidas)
+// 2. Eventos automáticos de Discord (Worker)
 export function setupWelcomeSystem(client: Client) {
     console.log('👋 [System] Sistema de Bienvenidas y Despedidas activo.');
 
