@@ -6,6 +6,7 @@ import * as veredicto from '../commands/veredicto';
 import * as msn from '../commands/msn';
 import * as forms from '../commands/forms';
 import * as ColocarForm from '../commands/ColocarForm';
+import * as borrar from '../commands/borrar'; // 🗑️ ¡Añadido el comando borrar aquí!
 
 import { handleReportButton, handleReportModalSubmit } from './reportModal';
 import { handleDefensaButton, handleDefensaModalSubmit } from './defensModal';
@@ -90,6 +91,8 @@ export async function handleInteraction(interaction: Interaction) {
                 await forms.execute(interaction);
             } else if (interaction.commandName === 'colocarform') {
                 await ColocarForm.execute(interaction);
+            } else if (interaction.commandName === 'borrar') {
+                await borrar.execute(interaction); // 🗑️ ¡Añadida la ejecución del comando borrar!
             }
             return;
         }
@@ -121,10 +124,8 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId.startsWith('ticket_deploy_channel_')) {
                 await handleTicketChannelSelect(interaction);
             } else if (interaction.customId === 'sched_select_channel') {
-                // 📅 NUEVO: Selecciona el canal de destino del mensaje programado
                 await handleSchedChannelSelect(interaction);
             } else if (interaction.customId === 'rr_select_channel') {
-                // 🎭 NUEVO: Selecciona el canal de destino para el rol por reacción
                 await handleRrChannelSelect(interaction);
             }
             return;
@@ -135,10 +136,8 @@ export async function handleInteraction(interaction: Interaction) {
             if (interaction.customId === 'dash_select_verd_role') {
                 await handleDashVeredictoRoleSelect(interaction);
             } else if (interaction.customId === 'sched_select_role') {
-                // 📅 NUEVO: Selecciona el rol a mencionar en el mensaje programado
                 await handleSchedRoleSelection(interaction);
             } else if (interaction.customId === 'rr_select_role') {
-                // 🎭 NUEVO: Selecciona el rol a otorgar al reaccionar
                 await handleRrRoleSelect(interaction);
             }
             return;
@@ -159,19 +158,14 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'dash_btn_crear_boton') {
                 await handleDashCrearBotonButton(interaction);
             } else if (interaction.customId === 'dash_btn_scheduled_msg') {
-                // 📅 NUEVO: Abre el modal inicial del programador de mensajes desde el Dash
                 await handleDashScheduledButton(interaction);
             } else if (interaction.customId === 'rr_btn_create') {
-                // 🎭 NUEVO: Abre el modal de contenido y emoji para roles por reacción desde el Dash
                 await handleDashRrButton(interaction);
             } else if (interaction.customId === 'sched_skip_role') {
-                // 📅 NUEVO: Salta la selección de rol en el programador
                 await handleSchedRoleSelection(interaction);
             } else if (interaction.customId === 'sched_repeat_yes') {
-                // 📅 NUEVO: Abre el modal para configurar días y horas de repetición
                 await handleSchedRepeatYes(interaction);
             } else if (interaction.customId === 'sched_repeat_no') {
-                // 📅 NUEVO: Finaliza y guarda como mensaje de única vez
                 await handleSchedFinalizeNo(interaction);
             } else if (interaction.customId.startsWith('dash_confirm_borrar_')) {
                 await handleDashDeleteConfirmButton(interaction); 
@@ -210,16 +204,12 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId.startsWith('modal_msn_')) {
                 await handleMsnModalSubmit(interaction);
             } else if (interaction.customId === 'modal_sched_content') {
-                // 📅 NUEVO: Procesa el texto e imagen del mensaje programado (Paso 1)
                 await handleSchedContentSubmit(interaction);
             } else if (interaction.customId === 'modal_sched_datetime') {
-                // 📅 NUEVO: Procesa la fecha y hora del mensaje programado (Paso 4)
                 await handleSchedDatetimeSubmit(interaction);
             } else if (interaction.customId === 'modal_sched_repeat') {
-                // 📅 NUEVO: Procesa los días y horas de repetición y guarda en MongoDB
                 await handleSchedRepeatModalSubmit(interaction);
-            } else if (interaction.customId === 'rr_modal_content') {
-                // 🎭 NUEVO: Procesa el mensaje y el emoji del rol por reacción (Paso 1)
+            } else if (interaction.customId === 'modal_rr_content') { // Corregido por consistencia si aplica
                 await handleRrContentSubmit(interaction);
             } else if (interaction.customId === 'modal_crear_ticket_config') {
                 await handleTicketModalSubmit(interaction);
