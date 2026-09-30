@@ -2,6 +2,8 @@ import {
     ButtonInteraction, 
     ChannelSelectMenuBuilder, 
     ActionRowBuilder, 
+    ButtonBuilder, 
+    ButtonStyle, 
     ChannelType, 
     ModalBuilder, 
     TextInputBuilder, 
@@ -10,7 +12,8 @@ import {
     Client, 
     GuildMember, 
     TextChannel, 
-    EmbedBuilder 
+    EmbedBuilder,
+    MessageFlags 
 } from 'discord.js';
 import { MongoClient as MongoDriver } from 'mongodb';
 
@@ -55,13 +58,13 @@ export async function handleDashWelcomeButton(interaction: ButtonInteraction): P
     await interaction.reply({
         embeds: [embed],
         components: [row],
-        ephemeral: true
+        flags: [MessageFlags.Ephemeral]
     });
 
     return true;
 }
 
-// --- FLUJO INDEPENDIENTE: BIENVENIDAS ---
+// --- FLUJO INDEPENDIENTE: BIENVENIDAS Y DESPEDIDAS (MENÚ) ---
 
 export async function handleWelcomeMenuButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId === 'welcome_menu_bienvenida') {
@@ -130,7 +133,7 @@ export async function handleWelcomeModalSubmit(interaction: ModalSubmitInteracti
     const session = welcomeSessions.get(interaction.user.id);
 
     if (!session || !session.welcomeChannelId) {
-        await interaction.reply({ content: '❌ Sesión caducada.', ephemeral: true });
+        await interaction.reply({ content: '❌ Sesión caducada.', flags: [MessageFlags.Ephemeral] });
         return true;
     }
 
@@ -151,11 +154,11 @@ export async function handleWelcomeModalSubmit(interaction: ModalSubmitInteracti
 
         await interaction.reply({
             content: '✅ **¡Bienvenidas actualizadas con éxito!** (Las despedidas no se han modificado).',
-            ephemeral: true
+            flags: [MessageFlags.Ephemeral]
         });
     } catch (error) {
         console.error('❌ Error al guardar bienvenida:', error);
-        await interaction.reply({ content: '❌ Error al guardar en la base de datos.', ephemeral: true });
+        await interaction.reply({ content: '❌ Error al guardar en la base de datos.', flags: [MessageFlags.Ephemeral] });
     }
 
     return true;
@@ -195,7 +198,7 @@ export async function handleGoodbyeModalSubmit(interaction: ModalSubmitInteracti
     const session = welcomeSessions.get(interaction.user.id);
 
     if (!session || !session.goodbyeChannelId) {
-        await interaction.reply({ content: '❌ Sesión caducada.', ephemeral: true });
+        await interaction.reply({ content: '❌ Sesión caducada.', flags: [MessageFlags.Ephemeral] });
         return true;
     }
 
@@ -216,11 +219,11 @@ export async function handleGoodbyeModalSubmit(interaction: ModalSubmitInteracti
 
         await interaction.reply({
             content: '✅ **¡Despedidas actualizadas con éxito!** (Las bienvenidas no se han modificado).',
-            ephemeral: true
+            flags: [MessageFlags.Ephemeral]
         });
     } catch (error) {
         console.error('❌ Error al guardar despedida:', error);
-        await interaction.reply({ content: '❌ Error al guardar en la base de datos.', ephemeral: true });
+        await interaction.reply({ content: '❌ Error al guardar en la base de datos.', flags: [MessageFlags.Ephemeral] });
     }
 
     return true;
