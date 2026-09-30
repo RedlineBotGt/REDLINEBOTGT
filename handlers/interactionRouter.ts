@@ -13,9 +13,10 @@ import { handleDefensaButton, handleDefensaModalSubmit } from './defensModal';
 import { handleVeredictoModalSubmit } from './veredictoModal';
 import { handleMsnModalSubmit } from './msnModal';
 
-// 👋 NUEVO: Importamos los manejadores del sistema de Bienvenidas y Despedidas
+// 👋 NUEVO: Importamos los manejadores del sistema de Bienvenidas y Despedidas (incluyendo el menú de selección)
 import { 
     handleDashWelcomeButton, 
+    handleWelcomeMenuButton, 
     handleWelcomeChannelSelect, 
     handleWelcomeModalSubmit, 
     handleGoodbyeChannelSelect, 
@@ -139,7 +140,7 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'welcome_select_welcome_channel') {
                 await handleWelcomeChannelSelect(interaction); // 👋 Canal de Bienvenida
             } else if (interaction.customId === 'welcome_select_goodbye_channel') {
-                await handleGoodbyeChannelSelect(interaction); // ⚠️ Canal de Despedidas
+                await handleGoodbyeChannelSelect(interaction); // 📤 Canal de Despedidas
             }
             return;
         }
@@ -176,6 +177,8 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleDashRrButton(interaction);
             } else if (interaction.customId === 'dash_btn_welcome_config') {
                 await handleDashWelcomeButton(interaction); // 👋 Botón principal de bienvenida en el Dash
+            } else if (interaction.customId === 'welcome_menu_bienvenida' || interaction.customId === 'welcome_menu_despedida') {
+                await handleWelcomeMenuButton(interaction); // 👋/📤 Selección de menú independiente
             } else if (interaction.customId === 'sched_skip_role') {
                 await handleSchedRoleSelection(interaction);
             } else if (interaction.customId === 'sched_repeat_yes') {
@@ -229,7 +232,7 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'modal_welcome_text') {
                 await handleWelcomeModalSubmit(interaction); // 👋 Modal de texto de Bienvenida
             } else if (interaction.customId === 'modal_goodbye_text') {
-                await handleGoodbyeModalSubmit(interaction); // ⚠️ Modal de texto de Despedida
+                await handleGoodbyeModalSubmit(interaction); // 📤 Modal de texto de Despedida
             } else if (interaction.customId === 'modal_crear_ticket_config') {
                 await handleTicketModalSubmit(interaction);
             } else if (interaction.customId === 'modal_dash_form_titulo') {
