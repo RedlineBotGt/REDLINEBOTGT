@@ -51,37 +51,41 @@ export function startScheduledWorker(client: Client) {
                         finalContent = `<@&${msg.roleId}>\n\n${finalContent}`;
                     }
 
-                    // Si hay imagen, podemos enviarla adjunta o con un embed/texto
+                    // Si hay imagen, construimos el embed
                     let messageOptions: any = { content: finalContent };
                     if (msg.image) {
-                        // Opción sencilla: añadir la URL de la imagen al final o crear un Embed
                         const embed = new EmbedBuilder()
                             .setDescription(finalContent)
                             .setImage(msg.image)
-                            .setColor(0xED4245); // Color rojo Redline o el que prefieras
-                        
+                            .setColor(0xED4245);
+
                         messageOptions = { content: msg.roleId ? `<@&${msg.roleId}>` : undefined, embeds: [embed] };
                     }
 
                     // Enviamos el mensaje al canal de Discord
                     await channel.send(messageOptions);
 
-                    // Actualizamos el estado en MongoDB según si es repetitivo o de una sola vez
-                    if (msg.repeats) {
-                        // Si se repite, por ejemplo, sumamos 7 días para la próxima ejecución (ajustable según prefieras)
-                        const nextDate = new Date(msg.scheduledAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+                    // Actualizamos el estado en MongoDB según si es repetitivo y quedan envíos
+                    if (msg.repeats && msg.remainingTimes > 1) {
+                        const currentScheduled = new Date(msg.scheduledAt);
+                        const addDays = (msg.repeatDays || 0) * 24 * 60 * 60 * 1000;
+                        const addHours = (msg.repeatHours || 0) * 60 * 60 * 1000;
+                        const nextDate = new Date(currentScheduled.getTime() + addDays + addHours);
+
                         await col.updateOne(
                             { _id: msg._id },
-                            { $set: { scheduledAt: nextDate } }
+                            { 
+                                $set: { scheduledAt: nextDate },$inc: { remainingTimes: -1 } // Resta una unidad al contador total de repeticiones
+                            }
                         );
-                        console.log(`🔄 [Worker] Mensaje repetitivo reprogramado para: ${nextDate}`);
+                        console.log(`🔄 [Worker] Mensaje repetitivo reprogramado para: ${nextDate}. Quedan ${msg.remainingTimes - 1} envíos.`);
                     } else {
-                        // Marcamos como enviado para que no se vuelva a procesar
+                        // Marcamos como enviado definitivo si ya no se repite o se agotaron las repeticiones
                         await col.updateOne(
                             { _id: msg._id },
                             { $set: { status: 'sent', sentAt: new Date() } }
                         );
-                        console.log(`✅ [Worker] Mensaje programado enviado con éxito en el servidor ${guild.name}`);
+                        console.log(`✅ [Worker] Mensaje programado finalizado con éxito en el servidor ${guild.name}`);
                     }
 
                 } catch (err) {
