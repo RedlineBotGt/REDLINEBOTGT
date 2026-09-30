@@ -47,7 +47,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         new ButtonBuilder().setCustomId('dash_btn_scheduled_msg').setLabel('Prog. Mensaje').setStyle(ButtonStyle.Secondary).setEmoji('📅'),
         new ButtonBuilder().setCustomId('dash_btn_crear_boton').setLabel('CrearBotón').setStyle(ButtonStyle.Success).setEmoji('🎟️'),
         new ButtonBuilder().setCustomId('rr_btn_create').setLabel('Rol Reacción').setStyle(ButtonStyle.Success).setEmoji('🎭'),
-        new ButtonBuilder().setCustomId('dash_btn_welcome_config').setLabel('Bienvenidas').setStyle(ButtonStyle.Secondary).setEmoji('👋')
+        new ButtonBuilder().setCustomId('dash_btn_welcome_config').setLabel('Edit Hola/Adiós').setStyle(ButtonStyle.Secondary).setEmoji('👋')
     );
 
     // Fila 3: Sistema de Comisarios (Escudo corregido: 🛡️)
