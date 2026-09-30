@@ -13,7 +13,7 @@ import { handleDefensaButton, handleDefensaModalSubmit } from './defensModal';
 import { handleVeredictoModalSubmit } from './veredictoModal';
 import { handleMsnModalSubmit } from './msnModal';
 
-// 👋 NUEVO: Importamos los manejadores del sistema de Bienvenidas y Despedidas (incluyendo el menú de selección)
+// 👋 NUEVO: Importamos los manejadores del sistema de Bienvenidas y Despedidas
 import { 
     handleDashWelcomeButton, 
     handleWelcomeMenuButton, 
@@ -53,7 +53,7 @@ import {
     handleDashOpenPreguntasButton 
 } from './dashCreateFormHandler'; 
 
-// 🎟️ NUEVO: Importamos los manejadores del sistema de tickets (incluyendo el cierre)
+// 🎟️ NUEVO: Importamos los manejadores del sistema de tickets
 import { 
     handleDashCrearBotonButton, 
     handleTicketModalSubmit, 
@@ -63,7 +63,7 @@ import {
     activeTicketButtons 
 } from './ticketButtonHandler';
 
-// 📅 NUEVO: Importamos los manejadores del sistema de Mensajes Programados (incluyendo repetición por días/horas)
+// 📅 NUEVO: Importamos los manejadores del sistema de Mensajes Programados
 import { 
     handleDashScheduledButton,
     handleSchedContentSubmit,
@@ -75,12 +75,15 @@ import {
     handleSchedRepeatModalSubmit
 } from './scheduledMessage';
 
-// 🎭 NUEVO: Importamos los manejadores del sistema de Roles por Reacción persistentes
+// 🎭 NUEVO: Importamos los manejadores del sistema de Roles por Reacción (incluyendo gestión y borrado de BD)
 import { 
     handleDashRrButton,
     handleRrContentSubmit,
     handleRrChannelSelect,
-    handleRrRoleSelect
+    handleRrRoleSelect,
+    handleRrExistingSelect,
+    handleRrDeleteConfig,
+    handleRrStartCreate
 } from './reactionRoles';
 
 export async function handleInteraction(interaction: Interaction) {
@@ -102,7 +105,7 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.commandName === 'colocarform') {
                 await ColocarForm.execute(interaction);
             } else if (interaction.commandName === 'borrar') {
-                await borrar.execute(interaction); // 🗑️ ¡Añadida la ejecución del comando borrar!
+                await borrar.execute(interaction);
             }
             return;
         }
@@ -115,6 +118,8 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleDashDeleteFormSelect(interaction);
             } else if (interaction.customId === 'dash_select_editar_form') {
                 await handleDashEditFormSelect(interaction);
+            } else if (interaction.customId === 'rr_select_existing_message') {
+                await handleRrExistingSelect(interaction); // 🎭 Selección de mensaje guardado de RR
             }
             return;
         }
@@ -138,9 +143,9 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'rr_select_channel') {
                 await handleRrChannelSelect(interaction);
             } else if (interaction.customId === 'welcome_select_welcome_channel') {
-                await handleWelcomeChannelSelect(interaction); // 👋 Canal de Bienvenida
+                await handleWelcomeChannelSelect(interaction);
             } else if (interaction.customId === 'welcome_select_goodbye_channel') {
-                await handleGoodbyeChannelSelect(interaction); // 📤 Canal de Despedidas
+                await handleGoodbyeChannelSelect(interaction);
             }
             return;
         }
@@ -174,11 +179,15 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'dash_btn_scheduled_msg') {
                 await handleDashScheduledButton(interaction);
             } else if (interaction.customId === 'rr_btn_create') {
-                await handleDashRrButton(interaction);
+                await handleDashRrButton(interaction); // 🎭 Abre el panel principal de gestión de RR
+            } else if (interaction.customId === 'rr_btn_start_create') {
+                await handleRrStartCreate(interaction); // 🎭 Botón "Crear Nuevo" dentro del panel de RR
+            } else if (interaction.customId.startsWith('rr_btn_delete_config_')) {
+                await handleRrDeleteConfig(interaction); // 🎭 Botón para borrar configuración de la BD
             } else if (interaction.customId === 'dash_btn_welcome_config') {
-                await handleDashWelcomeButton(interaction); // 👋 Botón principal de bienvenida en el Dash
+                await handleDashWelcomeButton(interaction);
             } else if (interaction.customId === 'welcome_menu_bienvenida' || interaction.customId === 'welcome_menu_despedida') {
-                await handleWelcomeMenuButton(interaction); // 👋/📤 Selección de menú independiente
+                await handleWelcomeMenuButton(interaction);
             } else if (interaction.customId === 'sched_skip_role') {
                 await handleSchedRoleSelection(interaction);
             } else if (interaction.customId === 'sched_repeat_yes') {
@@ -230,9 +239,9 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'modal_rr_content') { 
                 await handleRrContentSubmit(interaction);
             } else if (interaction.customId === 'modal_welcome_text') {
-                await handleWelcomeModalSubmit(interaction); // 👋 Modal de texto de Bienvenida
+                await handleWelcomeModalSubmit(interaction);
             } else if (interaction.customId === 'modal_goodbye_text') {
-                await handleGoodbyeModalSubmit(interaction); // 📤 Modal de texto de Despedida
+                await handleGoodbyeModalSubmit(interaction);
             } else if (interaction.customId === 'modal_crear_ticket_config') {
                 await handleTicketModalSubmit(interaction);
             } else if (interaction.customId === 'modal_dash_form_titulo') {
