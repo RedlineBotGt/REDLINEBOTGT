@@ -5,15 +5,19 @@ import {
     PartialMessageReaction, 
     PartialUser, 
     ButtonInteraction, 
+    StringSelectMenuInteraction,
     ModalBuilder, 
     TextInputBuilder, 
     TextInputStyle, 
     ActionRowBuilder, 
     ChannelSelectMenuBuilder, 
     RoleSelectMenuBuilder, 
+    StringSelectMenuBuilder,
     ChannelType, 
     ModalSubmitInteraction,
-    TextChannel 
+    TextChannel, 
+    EmbedBuilder,
+    MessageFlags 
 } from 'discord.js';
 import { MongoClient as MongoDriver } from 'mongodb';
 
@@ -67,12 +71,133 @@ export async function initReactionRoles(client: Client) {
 }
 
 // ---------------------------------------------------------------------------
-// ASISTENTE INTERACTIVO (PASOS DEL DASH)
+// PANEL DE GESTIÓN Y BASE DE DATOS (DASH)
 // ---------------------------------------------------------------------------
 
-// Paso A: Al pulsar el botón del Dash -> Abre Modal de Mensaje y Emoji
+// 1. Al pulsar el botón del Dash -> Muestra la lista de mensajes guardados y opción de crear nuevo
 export async function handleDashRrButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'rr_btn_create') return false;
+
+    const col = await getReactionCollection();
+    const savedConfigs = await col.find({ guildId: interaction.guildId }).toArray();
+
+    const embed = new EmbedBuilder()
+        .setColor(0x0055FF)
+        .setTitle('🎭 Gestión de Roles por Reacción')
+        .setDescription(
+            savedConfigs.length > 0 
+                ? `Tienes **${savedConfigs.length}** mensajes registrados en la base de datos de este servidor.\n\nSelecciona uno abajo para ver sus detalles o eliminarlo de la base de datos (ideal para limpiar errores 10008), o haz clic en **Crear Nuevo**.`
+                : 'No hay mensajes de roles por reacción guardados en este servidor.\nHaz clic en **Crear Nuevo** para configurar el primero.'
+        )
+        .setFooter({ text: 'REDLINE GT' })
+        .setTimestamp();
+
+    const components: any[] = [];
+
+    // Si hay mensajes guardados, mostramos el menú desplegable con ellos
+    if (savedConfigs.length > 0) {
+        const selectMenu = new StringSelectMenuBuilder()
+            .setCustomId('rr_select_existing_message')
+            .setPlaceholder('📂 Selecciona un mensaje guardado en la BD...');
+
+        savedConfigs.forEach((cfg) => {
+            const previewText = cfg.text ? cfg.text.substring(0, 80) : `Mensaje ID: ${cfg.messageId}`;
+            selectMenu.addOptions({
+                label: previewText,
+                description: `Canal ID: ${cfg.channelId} \vert{} Emoji:${cfg.emoji}`,
+                value: cfg.messageId
+            });
+        });
+
+        components.push(new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu));
+    }
+
+    // Botón para iniciar el flujo de creación nuevo
+    const rowButtons = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+            .setCustomId('rr_btn_start_create')
+            .setLabel('Crear Nuevo')
+            .setStyle(ButtonStyle.Success)
+            .setEmoji('➕')
+    );
+    components.push(rowButtons);
+
+    await interaction.reply({
+        embeds: [embed],
+        components: components,
+        flags: [MessageFlags.Ephemeral]
+    });
+
+    return true;
+}
+
+// 2. Al seleccionar un mensaje existente del desplegable -> Muestra datos y botón de borrar
+export async function handleRrExistingSelect(interaction: StringSelectMenuInteraction): Promise<boolean> {
+    if (interaction.customId !== 'rr_select_existing_message') return false;
+
+    const messageId = interaction.values[0];
+    const col = await getReactionCollection();
+    const config = await col.findOne({ guildId: interaction.guildId, messageId });
+
+    if (!config) {
+        await interaction.update({ content: '❌ No se encontró esta configuración en la base de datos.', embeds: [], components: [] });
+        return true;
+    }
+
+    const embed = new EmbedBuilder()
+        .setColor(0xFFA500)
+        .setTitle('⚙️ Detalle del Rol por Reacción')
+        .addFields(
+            { name: '🆔 ID del Mensaje', value: `\`${config.messageId}\``, inline: false },
+            { name: '📢 Canal Destino', value: `<#${config.channelId}>`, inline: false },
+            { name: '⭐ Emoji', value: config.emoji, inline: true },
+            { name: '👥 Rol Asociado', value: `<@&${config.roleId}>`, inline: true },
+            { name: '💬 Texto Registrado', value: config.text || 'Sin texto', inline: false }
+        )
+        .setFooter({ text: 'REDLINE GT' });
+
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+            .setCustomId(`rr_btn_delete_config_${messageId}`)
+            .setLabel('Eliminar de la Base de Datos')
+            .setStyle(ButtonStyle.Danger)
+            .setEmoji('🗑️'),
+        new ButtonBuilder()
+            .setCustomId('rr_btn_create')
+            .setLabel('Volver al Menú')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('⬅️')
+    );
+
+    await interaction.update({
+        embeds: [embed],
+        components: [row]
+    });
+
+    return true;
+}
+
+// 3. Borrar configuración huérfana o antigua de la base de datos (Soluciona error 10008)
+export async function handleRrDeleteConfig(interaction: ButtonInteraction): Promise<boolean> {
+    if (!interaction.customId.startsWith('rr_btn_delete_config_')) return false;
+
+    const messageId = interaction.customId.replace('rr_btn_delete_config_', '');
+    const col = await getReactionCollection();
+
+    await col.deleteOne({ guildId: interaction.guildId, messageId });
+
+    await interaction.update({
+        content: `✅ **Configuración eliminada de la base de datos.** El bot ya no intentará buscar el mensaje \`${messageId}\` al encender.`,
+        embeds: [],
+        components: []
+    });
+
+    return true;
+}
+
+// 4. Botón "Crear Nuevo" -> Abre el modal original de texto y emoji
+export async function handleRrStartCreate(interaction: ButtonInteraction): Promise<boolean> {
+    if (interaction.customId !== 'rr_btn_start_create') return false;
 
     const modal = new ModalBuilder()
         .setCustomId('rr_modal_content')
@@ -87,7 +212,7 @@ export async function handleDashRrButton(interaction: ButtonInteraction): Promis
 
     const inputEmoji = new TextInputBuilder()
         .setCustomId('rr_emoji')
-        .setLabel('⭐ Emoji obligatorio (Ej: 🏎️)')
+        .setLabel('⭐ Emoji obligatorio (Ej: 🏎️️)')
         .setStyle(TextInputStyle.Short)
         .setPlaceholder('🏎️')
         .setRequired(true);
@@ -101,7 +226,11 @@ export async function handleDashRrButton(interaction: ButtonInteraction): Promis
     return true;
 }
 
-// Paso B: Al enviar el Modal -> Guarda texto/emoji temporalmente y muestra Desplegable de Canales
+// ---------------------------------------------------------------------------
+// ASISTENTE INTERACTIVO (PASOS DE CREACIÓN)
+// ---------------------------------------------------------------------------
+
+// Paso 2: Al enviar el Modal -> Guarda texto/emoji temporalmente y muestra Desplegable de Canales
 export async function handleRrContentSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'rr_modal_content') return false;
 
@@ -120,13 +249,13 @@ export async function handleRrContentSubmit(interaction: ModalSubmitInteraction)
     await interaction.reply({
         content: '🎭 **Roles por Reacción (2/3):** Selecciona el canal de destino:',
         components: [row],
-        ephemeral: true
+        flags: [MessageFlags.Ephemeral]
     });
 
     return true;
 }
 
-// Paso C: Al seleccionar el canal -> Guarda canal y muestra Desplegable de Roles
+// Paso 3: Al seleccionar el canal -> Guarda canal y muestra Desplegable de Roles
 export async function handleRrChannelSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'rr_select_channel') return false;
 
@@ -153,7 +282,7 @@ export async function handleRrChannelSelect(interaction: any): Promise<boolean> 
     return true;
 }
 
-// Paso D: Al seleccionar el rol -> Publica el mensaje, reacciona y guarda en MongoDB
+// Paso 4: Al seleccionar el rol -> Publica el mensaje, reacciona y guarda en MongoDB
 export async function handleRrRoleSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'rr_select_role') return false;
 
@@ -188,13 +317,14 @@ export async function handleRrRoleSelect(interaction: any): Promise<boolean> {
             messageId: sentMessage.id,
             emoji: session.emoji,
             roleId: roleId,
+            text: session.text,
             createdAt: new Date()
         });
 
         reactionSessions.delete(interaction.user.id);
 
         await interaction.update({
-            content: `✅ **¡Rol por reacción configurado y publicado con éxito!**\n• Canal: <#${session.channelId}>\n• Emoji: ${session.emoji}\n• Rol: <@&${roleId}>\n\n*Guardado de forma permanente en MongoDB (sobrevivirá a deploys).*`,
+            content: `✅ **¡Rol por reacción configurado y publicado con éxito!**\n• Canal: <#${session.channelId}>\n• Emoji: ${session.emoji}\n• Rol: <@&${roleId}>\n\n*Guardado de forma permanente en MongoDB.*`,
             components: []
         });
 
@@ -210,7 +340,6 @@ export async function handleRrRoleSelect(interaction: any): Promise<boolean> {
 // EVENTOS DE REACCIÓN (Añadir / Quitar Rol)
 // ---------------------------------------------------------------------------
 
-// 2. EVENTO: Añadir rol al poner la reacción
 export async function handleReactionAdd(reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) {
     if (user.bot) return;
 
@@ -223,7 +352,6 @@ export async function handleReactionAdd(reaction: MessageReaction | PartialMessa
 
     const col = await getReactionCollection();
     const emojiIdentifier = reaction.emoji.id ? `<:${reaction.emoji.name}:${reaction.emoji.id}>` : reaction.emoji.name;
-    // Si el emoji es personalizado usa el ID, si es nativo usa el unicode/nombre
 
     const config = await col.findOne({
         messageId: reaction.message.id,
@@ -250,7 +378,6 @@ export async function handleReactionAdd(reaction: MessageReaction | PartialMessa
     }
 }
 
-// 3. EVENTO: Quitar rol al retirar la reacción
 export async function handleReactionRemove(reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) {
     if (user.bot) return;
 
