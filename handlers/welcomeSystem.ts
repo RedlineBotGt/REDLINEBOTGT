@@ -115,7 +115,7 @@ export async function handleWelcomeChannelSelect(interaction: any): Promise<bool
 
     const inputMsg = new TextInputBuilder()
         .setCustomId('welcome_text_input')
-        .setLabel('💬 Texto (usa {user}, {server}, {memberCount})')
+        .setLabel('Mensaje de Bienvenida') // Etiqueta acortada para cumplir con el límite de 45 caracteres
         .setStyle(TextInputStyle.Paragraph)
         .setPlaceholder('¡Bienvenido/a a {server}, {user}! Ya somos {memberCount} pilotos.')
         .setRequired(true);
@@ -180,7 +180,7 @@ export async function handleGoodbyeChannelSelect(interaction: any): Promise<bool
 
     const inputMsg = new TextInputBuilder()
         .setCustomId('goodbye_text_input')
-        .setLabel('💬 Texto (usa {user}, {server})')
+        .setLabel('Mensaje de Despedida') // Etiqueta acortada
         .setStyle(TextInputStyle.Paragraph)
         .setPlaceholder('El piloto {user} ha abandonado {server}. ¡Hasta pronto!')
         .setRequired(true);
