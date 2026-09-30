@@ -6,6 +6,7 @@ import { data as veredictoCommand } from './commands/veredicto';
 import { data as msnCommand } from './commands/msn';
 import { data as formsCommand } from './commands/forms';
 import { data as colocarFormCommand } from './commands/ColocarForm';
+import { data as borrarCommand } from './commands/borrar'; // 🗑️ Importamos el comando borrar
 
 // Mapeamos los comandos con su nombre para validar que ninguno llegue undefined
 const commandList = [
@@ -16,6 +17,7 @@ const commandList = [
     { name: 'msn', data: msnCommand },
     { name: 'forms', data: formsCommand },
     { name: 'colocarForm', data: colocarFormCommand },
+    { name: 'borrar', data: borrarCommand }, // 🗑️ Lo añadimos a la lista de registro
 ];
 
 const commands = commandList.map(cmd => {
