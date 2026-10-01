@@ -9,12 +9,18 @@ import {
     ModalSubmitInteraction,
     EmbedBuilder,
     ButtonStyle,
-    PermissionFlagsBits
+    PermissionFlagsBits,
+    ChannelType,
+    ChannelSelectMenuBuilder,
+    RoleSelectMenuBuilder,
+    ButtonBuilder // 👈 ¡Importación añadida aquí!
 } from 'discord.js';
 
+// Mapas temporales para almacenar las configuraciones mientras el admin completa los pasos
 const activeSorteoConfigs = new Map<string, { message: string; prize: string }>();
+const activeSorteoChannels = new Map<string, string>(); // userId -> channelId
 
-// 1. Muestra el modal al pulsar el botón en el /dash
+// 1. Abre el Modal al pulsar "Crear Sorteo" en el /dash
 export async function handleDashSorteoButton(interaction: ButtonInteraction) {
     const modal = new ModalBuilder()
         .setCustomId('modal_sorteo_config')
@@ -31,7 +37,7 @@ export async function handleDashSorteoButton(interaction: ButtonInteraction) {
         .setCustomId('sorteo_text_prize')
         .setLabel('Regalo / Premio (Texto o URL de imagen)')
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: Cuenta VIP o Juego de Simracing / Enlace de imagen')
+        .setPlaceholder('Ej: Cuenta VIP, Juego de Simracing o enlace')
         .setRequired(true);
 
     modal.addComponents(
@@ -42,18 +48,18 @@ export async function handleDashSorteoButton(interaction: ButtonInteraction) {
     await interaction.showModal(modal);
 }
 
-// 2. Recibe el Modal y pide Canal
+// 2. Recibe el Modal y pide el Canal público
 export async function handleSorteoModalSubmit(interaction: ModalSubmitInteraction) {
     const textMsg = interaction.fields.getTextInputValue('sorteo_text_msg');
     const prize = interaction.fields.getTextInputValue('sorteo_text_prize');
 
     activeSorteoConfigs.set(interaction.user.id, { message: textMsg, prize });
 
-    const channelSelectRow = new ActionRowBuilder<any>().addComponents(
-        new (require('discord.js').ChannelSelectMenuBuilder)()
+    const channelSelectRow = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(
+        new ChannelSelectMenuBuilder()
             .setCustomId('sorteo_select_channel')
             .setPlaceholder('📂 Selecciona el canal público para el sorteo')
-            .addChannelTypes(require('discord.js').ChannelType.GuildText)
+            .addChannelTypes(ChannelType.GuildText)
     );
 
     await interaction.reply({
@@ -63,19 +69,19 @@ export async function handleSorteoModalSubmit(interaction: ModalSubmitInteractio
     });
 }
 
-// 3. Recibe el canal y pide el rol
+// 3. Recibe el canal y pide el rol participante
 export async function handleSorteoChannelSelect(interaction: ChannelSelectMenuInteraction) {
     const channel = interaction.channels.first();
     if (!channel) {
         return interaction.update({ content: '❌ No se ha seleccionado ningún canal válido.', components: [] });
     }
 
-    (global as any)[`sorteo_chan_${interaction.user.id}`] = channel.id;
+    activeSorteoChannels.set(interaction.user.id, channel.id);
 
-    const roleSelectRow = new ActionRowBuilder<any>().addComponents(
-        new (require('discord.js').RoleSelectMenuBuilder)()
+    const roleSelectRow = new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(
+        new RoleSelectMenuBuilder()
             .setCustomId('sorteo_select_role')
-            .setPlaceholder('🛡️ Selecciona el rol único participante')
+            .setPlaceholder('🛡 Selecciona el rol único participante')
     );
 
     await interaction.update({
@@ -84,7 +90,7 @@ export async function handleSorteoChannelSelect(interaction: ChannelSelectMenuIn
     });
 }
 
-// 4. Recibe el rol y publica el mensaje final con el botón de sorteo
+// 4. Recibe el rol, genera el mensaje público y el botón de participación
 export async function handleSorteoRoleSelect(interaction: RoleSelectMenuInteraction) {
     const role = interaction.roles.first();
     if (!role) {
@@ -92,14 +98,14 @@ export async function handleSorteoRoleSelect(interaction: RoleSelectMenuInteract
     }
 
     const config = activeSorteoConfigs.get(interaction.user.id);
-    const channelId = (global as any)[`sorteo_chan_${interaction.user.id}`];
+    const channelId = activeSorteoChannels.get(interaction.user.id);
 
     if (!config || !channelId) {
         return interaction.update({ content: '❌ Error en los datos del sorteo. Vuelve a empezar desde el `/dash`.', components: [] });
     }
 
     const channel = interaction.guild?.channels.cache.get(channelId);
-    if (!channel || channel.type !== require('discord.js').ChannelType.GuildText) {
+    if (!channel || channel.type !== ChannelType.GuildText) {
         return interaction.update({ content: '❌ El canal seleccionado no es válido o no existe.', components: [] });
     }
 
@@ -126,8 +132,9 @@ export async function handleSorteoRoleSelect(interaction: RoleSelectMenuInteract
         components: [row]
     });
 
+    // Limpieza de memoria temporal
     activeSorteoConfigs.delete(interaction.user.id);
-    delete (global as any)[`sorteo_chan_${interaction.user.id}`];
+    activeSorteoChannels.delete(interaction.user.id);
 
     await interaction.update({
         content: `✅ ¡Sorteo publicado con éxito en <#${channelId}>!`,
@@ -136,7 +143,7 @@ export async function handleSorteoRoleSelect(interaction: RoleSelectMenuInteract
     });
 }
 
-// 5. Botón de 1 Click: 5 segundos de suspense y selección de ganador
+// 5. El botón de 1 Click: 5 segundos de suspense y selección de ganador al azar
 export async function handleSorteoLaunchButton(interaction: ButtonInteraction) {
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
         await interaction.reply({ content: '❌ Solo los administradores pueden iniciar el sorteo.', ephemeral: true });
@@ -166,9 +173,10 @@ export async function handleSorteoLaunchButton(interaction: ButtonInteraction) {
 
     const membersArray = Array.from(eligibleMembers.values());
 
+    // Efecto de suspense de 5 segundos
     const suspenseSteps = [
         '🎲 Barajando participantes y preparando la tómbola... (1s)',
-        '🎟️️ Analizando tickets y perfiles... (2s)',
+        '🎟 Analizando tickets y perfiles... (2s)',
         '⚡ ¡La tensión aumenta en el paddock!... (3s)',
         '🔥 Quedan pocos candidatos finales... (4s)',
         '🎯 ¡Seleccionando al campeón absoluto!... (5s)'
@@ -179,6 +187,7 @@ export async function handleSorteoLaunchButton(interaction: ButtonInteraction) {
         await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
+    // Ganador aleatorio
     const winner = membersArray[Math.floor(Math.random() * membersArray.length)];
 
     const winningEmbed = EmbedBuilder.from(interaction.message.embeds[0])
