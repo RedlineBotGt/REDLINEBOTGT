@@ -300,7 +300,6 @@ export async function handleEventRepeatNoButton(interaction: ButtonInteraction):
     });
     return true;
 }
-
 // 6. Procesar Modal de Repeticiones y Generar Eventos Futuros
 export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_event_repeat') return false;
@@ -454,7 +453,6 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
     await interaction.message.edit({ embeds: [newEmbed] });
     return true;
 }
-
 // 8. Worker en segundo plano (Revisa recordatorios y limpieza de roles al finalizar)
 export function setupEventWorker(client: Client) {
     console.log('📅 [System] Worker de Eventos y Recordatorios activo.');
@@ -485,4 +483,20 @@ export function setupEventWorker(client: Client) {
 
                 if (timeRemaining <= 0) {
                     const guild = await client.guilds.fetch(ev.guildId).catch(() => null);
-             
+                    if (guild) {
+                        const allAttendees = [...ev.yes, ...ev.maybe];
+                        for (const userId of allAttendees) {
+                            const member = await guild.members.fetch(userId).catch(() => null);
+                            if (member) {
+                                await member.roles.remove(ev.asistenteRoleId).catch(() => {});
+                            }
+                        }
+                    }
+                    await col.updateOne({ messageId: ev.messageId }, { $set: { completed: true } });
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error en el worker de eventos:', error);
+        }
+    }, 60 * 1000);
+}
