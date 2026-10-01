@@ -115,7 +115,7 @@ export async function handleWelcomeChannelSelect(interaction: any): Promise<bool
 
     const inputMsg = new TextInputBuilder()
         .setCustomId('welcome_text_input')
-        .setLabel('Mensaje de Bienvenida') // Etiqueta acortada para cumplir con el límite de 45 caracteres
+        .setLabel('Mensaje de Bienvenida')
         .setStyle(TextInputStyle.Paragraph)
         .setPlaceholder('¡Bienvenido/a a {server}, {user}! Ya somos {memberCount} pilotos.')
         .setRequired(true);
@@ -180,7 +180,7 @@ export async function handleGoodbyeChannelSelect(interaction: any): Promise<bool
 
     const inputMsg = new TextInputBuilder()
         .setCustomId('goodbye_text_input')
-        .setLabel('Mensaje de Despedida') // Etiqueta acortada
+        .setLabel('Mensaje de Despedida')
         .setStyle(TextInputStyle.Paragraph)
         .setPlaceholder('El piloto {user} ha abandonado {server}. ¡Hasta pronto!')
         .setRequired(true);
@@ -247,14 +247,15 @@ export function setupWelcomeSystem(client: Client) {
             text = text
                 .replace(/{user}/g, `<@${member.id}>`)
                 .replace(/{server}/g, member.guild.name)
-                .replace(/{memberCount}/g, member.guild.memberCount.toString());
+                .replace(/{memberCount}/g, member.guild.memberCount.toString())
+                .replace(/{avatar}/g, ''); // 👈 Elimina el texto {avatar} si está escrito
 
             const embed = new EmbedBuilder()
                 .setColor(0xED4245)
                 .setTitle('🏁 ¡Nuevo Piloto en la Pista!')
                 .setDescription(text)
-                .setThumbnail(member.user.displayAvatarURL({ size: 256 }))
-                .setFooter({ text: 'REDLINE GT' })
+                .setThumbnail(member.user.displayAvatarURL({ size: 256 })) // Mantiene la foto grande a la derecha
+                .setFooter({ text: member.guild.name }) // 👈 Multiserver: Muestra el nombre del servidor actual
                 .setTimestamp();
 
             await channel.send({ content: `<@${member.id}>`, embeds: [embed] });
@@ -276,13 +277,14 @@ export function setupWelcomeSystem(client: Client) {
             let text = settings.goodbyeMessage || `El piloto **{user}** ha abandonado el servidor.`;
             text = text
                 .replace(/{user}/g, member.user.tag)
-                .replace(/{server}/g, member.guild.name);
+                .replace(/{server}/g, member.guild.name)
+                .replace(/{avatar}/g, ''); // 👈 Elimina el texto {avatar} si está escrito
 
             const embed = new EmbedBuilder()
                 .setColor(0x2f3136)
                 .setTitle('⚠️ Baja en el Circuito')
                 .setDescription(text)
-                .setFooter({ text: 'REDLINE GT' })
+                .setFooter({ text: member.guild.name }) // 👈 Multiserver: Muestra el nombre del servidor actual
                 .setTimestamp();
 
             await channel.send({ embeds: [embed] });
