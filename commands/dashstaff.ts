@@ -1,16 +1,43 @@
-import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { 
+    SlashCommandBuilder, 
+    ChatInputCommandInteraction, 
+    EmbedBuilder, 
+    ActionRowBuilder, 
+    ButtonBuilder, 
+    ButtonStyle, 
+    PermissionFlagsBits 
+} from 'discord.js';
 
 export const data = new SlashCommandBuilder()
     .setName('dashstaff')
-    .setDescription('Panel operativo del Staff');
+    .setDescription('Panel operativo del Staff')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages); // Visible para Staff y Admins por defecto en Discord
 
-export async function execute(interaction) {
+export async function execute(interaction: ChatInputCommandInteraction) {
+    if (!interaction.guildId || !interaction.guild) {
+        await interaction.reply({ content: '❌ Este comando solo se puede usar dentro de un servidor.', ephemeral: true });
+        return;
+    }
+
+    // Comprobación: Permite si es Admin o si tiene permisos operativos de Staff (ej. Gestionar Mensajes o Moderar Miembros)
+    const isStaffOrAdmin = 
+        interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) ||
+        interaction.memberPermissions?.has(PermissionFlagsBits.ManageMessages) ||
+        interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers);
+
+    if (!isStaffOrAdmin) {
+        await interaction.reply({ 
+            content: '❌ Este comando es exclusivo para el **Staff** y Administradores.', 
+            ephemeral: true 
+        });
+        return;
+    }
+
     const embed = new EmbedBuilder()
         .setColor(0x2b2d31)
         .setDescription('### ⚡ Panel Operativo\nSelecciona una acción disponible para el staff:');
 
-    // Usamos los mismos customId que ya gestiona el interactionRouter
-    const row = new ActionRowBuilder().addComponents(
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
             .setCustomId('dash_btn_event_create')
             .setLabel('Crear evento')
