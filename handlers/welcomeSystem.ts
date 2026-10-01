@@ -252,7 +252,6 @@ export async function handleEventRepeatYesButton(interaction: ButtonInteraction)
     await interaction.showModal(modal);
     return true;
 }
-
 // 5.1 Botón "No, publicar ahora" -> Publica única y exclusivamente el evento base
 export async function handleEventRepeatNoButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_repeat_no') return false;
@@ -328,6 +327,7 @@ export async function handleEventRepeatNoButton(interaction: ButtonInteraction):
 
     return true;
 }
+
 // 6. Procesar Modal de Repeticiones -> Usa suma de días natural por calendario para evitar errores de zona horaria
 export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_event_repeat') return false;
@@ -367,7 +367,7 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
         const baseEmbed = new EmbedBuilder()
             .setColor(0x0055FF)
             .setTitle(`🏁 ${session.title}`)
-            .setDescription(`${descSubtitle}📅 **Fecha:** ${session.dateStr} a las **${session.timeStr} CET**\n⏱️️ **Recordatorio:** 30 min antes.\n\n🟢 **Confirmados (0):** Ninguno\n❔ **Dudas (0):** Ninguno\n❌ **No asisten (0):** Ninguno`)
+            .setDescription(`${descSubtitle}📅 **Fecha:** ${session.dateStr} a las **${session.timeStr} CET**\n⏱ **Recordatorio:** 30 min antes.\n\n🟢 **Confirmados (0):** Ninguno\n❔ **Dudas (0):** Ninguno\n❌ **No asisten (0):** Ninguno`)
             .setFooter({ text: guild.name, iconURL: guild.iconURL() || undefined })
             .setTimestamp();
 
@@ -463,7 +463,6 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
 
     return true;
 }
-
 // 7. Manejar Clics en Botones RSVP (Verde, Interrogante, Rojo)
 export async function handleEventRsvpButton(interaction: ButtonInteraction): Promise<boolean> {
     if (!['event_rsvp_yes', 'event_rsvp_maybe', 'event_rsvp_no'].includes(interaction.customId)) return false;
