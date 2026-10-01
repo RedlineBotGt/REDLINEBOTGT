@@ -1,17 +1,17 @@
 import { 
     Client, 
-    GuildMember, 
     TextChannel, 
     EmbedBuilder, 
+    GuildMember, 
     ActionRowBuilder, 
     ButtonBuilder, 
     ButtonStyle, 
     ChannelSelectMenuBuilder, 
-    RoleSelectMenuBuilder, 
     ModalBuilder, 
     TextInputBuilder, 
     TextInputStyle, 
     ButtonInteraction, 
+    ChannelSelectMenuInteraction, 
     ModalSubmitInteraction, 
     ChannelType, 
     MessageFlags 
@@ -21,45 +21,74 @@ import { MongoClient as MongoDriver } from 'mongodb';
 const uri = process.env.MONGODB_URI || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
 const clientMongo = new MongoDriver(uri);
 
-let eventsCollection: any = null;
-const eventSessions = new Map<string, { 
-    channelId?: string; 
-    roleId?: string;
-    title?: string;
-    subtitle?: string;
-    dateStr?: string;
-    timeStr?: string;
-    imageUrl?: string | null;
-    eventTimestamp?: number;
-    asistenteRoleId?: string;
-}>();
+let welcomeCollection: any = null;
+const welcomeSessions = new Map<string, { type?: 'welcome' | 'goodbye'; channelId?: string }>();
 
-async function getEventsCollection() {
-    if (!eventsCollection) {
+async function getWelcomeCollection() {
+    if (!welcomeCollection) {
         await clientMongo.connect();
-        eventsCollection = clientMongo.db('redline_bot').collection('events');
+        welcomeCollection = clientMongo.db('redline_bot').collection('welcomes');
     }
-    return eventsCollection;
+    return welcomeCollection;
 }
 
-// 1. Iniciar flujo desde el Dash -> Muestra selector de canal
-export async function handleDashEventButton(interaction: ButtonInteraction): Promise<boolean> {
-    if (interaction.customId !== 'dash_btn_event_create') return false;
+// 1. Esta es la función exacta que busca el Index.ts en su línea 42
+export function setupWelcomeSystem(client: Client) {
+    console.log('👋 [System] Sistema de Bienvenidas y Despedidas activo.');
 
-    const selectChannel = new ChannelSelectMenuBuilder()
-        .setCustomId('event_select_channel')
-        .setPlaceholder('📢 Selecciona el canal donde se publicará el evento...')
-        .addChannelTypes(ChannelType.GuildText);
+    client.on('guildMemberAdd', async (member: GuildMember) => {
+        try {
+            const col = await getWelcomeCollection();
+            const config = await col.findOne({ guildId: member.guild.id, type: 'welcome' });
+            if (!config || !config.channelId || !config.text) return;
 
-    const row = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(selectChannel);
+            const channel = await member.guild.channels.fetch(config.channelId) as TextChannel;
+            if (!channel) return;
 
-    await interaction.reply({
-        content: '📅 **Organizador de Eventos**\nPaso 1/2: Selecciona el canal de destino:',
-        components: [row],
-        flags: [MessageFlags.Ephemeral]
+            const formattedText = config.text
+                .replace(/{user}/g, `<@${member.id}>`)
+                .replace(/{server}/g, member.guild.name);
+
+            const embed = new EmbedBuilder()
+                .setColor(0x00FF00)
+                .setTitle('👋 ¡Bienvenido/a a la pista!')
+                .setDescription(formattedText)
+                .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
+                .setFooter({ text: member.guild.name, iconURL: member.guild.iconURL() || undefined })
+                .setTimestamp();
+
+            await channel.send({ content: `<@${member.id}>`, embeds: [embed] });
+        } catch (error) {
+            console.error('❌ Error en el evento guildMemberAdd:', error);
+        }
     });
 
-    return true;
+    client.on('guildMemberRemove', async (member: GuildMember) => {
+        try {
+            const col = await getWelcomeCollection();
+            const config = await col.findOne({ guildId: member.guild.id, type: 'goodbye' });
+            if (!config || !config.channelId || !config.text) return;
+
+            const channel = await member.guild.channels.fetch(config.channelId) as TextChannel;
+            if (!channel) return;
+
+            const formattedText = config.text
+                .replace(/{user}/g, member.user.tag)
+                .replace(/{server}/g, member.guild.name);
+
+            const embed = new EmbedBuilder()
+                .setColor(0xFF0000)
+                .setTitle('🏁 Un piloto ha abandonado el paddock')
+                .setDescription(formattedText)
+                .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
+                .setFooter({ text: member.guild.name, iconURL: member.guild.iconURL() || undefined })
+                .setTimestamp();
+
+            await channel.send({ embeds: [embed] });
+        } catch (error) {
+            console.error('❌ Error en el evento guildMemberRemove:', error);
+        }
+    });
 }
 
 // 2. Canal seleccionado -> Muestra selector de rol a mencionar
