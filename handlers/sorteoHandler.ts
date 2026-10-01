@@ -63,7 +63,7 @@ export async function handleSorteoModalSubmit(interaction: ModalSubmitInteractio
     );
 
     await interaction.reply({
-        content: '⚙️️ **Paso 2/3:** Ahora selecciona el canal donde se publicará el sorteo:',
+        content: '⚙️ **Paso 2/3:** Ahora selecciona el canal donde se publicará el sorteo:',
         components: [channelSelectRow],
         ephemeral: true
     });
@@ -126,8 +126,8 @@ export async function handleSorteoRoleSelect(interaction: RoleSelectMenuInteract
         .setTitle('🎉 ¡NUEVO SORTEO ACTIVADO! 🎉')
         .setDescription(formattedMessage)
         .addFields(
-            { name: '🛡️ Rol Participante', value: `<@&${role.id}>`, inline: false },
-            { name: 'PREMIO', value: config.prize.startsWith('http') ? '¡Mira la imagen adjunta abajo!' : config.prize, inline: false }
+            { name: '🛡️️ Rol Participante', value: `<@&${role.id}>`, inline: false },
+            { name: 'PREMIO', value: config.prize.startsWith('http') ? '\u200b' : config.prize, inline: false }
         )
         .setFooter({ 
             text: `Organizado por ${guild.name}`, 
