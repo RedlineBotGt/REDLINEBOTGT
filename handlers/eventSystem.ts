@@ -73,7 +73,7 @@ export async function handleEventChannelSelect(interaction: any): Promise<boolea
     return true;
 }
 
-// 3. Rol seleccionado -> Abre Modal de datos del evento
+// 3. Rol seleccionado -> Abre Modal de datos del evento (con campo de imagen)
 export async function handleEventRoleSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'event_select_role') return false;
 
@@ -120,11 +120,19 @@ export async function handleEventRoleSelect(interaction: any): Promise<boolean> 
         .setPlaceholder('Ej: 21:30')
         .setRequired(true);
 
+    const imageInput = new TextInputBuilder()
+        .setCustomId('event_image')
+        .setLabel('URL de la Imagen o Póster (Opcional)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('https://i.imgur.com/tu-imagen.png')
+        .setRequired(false);
+
     modal.addComponents(
         new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput),
         new ActionRowBuilder<TextInputBuilder>().addComponents(subtitleInput),
         new ActionRowBuilder<TextInputBuilder>().addComponents(dateInput),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(timeInput)
+        new ActionRowBuilder<TextInputBuilder>().addComponents(timeInput),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(imageInput)
     );
 
     await interaction.showModal(modal);
@@ -139,6 +147,7 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
     const subtitle = interaction.fields.getTextInputValue('event_subtitle');
     const dateStr = interaction.fields.getTextInputValue('event_date');
     const timeStr = interaction.fields.getTextInputValue('event_time');
+    const imageUrl = interaction.fields.getTextInputValue('event_image');
 
     const session = eventSessions.get(interaction.user.id);
     if (!session || !session.channelId || !session.roleId || !interaction.guild) {
@@ -180,6 +189,11 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
             .setFooter({ text: 'REDLINE GT' })
             .setTimestamp();
 
+        // Si se proporcionó una URL de imagen válida, la añadimos al embed
+        if (imageUrl && imageUrl.startsWith('http')) {
+            embed.setImage(imageUrl);
+        }
+
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Sí voy').setStyle(ButtonStyle.Success).setEmoji('🟢'),
             new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Quizás').setStyle(ButtonStyle.Secondary).setEmoji('❔'),
@@ -206,6 +220,7 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
             eventTimestamp,
             roleId: session.roleId,
             asistenteRoleId: asistenteRole.id,
+            imageUrl: imageUrl && imageUrl.startsWith('http') ? imageUrl : null,
             yes: [],
             maybe: [],
             no: [],
@@ -287,6 +302,10 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
     const oldEmbed = interaction.message.embeds[0];
     const newEmbed = EmbedBuilder.from(oldEmbed)
         .setDescription(`**${eventDoc.subtitle}**\n\n📅 **Fecha:** ${eventDoc.dateStr} a las **${eventDoc.timeStr} CET**\n⏱️ **Recordatorio:** 30 min antes.\n\n🟢 **Confirmados (${yes.length}):** ${yesText}\n\n❔ **Dudas (${maybe.length}):** ${maybeText}\n\n❌ **No asisten (${no.length}):** ${noText}`);
+
+    if (eventDoc.imageUrl) {
+        newEmbed.setImage(eventDoc.imageUrl);
+    }
 
     await interaction.message.edit({ embeds: [newEmbed] });
     return true;
