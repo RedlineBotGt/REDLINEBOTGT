@@ -3,7 +3,7 @@ import { Client, GatewayIntentBits } from 'discord.js';
 import { handleInteraction } from './handlers/interactionRouter';
 import { startScheduledWorker } from './handlers/scheduledMessage';
 import { initReactionRoles, handleReactionAdd, handleReactionRemove } from './handlers/reactionRoles';
-import { handleGuildMemberAdd } from './handlers/welcomeSystem'; // 👋 NUEVO: Importamos el manejador de entradas
+import { setupWelcomeSystem } from './handlers/welcomeSystem'; // 👋 Importamos la función general de bienvenidas/despedidas
 
 // 0. Servidor HTTP auxiliar obligatorio para satisfacer el puerto de Render
 const server = http.createServer((req, res) => {
@@ -22,7 +22,7 @@ const client = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMembers, // 🛡️ Imprescindible para detectar miembros nuevos
+        GatewayIntentBits.GuildMembers, // 🛡️️ Imprescindible para detectar miembros nuevos y salidas
         GatewayIntentBits.GuildMessageReactions
     ]
 });
@@ -36,6 +36,9 @@ client.once('ready', async () => {
     
     // 🎭 Sincronizamos y recuperamos los mensajes de roles por reacción desde MongoDB
     await initReactionRoles(client);
+
+    // 👋 Activamos el sistema completo de bienvenidas y despedidas
+    setupWelcomeSystem(client);
 });
 
 // 3. Enrutador ciego: deriva cualquier interacción al sistema modular externo
@@ -47,16 +50,7 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-// 👋 4. NUEVO: Escucha global cuando un usuario entra al servidor (Sistema de Bienvenidas)
-client.on('guildMemberAdd', async (member) => {
-    try {
-        await handleGuildMemberAdd(member);
-    } catch (error) {
-        console.error('❌ Error en guildMemberAdd (Bienvenidas):', error);
-    }
-});
-
-// 🎭 5. Escuchas globales de Reacciones (Asignan y retiran roles de forma persistente)
+// 🎭 4. Escuchas globales de Reacciones (Asignan y retiran roles de forma persistente)
 client.on('messageReactionAdd', async (reaction, user) => {
     try {
         await handleReactionAdd(reaction, user);
@@ -73,5 +67,5 @@ client.on('messageReactionRemove', async (reaction, user) => {
     }
 });
 
-// 6. Conexión definitiva
+// 5. Conexión definitiva
 client.login(process.env.DISCORD_TOKEN);
