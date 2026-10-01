@@ -4,6 +4,7 @@ import { handleInteraction } from './handlers/interactionRouter';
 import { startScheduledWorker } from './handlers/scheduledMessage';
 import { initReactionRoles, handleReactionAdd, handleReactionRemove } from './handlers/reactionRoles';
 import { setupWelcomeSystem } from './handlers/welcomeSystem'; // 👋 Importamos la función general de bienvenidas/despedidas
+import { setupEventWorker } from './handlers/eventSystem'; // 📅 Importamos el worker del organizador de eventos
 
 // 0. Servidor HTTP auxiliar obligatorio para satisfacer el puerto de Render
 const server = http.createServer((req, res) => {
@@ -22,7 +23,7 @@ const client = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMembers, // 🛡️️ Imprescindible para detectar miembros nuevos y salidas
+        GatewayIntentBits.GuildMembers, // 🛡 Imprescindible para detectar miembros nuevos y salidas
         GatewayIntentBits.GuildMessageReactions
     ]
 });
@@ -39,6 +40,9 @@ client.once('ready', async () => {
 
     // 👋 Activamos el sistema completo de bienvenidas y despedidas
     setupWelcomeSystem(client);
+
+    // 📅 Activamos el worker de eventos, recordatorios y gestión de roles temporales
+    setupEventWorker(client);
 });
 
 // 3. Enrutador ciego: deriva cualquier interacción al sistema modular externo
