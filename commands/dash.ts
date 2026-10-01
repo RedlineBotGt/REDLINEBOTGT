@@ -50,10 +50,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const rowForms = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('dash_btn_crear_form').setLabel('Crear F').setStyle(ButtonStyle.Primary).setEmoji('➕'),
         new ButtonBuilder().setCustomId('dash_btn_editar_form').setLabel('Editar F').setStyle(ButtonStyle.Secondary).setEmoji('📝'),
-        newButtonBuilder().setCustomId('dash_btn_borrar_form').setLabel('Borrar F').setStyle(ButtonStyle.Danger).setEmoji('🗑️')
+        new ButtonBuilder().setCustomId('dash_btn_borrar_form').setLabel('Borrar F').setStyle(ButtonStyle.Danger).setEmoji('🗑️')
     );
 
-    // Fila de Comunicaciones y Sorteos (¡Nuevo botón añadido aquí!)
+    // Fila de Comunicaciones, Ajustes y Sorteos
     const rowMsn = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('dash_btn_sorteo_create').setLabel('Crear Sorteo').setStyle(ButtonStyle.Success).setEmoji('🎁'),
         new ButtonBuilder().setCustomId('dash_btn_scheduled_msg').setLabel('Prog. Mensaje').setStyle(ButtonStyle.Secondary).setEmoji('📅'),
