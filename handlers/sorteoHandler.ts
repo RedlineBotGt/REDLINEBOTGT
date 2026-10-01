@@ -13,7 +13,7 @@ import {
     ChannelType,
     ChannelSelectMenuBuilder,
     RoleSelectMenuBuilder,
-    ButtonBuilder // 👈 ¡Importación añadida aquí!
+    ButtonBuilder
 } from 'discord.js';
 
 // Mapas temporales para almacenar las configuraciones mientras el admin completa los pasos
@@ -30,14 +30,14 @@ export async function handleDashSorteoButton(interaction: ButtonInteraction) {
         .setCustomId('sorteo_text_msg')
         .setLabel('Mensaje del Sorteo')
         .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('Ej: ¡Sorteo especial de temporada para celebrar la comunidad!')
+        .setPlaceholder('Ej: PRIMER Pre Sorteo de {server}\nUn premio para el @Staff\nDe todos los {member}....')
         .setRequired(true);
 
     const prizeInput = new TextInputBuilder()
         .setCustomId('sorteo_text_prize')
-        .setLabel('Regalo / Premio (Texto o URL de imagen)')
+        .setLabel('Premio (Texto o enlace directo de imagen)')
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: Cuenta VIP, Juego de Simracing o enlace')
+        .setPlaceholder('Ej: https://i.imgur.com/... o Nombre del Premio')
         .setRequired(true);
 
     modal.addComponents(
@@ -99,26 +99,40 @@ export async function handleSorteoRoleSelect(interaction: RoleSelectMenuInteract
 
     const config = activeSorteoConfigs.get(interaction.user.id);
     const channelId = activeSorteoChannels.get(interaction.user.id);
+    const guild = interaction.guild;
 
-    if (!config || !channelId) {
+    if (!config || !channelId || !guild) {
         return interaction.update({ content: '❌ Error en los datos del sorteo. Vuelve a empezar desde el `/dash`.', components: [] });
     }
 
-    const channel = interaction.guild?.channels.cache.get(channelId);
+    const channel = guild.channels.cache.get(channelId);
     if (!channel || channel.type !== ChannelType.GuildText) {
         return interaction.update({ content: '❌ El canal seleccionado no es válido o no existe.', components: [] });
     }
 
+    // Reemplazo inteligente de tags como {server} y {member}
+    let formattedMessage = config.message
+        .replace(/{server}/gi, guild.name)
+        .replace(/{member}/gi, `<@&${role.id}>`);
+
     const embed = new EmbedBuilder()
         .setColor(0xFFD700)
         .setTitle('🎉 ¡NUEVO SORTEO ACTIVADO! 🎉')
-        .setDescription(config.message)
+        .setDescription(formattedMessage)
         .addFields(
-            { name: '🎁 Premio', value: config.prize, inline: false },
-            { name: '🛡️ Rol Participante', value: `<@&${role.id}>`, inline: false },
-            { name: '👑 Organizado por', value: `<@${interaction.user.id}>`, inline: false }
+            { name: '🎁 Premio', value: config.prize.startsWith('http') ? '¡Mira la imagen adjunta abajo!' : config.prize, inline: false },
+            { name: '🛡️ Rol Participante', value: `<@&${role.id}>`, inline: false }
         )
+        .setFooter({ 
+            text: `Organizado por ${guild.name}`, 
+            iconURL: guild.iconURL() || undefined 
+        })
         .setTimestamp();
+
+    // Si el premio es un enlace directo de imagen, lo mostramos limpio con setImage (sin texto de enlace)
+    if (config.prize.startsWith('http')) {
+        embed.setImage(config.prize);
+    }
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
