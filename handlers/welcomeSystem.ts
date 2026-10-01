@@ -32,7 +32,7 @@ async function getWelcomeCollection() {
     return welcomeCollection;
 }
 
-// 1. Inicializador del sistema que escucha las entradas y salidas (Función que busca el Index.ts)
+// 1. Inicializador del sistema que escucha las entradas y salidas (Buscado por Index.ts en su línea 42)
 export function setupWelcomeSystem(client: Client) {
     console.log('👋 [System] Sistema de Bienvenidas y Despedidas activo.');
 
@@ -45,15 +45,19 @@ export function setupWelcomeSystem(client: Client) {
             const channel = await member.guild.channels.fetch(config.channelId) as TextChannel;
             if (!channel) return;
 
+            // Traducción y limpieza de tags dinámicos
             const formattedText = config.text
                 .replace(/{user}/g, `<@${member.id}>`)
-                .replace(/{server}/g, member.guild.name);
+                .replace(/{server}/g, member.guild.name)
+                .replace(/{avatar}/g, '') // Oculta la etiqueta de texto para que luzca la imagen en miniatura
+                .replace(/{memberCount}/g, member.guild.memberCount.toString())
+                .replace(/{count}/g, member.guild.memberCount.toString());
 
             const embed = new EmbedBuilder()
                 .setColor(0x00FF00)
-                .setTitle('👋 ¡Bienvenido/a a la pista!')
+                .setTitle('🏁 ¡Nuevo Piloto en la Pista!')
                 .setDescription(formattedText)
-                .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
+                .setThumbnail(member.user.displayAvatarURL({ forceStatic: false })) // Muestra la foto de perfil en miniatura
                 .setFooter({ text: member.guild.name, iconURL: member.guild.iconURL() || undefined })
                 .setTimestamp();
 
@@ -74,7 +78,10 @@ export function setupWelcomeSystem(client: Client) {
 
             const formattedText = config.text
                 .replace(/{user}/g, member.user.tag)
-                .replace(/{server}/g, member.guild.name);
+                .replace(/{server}/g, member.guild.name)
+                .replace(/{avatar}/g, '')
+                .replace(/{memberCount}/g, member.guild.memberCount.toString())
+                .replace(/{count}/g, member.guild.memberCount.toString());
 
             const embed = new EmbedBuilder()
                 .setColor(0xFF0000)
@@ -146,9 +153,9 @@ export async function handleWelcomeChannelSelect(interaction: ChannelSelectMenuI
 
     const textInput = new TextInputBuilder()
         .setCustomId('welcome_text_content')
-        .setLabel('Texto (Usa {user} y {server})')
+        .setLabel('Texto (Usa {user}, {avatar}, {memberCount})')
         .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('¡Hola {user}, bienvenido a {server}! Pásate por normativa.')
+        .setPlaceholder('Hola {user}\n{avatar}\nBienvenido a PADDOCK. Eres el miembro {memberCount}')
         .setRequired(true);
 
     modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(textInput));
@@ -171,7 +178,7 @@ export async function handleGoodbyeChannelSelect(interaction: ChannelSelectMenuI
 
     const textInput = new TextInputBuilder()
         .setCustomId('goodbye_text_content')
-        .setLabel('Texto (Usa {user} y {server})')
+        .setLabel('Texto (Usa {user}, {server})')
         .setStyle(TextInputStyle.Paragraph)
         .setPlaceholder('{user} ha abandonado {server}. ¡Hasta pronto!')
         .setRequired(true);
