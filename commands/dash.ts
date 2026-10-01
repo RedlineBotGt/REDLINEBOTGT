@@ -26,7 +26,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         .setTitle(`🏁 ${guildName} — Panel de Control`)
         .setDescription('Selecciona una opción en los botones inferiores para gestionar el servidor.')
         .addFields(
-            { name: '👋 Bienvenidas & 📅 Eventos', value: 'Configuración de saludos/despedidas y organizador de eventos de simracing.', inline: false },
+            { name: '👋 Bienvenidas & 🏎️ Eventos', value: 'Configuración de saludos/despedidas y organizador de eventos de simracing.', inline: false },
             { name: '📋 Gestión de Formularios', value: 'Crear, editar, borrar o colocar formularios.', inline: false },
             { name: '📢 Comunicaciones y Ajustes', value: 'Enviar mensajes, programar anuncios, botones y roles por reacción.', inline: false },
             { name: '⚖️ Sistema de Comisarios', value: 'Gestionar reportes, defensas y veredicto.', inline: false }
@@ -37,7 +37,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     // Fila 1 (NUEVA): Edit Hola/Adiós y el nuevo botón de Eventos en primer lugar
     const rowTop = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('dash_btn_welcome_config').setLabel('Edit Hola/Adiós').setStyle(ButtonStyle.Secondary).setEmoji('👋'),
-        new ButtonBuilder().setCustomId('dash_btn_event_create').setLabel('Eventos').setStyle(ButtonStyle.Primary).setEmoji('📅')
+        new ButtonBuilder().setCustomId('dash_btn_event_create').setLabel('Eventos').setStyle(ButtonStyle.Primary).setEmoji('🏎️')
     );
 
     // Fila 2: Los 4 botones de Formularios juntos
