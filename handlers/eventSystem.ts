@@ -231,7 +231,6 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
             completed: false
         });
 
-        // Guardamos temporalmente en sesión por si quiere añadir repeticiones
         session.title = title;
         session.subtitle = subtitle;
         session.dateStr = dateStr;
@@ -241,7 +240,6 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
         session.asistenteRoleId = asistenteRole.id;
         eventSessions.set(interaction.user.id, session);
 
-        // Botones para preguntar si desea repeticiones
         const repeatRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder().setCustomId('event_repeat_yes').setLabel('Sí, programar repeticiones').setStyle(ButtonStyle.Primary).setEmoji('🔄'),
             new ButtonBuilder().setCustomId('event_repeat_no').setLabel('No, finalizar').setStyle(ButtonStyle.Secondary).setEmoji('✅')
@@ -330,7 +328,6 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
         let currentDateStr = session.dateStr!;
 
         for (let i = 0; i < repeatCount; i++) {
-            // Sumar días en milisegundos
             currentTimestamp += intervalDays * 24 * 60 * 60 * 1000;
             
             const nextDateObj = new Date(currentTimestamp);
@@ -483,4 +480,9 @@ export function setupEventWorker(client: Client) {
                             });
                         }
                     }
-                    await col.updateOne({ messageId: ev.messageId }, { $set: { reminderSent:
+                    await col.updateOne({ messageId: ev.messageId }, { $set: { reminderSent: true } });
+                }
+
+                if (timeRemaining <= 0) {
+                    const guild = await client.guilds.fetch(ev.guildId).catch(() => null);
+             
