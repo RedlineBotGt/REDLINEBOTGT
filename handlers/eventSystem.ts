@@ -22,7 +22,17 @@ const uri = process.env.MONGODB_URI || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@
 const clientMongo = new MongoDriver(uri);
 
 let eventsCollection: any = null;
-const eventSessions = new Map<string, { channelId?: string; roleId?: string }>();
+const eventSessions = new Map<string, { 
+    channelId?: string; 
+    roleId?: string;
+    title?: string;
+    subtitle?: string;
+    dateStr?: string;
+    timeStr?: string;
+    imageUrl?: string | null;
+    eventTimestamp?: number;
+    asistenteRoleId?: string;
+}>();
 
 async function getEventsCollection() {
     if (!eventsCollection) {
@@ -73,7 +83,7 @@ export async function handleEventChannelSelect(interaction: any): Promise<boolea
     return true;
 }
 
-// 3. Rol seleccionado -> Abre Modal de datos del evento (con campo de imagen)
+// 3. Rol seleccionado -> Abre Modal de datos del evento
 export async function handleEventRoleSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'event_select_role') return false;
 
@@ -139,7 +149,7 @@ export async function handleEventRoleSelect(interaction: any): Promise<boolean> 
     return true;
 }
 
-// 4. Procesar Modal y Publicar Evento
+// 4. Procesar Modal y Publicar Evento (Pregunta si desea repetir)
 export async function handleEventModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_event_create') return false;
 
@@ -155,7 +165,6 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
         return true;
     }
 
-    // Calcular timestamp exacto en milisegundos (CET)
     const eventTimestamp = new Date(`${dateStr}T${timeStr}:00+02:00`).getTime();
     if (isNaN(eventTimestamp)) {
         await interaction.reply({ content: '❌ Formato de fecha u hora incorrecto. Usa AAAA-MM-DD y HH:MM.', flags: [MessageFlags.Ephemeral] });
@@ -165,7 +174,6 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
     try {
         const guild = interaction.guild;
         
-        // Comprobar/Crear rol temporal @asistente
         let asistenteRole = guild.roles.cache.find(r => r.name === '@asistente' || r.name === 'asistente');
         if (!asistenteRole) {
             asistenteRole = await guild.roles.create({
@@ -181,7 +189,6 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
             return true;
         }
 
-        // Construir Embed y Botones
         const embed = new EmbedBuilder()
             .setColor(0x0055FF)
             .setTitle(`🏁 ${title}`)
@@ -189,10 +196,8 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
             .setFooter({ text: 'REDLINE GT' })
             .setTimestamp();
 
-        // Si se proporcionó una URL de imagen válida, la añadimos al embed
-        if (imageUrl && imageUrl.startsWith('http')) {
-            embed.setImage(imageUrl);
-        }
+        const validImageUrl = imageUrl && imageUrl.startsWith('http') ? imageUrl : null;
+        if (validImageUrl) embed.setImage(validImageUrl);
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Sí voy').setStyle(ButtonStyle.Success).setEmoji('🟢'),
@@ -200,14 +205,12 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
             new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No voy').setStyle(ButtonStyle.Danger).setEmoji('❌')
         );
 
-        // Enviar mensaje al canal con mención al rol del campeonato
         const message = await channel.send({
             content: `📢 ¡Atención <@&${session.roleId}>! Nuevo evento programado:`,
             embeds: [embed],
             components: [row]
         });
 
-        // Guardar en MongoDB para persistencia ante deploys
         const col = await getEventsCollection();
         await col.insertOne({
             guildId: guild.id,
@@ -220,7 +223,7 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
             eventTimestamp,
             roleId: session.roleId,
             asistenteRoleId: asistenteRole.id,
-            imageUrl: imageUrl && imageUrl.startsWith('http') ? imageUrl : null,
+            imageUrl: validImageUrl,
             yes: [],
             maybe: [],
             no: [],
@@ -228,10 +231,25 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
             completed: false
         });
 
-        eventSessions.delete(interaction.user.id);
+        // Guardamos temporalmente en sesión por si quiere añadir repeticiones
+        session.title = title;
+        session.subtitle = subtitle;
+        session.dateStr = dateStr;
+        session.timeStr = timeStr;
+        session.imageUrl = validImageUrl;
+        session.eventTimestamp = eventTimestamp;
+        session.asistenteRoleId = asistenteRole.id;
+        eventSessions.set(interaction.user.id, session);
+
+        // Botones para preguntar si desea repeticiones
+        const repeatRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder().setCustomId('event_repeat_yes').setLabel('Sí, programar repeticiones').setStyle(ButtonStyle.Primary).setEmoji('🔄'),
+            new ButtonBuilder().setCustomId('event_repeat_no').setLabel('No, finalizar').setStyle(ButtonStyle.Secondary).setEmoji('✅')
+        );
 
         await interaction.reply({
-            content: `✅ **¡Evento creado y publicado con éxito en <#${channel.id}>!**`,
+            content: `✅ **¡Evento creado con éxito en <#${channel.id}>!**\n¿Deseas programar repeticiones periódicas para este evento?`,
+            components: [repeatRow],
             flags: [MessageFlags.Ephemeral]
         });
 
@@ -243,7 +261,141 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
     return true;
 }
 
-// 5. Manejar Clics en Botones RSVP (Verde, Interrogante, Rojo)
+// 5. Botón "Sí, programar repeticiones" -> Abre modal de repetición
+export async function handleEventRepeatYesButton(interaction: ButtonInteraction): Promise<boolean> {
+    if (interaction.customId !== 'event_repeat_yes') return false;
+
+    const modal = new ModalBuilder()
+        .setCustomId('modal_event_repeat')
+        .setTitle('Configurar Repeticiones');
+
+    const intervalInput = new TextInputBuilder()
+        .setCustomId('repeat_interval')
+        .setLabel('Intervalo (Días entre eventos)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Ej: 7 (para semanal), 14 (quincenal)')
+        .setRequired(true);
+
+    const countInput = new TextInputBuilder()
+        .setCustomId('repeat_count')
+        .setLabel('¿Cuántas veces se repite en total?')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Ej: 4')
+        .setRequired(true);
+
+    modal.addComponents(
+        new ActionRowBuilder<TextInputBuilder>().addComponents(intervalInput),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(countInput)
+    );
+
+    await interaction.showModal(modal);
+    return true;
+}
+
+// 5.1 Botón "No, finalizar"
+export async function handleEventRepeatNoButton(interaction: ButtonInteraction): Promise<boolean> {
+    if (interaction.customId !== 'event_repeat_no') return false;
+    eventSessions.delete(interaction.user.id);
+    await interaction.update({
+        content: '✅ **¡Proceso finalizado con éxito! Evento configurado correctamente.**',
+        components: []
+    });
+    return true;
+}
+
+// 6. Procesar Modal de Repeticiones y Generar Eventos Futuros
+export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
+    if (interaction.customId !== 'modal_event_repeat') return false;
+
+    const intervalDays = parseInt(interaction.fields.getTextInputValue('repeat_interval'));
+    const repeatCount = parseInt(interaction.fields.getTextInputValue('repeat_count'));
+
+    if (isNaN(intervalDays) || isNaN(repeatCount) || intervalDays <= 0 || repeatCount <= 0) {
+        await interaction.reply({ content: '❌ Valores numéricos inválidos. Introduce números mayores que 0.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    const session = eventSessions.get(interaction.user.id);
+    if (!session || !session.channelId || !session.roleId || !interaction.guild) {
+        await interaction.reply({ content: '❌ Sesión caducada. Crea el evento de nuevo.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    try {
+        const guild = interaction.guild;
+        const channel = await guild.channels.fetch(session.channelId) as TextChannel;
+        const col = await getEventsCollection();
+
+        let currentTimestamp = session.eventTimestamp!;
+        let currentDateStr = session.dateStr!;
+
+        for (let i = 0; i < repeatCount; i++) {
+            // Sumar días en milisegundos
+            currentTimestamp += intervalDays * 24 * 60 * 60 * 1000;
+            
+            const nextDateObj = new Date(currentTimestamp);
+            const year = nextDateObj.getFullYear();
+            const month = String(nextDateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(nextDateObj.getDate()).padStart(2, '0');
+            currentDateStr = `${year}-${month}-${day}`;
+
+            const embed = new EmbedBuilder()
+                .setColor(0x0055FF)
+                .setTitle(`🏁 ${session.title}`)
+                .setDescription(`**${session.subtitle}**\n\n📅 **Fecha:** ${currentDateStr} a las **${session.timeStr} CET**\n⏱️ **Recordatorio:** 30 min antes.\n\n🟢 **Confirmados (0):** Ninguno\n❔ **Dudas (0):** Ninguno\n❌ **No asisten (0):** Ninguno`)
+                .setFooter({ text: 'REDLINE GT' })
+                .setTimestamp();
+
+            if (session.imageUrl) embed.setImage(session.imageUrl);
+
+            const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Sí voy').setStyle(ButtonStyle.Success).setEmoji('🟢'),
+                new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Quizás').setStyle(ButtonStyle.Secondary).setEmoji('❔'),
+                new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No voy').setStyle(ButtonStyle.Danger).setEmoji('❌')
+            );
+
+            const message = await channel.send({
+                content: `📢 ¡Atención <@&${session.roleId}>! Nuevo evento programado (Recurrente):`,
+                embeds: [embed],
+                components: [row]
+            });
+
+            await col.insertOne({
+                guildId: guild.id,
+                channelId: channel.id,
+                messageId: message.id,
+                title: session.title,
+                subtitle: session.subtitle,
+                dateStr: currentDateStr,
+                timeStr: session.timeStr,
+                eventTimestamp: currentTimestamp,
+                roleId: session.roleId,
+                asistenteRoleId: session.asistenteRoleId,
+                imageUrl: session.imageUrl,
+                yes: [],
+                maybe: [],
+                no: [],
+                reminderSent: false,
+                completed: false
+            });
+        }
+
+        eventSessions.delete(interaction.user.id);
+
+        await interaction.update({
+            content: `✅ **¡Se han programado ${repeatCount} eventos recurrentes adicionales con éxito en <#${channel.id}>!**`,
+            components: []
+        });
+
+    } catch (error) {
+        console.error('❌ Error al programar repeticiones:', error);
+        await interaction.reply({ content: '❌ Ocurrió un error al crear los eventos recurrentes.', flags: [MessageFlags.Ephemeral] });
+    }
+
+    return true;
+}
+
+// 7. Manejar Clics en Botones RSVP (Verde, Interrogante, Rojo)
 export async function handleEventRsvpButton(interaction: ButtonInteraction): Promise<boolean> {
     if (!['event_rsvp_yes', 'event_rsvp_maybe', 'event_rsvp_no'].includes(interaction.customId)) return false;
 
@@ -260,17 +412,14 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
     const userId = interaction.user.id;
     let { yes, maybe, no } = eventDoc;
 
-    // Eliminar de todas las listas previas
     yes = yes.filter((id: string) => id !== userId);
     maybe = maybe.filter((id: string) => id !== userId);
     no = no.filter((id: string) => id !== userId);
 
-    // Añadir a la lista correspondiente
     if (interaction.customId === 'event_rsvp_yes') yes.push(userId);
     if (interaction.customId === 'event_rsvp_maybe') maybe.push(userId);
     if (interaction.customId === 'event_rsvp_no') no.push(userId);
 
-    // Gestionar Rol Temporal @asistente
     try {
         const guild = interaction.guild;
         if (guild) {
@@ -288,13 +437,11 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
         console.error('❌ Error gestionando rol temporal de asistencia:', err);
     }
 
-    // Actualizar MongoDB
     await col.updateOne(
         { messageId: interaction.message.id },
         { $set: { yes, maybe, no } }
     );
 
-    // Reconstruir texto de listas para el Embed
     const yesText = yes.length > 0 ? yes.map((id: string) => `<@${id}>`).join(', ') : 'Ninguno';
     const maybeText = maybe.length > 0 ? maybe.map((id: string) => `<@${id}>`).join(', ') : 'Ninguno';
     const noText = no.length > 0 ? no.map((id: string) => `<@${id}>`).join(', ') : 'Ninguno';
@@ -311,7 +458,7 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
     return true;
 }
 
-// 6. Worker en segundo plano (Revisa recordatorios y limpieza de roles al finalizar)
+// 8. Worker en segundo plano (Revisa recordatorios y limpieza de roles al finalizar)
 export function setupEventWorker(client: Client) {
     console.log('📅 [System] Worker de Eventos y Recordatorios activo.');
 
@@ -321,13 +468,11 @@ export function setupEventWorker(client: Client) {
             const now = Date.now();
             const thirtyMinutes = 30 * 60 * 1000;
 
-            // Buscar eventos futuros no completados
             const activeEvents = await col.find({ completed: false }).toArray();
 
             for (const ev of activeEvents) {
                 const timeRemaining = ev.eventTimestamp - now;
 
-                // 1. Enviar recordatorio 30 minutos antes
                 if (!ev.reminderSent && timeRemaining <= thirtyMinutes && timeRemaining > 0) {
                     const guild = await client.guilds.fetch(ev.guildId).catch(() => null);
                     if (guild) {
@@ -338,27 +483,4 @@ export function setupEventWorker(client: Client) {
                             });
                         }
                     }
-                    await col.updateOne({ messageId: ev.messageId }, { $set: { reminderSent: true } });
-                }
-
-                // 2. Al finalizar el evento (cuando pasa la hora exacta), limpiar rol temporal a todos
-                if (timeRemaining <= 0) {
-                    const guild = await client.guilds.fetch(ev.guildId).catch(() => null);
-                    if (guild) {
-                        const allAttendees = [...ev.yes, ...ev.maybe];
-                        for (const userId of allAttendees) {
-                            const member = await guild.members.fetch(userId).catch(() => null);
-                            if (member) {
-                                await member.roles.remove(ev.asistenteRoleId).catch(() => {});
-                            }
-                        }
-                    }
-                    // Marcar como completado para que el worker no vuelva a procesarlo
-                    await col.updateOne({ messageId: ev.messageId }, { $set: { completed: true } });
-                }
-            }
-        } catch (error) {
-            console.error('❌ Error en el worker de eventos:', error);
-        }
-    }, 60 * 1000); // Se ejecuta cada 1 minuto
-}
+                    await col.updateOne({ messageId: ev.messageId }, { $set: { reminderSent:
