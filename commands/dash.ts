@@ -37,7 +37,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         .addFields(
             { name: '👋 Bienvenidas', value: 'Configuración de saludos y despedidas.', inline: false },
             { name: '📋 Gestión de Formularios', value: 'Crear, editar o borrar estructuras de formularios.', inline: false },
-            { name: '📢 Comunicaciones y Ajustes', value: 'Mensajes programados, botones interactivos y roles por reacción.', inline: false },
+            { name: '📢 Comunicaciones, Ajustes y Sorteos', value: 'Gestión de sorteos, mensajes programados, botones interactivos y roles por reacción.', inline: false },
             { name: '⚖️ Ajustes de Comisarios', value: 'Configurar plantillas de reportes y defensas.', inline: false }
         )
         .setTimestamp()
@@ -50,10 +50,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const rowForms = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('dash_btn_crear_form').setLabel('Crear F').setStyle(ButtonStyle.Primary).setEmoji('➕'),
         new ButtonBuilder().setCustomId('dash_btn_editar_form').setLabel('Editar F').setStyle(ButtonStyle.Secondary).setEmoji('📝'),
-        new ButtonBuilder().setCustomId('dash_btn_borrar_form').setLabel('Borrar F').setStyle(ButtonStyle.Danger).setEmoji('🗑️')
+        newButtonBuilder().setCustomId('dash_btn_borrar_form').setLabel('Borrar F').setStyle(ButtonStyle.Danger).setEmoji('🗑️')
     );
 
+    // Fila de Comunicaciones y Sorteos (¡Nuevo botón añadido aquí!)
     const rowMsn = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId('dash_btn_sorteo_create').setLabel('Crear Sorteo').setStyle(ButtonStyle.Success).setEmoji('🎁'),
         new ButtonBuilder().setCustomId('dash_btn_scheduled_msg').setLabel('Prog. Mensaje').setStyle(ButtonStyle.Secondary).setEmoji('📅'),
         new ButtonBuilder().setCustomId('dash_btn_crear_boton').setLabel('CrearBotón').setStyle(ButtonStyle.Success).setEmoji('🎟️'),
         new ButtonBuilder().setCustomId('rr_btn_create').setLabel('Rol Reacción').setStyle(ButtonStyle.Success).setEmoji('🎭')
