@@ -120,8 +120,8 @@ export async function handleSorteoRoleSelect(interaction: RoleSelectMenuInteract
         .setTitle('🎉 ¡NUEVO SORTEO ACTIVADO! 🎉')
         .setDescription(formattedMessage)
         .addFields(
-            { name: '🎁 Premio', value: config.prize.startsWith('http') ? '¡Mira la imagen adjunta abajo!' : config.prize, inline: false },
-            { name: '🛡️ Rol Participante', value: `<@&${role.id}>`, inline: false }
+            { name: '🛡️ Rol Participante', value: `<@&${role.id}>`, inline: false },
+            { name: 'PREMIO', value: config.prize.startsWith('http') ? '¡Mira la imagen adjunta abajo!' : config.prize, inline: false }
         )
         .setFooter({ 
             text: `Organizado por ${guild.name}`, 
