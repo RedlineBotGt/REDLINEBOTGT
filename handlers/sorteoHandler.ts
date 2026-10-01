@@ -63,7 +63,7 @@ export async function handleSorteoModalSubmit(interaction: ModalSubmitInteractio
     );
 
     await interaction.reply({
-        content: '⚙️ **Paso 2/3:** Ahora selecciona el canal donde se publicará el sorteo:',
+        content: '⚙️️ **Paso 2/3:** Ahora selecciona el canal donde se publicará el sorteo:',
         components: [channelSelectRow],
         ephemeral: true
     });
@@ -110,10 +110,16 @@ export async function handleSorteoRoleSelect(interaction: RoleSelectMenuInteract
         return interaction.update({ content: '❌ El canal seleccionado no es válido o no existe.', components: [] });
     }
 
-    // Reemplazo inteligente de tags como {server} y {member}
+    // Reemplazo inteligente de tags personalizados ({server} y {member})
     let formattedMessage = config.message
         .replace(/{server}/gi, guild.name)
         .replace(/{member}/gi, `<@&${role.id}>`);
+
+    // Detección automática: convierte cualquier texto con formato @NombreDeRol (ej: @Staff) en una mención real de Discord
+    guild.roles.cache.forEach(r => {
+        const regex = new RegExp(`@${r.name}`, 'gi');
+        formattedMessage = formattedMessage.replace(regex, `<@&${r.id}>`);
+    });
 
     const embed = new EmbedBuilder()
         .setColor(0xFFD700)
