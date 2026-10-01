@@ -1,9 +1,9 @@
 export function setupNicknameSystem(client) {
-    // 🛠️ CONFIGURA AQUÍ LAS IDS DE TUS ROLES
+    // 🛠️ IDS DE LOS ROLES CONFIGURADAS
     const ROLE_IDS = {
-        admin: 'ID_DEL_ROL_ADMIN',
-        staff: 'ID_DEL_ROL_STAFF',
-        comisario: 'ID_DEL_ROL_COMISARIO'
+        admin: '1553478496343429150',
+        staff: '1555295354377998408',
+        comisario: '1553479676704592022'
     };
 
     const PREFIXES = {
