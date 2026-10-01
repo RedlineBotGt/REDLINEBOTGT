@@ -118,9 +118,9 @@ export async function handleEventRoleSelect(interaction: any): Promise<boolean> 
 
     const dateInput = new TextInputBuilder()
         .setCustomId('event_date')
-        .setLabel('Fecha (AAAA-MM-DD)')
+        .setLabel('Fecha (DD/MM/YYYY)')
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: 2026-06-15')
+        .setPlaceholder('Ej: 15/06/2026')
         .setRequired(true);
 
     const timeInput = new TextInputBuilder()
@@ -165,9 +165,16 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
         return true;
     }
 
-    const eventTimestamp = new Date(`${dateStr}T${timeStr}:00+02:00`).getTime();
+    const dateParts = dateStr.split('/');
+    if (dateParts.length !== 3) {
+        await interaction.reply({ content: '❌ Formato de fecha incorrecto. Usa DD/MM/YYYY (Ej: 15/06/2026).', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+    const [dayInput, monthInput, yearInput] = dateParts;
+    const eventTimestamp = new Date(`${yearInput}-${monthInput}-${dayInput}T${timeStr}:00+02:00`).getTime();
+
     if (isNaN(eventTimestamp)) {
-        await interaction.reply({ content: '❌ Formato de fecha u hora incorrecto. Usa AAAA-MM-DD y HH:MM.', flags: [MessageFlags.Ephemeral] });
+        await interaction.reply({ content: '❌ Formato de fecha u hora incorrecto. Usa DD/MM/YYYY y HH:MM.', flags: [MessageFlags.Ephemeral] });
         return true;
     }
 
@@ -332,10 +339,10 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
             currentTimestamp += intervalDays * 24 * 60 * 60 * 1000;
             
             const nextDateObj = new Date(currentTimestamp);
-            const year = nextDateObj.getFullYear();
-            const month = String(nextDateObj.getMonth() + 1).padStart(2, '0');
             const day = String(nextDateObj.getDate()).padStart(2, '0');
-            currentDateStr = `${year}-${month}-${day}`;
+            const month = String(nextDateObj.getMonth() + 1).padStart(2, '0');
+            const year = nextDateObj.getFullYear();
+            currentDateStr = `${day}/${month}/${year}`;
 
             const descSubtitle = session.subtitle ? `**${session.subtitle}**\n\n` : '';
 
@@ -505,4 +512,21 @@ export function setupEventWorker(client: Client) {
             console.error('❌ Error en el worker de eventos:', error);
         }
     }, 60 * 1000);
+}
+
+// 9. Router unificado para todas las interacciones de eventos (Evita que fallen botones/modales)
+export async function handleEventInteraction(interaction: any): Promise<boolean> {
+    if (interaction.isButton()) {
+        if (await handleDashEventButton(interaction)) return true;
+        if (await handleEventRepeatYesButton(interaction)) return true;
+        if (await handleEventRepeatNoButton(interaction)) return true;
+        if (await handleEventRsvpButton(interaction)) return true;
+    } else if (interaction.isStringSelectMenu() || interaction.isChannelSelectMenu() || interaction.isRoleSelectMenu()) {
+        if (await handleEventChannelSelect(interaction)) return true;
+        if (await handleEventRoleSelect(interaction)) return true;
+    } else if (interaction.isModalSubmit()) {
+        if (await handleEventModalSubmit(interaction)) return true;
+        if (await handleEventRepeatModalSubmit(interaction)) return true;
+    }
+    return false;
 }
