@@ -149,7 +149,7 @@ export async function handleEventRoleSelect(interaction: any): Promise<boolean> 
     return true;
 }
 
-// 4. Procesar Modal y Publicar Evento (Pregunta si desea repetir)
+// 4. Procesar Modal: Guarda provisionalmente y pregunta si desea repetir (SIN publicar todavía)
 export async function handleEventModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_event_create') return false;
 
@@ -190,56 +190,9 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
             });
         }
 
-        const channel = await guild.channels.fetch(session.channelId) as TextChannel;
-        if (!channel) {
-            await interaction.reply({ content: '❌ No se pudo encontrar el canal seleccionado.', flags: [MessageFlags.Ephemeral] });
-            return true;
-        }
-
-        const descSubtitle = subtitle ? `**${subtitle}**\n\n` : '';
-
-        const embed = new EmbedBuilder()
-            .setColor(0x0055FF)
-            .setTitle(`🏁 ${title}`)
-            .setDescription(`${descSubtitle}📅 **Fecha:** ${dateStr} a las **${timeStr} CET**\n⏱️ **Recordatorio:** 30 min antes.\n\n🟢 **Confirmados (0):** Ninguno\n❔ **Dudas (0):** Ninguno\n❌ **No asisten (0):** Ninguno`)
-            .setFooter({ text: guild.name, iconURL: guild.iconURL() || undefined })
-            .setTimestamp();
-
         const validImageUrl = imageUrl && imageUrl.startsWith('http') ? imageUrl : null;
-        if (validImageUrl) embed.setImage(validImageUrl);
 
-        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Sí voy').setStyle(ButtonStyle.Success).setEmoji('🟢'),
-            new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Quizás').setStyle(ButtonStyle.Secondary).setEmoji('❔'),
-            new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No voy').setStyle(ButtonStyle.Danger).setEmoji('✖️')
-        );
-
-        const message = await channel.send({
-            content: `📢 ¡Atención <@&${session.roleId}>! Nuevo evento programado:`,
-            embeds: [embed],
-            components: [row]
-        });
-
-        const col = await getEventsCollection();
-        await col.insertOne({
-            guildId: guild.id,
-            channelId: channel.id,
-            messageId: message.id,
-            title,
-            subtitle,
-            dateStr,
-            timeStr,
-            eventTimestamp,
-            roleId: session.roleId,
-            asistenteRoleId: asistenteRole.id,
-            imageUrl: validImageUrl,
-            yes: [],
-            maybe: [],
-            no: [],
-            reminderSent: false,
-            completed: false
-        });
-
+        // Guardamos todo en la sesión temporalmente
         session.title = title;
         session.subtitle = subtitle;
         session.dateStr = dateStr;
@@ -251,17 +204,17 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
 
         const repeatRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder().setCustomId('event_repeat_yes').setLabel('Sí, programar repeticiones').setStyle(ButtonStyle.Primary).setEmoji('🔄'),
-            new ButtonBuilder().setCustomId('event_repeat_no').setLabel('No, finalizar').setStyle(ButtonStyle.Secondary).setEmoji('✅')
+            new ButtonBuilder().setCustomId('event_repeat_no').setLabel('No, publicar ahora').setStyle(ButtonStyle.Success).setEmoji('✅')
         );
 
         await interaction.reply({
-            content: `✅ **¡Evento creado con éxito en <#${channel.id}>!**\n¿Deseas programar repeticiones periódicas para este evento?`,
+            content: `📝 **Datos guardados temporalmente.**\n¿Deseas programar repeticiones periódicas para este evento antes de publicarlo?`,
             components: [repeatRow],
             flags: [MessageFlags.Ephemeral]
         });
 
     } catch (error) {
-        console.error('❌ Error al crear evento:', error);
+        console.error('❌ Error al procesar datos del evento:', error);
         await interaction.reply({ content: '❌ Ocurrió un error al procesar el evento.', flags: [MessageFlags.Ephemeral] });
     }
 
@@ -298,18 +251,83 @@ export async function handleEventRepeatYesButton(interaction: ButtonInteraction)
     await interaction.showModal(modal);
     return true;
 }
-
-// 5.1 Botón "No, finalizar"
+// 5.1 Botón "No, publicar ahora" -> Publica única y exclusivamente el evento base
 export async function handleEventRepeatNoButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_repeat_no') return false;
-    eventSessions.delete(interaction.user.id);
-    await interaction.update({
-        content: '✅ **¡Proceso finalizado con éxito! Evento configurado correctamente.**',
-        components: []
-    });
+
+    const session = eventSessions.get(interaction.user.id);
+    if (!session || !session.channelId || !session.roleId || !interaction.guild) {
+        await interaction.reply({ content: '❌ Sesión caducada. Empieza de nuevo desde el Dash.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    try {
+        const guild = interaction.guild;
+        const channel = await guild.channels.fetch(session.channelId) as TextChannel;
+        if (!channel) {
+            await interaction.reply({ content: '❌ No se pudo encontrar el canal seleccionado.', flags: [MessageFlags.Ephemeral] });
+            return true;
+        }
+
+        const descSubtitle = session.subtitle ? `**${session.subtitle}**\n\n` : '';
+
+        const embed = new EmbedBuilder()
+            .setColor(0x0055FF)
+            .setTitle(`🏁 ${session.title}`)
+            .setDescription(`${descSubtitle}📅 **Fecha:** ${session.dateStr} a las **${session.timeStr} CET**\n⏱️ **Recordatorio:** 30 min antes.\n\n🟢 **Confirmados (0):** Ninguno\n❔ **Dudas (0):** Ninguno\n❌ **No asisten (0):** Ninguno`)
+            .setFooter({ text: guild.name, iconURL: guild.iconURL() || undefined })
+            .setTimestamp();
+
+        if (session.imageUrl) embed.setImage(session.imageUrl);
+
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Sí voy').setStyle(ButtonStyle.Success).setEmoji('🟢'),
+            new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Quizás').setStyle(ButtonStyle.Secondary).setEmoji('❔'),
+            new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No voy').setStyle(ButtonStyle.Danger).setEmoji('✖️')
+        );
+
+        const message = await channel.send({
+            content: `📢 ¡Atención <@&${session.roleId}>! Nuevo evento programado:`,
+            embeds: [embed],
+            components: [row]
+        });
+
+        const col = await getEventsCollection();
+        await col.insertOne({
+            guildId: guild.id,
+            channelId: channel.id,
+            messageId: message.id,
+            title: session.title,
+            subtitle: session.subtitle,
+            dateStr: session.dateStr,
+            timeStr: session.timeStr,
+            eventTimestamp: session.eventTimestamp,
+            roleId: session.roleId,
+            asistenteRoleId: session.asistenteRoleId,
+            imageUrl: session.imageUrl,
+            yes: [],
+            maybe: [],
+            no: [],
+            reminderSent: false,
+            completed: false
+        });
+
+        eventSessions.delete(interaction.user.id);
+
+        await interaction.update({
+            content: `✅ **¡Evento creado y publicado con éxito en <#${channel.id}>!**`,
+            components: []
+        });
+
+    } catch (error) {
+        console.error('❌ Error al publicar evento:', error);
+        await interaction.reply({ content: '❌ Ocurrió un error al publicar el evento.', flags: [MessageFlags.Ephemeral] });
+    }
+
     return true;
 }
-// 6. Procesar Modal de Repeticiones y Generar Eventos Futuros
+
+// 6. Procesar Modal de Repeticiones -> Publica el evento principal + todas las repeticiones juntas al terminar
 export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_event_repeat') return false;
 
@@ -330,8 +348,56 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
     try {
         const guild = interaction.guild;
         const channel = await guild.channels.fetch(session.channelId) as TextChannel;
-        const col = await getEventsCollection();
+        if (!channel) {
+            await interaction.reply({ content: '❌ No se pudo encontrar el canal seleccionado.', flags: [MessageFlags.Ephemeral] });
+            return true;
+        }
 
+        const col = await getEventsCollection();
+        const descSubtitle = session.subtitle ? `**${session.subtitle}**\n\n` : '';
+
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Sí voy').setStyle(ButtonStyle.Success).setEmoji('🟢'),
+            new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Quizás').setStyle(ButtonStyle.Secondary).setEmoji('❔'),
+            new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No voy').setStyle(ButtonStyle.Danger).setEmoji('✖️')
+        );
+
+        // 1. Publicar el evento principal (base)
+        const baseEmbed = new EmbedBuilder()
+            .setColor(0x0055FF)
+            .setTitle(`🏁 ${session.title}`)
+            .setDescription(`${descSubtitle}📅 **Fecha:** ${session.dateStr} a las **${session.timeStr} CET**\n⏱️ **Recordatorio:** 30 min antes.\n\n🟢 **Confirmados (0):** Ninguno\n❔ **Dudas (0):** Ninguno\n❌ **No asisten (0):** Ninguno`)
+            .setFooter({ text: guild.name, iconURL: guild.iconURL() || undefined })
+            .setTimestamp();
+
+        if (session.imageUrl) baseEmbed.setImage(session.imageUrl);
+
+        const baseMessage = await channel.send({
+            content: `📢 ¡Atención <@&${session.roleId}>! Nuevo evento programado:`,
+            embeds: [baseEmbed],
+            components: [row]
+        });
+
+        await col.insertOne({
+            guildId: guild.id,
+            channelId: channel.id,
+            messageId: baseMessage.id,
+            title: session.title,
+            subtitle: session.subtitle,
+            dateStr: session.dateStr,
+            timeStr: session.timeStr,
+            eventTimestamp: session.eventTimestamp,
+            roleId: session.roleId,
+            asistenteRoleId: session.asistenteRoleId,
+            imageUrl: session.imageUrl,
+            yes: [],
+            maybe: [],
+            no: [],
+            reminderSent: false,
+            completed: false
+        });
+
+        // 2. Publicar todas las repeticiones
         let currentTimestamp = session.eventTimestamp!;
         let currentDateStr = session.dateStr!;
 
@@ -344,8 +410,6 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
             const year = nextDateObj.getFullYear();
             currentDateStr = `${day}/${month}/${year}`;
 
-            const descSubtitle = session.subtitle ? `**${session.subtitle}**\n\n` : '';
-
             const embed = new EmbedBuilder()
                 .setColor(0x0055FF)
                 .setTitle(`🏁 ${session.title}`)
@@ -354,12 +418,6 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
                 .setTimestamp();
 
             if (session.imageUrl) embed.setImage(session.imageUrl);
-
-            const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Sí voy').setStyle(ButtonStyle.Success).setEmoji('🟢'),
-                new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Quizás').setStyle(ButtonStyle.Secondary).setEmoji('❔'),
-                new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No voy').setStyle(ButtonStyle.Danger).setEmoji('✖️')
-            );
 
             const message = await channel.send({
                 content: `📢 ¡Atención <@&${session.roleId}>! Nuevo evento programado (Recurrente):`,
@@ -389,8 +447,9 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
 
         eventSessions.delete(interaction.user.id);
 
+        const totalPublished = repeatCount + 1;
         await interaction.update({
-            content: `✅ **¡Se han programado ${repeatCount} eventos recurrentes adicionales con éxito en <#${channel.id}>!**`,
+            content: `✅ **¡Se han publicado ${totalPublished} eventos (principal + ${repeatCount} repeticiones) con éxito en <#${channel.id}>!**`,
             components: []
         });
 
@@ -514,7 +573,7 @@ export function setupEventWorker(client: Client) {
     }, 60 * 1000);
 }
 
-// 9. Router unificado para todas las interacciones de eventos (Evita que fallen botones/modales)
+// 9. Router unificado para todas las interacciones de eventos
 export async function handleEventInteraction(interaction: any): Promise<boolean> {
     if (interaction.isButton()) {
         if (await handleDashEventButton(interaction)) return true;
