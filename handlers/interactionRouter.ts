@@ -23,6 +23,15 @@ import {
     handleGoodbyeModalSubmit 
 } from './welcomeSystem';
 
+// 📅 NUEVO: Importamos los manejadores del sistema de Eventos de Simracing
+import {
+    handleDashEventButton,
+    handleEventChannelSelect,
+    handleEventRoleSelect,
+    handleEventModalSubmit,
+    handleEventRsvpButton
+} from './eventSystem';
+
 // Manejadores de formularios y Dash
 import { handleFormCreateModal } from './formCreateModal';
 import { 
@@ -126,7 +135,9 @@ export async function handleInteraction(interaction: Interaction) {
 
         // 2.1. Manejo de Menús Desplegables de Canales (Channel Select Menus)
         if (interaction.isChannelSelectMenu()) {
-            if (interaction.customId === 'dash_select_msn_channel') {
+            if (interaction.customId === 'event_select_channel') {
+                await handleEventChannelSelect(interaction); // 📅 Selección de canal para evento
+            } else if (interaction.customId === 'dash_select_msn_channel') {
                 await handleDashMsnChannelSelect(interaction);
             } else if (interaction.customId === 'dash_select_verd_channel') {
                 await handleDashVeredictoChannelSelect(interaction);
@@ -152,7 +163,9 @@ export async function handleInteraction(interaction: Interaction) {
 
         // 2.2. Manejo de Menús Desplegables de Roles (Role Select Menus)
         if (interaction.isRoleSelectMenu()) {
-            if (interaction.customId === 'dash_select_verd_role') {
+            if (interaction.customId === 'event_select_role') {
+                await handleEventRoleSelect(interaction); // 📅 Selección de rol de campeonato para evento
+            } else if (interaction.customId === 'dash_select_verd_role') {
                 await handleDashVeredictoRoleSelect(interaction);
             } else if (interaction.customId === 'sched_select_role') {
                 await handleSchedRoleSelection(interaction);
@@ -164,7 +177,11 @@ export async function handleInteraction(interaction: Interaction) {
 
         // 3. Manejo de Botones interactivos
         if (interaction.isButton()) {
-            if (interaction.customId === 'dash_btn_crear_form') {
+            if (interaction.customId === 'dash_btn_event_create') {
+                await handleDashEventButton(interaction); // 📅 Botón del Dash para crear evento
+            } else if (['event_rsvp_yes', 'event_rsvp_maybe', 'event_rsvp_no'].includes(interaction.customId)) {
+                await handleEventRsvpButton(interaction); // 📅 Botones RSVP de asistencia (Verde, Interrogante, Rojo)
+            } else if (interaction.customId === 'dash_btn_crear_form') {
                 await handleDashCreateFormButton(interaction); 
             } else if (interaction.customId === 'dash_btn_abrir_preguntas') {
                 await handleDashOpenPreguntasButton(interaction); 
@@ -222,7 +239,9 @@ export async function handleInteraction(interaction: Interaction) {
 
         // 4. Manejo de Envíos de Formularios (Modals)
         if (interaction.isModalSubmit()) {
-            if (interaction.customId === 'modal_envio_reporte') {
+            if (interaction.customId === 'modal_event_create') {
+                await handleEventModalSubmit(interaction); // 📅 Envío de datos del modal de eventos
+            } else if (interaction.customId === 'modal_envio_reporte') {
                 await handleReportModalSubmit(interaction);
             } else if (interaction.customId === 'modal_envio_defensa') {
                 await handleDefensaModalSubmit(interaction);
