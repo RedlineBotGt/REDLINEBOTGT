@@ -5,6 +5,7 @@ import { startScheduledWorker } from './handlers/scheduledMessage';
 import { initReactionRoles, handleReactionAdd, handleReactionRemove } from './handlers/reactionRoles';
 import { setupWelcomeSystem } from './handlers/welcomeSystem'; // 👋 Importamos la función general de bienvenidas/despedidas
 import { setupEventWorker } from './handlers/eventSystem'; // 📅 Importamos el worker del organizador de eventos
+import { setupNicknameSystem } from './handlers/nicknameSystem'; // 🏷️ Importamos el sistema de apodos jerárquicos por rol
 
 // 0. Servidor HTTP auxiliar obligatorio para satisfacer el puerto de Render
 const server = http.createServer((req, res) => {
@@ -23,7 +24,7 @@ const client = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMembers, // 🛡 Imprescindible para detectar miembros nuevos y salidas
+        GatewayIntentBits.GuildMembers, // 🛡 Imprescindible para detectar miembros nuevos, salidas y cambios de roles
         GatewayIntentBits.GuildMessageReactions
     ]
 });
@@ -43,6 +44,9 @@ client.once('ready', async () => {
 
     // 📅 Activamos el worker de eventos, recordatorios y gestión de roles temporales
     setupEventWorker(client);
+
+    // 🏷️ Activamos el sistema de apodos automáticos según jerarquía de roles
+    setupNicknameSystem(client);
 });
 
 // 3. Enrutador ciego: deriva cualquier interacción al sistema modular externo
