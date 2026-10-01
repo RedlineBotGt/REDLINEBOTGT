@@ -170,8 +170,10 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
         await interaction.reply({ content: '❌ Formato de fecha incorrecto. Usa DD/MM/YYYY (Ej: 15/06/2026).', flags: [MessageFlags.Ephemeral] });
         return true;
     }
-    const [dayInput, monthInput, yearInput] = dateParts;
-    const eventTimestamp = new Date(`${yearInput}-${monthInput}-${dayInput}T${timeStr}:00+02:00`).getTime();
+    const [dayInput, monthInput, yearInput] = dateParts.map(Number);
+    const [hours, minutes] = timeStr.split(':').map(Number);
+
+    const eventTimestamp = new Date(yearInput, monthInput - 1, dayInput, hours, minutes).getTime();
 
     if (isNaN(eventTimestamp)) {
         await interaction.reply({ content: '❌ Formato de fecha u hora incorrecto. Usa DD/MM/YYYY y HH:MM.', flags: [MessageFlags.Ephemeral] });
@@ -192,7 +194,6 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
 
         const validImageUrl = imageUrl && imageUrl.startsWith('http') ? imageUrl : null;
 
-        // Guardamos todo en la sesión temporalmente
         session.title = title;
         session.subtitle = subtitle;
         session.dateStr = dateStr;
@@ -233,14 +234,14 @@ export async function handleEventRepeatYesButton(interaction: ButtonInteraction)
         .setCustomId('repeat_interval')
         .setLabel('Intervalo (Días entre eventos)')
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: 7 (para semanal), 14 (quincenal)')
+        .setPlaceholder('Ej: 1 (diario), 7 (semanal)')
         .setRequired(true);
 
     const countInput = new TextInputBuilder()
         .setCustomId('repeat_count')
         .setLabel('¿Cuántas veces se repite en total?')
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: 4')
+        .setPlaceholder('Ej: 1')
         .setRequired(true);
 
     modal.addComponents(
@@ -327,7 +328,7 @@ export async function handleEventRepeatNoButton(interaction: ButtonInteraction):
     return true;
 }
 
-// 6. Procesar Modal de Repeticiones -> Publica el evento principal + todas las repeticiones juntas al terminar
+// 6. Procesar Modal de Repeticiones -> Usa suma de días natural por calendario para evitar errores de zona horaria
 export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_event_repeat') return false;
 
@@ -366,7 +367,7 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
         const baseEmbed = new EmbedBuilder()
             .setColor(0x0055FF)
             .setTitle(`🏁 ${session.title}`)
-            .setDescription(`${descSubtitle}📅 **Fecha:** ${session.dateStr} a las **${session.timeStr} CET**\n⏱️ **Recordatorio:** 30 min antes.\n\n🟢 **Confirmados (0):** Ninguno\n❔ **Dudas (0):** Ninguno\n❌ **No asisten (0):** Ninguno`)
+            .setDescription(`${descSubtitle}📅 **Fecha:** ${session.dateStr} a las **${session.timeStr} CET**\n⏱ **Recordatorio:** 30 min antes.\n\n🟢 **Confirmados (0):** Ninguno\n❔ **Dudas (0):** Ninguno\n❌ **No asisten (0):** Ninguno`)
             .setFooter({ text: guild.name, iconURL: guild.iconURL() || undefined })
             .setTimestamp();
 
@@ -397,18 +398,20 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
             completed: false
         });
 
-        // 2. Publicar todas las repeticiones
-        let currentTimestamp = session.eventTimestamp!;
-        let currentDateStr = session.dateStr!;
+        // 2. Publicar todas las repeticiones usando cálculo de fecha natural de calendario
+        const [baseDay, baseMonth, baseYear] = session.dateStr!.split('/').map(Number);
+        const [hours, minutes] = session.timeStr!.split(':').map(Number);
 
-        for (let i = 0; i < repeatCount; i++) {
-            currentTimestamp += intervalDays * 24 * 60 * 60 * 1000;
-            
-            const nextDateObj = new Date(currentTimestamp);
-            const day = String(nextDateObj.getDate()).padStart(2, '0');
-            const month = String(nextDateObj.getMonth() + 1).padStart(2, '0');
-            const year = nextDateObj.getFullYear();
-            currentDateStr = `${day}/${month}/${year}`;
+        for (let i = 1; i <= repeatCount; i++) {
+            const nextDate = new Date(baseYear, baseMonth - 1, baseDay);
+            nextDate.setDate(nextDate.getDate() + (intervalDays * i));
+
+            const day = String(nextDate.getDate()).padStart(2, '0');
+            const month = String(nextDate.getMonth() + 1).padStart(2, '0');
+            const year = nextDate.getFullYear();
+            const currentDateStr = `${day}/${month}/${year}`;
+
+            const currentTimestamp = new Date(year, month - 1, day, hours, minutes).getTime();
 
             const embed = new EmbedBuilder()
                 .setColor(0x0055FF)
@@ -460,7 +463,6 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
 
     return true;
 }
-
 // 7. Manejar Clics en Botones RSVP (Verde, Interrogante, Rojo)
 export async function handleEventRsvpButton(interaction: ButtonInteraction): Promise<boolean> {
     if (!['event_rsvp_yes', 'event_rsvp_maybe', 'event_rsvp_no'].includes(interaction.customId)) return false;
@@ -525,6 +527,7 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
     await interaction.message.edit({ embeds: [newEmbed] });
     return true;
 }
+
 // 8. Worker en segundo plano (Revisa recordatorios y limpieza de roles al finalizar)
 export function setupEventWorker(client: Client) {
     console.log('📅 [System] Worker de Eventos y Recordatorios activo.');
