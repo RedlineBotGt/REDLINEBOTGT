@@ -54,7 +54,7 @@ export async function handleDashEventButton(interaction: ButtonInteraction): Pro
     const row = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(selectChannel);
 
     await interaction.reply({
-        content: '📅 **Organizador de Eventos REDLINE GT**\nPaso 1/2: Selecciona el canal de destino:',
+        content: '📅 **Organizador de Eventos**\nPaso 1/2: Selecciona el canal de destino:',
         components: [row],
         flags: [MessageFlags.Ephemeral]
     });
@@ -76,7 +76,7 @@ export async function handleEventChannelSelect(interaction: any): Promise<boolea
     const row = new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(selectRole);
 
     await interaction.update({
-        content: '📅 **Organizador de Eventos REDLINE GT**\nPaso 2/2: Selecciona el rol del campeonato que recibirá el aviso inicial:',
+        content: '📅 **Organizador de Eventos**\nPaso 2/2: Selecciona el rol del campeonato que recibirá el aviso inicial:',
         components: [row]
     });
 
@@ -113,8 +113,8 @@ export async function handleEventRoleSelect(interaction: any): Promise<boolean> 
         .setCustomId('event_subtitle')
         .setLabel('Subtítulo / Detalles / Circuito')
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: Gr.4 | 15 Vueltas | Desgaste x2')
-        .setRequired(true);
+        .setPlaceholder('Ej: Gr.4 | 15 Vueltas (Opcional)')
+        .setRequired(false);
 
     const dateInput = new TextInputBuilder()
         .setCustomId('event_date')
@@ -154,7 +154,7 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
     if (interaction.customId !== 'modal_event_create') return false;
 
     const title = interaction.fields.getTextInputValue('event_title');
-    const subtitle = interaction.fields.getTextInputValue('event_subtitle');
+    const subtitle = interaction.fields.getTextInputValue('event_subtitle') || '';
     const dateStr = interaction.fields.getTextInputValue('event_date');
     const timeStr = interaction.fields.getTextInputValue('event_time');
     const imageUrl = interaction.fields.getTextInputValue('event_image');
@@ -179,7 +179,7 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
             asistenteRole = await guild.roles.create({
                 name: '@asistente',
                 color: 0x00FF00,
-                reason: 'Rol temporal automático para eventos de REDLINE GT'
+                reason: 'Rol temporal automático para eventos'
             });
         }
 
@@ -189,11 +189,13 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
             return true;
         }
 
+        const descSubtitle = subtitle ? `**${subtitle}**\n\n` : '';
+
         const embed = new EmbedBuilder()
             .setColor(0x0055FF)
             .setTitle(`🏁 ${title}`)
-            .setDescription(`**${subtitle}**\n\n📅 **Fecha:** ${dateStr} a las **${timeStr} CET**\n⏱️ **Recordatorio:** 30 min antes.\n\n🟢 **Confirmados (0):** Ninguno\n❔ **Dudas (0):** Ninguno\n❌ **No asisten (0):** Ninguno`)
-            .setFooter({ text: 'REDLINE GT' })
+            .setDescription(`${descSubtitle}📅 **Fecha:** ${dateStr} a las **${timeStr} CET**\n⏱️ **Recordatorio:** 30 min antes.\n\n🟢 **Confirmados (0):** Ninguno\n❔ **Dudas (0):** Ninguno\n❌ **No asisten (0):** Ninguno`)
+            .setFooter({ text: guild.name, iconURL: guild.iconURL() || undefined })
             .setTimestamp();
 
         const validImageUrl = imageUrl && imageUrl.startsWith('http') ? imageUrl : null;
@@ -202,7 +204,7 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Sí voy').setStyle(ButtonStyle.Success).setEmoji('🟢'),
             new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Quizás').setStyle(ButtonStyle.Secondary).setEmoji('❔'),
-            new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No voy').setStyle(ButtonStyle.Danger).setEmoji('❌')
+            new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No voy').setStyle(ButtonStyle.Danger).setEmoji('✖️')
         );
 
         const message = await channel.send({
@@ -335,11 +337,13 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
             const day = String(nextDateObj.getDate()).padStart(2, '0');
             currentDateStr = `${year}-${month}-${day}`;
 
+            const descSubtitle = session.subtitle ? `**${session.subtitle}**\n\n` : '';
+
             const embed = new EmbedBuilder()
                 .setColor(0x0055FF)
                 .setTitle(`🏁 ${session.title}`)
-                .setDescription(`**${session.subtitle}**\n\n📅 **Fecha:** ${currentDateStr} a las **${session.timeStr} CET**\n⏱️ **Recordatorio:** 30 min antes.\n\n🟢 **Confirmados (0):** Ninguno\n❔ **Dudas (0):** Ninguno\n❌ **No asisten (0):** Ninguno`)
-                .setFooter({ text: 'REDLINE GT' })
+                .setDescription(`${descSubtitle}📅 **Fecha:** ${currentDateStr} a las **${session.timeStr} CET**\n⏱️ **Recordatorio:** 30 min antes.\n\n🟢 **Confirmados (0):** Ninguno\n❔ **Dudas (0):** Ninguno\n❌ **No asisten (0):** Ninguno`)
+                .setFooter({ text: guild.name, iconURL: guild.iconURL() || undefined })
                 .setTimestamp();
 
             if (session.imageUrl) embed.setImage(session.imageUrl);
@@ -347,7 +351,7 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
             const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
                 new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Sí voy').setStyle(ButtonStyle.Success).setEmoji('🟢'),
                 new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Quizás').setStyle(ButtonStyle.Secondary).setEmoji('❔'),
-                new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No voy').setStyle(ButtonStyle.Danger).setEmoji('❌')
+                new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No voy').setStyle(ButtonStyle.Danger).setEmoji('✖️')
             );
 
             const message = await channel.send({
@@ -442,9 +446,11 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
     const maybeText = maybe.length > 0 ? maybe.map((id: string) => `<@${id}>`).join(', ') : 'Ninguno';
     const noText = no.length > 0 ? no.map((id: string) => `<@${id}>`).join(', ') : 'Ninguno';
 
+    const descSubtitle = eventDoc.subtitle ? `**${eventDoc.subtitle}**\n\n` : '';
+
     const oldEmbed = interaction.message.embeds[0];
     const newEmbed = EmbedBuilder.from(oldEmbed)
-        .setDescription(`**${eventDoc.subtitle}**\n\n📅 **Fecha:** ${eventDoc.dateStr} a las **${eventDoc.timeStr} CET**\n⏱️ **Recordatorio:** 30 min antes.\n\n🟢 **Confirmados (${yes.length}):** ${yesText}\n\n❔ **Dudas (${maybe.length}):** ${maybeText}\n\n❌ **No asisten (${no.length}):** ${noText}`);
+        .setDescription(`${descSubtitle}📅 **Fecha:** ${eventDoc.dateStr} a las **${eventDoc.timeStr} CET**\n⏱️ **Recordatorio:** 30 min antes.\n\n🟢 **Confirmados (${yes.length}):** ${yesText}\n\n❔ **Dudas (${maybe.length}):** ${maybeText}\n\n❌ **No asisten (${no.length}):** ${noText}`);
 
     if (eventDoc.imageUrl) {
         newEmbed.setImage(eventDoc.imageUrl);
