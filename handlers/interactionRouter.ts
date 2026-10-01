@@ -1,5 +1,6 @@
 import { Interaction } from 'discord.js';
 import * as dash from '../commands/dash';
+import * as dashstaff from '../commands/dashstaff'; // ⚡ ¡Nuevo import para el panel de staff!
 import * as reporte from '../commands/reporte';
 import * as setupdefensa from '../commands/setupdefensa';
 import * as veredicto from '../commands/veredicto';
@@ -104,6 +105,8 @@ export async function handleInteraction(interaction: Interaction) {
         if (interaction.isChatInputCommand()) {
             if (interaction.commandName === 'dash') {
                 await dash.execute(interaction);
+            } else if (interaction.commandName === 'dashstaff') {
+                await dashstaff.execute(interaction); // ⚡ Ejecuta el panel operativo de staff
             } else if (interaction.commandName === 'setup-reporte') {
                 await reporte.execute(interaction);
             } else if (interaction.commandName === 'setupdefensa') {
