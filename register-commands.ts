@@ -1,5 +1,6 @@
 import { REST, Routes } from 'discord.js';
 import { data as dashCommand } from './commands/dash';
+import { data as dashstaffCommand } from './commands/dashstaff'; // ⚡ ¡Importamos el comando de staff!
 import { data as reporteCommand } from './commands/reporte';
 import { data as setupdefensaCommand } from './commands/setupdefensa';
 import { data as veredictoCommand } from './commands/veredicto';
@@ -11,6 +12,7 @@ import { data as borrarCommand } from './commands/borrar'; // 🗑️ Importamos
 // Mapeamos los comandos con su nombre para validar que ninguno llegue undefined
 const commandList = [
     { name: 'dash', data: dashCommand },
+    { name: 'dashstaff', data: dashstaffCommand }, // ⚡ ¡Lo añadimos a la lista de registro!
     { name: 'reporte', data: reporteCommand },
     { name: 'setupdefensa', data: setupdefensaCommand },
     { name: 'veredicto', data: veredictoCommand },
