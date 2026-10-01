@@ -23,13 +23,16 @@ import {
     handleGoodbyeModalSubmit 
 } from './welcomeSystem';
 
-// 📅 NUEVO: Importamos los manejadores del sistema de Eventos de Simracing
+// 📅 NUEVO: Importamos los manejadores del sistema de Eventos de Simracing (incluyendo repeticiones)
 import {
     handleDashEventButton,
     handleEventChannelSelect,
     handleEventRoleSelect,
     handleEventModalSubmit,
-    handleEventRsvpButton
+    handleEventRsvpButton,
+    handleEventRepeatYesButton,
+    handleEventRepeatNoButton,
+    handleEventRepeatModalSubmit
 } from './eventSystem';
 
 // Manejadores de formularios y Dash
@@ -181,6 +184,10 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleDashEventButton(interaction); // 📅 Botón del Dash para crear evento
             } else if (['event_rsvp_yes', 'event_rsvp_maybe', 'event_rsvp_no'].includes(interaction.customId)) {
                 await handleEventRsvpButton(interaction); // 📅 Botones RSVP de asistencia (Verde, Interrogante, Rojo)
+            } else if (interaction.customId === 'event_repeat_yes') {
+                await handleEventRepeatYesButton(interaction); // 🔄 Botón para activar repetición de eventos
+            } else if (interaction.customId === 'event_repeat_no') {
+                await handleEventRepeatNoButton(interaction); // ✅ Botón para finalizar creación de eventos sin repetir
             } else if (interaction.customId === 'dash_btn_crear_form') {
                 await handleDashCreateFormButton(interaction); 
             } else if (interaction.customId === 'dash_btn_abrir_preguntas') {
@@ -241,6 +248,8 @@ export async function handleInteraction(interaction: Interaction) {
         if (interaction.isModalSubmit()) {
             if (interaction.customId === 'modal_event_create') {
                 await handleEventModalSubmit(interaction); // 📅 Envío de datos del modal de eventos
+            } else if (interaction.customId === 'modal_event_repeat') {
+                await handleEventRepeatModalSubmit(interaction); // 📋 Modal de configuración de repeticiones de eventos
             } else if (interaction.customId === 'modal_envio_reporte') {
                 await handleReportModalSubmit(interaction);
             } else if (interaction.customId === 'modal_envio_defensa') {
