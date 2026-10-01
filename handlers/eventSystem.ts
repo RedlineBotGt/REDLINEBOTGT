@@ -149,7 +149,7 @@ export async function handleEventRoleSelect(interaction: any): Promise<boolean> 
     return true;
 }
 
-// 4. Procesar Modal: Guarda provisionalmente y pregunta si desea repetir (SIN publicar todavía)
+// 4. Procesar Modal: Guarda provisionalmente y pregunta si desea repetir
 export async function handleEventModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_event_create') return false;
 
