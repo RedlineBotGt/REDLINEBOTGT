@@ -36,6 +36,15 @@ import {
     handleEventRepeatModalSubmit
 } from './eventSystem';
 
+// 🎁 NUEVO: Importamos los manejadores del sistema de Sorteos
+import { 
+    handleDashSorteoButton, 
+    handleSorteoModalSubmit, 
+    handleSorteoChannelSelect, 
+    handleSorteoRoleSelect, 
+    handleSorteoLaunchButton 
+} from './sorteoHandler';
+
 // Manejadores de formularios y Dash
 import { handleFormCreateModal } from './formCreateModal';
 import { 
@@ -163,6 +172,8 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleWelcomeChannelSelect(interaction);
             } else if (interaction.customId === 'welcome_select_goodbye_channel') {
                 await handleGoodbyeChannelSelect(interaction);
+            } else if (interaction.customId === 'sorteo_select_channel') {
+                await handleSorteoChannelSelect(interaction); // 🎁 Canal para el sorteo
             }
             return;
         }
@@ -177,6 +188,8 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleSchedRoleSelection(interaction);
             } else if (interaction.customId === 'rr_select_role') {
                 await handleRrRoleSelect(interaction);
+            } else if (interaction.customId === 'sorteo_select_role') {
+                await handleSorteoRoleSelect(interaction); // 🎁 Rol participante para el sorteo
             }
             return;
         }
@@ -215,6 +228,10 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleDashWelcomeButton(interaction);
             } else if (interaction.customId === 'welcome_menu_bienvenida' || interaction.customId === 'welcome_menu_despedida') {
                 await handleWelcomeMenuButton(interaction);
+            } else if (interaction.customId === 'dash_btn_sorteo_create') {
+                await handleDashSorteoButton(interaction); // 🎁 Abre el modal de sorteo desde el /dash
+            } else if (interaction.customId.startsWith('sorteo_launch_')) {
+                await handleSorteoLaunchButton(interaction); // 🎲 Ejecuta el sorteo público en 5 segundos
             } else if (interaction.customId === 'sched_skip_role') {
                 await handleSchedRoleSelection(interaction);
             } else if (interaction.customId === 'sched_repeat_yes') {
@@ -275,6 +292,8 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleGoodbyeModalSubmit(interaction);
             } else if (interaction.customId === 'modal_crear_ticket_config') {
                 await handleTicketModalSubmit(interaction);
+            } else if (interaction.customId === 'modal_sorteo_config') {
+                await handleSorteoModalSubmit(interaction); // 🎁 Guarda datos del modal y pide canal
             } else if (interaction.customId === 'modal_dash_form_titulo') {
                 await handleDashFormTituloModal(interaction); 
             } else if (interaction.customId === 'modal_crear_formulario_preguntas') {
