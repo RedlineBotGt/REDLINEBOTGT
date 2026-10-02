@@ -126,7 +126,7 @@ export async function handleSorteoRoleSelect(interaction: RoleSelectMenuInteract
         .setTitle('🎉 ¡NUEVO SORTEO ACTIVADO! 🎉')
         .setDescription(formattedMessage)
         .addFields(
-            { name: '🛡️️ Rol Participante', value: `<@&${role.id}>`, inline: false },
+            { name: '🛡 Rol Participante', value: `<@&${role.id}>`, inline: false },
             { name: 'PREMIO', value: config.prize.startsWith('http') ? '\u200b' : config.prize, inline: false }
         )
         .setFooter({ 
@@ -210,12 +210,19 @@ export async function handleSorteoLaunchButton(interaction: ButtonInteraction) {
     // Ganador aleatorio
     const winner = membersArray[Math.floor(Math.random() * membersArray.length)];
 
-    const winningEmbed = EmbedBuilder.from(interaction.message.embeds[0])
+    const originalEmbed = interaction.message.embeds[0];
+    
+    // Solución: Usamos la descripción o un campo con el nombre legible asegurando que renderice bien el usuario
+    const winningEmbed = EmbedBuilder.from(originalEmbed)
         .setColor(0x00FF00)
-        .addFields({ name: '🏆 ¡CAMPEÓN DEL SORTEO!', value: `¡Felicidades <@${winner.id}>! 🥳`, inline: false });
+        .addFields({ 
+            name: '🏆 ¡CAMPEÓN DEL SORTEO!', 
+            value: `¡Felicidades <@${winner.id}> (${winner.user.username})! 🥳`, 
+            inline: false 
+        });
 
     await interaction.editReply({
-        content: '✨ **¡Sorteo finalizado con éxito!** ✨',
+        content: `✨ **¡Sorteo finalizado con éxito!** ✨\n\n¡Felicidades <@${winner.id}>! 🥳`,
         embeds: [winningEmbed],
         components: []
     });
