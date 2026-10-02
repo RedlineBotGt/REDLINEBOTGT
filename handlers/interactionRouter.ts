@@ -8,6 +8,7 @@ import * as msn from '../commands/msn';
 import * as forms from '../commands/forms';
 import * as ColocarForm from '../commands/ColocarForm';
 import * as borrar from '../commands/borrar'; // 🗑️ ¡Añadido el comando borrar aquí!
+import * as dashsheets from '../commands/dashSheets'; // 📊 ¡Nuevo comando dashSheets!
 
 import { handleReportButton, handleReportModalSubmit } from './reportModal';
 import { handleDefensaButton, handleDefensaModalSubmit } from './defensModal';
@@ -108,6 +109,9 @@ import {
     handleRrStartCreate
 } from './reactionRoles';
 
+// 📊 NUEVO: Importamos el manejador del panel de Google Sheets
+import { handleDashSheetsButton } from './dashSheetsHandler';
+
 export async function handleInteraction(interaction: Interaction) {
     try {
         // 1. Manejo de Comandos de Barra (Slash Commands)
@@ -130,6 +134,8 @@ export async function handleInteraction(interaction: Interaction) {
                 await ColocarForm.execute(interaction);
             } else if (interaction.commandName === 'borrar') {
                 await borrar.execute(interaction);
+            } else if (interaction.commandName === 'dashsheets') {
+                await dashsheets.execute(interaction); // 📊 Ejecuta el panel de Google Sheets
             }
             return;
         }
@@ -196,7 +202,9 @@ export async function handleInteraction(interaction: Interaction) {
 
         // 3. Manejo de Botones interactivos
         if (interaction.isButton()) {
-            if (interaction.customId === 'dash_btn_event_create') {
+            if (interaction.customId.startsWith('sheets_') || interaction.customId.startsWith('pub_')) {
+                await handleDashSheetsButton(interaction); // 📊 Maneja los botones del panel Sheets y publicación
+            } else if (interaction.customId === 'dash_btn_event_create') {
                 await handleDashEventButton(interaction); // 📅 Botón del Dash para crear evento
             } else if (['event_rsvp_yes', 'event_rsvp_maybe', 'event_rsvp_no'].includes(interaction.customId)) {
                 await handleEventRsvpButton(interaction); // 📅 Botones RSVP de asistencia (Verde, Interrogante, Rojo)
