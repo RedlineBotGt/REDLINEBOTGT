@@ -18,12 +18,12 @@ const userSheetState = new Map<string, { content: string; title: string; channel
 export async function handleDashSheetsButton(interaction: ButtonInteraction) {
     if (!interaction.guild) return;
 
-    // ⚡ DEFERIR INMEDIATAMENTE PARA EVITAR EL TIMEOUT DE DISCORD (3s)
+    // ⚡ DEFERIR INMEDIATAMENTE (Evita el timeout de 3 segundos de Discord)
     if (!interaction.deferred && !interaction.replied) {
         try {
             await interaction.deferUpdate();
         } catch (err) {
-            console.error('Error al diferir la interacción:', err);
+            console.error('❌ Error al diferir la interacción:', err);
             return;
         }
     }
@@ -79,23 +79,26 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
             if (customId === 'sheets_clasificacion') {
                 titleHeader = '🏆 Clasificación General';
                 const rawData = (await getSheetData('Tabla!B8:N25')) || [];
+                console.log('📊 [Sheets] Clasificación Raw Data:', rawData);
+                
                 // B(0)=POS, C(1)=PILOTO, D(2)=Nº, N(12)=PUNTOS
                 filteredData = rawData
-                    .filter(row => row && row.length > 0 && row[0] !== undefined && row[0] !== '' && row[0] !== 'POS')
+                    .filter(row => row && row[0] !== undefined && row[0] !== '' && row[0] !== 'POS')
                     .map(row => {
                         const pos = row[0] || '';
                         const piloto = row[1] || '';
                         const num = row[2] || '';
-                        const puntos = row[12] || '';
+                        const puntos = row[12] || ''; // Columna N
                         return [pos, piloto, num, '|', puntos];
                     });
             } 
             else if (customId === 'sheets_asistencia') {
                 titleHeader = '📋 Control de Asistencia';
-                // Consultamos directamente AE y AF (Piloto y Apariciones) desde la fila 3
-                const rawData = (await getSheetData('Ingreso!AE3:AF20')) || [];
+                const rawData = (await getSheetData('Ingreso!AE4:AF20')) || [];
+                console.log('📊 [Sheets] Asistencia Raw Data:', rawData);
+
                 filteredData = rawData
-                    .filter(row => row && row.length > 0 && row[0] !== undefined && row[0] !== '' && row[0] !== 'PILOTO')
+                    .filter(row => row && row[0] !== undefined && row[0] !== '' && row[0] !== 'PILOTO')
                     .map(row => {
                         const piloto = row[0] || '';
                         const apariciones = row[1] || '';
@@ -105,29 +108,33 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
             else if (customId === 'sheets_vr') {
                 titleHeader = '⚡ Vueltas Rápidas (VR)';
                 const rawData = (await getSheetData('Tabla!B9:L25')) || [];
+                console.log('📊 [Sheets] VR Raw Data:', rawData);
+
                 filteredData = rawData
-                    .filter(row => row && row.length > 0 && row[0] !== undefined && row[0] !== '')
+                    .filter(row => row && row[0] !== undefined && row[0] !== '')
                     .map(row => {
                         const pos = row[0] || '';
                         const piloto = row[1] || '';
-                        const vr = row[10] || ''; // Columna L (índice 10)
+                        const vr = row[10] || ''; // Columna L
                         return [pos, piloto, '|', vr];
                     });
             } 
             else if (customId === 'sheets_pp') {
                 titleHeader = '🎯 Pole Positions (PP)';
                 const rawData = (await getSheetData('Tabla!B9:K25')) || [];
+                console.log('📊 [Sheets] PP Raw Data:', rawData);
+
                 filteredData = rawData
-                    .filter(row => row && row.length > 0 && row[0] !== undefined && row[0] !== '')
+                    .filter(row => row && row[0] !== undefined && row[0] !== '')
                     .map(row => {
                         const pos = row[0] || '';
                         const piloto = row[1] || '';
-                        const pp = row[9] || ''; // Columna K (índice 9)
+                        const pp = row[9] || ''; // Columna K
                         return [pos, piloto, '|', pp];
                     });
             }
         } catch (error) {
-            console.error('❌ Error al obtener datos de Google Sheets:', error);
+            console.error('❌ Error al procesar los datos de Google Sheets:', error);
             filteredData = [];
         }
 
@@ -139,6 +146,7 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
             formattedText = '```text\nNo se encontraron datos en el rango especificado.\n```';
         }
 
+        // Mantener el estado previo del usuario (canal y rol seleccionados)
         const currentState = userSheetState.get(userId) || { content: '', title: '' };
         userSheetState.set(userId, { 
             content: formattedText, 
@@ -185,7 +193,7 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
                 components: [rowButtons, publishButtons, channelSelect, roleSelect]
             });
         } catch (err) {
-            console.error('Error al editar la respuesta del panel Sheets:', err);
+            console.error('❌ Error al editar la respuesta del panel Sheets:', err);
         }
     }
 }
