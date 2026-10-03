@@ -18,7 +18,7 @@ const userSheetState = new Map<string, { content: string; title: string; channel
 export async function handleDashSheetsButton(interaction: ButtonInteraction) {
     if (!interaction.guild) return;
 
-    // ⚡ DEFERIR INMEDIATAMENTE (Evita el timeout de 3 segundos de Discord)
+    // ⚡ DEFERIR INMEDIATAMENTE PARA EVITAR EL TIMEOUT DE DISCORD (3s)
     if (!interaction.deferred && !interaction.replied) {
         try {
             await interaction.deferUpdate();
@@ -79,9 +79,7 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
             if (customId === 'sheets_clasificacion') {
                 titleHeader = '🏆 Clasificación General';
                 const rawData = (await getSheetData('Tabla!B8:N25')) || [];
-                console.log('📊 [Sheets] Clasificación Raw Data:', rawData);
                 
-                // B(0)=POS, C(1)=PILOTO, D(2)=Nº, N(12)=PUNTOS
                 filteredData = rawData
                     .filter(row => row && row[0] !== undefined && row[0] !== '' && row[0] !== 'POS')
                     .map(row => {
@@ -95,7 +93,6 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
             else if (customId === 'sheets_asistencia') {
                 titleHeader = '📋 Control de Asistencia';
                 const rawData = (await getSheetData('Ingreso!AE4:AF20')) || [];
-                console.log('📊 [Sheets] Asistencia Raw Data:', rawData);
 
                 filteredData = rawData
                     .filter(row => row && row[0] !== undefined && row[0] !== '' && row[0] !== 'PILOTO')
@@ -108,7 +105,6 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
             else if (customId === 'sheets_vr') {
                 titleHeader = '⚡ Vueltas Rápidas (VR)';
                 const rawData = (await getSheetData('Tabla!B9:L25')) || [];
-                console.log('📊 [Sheets] VR Raw Data:', rawData);
 
                 filteredData = rawData
                     .filter(row => row && row[0] !== undefined && row[0] !== '')
@@ -122,7 +118,6 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
             else if (customId === 'sheets_pp') {
                 titleHeader = '🎯 Pole Positions (PP)';
                 const rawData = (await getSheetData('Tabla!B9:K25')) || [];
-                console.log('📊 [Sheets] PP Raw Data:', rawData);
 
                 filteredData = rawData
                     .filter(row => row && row[0] !== undefined && row[0] !== '')
@@ -198,26 +193,38 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
     }
 }
 
-// Manejador seguro para la selección del canal
+// 🛡️ Manejador seguro para la selección del canal (con deferUpdate para evitar el timeout)
 export async function handleSheetsChannelSelect(interaction: ChannelSelectMenuInteraction) {
     if (!interaction.guild) return;
-    const userId = interaction.user.id;
-    const channelId = interaction.values[0];
+    
+    try {
+        await interaction.deferUpdate();
+        const userId = interaction.user.id;
+        const channelId = interaction.values[0];
 
-    const state = userSheetState.get(userId) || { content: '', title: '' };
-    userSheetState.set(userId, { ...state, channelId });
+        const state = userSheetState.get(userId) || { content: '', title: '' };
+        userSheetState.set(userId, { ...state, channelId });
 
-    await interaction.reply({ content: `📁 Canal seleccionado correctamente.`, ephemeral: true });
+        await interaction.followUp({ content: `📁 Canal seleccionado correctamente.`, ephemeral: true });
+    } catch (err) {
+        console.error('❌ Error al seleccionar el canal:', err);
+    }
 }
 
-// Manejador seguro para la selección del rol
+// 🛡️ Manejador seguro para la selección del rol (con deferUpdate para evitar el timeout)
 export async function handleSheetsRoleSelect(interaction: RoleSelectMenuInteraction) {
     if (!interaction.guild) return;
-    const userId = interaction.user.id;
-    const roleId = interaction.values[0];
 
-    const state = userSheetState.get(userId) || { content: '', title: '' };
-    userSheetState.set(userId, { ...state, roleId });
+    try {
+        await interaction.deferUpdate();
+        const userId = interaction.user.id;
+        const roleId = interaction.values[0];
 
-    await interaction.reply({ content: `🔔 Rol seleccionado correctamente.`, ephemeral: true });
+        const state = userSheetState.get(userId) || { content: '', title: '' };
+        userSheetState.set(userId, { ...state, roleId });
+
+        await interaction.followUp({ content: `🔔 Rol seleccionado correctamente.`, ephemeral: true });
+    } catch (err) {
+        console.error('❌ Error al seleccionar el rol:', err);
+    }
 }
