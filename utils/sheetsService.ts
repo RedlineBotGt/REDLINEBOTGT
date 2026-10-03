@@ -2,12 +2,11 @@ import { google } from 'googleapis';
 import path from 'path';
 import fs from 'fs';
 
+// 📌 ID de tu Google Sheet para REDLINE GT
+const SPREADSHEET_ID = '1E-dMxBrK7gZLAGR2Ge7OuGEt-IvzVK8BWOTtxZojsXs';
+
 /**
  * Configura el cliente de autenticación de Google de forma ultra robusta.
- * Soporta: 
- * 1. Archivo local credential.json (si existe)
- * 2. Variable de entorno con el JSON completo (GOOGLE_CREDENTIALS)
- * 3. Variables separadas (GOOGLE_PRIVATE_KEY / GOOGLE_CLIENT_EMAIL)
  */
 function getAuthClient() {
   // 1. Intentar buscar el archivo físico local credential.json
@@ -30,7 +29,7 @@ function getAuthClient() {
     }
   }
 
-  // 2. Si se configuró un JSON completo en una sola variable de entorno (ej. GOOGLE_CREDENTIALS)
+  // 2. Si se configuró un JSON completo en una sola variable de entorno (GOOGLE_CREDENTIALS)
   if (process.env.GOOGLE_CREDENTIALS) {
     try {
       const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
@@ -57,7 +56,7 @@ function getAuthClient() {
   if (privateKey && clientEmail) {
     console.log('☁️ [Google Auth] Usando GOOGLE_PRIVATE_KEY y GOOGLE_CLIENT_EMAIL de entorno');
     
-    // CORRECCIÓN CRÍTICA: Reemplaza los '\\n' literales por saltos de línea reales '\n'
+    // Corrige los saltos de línea escapados '\\n'
     privateKey = privateKey.replace(/\\n/g, '\n');
 
     return new google.auth.JWT({
@@ -81,13 +80,8 @@ export async function getSheetData(range: string): Promise<any[][] | undefined> 
     const auth = getAuthClient();
     const sheets = google.sheets({ version: 'v4', auth });
     
-    const spreadsheetId = process.env.SPREADSHEET_ID;
-    if (!spreadsheetId) {
-      throw new Error('❌ Falta la variable de entorno SPREADSHEET_ID en Render.');
-    }
-
     const response = await sheets.spreadsheets.values.get({
-      spreadsheetId,
+      spreadsheetId: SPREADSHEET_ID,
       range,
     });
     
