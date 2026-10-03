@@ -12,7 +12,16 @@ export async function getSheetData(range: string) {
         if (process.env.GOOGLE_CREDENTIALS_JSON) {
             let credentials;
             try {
-                credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
+                let rawJson = process.env.GOOGLE_CREDENTIALS_JSON.trim();
+                if (rawJson.startsWith('"') && rawJson.endsWith('"')) {
+                    rawJson = JSON.parse(rawJson);
+                }
+                credentials = typeof rawJson === 'string' ? JSON.parse(rawJson) : rawJson;
+
+                // 🔑 REPARAR CLAVE PRIVADA: Corrige los saltos de línea planos (\n) que se aplanan en Render
+                if (credentials && credentials.private_key) {
+                    credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+                }
             } catch (e) {
                 console.error('❌ Error: GOOGLE_CREDENTIALS_JSON no tiene un formato JSON válido.');
                 throw e;
