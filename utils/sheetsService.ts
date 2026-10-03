@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 import path from 'path';
+import fs from 'fs';
 
 const SPREADSHEET_ID = '1E-dMxBrK7gZLAGR2Ge7OuGEt-IvzVK8BWOTtxZojsXs';
 
@@ -7,17 +8,27 @@ export async function getSheetData(range: string) {
     try {
         let auth;
 
-        // Si estás en Render y configuras la variable de entorno GOOGLE_CREDENTIALS_JSON
+        // 1. Comprobar si existe la variable de entorno en la nube (Render)
         if (process.env.GOOGLE_CREDENTIALS_JSON) {
-            const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
+            let credentials;
+            try {
+                credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
+            } catch (e) {
+                console.error('❌ Error: GOOGLE_CREDENTIALS_JSON no tiene un formato JSON válido.');
+                throw e;
+            }
             auth = new google.auth.GoogleAuth({
                 credentials,
                 scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
             });
         } else {
-            // Si estás en local usando el archivo credentials.json
+            // 2. Si no está en entorno, buscar el archivo local credentials.json
+            const keyFilePath = path.join(process.cwd(), 'credentials.json');
+            if (!fs.existsSync(keyFilePath)) {
+                throw new Error(`No se encuentra el archivo 'credentials.json' en la ruta: ${keyFilePath}`);
+            }
             auth = new google.auth.GoogleAuth({
-                keyFile: path.join(process.cwd(), 'credentials.json'),
+                keyFile: keyFilePath,
                 scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
             });
         }
