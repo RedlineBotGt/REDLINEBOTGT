@@ -139,4 +139,91 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
         if (filteredData.length > 0) {
             formattedText = '```text\n' + filteredData.map(row => row.join('\t')).join('\n') + '\n```';
         } else {
-            formattedText = '```text\nNo se encontraron datos en el rango especificado.\n
+            formattedText = '```text\nNo se encontraron datos en el rango especificado.\n```';
+        }
+
+        // Mantener el estado previo del usuario (canal y rol seleccionados)
+        const currentState = userSheetState.get(userId) || { content: '', title: '' };
+        userSheetState.set(userId, { 
+            content: formattedText, 
+            title: titleHeader, 
+            channelId: currentState.channelId, 
+            roleId: currentState.roleId 
+        });
+
+        const resultEmbed = new EmbedBuilder()
+            .setAuthor({ name: interaction.guild.name, iconURL: interaction.guild.iconURL({ dynamic: true }) || undefined })
+            .setTitle(titleHeader)
+            .setDescription(formattedText)
+            .setColor(0x2b2b2b)
+            .setFooter({ text: 'REDLINE GT', iconURL: interaction.guild.iconURL({ dynamic: true }) || undefined });
+
+        const rowButtons = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder().setCustomId('sheets_clasificacion').setLabel('Clasificación').setStyle(ButtonStyle.Primary).setEmoji('🏆'),
+            new ButtonBuilder().setCustomId('sheets_asistencia').setLabel('Asistencia').setStyle(ButtonStyle.Secondary).setEmoji('📋'),
+            new ButtonBuilder().setCustomId('sheets_vr').setLabel('VR').setStyle(ButtonStyle.Success).setEmoji('⚡'),
+            new ButtonBuilder().setCustomId('sheets_pp').setLabel('PP').setStyle(ButtonStyle.Danger).setEmoji('🎯')
+        );
+
+        const publishButtons = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder().setCustomId('pub_yes').setLabel('Publicar: SÍ').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId('pub_no').setLabel('Publicar: NO').setStyle(ButtonStyle.Secondary)
+        );
+
+        const channelSelect = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(
+            new ChannelSelectMenuBuilder()
+                .setCustomId('sheets_select_channel')
+                .setPlaceholder('📁 ¿Dónde quieres publicar?')
+                .addChannelTypes(ChannelType.GuildText)
+        );
+
+        const roleSelect = new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(
+            new RoleSelectMenuBuilder()
+                .setCustomId('sheets_select_role')
+                .setPlaceholder('🔔 ¿Quieres mencionar algún rol?')
+        );
+
+        try {
+            await interaction.editReply({
+                embeds: [resultEmbed],
+                components: [rowButtons, publishButtons, channelSelect, roleSelect]
+            });
+        } catch (err) {
+            console.error('❌ Error al editar la respuesta del panel Sheets:', err);
+        }
+    }
+}
+
+// 🛡️ Manejador seguro para la selección del canal
+export async function handleSheetsChannelSelect(interaction: ChannelSelectMenuInteraction) {
+    if (!interaction.guild) return;
+    
+    try {
+        const userId = interaction.user.id;
+        const channelId = interaction.values[0];
+
+        const state = userSheetState.get(userId) || { content: '', title: '' };
+        userSheetState.set(userId, { ...state, channelId });
+
+        await interaction.followUp({ content: '📁 Canal seleccionado correctamente.', flags: [MessageFlags.Ephemeral] });
+    } catch (err) {
+        console.error('❌ Error al seleccionar el canal:', err);
+    }
+}
+
+// 🛡️ Manejador seguro para la selección del rol
+export async function handleSheetsRoleSelect(interaction: RoleSelectMenuInteraction) {
+    if (!interaction.guild) return;
+
+    try {
+        const userId = interaction.user.id;
+        const roleId = interaction.values[0];
+
+        const state = userSheetState.get(userId) || { content: '', title: '' };
+        userSheetState.set(userId, { ...state, roleId });
+
+        await interaction.followUp({ content: '🔔 Rol seleccionado correctamente.', flags: [MessageFlags.Ephemeral] });
+    } catch (err) {
+        console.error('❌ Error al seleccionar el rol:', err);
+    }
+}
