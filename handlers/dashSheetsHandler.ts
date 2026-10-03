@@ -69,7 +69,6 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
 
     // 3. Manejo de los botones del panel de Google Sheets
     if (customId.startsWith('sheets_')) {
-        // Diferimos inmediatamente para evitar el timeout de 3 segundos de Discord
         if (!interaction.deferred && !interaction.replied) {
             try {
                 await interaction.deferUpdate();
@@ -86,15 +85,20 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
             if (customId === 'sheets_clasificacion') {
                 titleHeader = '🏆 Clasificación General';
                 const rawData = (await getSheetData('Tabla!B8:N25')) || [];
-                // Columna B (Pos), C (Piloto), D (Nº), N (Puntos - índice 12)
+                // B(0)=POS, C(1)=PILOTO, D(2)=Nº, N(12)=PUNTOS
                 filteredData = rawData
-                    .filter(row => row && row.length > 0 && (row[0] || row[1]))
-                    .map(row => [row[0] || '', row[1] || '', row[2] || '', '|', row[12] || '']);
+                    .filter(row => row && row.length > 0 && row[0] !== undefined && row[0] !== '' && row[0] !== 'POS')
+                    .map(row => {
+                        const pos = row[0] || '';
+                        const piloto = row[1] || '';
+                        const num = row[2] || '';
+                        const puntos = row[12] || '';
+                        return [pos, piloto, num, '|', puntos];
+                    });
             } 
             else if (customId === 'sheets_asistencia') {
                 titleHeader = '📋 Control de Asistencia';
                 const rawData = (await getSheetData('Ingreso!AB4:AF20')) || [];
-                // AB, AC, AD descartadas; AE (índice 3 = Piloto) y AF (índice 4 = Apariciones)
                 filteredData = rawData
                     .filter(row => row && row.length > 4 && (row[3] || row[4]))
                     .map(row => [row[3] || '', '|', row[4] || ''])
@@ -103,7 +107,6 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
             else if (customId === 'sheets_vr') {
                 titleHeader = '⚡ Vueltas Rápidas (VR)';
                 const rawData = (await getSheetData('Tabla!B9:L25')) || [];
-                // B (Pos), C (Piloto), L (VR - índice 10)
                 filteredData = rawData
                     .filter(row => row && row.length > 0 && (row[0] || row[1]))
                     .map(row => [row[0] || '', row[1] || '', '|', row[10] || '']);
@@ -111,7 +114,6 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
             else if (customId === 'sheets_pp') {
                 titleHeader = '🎯 Pole Positions (PP)';
                 const rawData = (await getSheetData('Tabla!B9:K25')) || [];
-                // B (Pos), C (Piloto), K (PP - índice 9)
                 filteredData = rawData
                     .filter(row => row && row.length > 0 && (row[0] || row[1]))
                     .map(row => [row[0] || '', row[1] || '', '|', row[9] || '']);
@@ -129,7 +131,6 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
             formattedText = '```text\nNo se encontraron datos en el rango especificado.\n```';
         }
 
-        // Mantener canal y rol seleccionados previamente
         const currentState = userSheetState.get(userId) || { content: '', title: '' };
         userSheetState.set(userId, { 
             content: formattedText, 
