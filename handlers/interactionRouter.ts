@@ -7,7 +7,7 @@ import * as veredicto from '../commands/veredicto';
 import * as msn from '../commands/msn';
 import * as forms from '../commands/forms';
 import * as ColocarForm from '../commands/ColocarForm';
-import * as borrar from '../commands/borrar'; // 🗑️ ¡Añadido el comando borrar aquí!
+import * as borrar from '../commands/borrar'; // 🗑️️ ¡Añadido el comando borrar aquí!
 import * as dashsheets from '../commands/dashSheets'; // 📊 ¡Nuevo comando dashSheets!
 
 import { handleReportButton, handleReportModalSubmit } from './reportModal';
@@ -160,6 +160,10 @@ export async function handleInteraction(interaction: Interaction) {
         // 2.1. Manejo de Menús Desplegables de Canales (Channel Select Menus)
         if (interaction.isChannelSelectMenu()) {
             if (interaction.customId === 'sheets_select_channel') {
+                // ⚡ DIFERIR AL INSTANTE EN EL ROUTER PARA EVITAR TIMEOUT DE GOOGLE SHEETS
+                if (!interaction.deferred && !interaction.replied) {
+                    await interaction.deferUpdate().catch(() => {});
+                }
                 await handleSheetsChannelSelect(interaction); // 📊 Canal seleccionado para Google Sheets
             } else if (interaction.customId === 'event_select_channel') {
                 await handleEventChannelSelect(interaction); // 📅 Selección de canal para evento
@@ -192,6 +196,10 @@ export async function handleInteraction(interaction: Interaction) {
         // 2.2. Manejo de Menús Desplegables de Roles (Role Select Menus)
         if (interaction.isRoleSelectMenu()) {
             if (interaction.customId === 'sheets_select_role') {
+                // ⚡ DIFERIR AL INSTANTE EN EL ROUTER
+                if (!interaction.deferred && !interaction.replied) {
+                    await interaction.deferUpdate().catch(() => {});
+                }
                 await handleSheetsRoleSelect(interaction); // 📊 Rol seleccionado para Google Sheets
             } else if (interaction.customId === 'event_select_role') {
                 await handleEventRoleSelect(interaction); // 📅 Selección de rol de campeonato para evento
@@ -209,6 +217,10 @@ export async function handleInteraction(interaction: Interaction) {
         // 3. Manejo de Botones interactivos
         if (interaction.isButton()) {
             if (interaction.customId.startsWith('sheets_') || interaction.customId.startsWith('pub_')) {
+                // ⚡ DIFERIR AL INSTANTE EN EL ROUTER ANTES DE LLAMAR A LA API DE SHEETS
+                if (!interaction.deferred && !interaction.replied) {
+                    await interaction.deferUpdate().catch(() => {});
+                }
                 await handleDashSheetsButton(interaction); // 📊 Maneja los botones del panel Sheets y publicación
             } else if (interaction.customId === 'dash_btn_event_create') {
                 await handleDashEventButton(interaction); // 📅 Botón del Dash para crear evento
@@ -324,7 +336,7 @@ export async function handleInteraction(interaction: Interaction) {
         console.error('❌ Error al procesar la interacción:', error);
         if (interaction.isRepliable()) {
             const errorMessage = {
-                content: 'Hubo an error al procesar esta acción.',
+                content: 'Hubo un error al procesar esta acción.',
                 ephemeral: true
             };
             if (interaction.deferred || interaction.replied) {
