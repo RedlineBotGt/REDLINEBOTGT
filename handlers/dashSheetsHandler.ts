@@ -18,6 +18,16 @@ const userSheetState = new Map<string, { content: string; title: string; channel
 export async function handleDashSheetsButton(interaction: ButtonInteraction) {
     if (!interaction.guild) return;
 
+    // ⚡ DEFERIR INMEDIATAMENTE EN LA LÍNEA 1 PARA EVITAR EL TIMEOUT DE DISCORD (3s)
+    if (!interaction.deferred && !interaction.replied) {
+        try {
+            await interaction.deferUpdate();
+        } catch (err) {
+            console.error('Error al diferir la interacción:', err);
+            return;
+        }
+    }
+
     const userId = interaction.user.id;
     const customId = interaction.customId;
 
@@ -25,15 +35,10 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
     if (customId === 'pub_yes') {
         const state = userSheetState.get(userId);
         if (!state || !state.channelId) {
-            const warningMsg = { content: '⚠️ Por favor, selecciona primero un canal en el menú desplegable.', ephemeral: true };
-            if (interaction.deferred || interaction.replied) {
-                return interaction.followUp(warningMsg);
-            }
-            return interaction.reply(warningMsg);
-        }
-
-        if (!interaction.deferred && !interaction.replied) {
-            await interaction.deferUpdate();
+            return interaction.followUp({ 
+                content: '⚠️ Por favor, selecciona primero un canal en el menú desplegable.', 
+                ephemeral: true 
+            });
         }
 
         const targetChannel = await interaction.guild.channels.fetch(state.channelId);
@@ -51,7 +56,10 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
                 embeds: [publishEmbed]
             });
 
-            await interaction.followUp({ content: '✅ ¡Datos publicados con éxito en el canal seleccionado!', ephemeral: true });
+            await interaction.followUp({ 
+                content: '✅ ¡Datos publicados con éxito en el canal seleccionado!', 
+                ephemeral: true 
+            });
         }
         return;
     }
@@ -59,25 +67,11 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
     // 2. Manejo del botón Publicar: NO
     if (customId === 'pub_no') {
         userSheetState.delete(userId);
-        if (!interaction.deferred && !interaction.replied) {
-            await interaction.update({ content: '❌ Consulta cerrada.', embeds: [], components: [] });
-        } else {
-            await interaction.editReply({ content: '❌ Consulta cerrada.', embeds: [], components: [] });
-        }
-        return;
+        return interaction.editReply({ content: '❌ Consulta cerrada.', embeds: [], components: [] });
     }
 
     // 3. Manejo de los botones del panel de Google Sheets
     if (customId.startsWith('sheets_')) {
-        if (!interaction.deferred && !interaction.replied) {
-            try {
-                await interaction.deferUpdate();
-            } catch (err) {
-                console.error('Error al diferir la actualización:', err);
-                return;
-            }
-        }
-
         let titleHeader = '';
         let filteredData: any[][] = [];
 
@@ -119,7 +113,7 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
                     .map(row => [row[0] || '', row[1] || '', '|', row[9] || '']);
             }
         } catch (error) {
-            console.error('Error al obtener datos de Google Sheets:', error);
+            console.error('❌ Error al obtener datos de Google Sheets:', error);
             filteredData = [];
         }
 
