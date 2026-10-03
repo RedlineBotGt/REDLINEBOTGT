@@ -8,8 +8,7 @@ import {
     EmbedBuilder, 
     ChannelSelectMenuBuilder, 
     RoleSelectMenuBuilder, 
-    ChannelType,
-    MessageFlags
+    ChannelType 
 } from 'discord.js';
 import { getSheetData } from '../utils/sheetsService';
 
@@ -22,77 +21,100 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
     const userId = interaction.user.id;
     const customId = interaction.customId;
 
+    // 1. Manejo del botón Publicar: SÍ
+    if (customId === 'pub_yes') {
+        const state = userSheetState.get(userId);
+        if (!state || !state.channelId) {
+            const warningMsg = { content: '⚠️ Por favor, selecciona primero un canal en el menú desplegable.', ephemeral: true };
+            if (interaction.deferred || interaction.replied) {
+                return interaction.followUp(warningMsg);
+            }
+            return interaction.reply(warningMsg);
+        }
+
+        if (!interaction.deferred && !interaction.replied) {
+            await interaction.deferUpdate();
+        }
+
+        const targetChannel = await interaction.guild.channels.fetch(state.channelId);
+        if (targetChannel && targetChannel.isTextBased()) {
+            const roleMention = state.roleId ? `<@&${state.roleId}>` : '';
+            const publishEmbed = new EmbedBuilder()
+                .setTitle(state.title)
+                .setDescription(state.content)
+                .setColor(0x1b1b1b)
+                .setFooter({ text: 'REDLINE GT', iconURL: interaction.guild.iconURL({ dynamic: true }) || undefined })
+                .setTimestamp();
+
+            await targetChannel.send({
+                content: roleMention,
+                embeds: [publishEmbed]
+            });
+
+            await interaction.followUp({ content: '✅ ¡Datos publicados con éxito en el canal seleccionado!', ephemeral: true });
+        }
+        return;
+    }
+
+    // 2. Manejo del botón Publicar: NO
+    if (customId === 'pub_no') {
+        userSheetState.delete(userId);
+        if (!interaction.deferred && !interaction.replied) {
+            await interaction.update({ content: '❌ Consulta cerrada.', embeds: [], components: [] });
+        } else {
+            await interaction.editReply({ content: '❌ Consulta cerrada.', embeds: [], components: [] });
+        }
+        return;
+    }
+
+    // 3. Manejo de los botones del panel de Google Sheets
     if (customId.startsWith('sheets_')) {
-        // Evita errores si la interacción ya fue reconocida o diferida previamente
+        // Diferimos inmediatamente para evitar el timeout de 3 segundos de Discord
         if (!interaction.deferred && !interaction.replied) {
             try {
                 await interaction.deferUpdate();
             } catch (err) {
                 console.error('Error al diferir la actualización:', err);
+                return;
             }
         }
 
         let titleHeader = '';
-        let rawData: any[][] = [];
         let filteredData: any[][] = [];
 
         try {
-            switch (customId) {
-                case 'sheets_clasificacion':
-                    titleHeader = '🏆 Clasificación General';
-                    rawData = (await getSheetData('Tabla!B8:N25')) || [];
-                    filteredData = rawData
-                        .filter(row => row && row.length > 0 && (row[0] || row[1]))
-                        .map(row => {
-                            const colB = row[0] || ''; // POS
-                            const colC = row[1] || ''; // PILOTO
-                            const colD = row[2] || ''; // Nº
-                            const colN = row[12] || ''; // PUNTOS (Columna N)
-                            return [colB, colC, colD, '|', colN];
-                        });
-                    break;
-
-                case 'sheets_asistencia':
-                    titleHeader = '📋 Control de Asistencia';
-                    rawData = (await getSheetData('Ingreso!AB4:AF20')) || [];
-                    filteredData = rawData
-                        .filter(row => row && row.length > 0 && row.some(cell => cell !== ''))
-                        .map(row => {
-                            const colAB = row[0] || '';
-                            const colAC = row[1] || '';
-                            const colAD = row[2] || '';
-                            const colAE = row[3] || '';
-                            const colAF = row[4] || '';
-                            return [colAB, colAC, colAD, colAE, colAF].filter(val => val !== '');
-                        })
-                        .filter(row => row.length > 0);
-                    break;
-
-                case 'sheets_vr':
-                    titleHeader = '⚡ Vueltas Rápidas (VR)';
-                    rawData = (await getSheetData('Tabla!B9:L25')) || [];
-                    filteredData = rawData
-                        .filter(row => row && row.length > 0 && (row[0] || row[1]))
-                        .map(row => {
-                            const colB = row[0] || ''; // POS
-                            const colC = row[1] || ''; // PILOTO
-                            const colL = row[10] || ''; // VR (Columna L)
-                            return [colB, colC, '|', colL];
-                        });
-                    break;
-
-                case 'sheets_pp':
-                    titleHeader = '🎯 Pole Positions (PP)';
-                    rawData = (await getSheetData('Tabla!B9:K25')) || [];
-                    filteredData = rawData
-                        .filter(row => row && row.length > 0 && (row[0] || row[1]))
-                        .map(row => {
-                            const colB = row[0] || ''; // POS
-                            const colC = row[1] || ''; // PILOTO
-                            const colK = row[9] || ''; // PP (Columna K)
-                            return [colB, colC, '|', colK];
-                        });
-                    break;
+            if (customId === 'sheets_clasificacion') {
+                titleHeader = '🏆 Clasificación General';
+                const rawData = (await getSheetData('Tabla!B8:N25')) || [];
+                // Columna B (Pos), C (Piloto), D (Nº), N (Puntos - índice 12)
+                filteredData = rawData
+                    .filter(row => row && row.length > 0 && (row[0] || row[1]))
+                    .map(row => [row[0] || '', row[1] || '', row[2] || '', '|', row[12] || '']);
+            } 
+            else if (customId === 'sheets_asistencia') {
+                titleHeader = '📋 Control de Asistencia';
+                const rawData = (await getSheetData('Ingreso!AB4:AF20')) || [];
+                // AB, AC, AD descartadas; AE (índice 3 = Piloto) y AF (índice 4 = Apariciones)
+                filteredData = rawData
+                    .filter(row => row && row.length > 4 && (row[3] || row[4]))
+                    .map(row => [row[3] || '', '|', row[4] || ''])
+                    .filter(row => row[0] !== '');
+            } 
+            else if (customId === 'sheets_vr') {
+                titleHeader = '⚡ Vueltas Rápidas (VR)';
+                const rawData = (await getSheetData('Tabla!B9:L25')) || [];
+                // B (Pos), C (Piloto), L (VR - índice 10)
+                filteredData = rawData
+                    .filter(row => row && row.length > 0 && (row[0] || row[1]))
+                    .map(row => [row[0] || '', row[1] || '', '|', row[10] || '']);
+            } 
+            else if (customId === 'sheets_pp') {
+                titleHeader = '🎯 Pole Positions (PP)';
+                const rawData = (await getSheetData('Tabla!B9:K25')) || [];
+                // B (Pos), C (Piloto), K (PP - índice 9)
+                filteredData = rawData
+                    .filter(row => row && row.length > 0 && (row[0] || row[1]))
+                    .map(row => [row[0] || '', row[1] || '', '|', row[9] || '']);
             }
         } catch (error) {
             console.error('Error al obtener datos de Google Sheets:', error);
@@ -107,7 +129,7 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
             formattedText = '```text\nNo se encontraron datos en el rango especificado.\n```';
         }
 
-        // Mantener canal y rol si ya estaban seleccionados previamente
+        // Mantener canal y rol seleccionados previamente
         const currentState = userSheetState.get(userId) || { content: '', title: '' };
         userSheetState.set(userId, { 
             content: formattedText, 
@@ -154,47 +176,7 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
                 components: [rowButtons, publishButtons, channelSelect, roleSelect]
             });
         } catch (err) {
-            console.error('Error al editar la respuesta:', err);
-        }
-
-    } else if (customId === 'pub_yes') {
-        const state = userSheetState.get(userId);
-        if (!state || !state.channelId) {
-            const warningMsg = { content: '⚠️️ Por favor, selecciona primero un canal en el menú desplegable.', flags: MessageFlags.Ephemeral };
-            if (interaction.deferred || interaction.replied) {
-                return interaction.followUp(warningMsg);
-            }
-            return interaction.reply(warningMsg);
-        }
-
-        if (!interaction.deferred && !interaction.replied) {
-            await interaction.deferUpdate();
-        }
-
-        const targetChannel = await interaction.guild.channels.fetch(state.channelId);
-        if (targetChannel && targetChannel.isTextBased()) {
-            const roleMention = state.roleId ? `<@&${state.roleId}>` : '';
-            const publishEmbed = new EmbedBuilder()
-                .setTitle(state.title)
-                .setDescription(state.content)
-                .setColor(0x1b1b1b)
-                .setFooter({ text: 'REDLINE GT', iconURL: interaction.guild.iconURL({ dynamic: true }) || undefined })
-                .setTimestamp();
-
-            await targetChannel.send({
-                content: roleMention,
-                embeds: [publishEmbed]
-            });
-
-            await interaction.followUp({ content: '✅ ¡Datos publicados con éxito en el canal seleccionado!', flags: MessageFlags.Ephemeral });
-        }
-
-    } else if (customId === 'pub_no') {
-        userSheetState.delete(userId);
-        if (!interaction.deferred && !interaction.replied) {
-            await interaction.update({ content: '❌ Consulta cerrada.', embeds: [], components: [] });
-        } else {
-            await interaction.editReply({ content: '❌ Consulta cerrada.', embeds: [], components: [] });
+            console.error('Error al editar la respuesta del panel Sheets:', err);
         }
     }
 }
@@ -208,11 +190,7 @@ export async function handleSheetsChannelSelect(interaction: ChannelSelectMenuIn
     const state = userSheetState.get(userId) || { content: '', title: '' };
     userSheetState.set(userId, { ...state, channelId });
 
-    const replyOptions = { content: `📁 Canal seleccionado correctamente.`, flags: MessageFlags.Ephemeral };
-    if (interaction.deferred || interaction.replied) {
-        return interaction.followUp(replyOptions);
-    }
-    return interaction.reply(replyOptions);
+    await interaction.reply({ content: `📁 Canal seleccionado correctamente.`, ephemeral: true });
 }
 
 // Manejador seguro para la selección del rol
@@ -224,9 +202,5 @@ export async function handleSheetsRoleSelect(interaction: RoleSelectMenuInteract
     const state = userSheetState.get(userId) || { content: '', title: '' };
     userSheetState.set(userId, { ...state, roleId });
 
-    const replyOptions = { content: `🔔 Rol seleccionado correctamente.`, flags: MessageFlags.Ephemeral };
-    if (interaction.deferred || interaction.replied) {
-        return interaction.followUp(replyOptions);
-    }
-    return interaction.reply(replyOptions);
+    await interaction.reply({ content: `🔔 Rol seleccionado correctamente.`, ephemeral: true });
 }
