@@ -18,7 +18,7 @@ const userSheetState = new Map<string, { content: string; title: string; channel
 export async function handleDashSheetsButton(interaction: ButtonInteraction) {
     if (!interaction.guild) return;
 
-    // ⚡ DEFERIR INMEDIATAMENTE EN LA LÍNEA 1 PARA EVITAR EL TIMEOUT DE DISCORD (3s)
+    // ⚡ DEFERIR INMEDIATAMENTE PARA EVITAR EL TIMEOUT DE DISCORD (3s)
     if (!interaction.deferred && !interaction.replied) {
         try {
             await interaction.deferUpdate();
@@ -92,25 +92,39 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
             } 
             else if (customId === 'sheets_asistencia') {
                 titleHeader = '📋 Control de Asistencia';
-                const rawData = (await getSheetData('Ingreso!AB4:AF20')) || [];
+                // Consultamos directamente AE y AF (Piloto y Apariciones) desde la fila 3
+                const rawData = (await getSheetData('Ingreso!AE3:AF20')) || [];
                 filteredData = rawData
-                    .filter(row => row && row.length > 4 && (row[3] || row[4]))
-                    .map(row => [row[3] || '', '|', row[4] || ''])
-                    .filter(row => row[0] !== '');
+                    .filter(row => row && row.length > 0 && row[0] !== undefined && row[0] !== '' && row[0] !== 'PILOTO')
+                    .map(row => {
+                        const piloto = row[0] || '';
+                        const apariciones = row[1] || '';
+                        return [piloto, '|', apariciones];
+                    });
             } 
             else if (customId === 'sheets_vr') {
                 titleHeader = '⚡ Vueltas Rápidas (VR)';
                 const rawData = (await getSheetData('Tabla!B9:L25')) || [];
                 filteredData = rawData
-                    .filter(row => row && row.length > 0 && (row[0] || row[1]))
-                    .map(row => [row[0] || '', row[1] || '', '|', row[10] || '']);
+                    .filter(row => row && row.length > 0 && row[0] !== undefined && row[0] !== '')
+                    .map(row => {
+                        const pos = row[0] || '';
+                        const piloto = row[1] || '';
+                        const vr = row[10] || ''; // Columna L (índice 10)
+                        return [pos, piloto, '|', vr];
+                    });
             } 
             else if (customId === 'sheets_pp') {
                 titleHeader = '🎯 Pole Positions (PP)';
                 const rawData = (await getSheetData('Tabla!B9:K25')) || [];
                 filteredData = rawData
-                    .filter(row => row && row.length > 0 && (row[0] || row[1]))
-                    .map(row => [row[0] || '', row[1] || '', '|', row[9] || '']);
+                    .filter(row => row && row.length > 0 && row[0] !== undefined && row[0] !== '')
+                    .map(row => {
+                        const pos = row[0] || '';
+                        const piloto = row[1] || '';
+                        const pp = row[9] || ''; // Columna K (índice 9)
+                        return [pos, piloto, '|', pp];
+                    });
             }
         } catch (error) {
             console.error('❌ Error al obtener datos de Google Sheets:', error);
