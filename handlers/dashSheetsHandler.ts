@@ -25,35 +25,57 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
         await interaction.deferUpdate();
 
         let titleHeader = '';
-        
-        // Consultamos la pestaña 'Tabla' en el rango B8:M25
-        const rawData = await getSheetData('Tabla!B8:M25');
+        let rawData: any[][] = [];
+        let filteredData: any[][] = [];
 
         switch (customId) {
             case 'sheets_clasificacion':
                 titleHeader = '🏆 Clasificación General';
+                rawData = await getSheetData('Tabla!B8:M25');
+                filteredData = rawData.map(row => {
+                    const colB = row[0] || '';
+                    const colC = row[1] || '';
+                    const colD = row[2] || '';
+                    const colK = row[9] || '';
+                    const colL = row[10] || '';
+                    const colM = row[11] || '';
+                    return [colB, colC, colD, '|', colK, colL, colM];
+                });
                 break;
+
             case 'sheets_asistencia':
                 titleHeader = '📋 Control de Asistencia';
+                rawData = await getSheetData('Ingreso!AB4:AF20');
+                filteredData = rawData.map(row => {
+                    const colAB = row[0] || '';
+                    const colAC = row[1] || '';
+                    const colAD = row[2] || '';
+                    const colAE = row[3] || '';
+                    const colAF = row[4] || '';
+                    return [colAB, colAC, colAD, colAE, colAF];
+                });
                 break;
+
             case 'sheets_vr':
                 titleHeader = '⚡ Vueltas Rápidas (VR)';
+                rawData = await getSheetData('Tabla!B9:L25');
+                filteredData = rawData.map(row => {
+                    const colB = row[0] || '';
+                    const colL = row[10] || '';
+                    return [colB, colL];
+                });
                 break;
+
             case 'sheets_pp':
                 titleHeader = '🎯 Pole Positions (PP)';
+                rawData = await getSheetData('Tabla!B9:K25');
+                filteredData = rawData.map(row => {
+                    const colB = row[0] || '';
+                    const colK = row[9] || '';
+                    return [colB, colK];
+                });
                 break;
         }
-
-        // Filtramos las columnas para extraer solo B, C, D (índices 0, 1, 2) y K, L, M (índices 9, 10, 11)
-        const filteredData = rawData.map(row => {
-            const colB = row[0] || '';
-            const colC = row[1] || '';
-            const colD = row[2] || '';
-            const colK = row[9] || '';
-            const colL = row[10] || '';
-            const colM = row[11] || '';
-            return [colB, colC, colD, '|', colK, colL, colM];
-        });
 
         // Formatear los datos en tabla de texto plano para Discord
         let formattedText = '';
