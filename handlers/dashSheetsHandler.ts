@@ -25,34 +25,42 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
         await interaction.deferUpdate();
 
         let titleHeader = '';
-        let rawData: string[][] = [];
+        
+        // Consultamos la pestaña 'Tabla' en el rango B8:M25
+        const rawData = await getSheetData('Tabla!B8:M25');
 
-        // ⚠️ CAMBIA AQUÍ LOS NOMBRES DE TUS PESTAÑAS EXACTAS DE GOOGLE SHEETS
         switch (customId) {
             case 'sheets_clasificacion':
                 titleHeader = '🏆 Clasificación General';
-                rawData = await getSheetData('Clasificación!A1:C20'); 
                 break;
             case 'sheets_asistencia':
                 titleHeader = '📋 Control de Asistencia';
-                rawData = await getSheetData('Asistencia!A1:B20');
                 break;
             case 'sheets_vr':
                 titleHeader = '⚡ Vueltas Rápidas (VR)';
-                rawData = await getSheetData('VR!A1:B20');
                 break;
             case 'sheets_pp':
                 titleHeader = '🎯 Pole Positions (PP)';
-                rawData = await getSheetData('PP!A1:B20');
                 break;
         }
 
+        // Filtramos las columnas para extraer solo B, C, D (índices 0, 1, 2) y K, L, M (índices 9, 10, 11)
+        const filteredData = rawData.map(row => {
+            const colB = row[0] || '';
+            const colC = row[1] || '';
+            const colD = row[2] || '';
+            const colK = row[9] || '';
+            const colL = row[10] || '';
+            const colM = row[11] || '';
+            return [colB, colC, colD, '|', colK, colL, colM];
+        });
+
         // Formatear los datos en tabla de texto plano para Discord
         let formattedText = '';
-        if (rawData.length > 0) {
-            formattedText = '```text\n' + rawData.map(row => row.join('\t')).join('\n') + '\n```';
+        if (filteredData.length > 0) {
+            formattedText = '```text\n' + filteredData.map(row => row.join('\t')).join('\n') + '\n```';
         } else {
-            formattedText = '```text\nNo se encontraron datos o la pestaña está vacía.\n```';
+            formattedText = '```text\nNo se encontraron datos en el rango especificado.\n```';
         }
 
         // Mantener canal y rol si ya estaban seleccionados previamente
