@@ -22,59 +22,65 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
     const customId = interaction.customId;
 
     if (customId.startsWith('sheets_')) {
+        // Deferimos inmediatamente para evitar el timeout de Discord (3 segundos)
         await interaction.deferUpdate();
 
         let titleHeader = '';
         let rawData: any[][] = [];
         let filteredData: any[][] = [];
 
-        switch (customId) {
-            case 'sheets_clasificacion':
-                titleHeader = '🏆 Clasificación General';
-                rawData = await getSheetData('Tabla!B8:M25');
-                filteredData = rawData.map(row => {
-                    const colB = row[0] || '';
-                    const colC = row[1] || '';
-                    const colD = row[2] || '';
-                    const colK = row[9] || '';
-                    const colL = row[10] || '';
-                    const colM = row[11] || '';
-                    return [colB, colC, colD, '|', colK, colL, colM];
-                });
-                break;
+        try {
+            switch (customId) {
+                case 'sheets_clasificacion':
+                    titleHeader = '🏆 Clasificación General';
+                    rawData = (await getSheetData('Tabla!B8:M25')) || [];
+                    filteredData = rawData.map(row => {
+                        const colB = row[0] || '';
+                        const colC = row[1] || '';
+                        const colD = row[2] || '';
+                        const colK = row[9] || '';
+                        const colL = row[10] || '';
+                        const colM = row[11] || '';
+                        return [colB, colC, colD, '|', colK, colL, colM];
+                    });
+                    break;
 
-            case 'sheets_asistencia':
-                titleHeader = '📋 Control de Asistencia';
-                rawData = await getSheetData('Ingreso!AB4:AF20');
-                filteredData = rawData.map(row => {
-                    const colAB = row[0] || '';
-                    const colAC = row[1] || '';
-                    const colAD = row[2] || '';
-                    const colAE = row[3] || '';
-                    const colAF = row[4] || '';
-                    return [colAB, colAC, colAD, colAE, colAF];
-                });
-                break;
+                case 'sheets_asistencia':
+                    titleHeader = '📋 Control de Asistencia';
+                    rawData = (await getSheetData('Ingreso!AB4:AF20')) || [];
+                    filteredData = rawData.map(row => {
+                        const colAB = row[0] || '';
+                        const colAC = row[1] || '';
+                        const colAD = row[2] || '';
+                        const colAE = row[3] || '';
+                        const colAF = row[4] || '';
+                        return [colAB, colAC, colAD, colAE, colAF];
+                    });
+                    break;
 
-            case 'sheets_vr':
-                titleHeader = '⚡ Vueltas Rápidas (VR)';
-                rawData = await getSheetData('Tabla!B9:L25');
-                filteredData = rawData.map(row => {
-                    const colB = row[0] || '';
-                    const colL = row[10] || '';
-                    return [colB, colL];
-                });
-                break;
+                case 'sheets_vr':
+                    titleHeader = '⚡ Vueltas Rápidas (VR)';
+                    rawData = (await getSheetData('Tabla!B9:L25')) || [];
+                    filteredData = rawData.map(row => {
+                        const colB = row[0] || '';
+                        const colL = row[10] || '';
+                        return [colB, colL];
+                    });
+                    break;
 
-            case 'sheets_pp':
-                titleHeader = '🎯 Pole Positions (PP)';
-                rawData = await getSheetData('Tabla!B9:K25');
-                filteredData = rawData.map(row => {
-                    const colB = row[0] || '';
-                    const colK = row[9] || '';
-                    return [colB, colK];
-                });
-                break;
+                case 'sheets_pp':
+                    titleHeader = '🎯 Pole Positions (PP)';
+                    rawData = (await getSheetData('Tabla!B9:K25')) || [];
+                    filteredData = rawData.map(row => {
+                        const colB = row[0] || '';
+                        const colK = row[9] || '';
+                        return [colB, colK];
+                    });
+                    break;
+            }
+        } catch (error) {
+            console.error('Error al obtener datos de Google Sheets:', error);
+            filteredData = [];
         }
 
         // Formatear los datos en tabla de texto plano para Discord
