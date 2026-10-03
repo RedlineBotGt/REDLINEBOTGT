@@ -1,5 +1,7 @@
 import { 
     ButtonInteraction, 
+    ChannelSelectMenuInteraction, 
+    RoleSelectMenuInteraction, 
     ActionRowBuilder, 
     ButtonBuilder, 
     ButtonStyle, 
@@ -8,7 +10,7 @@ import {
     RoleSelectMenuBuilder, 
     ChannelType 
 } from 'discord.js';
-import { getSheetData } from '../services/sheetsService';
+import { getSheetData } from '../utils/sheetsService';
 
 // Almacén temporal en memoria para guardar el estado de la consulta por usuario
 const userSheetState = new Map<string, { content: string; title: string; channelId?: string; roleId?: string }>();
@@ -53,7 +55,14 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
             formattedText = '```text\nNo se encontraron datos o la pestaña está vacía.\n```';
         }
 
-        userSheetState.set(userId, { content: formattedText, title: titleHeader });
+        // Mantener canal y rol si ya estaban seleccionados previamente
+        const currentState = userSheetState.get(userId) || { content: '', title: '' };
+        userSheetState.set(userId, { 
+            content: formattedText, 
+            title: titleHeader, 
+            channelId: currentState.channelId, 
+            roleId: currentState.roleId 
+        });
 
         const resultEmbed = new EmbedBuilder()
             .setAuthor({ name: interaction.guild.name, iconURL: interaction.guild.iconURL({ dynamic: true }) || undefined })
@@ -122,4 +131,28 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
         userSheetState.delete(userId);
         await interaction.update({ content: '❌ Consulta cerrada.', embeds: [], components: [] });
     }
+}
+
+// Manejador para la selección del canal donde se publicará el reporte
+export async function handleSheetsChannelSelect(interaction: ChannelSelectMenuInteraction) {
+    if (!interaction.guild) return;
+    const userId = interaction.user.id;
+    const channelId = interaction.values[0];
+
+    const state = userSheetState.get(userId) || { content: '', title: '' };
+    userSheetState.set(userId, { ...state, channelId });
+
+    await interaction.reply({ content: `📁 Canal seleccionado correctamente.`, ephemeral: true });
+}
+
+// Manejador para la selección del rol que se mencionará
+export async function handleSheetsRoleSelect(interaction: RoleSelectMenuInteraction) {
+    if (!interaction.guild) return;
+    const userId = interaction.user.id;
+    const roleId = interaction.values[0];
+
+    const state = userSheetState.get(userId) || { content: '', title: '' };
+    userSheetState.set(userId, { ...state, roleId });
+
+    await interaction.reply({ content: `🔔 Rol seleccionado correctamente.`, ephemeral: true });
 }
