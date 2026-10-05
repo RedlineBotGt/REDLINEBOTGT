@@ -208,7 +208,6 @@ export async function handleSchedRoleSelection(interaction: any): Promise<boolea
     await interaction.showModal(modal);
     return true;
 }
-
 // 5. Guardar fecha/hora y preguntar por repetición
 export async function handleSchedDatetimeSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_sched_datetime') return false;
@@ -457,7 +456,7 @@ export function startScheduledWorker(client: Client) {
                         await col.updateOne(
                             { _id: msg._id },
                             { 
-                                $set: { scheduledAt: nextDate },$inc: { remainingTimes: -1 }
+                                $set: { scheduledAt: nextDate },$inc: { remainingTimes: -1 } 
                             }
                         );
                         console.log(`🔄 [Worker] Mensaje repetitivo reprogramado para: ${nextDate}. Quedan ${msg.remainingTimes - 1} envíos.`);
