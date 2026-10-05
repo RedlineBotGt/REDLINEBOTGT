@@ -7,7 +7,8 @@ import { setupWelcomeSystem } from './handlers/welcomeSystem';
 import { setupEventWorker } from './handlers/eventSystem'; 
 import { setupNicknameSystem } from './handlers/nicknameSystem'; 
 import { setupAvisosSystem } from './handlers/avisosSystem'; 
-import { handleReactionAddRouter, handleReactionRemoveRouter } from './handlers/reactionRouter'; // 👈 Todo gestionado aquí
+import { handleReactionAddRouter, handleReactionRemoveRouter } from './handlers/reactionRouter'; 
+import { startPollsWorker } from './handlers/encuestaSystem'; // 👈 Importamos el worker de encuestas
 
 // 0. Servidor HTTP auxiliar obligatorio para Render
 const server = http.createServer((req, res) => {
@@ -41,6 +42,7 @@ client.once('ready', async () => {
     console.log(`✅ REDLINE GT Bot conectado y operativo como ${client.user?.tag}`);
 
     startScheduledWorker(client);
+    startPollsWorker(client); // 👈 ¡Iniciamos el vigilante de cierre automático de encuestas!
     await initReactionRoles(client);
     setupWelcomeSystem(client);
     setupAvisosSystem(client);
