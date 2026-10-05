@@ -11,7 +11,7 @@ import {
 export const data = new SlashCommandBuilder()
     .setName('dash')
     .setDescription('Panel de Configuración y Administración')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator); // Oculta el comando a no-admins en Discord
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.guildId || !interaction.guild) {
@@ -19,7 +19,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         return;
     }
 
-    // Comprobación de seguridad en tiempo de ejecución
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
         await interaction.reply({ 
             content: '❌ Este panel de configuración es **exclusivo para Administradores**.', 
@@ -38,7 +37,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             { name: '👋 Bienvenidas', value: 'Configuración de saludos y despedidas.', inline: false },
             { name: '📋 Gestión de Formularios', value: 'Crear, editar o borrar estructuras de formularios.', inline: false },
             { name: '📢 Comunicaciones, Ajustes y Sorteos', value: 'Gestión de sorteos, mensajes programados, botones interactivos y roles por reacción.', inline: false },
-            { name: '⚖️ Ajustes de Comisarios', value: 'Configurar plantillas de reportes y defensas.', inline: false }
+            { name: '⚖️ Ajustes de Comisarios', value: 'Configurar plantillas de reportes y defensas.', inline: false },
+            { name: '📋 Sistema de Avisos', value: 'Configurar canal de registros para entradas, salidas y roles.', inline: false }
         )
         .setTimestamp()
         .setFooter({ text: `${guildName} Admin Dashboard` });
@@ -53,7 +53,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         new ButtonBuilder().setCustomId('dash_btn_borrar_form').setLabel('Borrar F').setStyle(ButtonStyle.Danger).setEmoji('🗑️')
     );
 
-    // Fila de Comunicaciones, Ajustes y Sorteos
     const rowMsn = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('dash_btn_sorteo_create').setLabel('Crear Sorteo').setStyle(ButtonStyle.Success).setEmoji('🎁'),
         new ButtonBuilder().setCustomId('dash_btn_scheduled_msg').setLabel('Prog. Mensaje').setStyle(ButtonStyle.Secondary).setEmoji('📅'),
@@ -66,9 +65,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         new ButtonBuilder().setCustomId('dash_btn_setup_defensa').setLabel('Editar Defensa').setStyle(ButtonStyle.Secondary).setEmoji('⚖️')
     );
 
+    // Nueva fila para el botón de Avisos / Logs
+    const rowAvisos = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId('dash_btn_avisos_config').setLabel('Configurar Avisos').setStyle(ButtonStyle.Secondary).setEmoji('📋')
+    );
+
     await interaction.reply({
         embeds: [embed],
-        components: [rowWelcome, rowForms, rowMsn, rowComisarios],
+        components: [rowWelcome, rowForms, rowMsn, rowComisarios, rowAvisos],
         ephemeral: true
     });
 }
