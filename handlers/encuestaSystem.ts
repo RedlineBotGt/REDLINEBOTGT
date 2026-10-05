@@ -33,7 +33,6 @@ async function getCollections() {
     return { pendingPollsCol, activePollsCol };
 }
 
-// 1. Iniciar encuesta -> Muestra los 3 selectores limpios y el botón
 export async function handleEncuestaStart(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_encuesta_create') return false;
 
@@ -71,7 +70,6 @@ export async function handleEncuestaStart(interaction: ButtonInteraction): Promi
     return true;
 }
 
-// 2. Guardar selecciones de los menús en MongoDB temporalmente
 export async function handleEncuestaPreSelections(interaction: any): Promise<boolean> {
     if (!['encuesta_pre_publish_channel', 'encuesta_pre_role', 'encuesta_pre_log_channel'].includes(interaction.customId)) {
         return false;
@@ -98,7 +96,6 @@ export async function handleEncuestaPreSelections(interaction: any): Promise<boo
     return true;
 }
 
-// 3. Botón "Siguiente" -> Valida que estén los canales antes de abrir el modal
 export async function handleEncuestaOpenModalButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'encuesta_btn_open_modal') return false;
 
@@ -138,12 +135,12 @@ export async function handleEncuestaOpenModalButton(interaction: ButtonInteracti
         .setPlaceholder('Monza\nSpa-Francorchamps\nSilverstone\nNürburgring')
         .setRequired(true);
 
-    // 🕒 Nueva caja de texto para introducir los días (1 a 7)
     const durationInput = new TextInputBuilder()
         .setCustomId('encuesta_duration')
-        .setLabel('Duración en días (Introduce un número del 1 al 7)')
+        .setLabel('Duración en días (1 al 7)')
         .setStyle(TextInputStyle.Short)
         .setPlaceholder('Ej: 3')
+        .setMaxLength(2)
         .setRequired(true);
 
     modal.addComponents(
@@ -156,7 +153,6 @@ export async function handleEncuestaOpenModalButton(interaction: ButtonInteracti
     await interaction.showModal(modal);
     return true;
 }
-// 4. Procesar el envío del modal -> Publicar encuesta definitiva
 export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_encuesta_final') return false;
 
@@ -165,7 +161,6 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
     const optionsRaw = interaction.fields.getTextInputValue('encuesta_options_block');
     const durationRaw = interaction.fields.getTextInputValue('encuesta_duration');
 
-    // Validar que la duración sea un número del 1 al 7
     const durationDays = parseInt(durationRaw.trim(), 10);
     if (isNaN(durationDays) || durationDays < 1 || durationDays > 7) {
         await interaction.reply({
@@ -267,8 +262,6 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
 
     return true;
 }
-
-// 5. 🗳️ LISTENER DE REACCIONES (Canal de respuestas / Logs)
 export async function handleEncuestaReactionAdd(reaction: any, user: any) {
     try {
         if (user.bot) return;
@@ -314,7 +307,6 @@ export async function handleEncuestaReactionAdd(reaction: any, user: any) {
     }
 }
 
-// 6. 🕒 WORKER AUTOMÁTICO: Cierra las encuestas expiradas y publica los resultados finales
 export function startPollsWorker(client: Client) {
     setInterval(async () => {
         try {
