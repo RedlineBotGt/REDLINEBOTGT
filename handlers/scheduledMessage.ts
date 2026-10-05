@@ -14,7 +14,8 @@ import {
     TextChannel, 
     EmbedBuilder,
     StringSelectMenuBuilder,
-    StringSelectMenuInteraction
+    StringSelectMenuInteraction,
+    MessageFlags
 } from 'discord.js';
 import { MongoClient as MongoDriver, ObjectId } from 'mongodb';
 
@@ -49,13 +50,13 @@ export async function handleDashScheduledButton(interaction: ButtonInteraction):
     await interaction.reply({
         content: '📅 **Sistema de Mensajes Programados**\n¿Qué deseas hacer con tus plantillas de mensajes?',
         components: [row],
-        flags: [6] // Ephemeral
+        flags: [MessageFlags.Ephemeral]
     });
 
     return true;
 }
 
-// 2. Botón "Crear Nuevo Mensaje" -> Abre modal para título y contenido
+// 2. Botón "Crear Nuevo Mensaje" -> Abre modal para título, contenido e imagen
 export async function handleSchedNewButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'sched_btn_new') return false;
 
@@ -79,9 +80,17 @@ export async function handleSchedNewButton(interaction: ButtonInteraction): Prom
         .setPlaceholder('Escribe el texto que enviará el bot...')
         .setRequired(true);
 
+    const imageInput = new TextInputBuilder()
+        .setCustomId('sched_image_input')
+        .setLabel('URL de la imagen (Opcional)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('https://... (dejar en blanco si no hay)')
+        .setRequired(false);
+
     modal.addComponents(
         new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(contentInput)
+        new ActionRowBuilder<TextInputBuilder>().addComponents(contentInput),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(imageInput)
     );
 
     await interaction.showModal(modal);
@@ -109,7 +118,7 @@ export async function handleSchedExistingButton(interaction: ButtonInteraction):
         .setPlaceholder('📂 Selecciona una plantilla guardada...')
         .addOptions(allTemplates.map(t => ({
             label: t.title.substring(0, 100),
-            description: t.content.substring(0, 90) + '...',
+            description: (t.content ? t.content.substring(0, 90) : '') + '...',
             value: t._id.toString()
         })));
 
@@ -123,7 +132,7 @@ export async function handleSchedExistingButton(interaction: ButtonInteraction):
     return true;
 }
 
-// 4. Seleccionar una plantilla existente -> Muestra opciones (Programar, Editar, Borrar)
+// 4. Seleccionar una plantilla existente -> Muestra opciones y previsualización con imagen si la tiene
 export async function handleSchedExistingSelect(interaction: StringSelectMenuInteraction): Promise<boolean> {
     if (interaction.customId !== 'sched_select_existing') return false;
 
@@ -136,13 +145,17 @@ export async function handleSchedExistingSelect(interaction: StringSelectMenuInt
         return true;
     }
 
-    scheduledSessions.set(interaction.user.id, { templateId, text: template.content });
+    scheduledSessions.set(interaction.user.id, { templateId, text: template.content, image: template.image || null });
 
     const embed = new EmbedBuilder()
         .setColor(0x00AAFF)
         .setTitle(`📄 Plantilla: ${template.title}`)
-        .setDescription(template.content)
+        .setDescription(template.content || '')
         .setTimestamp();
+
+    if (template.image) {
+        embed.setImage(template.image);
+    }
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId(`sched_action_schedule_${templateId}`).setLabel('Programar / Enviar').setStyle(ButtonStyle.Success).setEmoji('⏰'),
@@ -159,13 +172,14 @@ export async function handleSchedExistingSelect(interaction: StringSelectMenuInt
     return true;
 }
 
-// 5. Guardar nueva plantilla o edición desde modal
+// 5. Guardar nueva plantilla o edición desde modal (incluyendo imagen)
 export async function handleSchedModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_sched_new' && interaction.customId !== 'modal_sched_edit') return false;
     if (!interaction.guildId) return true;
 
     const title = interaction.fields.getTextInputValue('sched_title_input');
     const content = interaction.fields.getTextInputValue('sched_content_input');
+    const image = interaction.fields.getTextInputValue('sched_image_input').trim();
     const session = scheduledSessions.get(interaction.user.id) || {};
     const { templates } = await getSchedCollections();
 
@@ -174,20 +188,21 @@ export async function handleSchedModalSubmit(interaction: ModalSubmitInteraction
             guildId: interaction.guildId,
             title,
             content,
+            image: image || null,
             createdAt: new Date()
         });
         await interaction.reply({
             content: `✅ **¡Plantilla "${title}" creada y guardada en la base de datos con éxito!**`,
-            flags: [6]
+            flags: [MessageFlags.Ephemeral]
         });
     } else if (interaction.customId === 'modal_sched_edit' && session.templateId) {
         await templates.updateOne(
             { _id: new ObjectId(session.templateId) },
-            { $set: { title, content } }
+            { $set: { title, content, image: image || null } }
         );
         await interaction.reply({
             content: `✅ **¡Plantilla "${title}" actualizada con éxito!**`,
-            flags: [6]
+            flags: [MessageFlags.Ephemeral]
         });
     }
 
@@ -221,12 +236,20 @@ export async function handleSchedActionButtons(interaction: ButtonInteraction): 
             .setCustomId('sched_content_input')
             .setLabel('Contenido del mensaje')
             .setStyle(TextInputStyle.Paragraph)
-            .setValue(template.content)
+            .setValue(template.content || '')
             .setRequired(true);
+
+        const imageInput = new TextInputBuilder()
+            .setCustomId('sched_image_input')
+            .setLabel('URL de la imagen (Opcional)')
+            .setStyle(TextInputStyle.Short)
+            .setValue(template.image || '')
+            .setRequired(false);
 
         modal.addComponents(
             new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput),
-            new ActionRowBuilder<TextInputBuilder>().addComponents(contentInput)
+            new ActionRowBuilder<TextInputBuilder>().addComponents(contentInput),
+            new ActionRowBuilder<TextInputBuilder>().addComponents(imageInput)
         );
 
         await interaction.showModal(modal);
@@ -255,6 +278,7 @@ export async function handleSchedActionButtons(interaction: ButtonInteraction): 
         const session = scheduledSessions.get(interaction.user.id) || {};
         session.templateId = templateId;
         session.text = template.content;
+        session.image = template.image || null;
         scheduledSessions.set(interaction.user.id, session);
 
         const selectChannel = new ChannelSelectMenuBuilder()
@@ -396,7 +420,7 @@ export async function handleSchedDatetimeSubmit(interaction: ModalSubmitInteract
 
     const session = scheduledSessions.get(interaction.user.id);
     if (!session || !session.channelId || !session.text) {
-        await interaction.reply({ content: '❌ Sesión caducada.', flags: [6] });
+        await interaction.reply({ content: '❌ Sesión caducada.', flags: [MessageFlags.Ephemeral] });
         return true;
     }
 
@@ -404,7 +428,7 @@ export async function handleSchedDatetimeSubmit(interaction: ModalSubmitInteract
     if (!targetDate || isNaN(targetDate.getTime()) || targetDate.getTime() <= Date.now()) {
         await interaction.reply({
             content: '❌ Fecha u hora inválida, o es una hora que ya ha pasado. Usa `DD/MM/YYYY` y `HH:MM`.',
-            flags: [6]
+            flags: [MessageFlags.Ephemeral]
         });
         return true;
     }
@@ -421,7 +445,7 @@ export async function handleSchedDatetimeSubmit(interaction: ModalSubmitInteract
     await interaction.reply({
         content: `📅 **Programador (5/5):** Fecha programada para el **${dateStr} a las ${timeStr}** (Hora Peninsular).\n¿Deseas que este mensaje se repita automáticamente?`,
         components: [rowRepeat],
-        flags: [6]
+        flags: [MessageFlags.Ephemeral]
     });
 
     return true;
@@ -443,6 +467,7 @@ export async function handleSchedFinalizeNo(interaction: ButtonInteraction): Pro
             guildId: interaction.guildId,
             userId: interaction.user.id,
             text: session.text,
+            image: session.image || null,
             channelId: session.channelId,
             roleId: session.roleId || null,
             date: session.date,
@@ -520,18 +545,18 @@ export async function handleSchedRepeatModalSubmit(interaction: ModalSubmitInter
     const totalTimes = timesStr ? parseInt(timesStr, 10) : 0;
 
     if ((isNaN(days) || days < 0) || (isNaN(hours) || hours < 0) || (days === 0 && hours === 0)) {
-        await interaction.reply({ content: '❌ Debes indicar al menos un valor válido mayor a 0 (en días o en horas).', flags: [6] });
+        await interaction.reply({ content: '❌ Debes indicar al menos un valor válido mayor a 0 (en días o en horas).', flags: [MessageFlags.Ephemeral] });
         return true;
     }
 
     if (isNaN(totalTimes) || totalTimes < 2) {
-        await interaction.reply({ content: '❌ El número total de repeticiones debe ser al menos 2.', flags: [6] });
+        await interaction.reply({ content: '❌ El número total de repeticiones debe ser al menos 2.', flags: [MessageFlags.Ephemeral] });
         return true;
     }
 
     const session = scheduledSessions.get(interaction.user.id);
     if (!session) {
-        await interaction.reply({ content: '❌ Sesión caducada.', flags: [6] });
+        await interaction.reply({ content: '❌ Sesión caducada.', flags: [MessageFlags.Ephemeral] });
         return true;
     }
 
@@ -541,6 +566,7 @@ export async function handleSchedRepeatModalSubmit(interaction: ModalSubmitInter
             guildId: interaction.guildId,
             userId: interaction.user.id,
             text: session.text,
+            image: session.image || null,
             channelId: session.channelId,
             roleId: session.roleId || null,
             date: session.date,
@@ -562,17 +588,17 @@ export async function handleSchedRepeatModalSubmit(interaction: ModalSubmitInter
 
         await interaction.reply({
             content: `✅ **¡Mensaje programado y recurrente configurado!**\n• Primer envío: **${session.date}** a las **${session.time}**\n• Se repetirá cada: **${repeatText.join(' y ')}**\n• Total de envíos: **${totalTimes}**`,
-            flags: [6]
+            flags: [MessageFlags.Ephemeral]
         });
     } catch (error) {
         console.error('❌ Error al guardar mensaje repetitivo:', error);
-        await interaction.reply({ content: '❌ Error al guardar en la base de datos.', flags: [6] });
+        await interaction.reply({ content: '❌ Error al guardar en la base de datos.', flags: [MessageFlags.Ephemeral] });
     }
 
     return true;
 }
 
-// 11. ⏰ WORKER EN SEGUNDO PLANO
+// 11. ⏰ WORKER EN SEGUNDO PLANO (Soporta texto e imagen en Embed)
 export function startScheduledWorker(client: Client) {
     console.log('⏰ [Worker] Sistema de mensajes programados iniciado en segundo plano.');
 
@@ -602,12 +628,27 @@ export function startScheduledWorker(client: Client) {
                         continue;
                     }
 
-                    let finalContent = msg.text;
-                    if (msg.roleId) {
-                        finalContent = `<@&${msg.roleId}>\n\n` + finalContent;
+                    let messageOptions: any = {};
+
+                    if (msg.image) {
+                        const embed = new EmbedBuilder()
+                            .setDescription(msg.text || '')
+                            .setImage(msg.image)
+                            .setColor(0xED4245);
+
+                        messageOptions = {
+                            content: msg.roleId ? `<@&${msg.roleId}>` : undefined,
+                            embeds: [embed]
+                        };
+                    } else {
+                        let finalContent = msg.text || '';
+                        if (msg.roleId) {
+                            finalContent = `<@&${msg.roleId}>\n\n` + finalContent;
+                        }
+                        messageOptions = { content: finalContent };
                     }
 
-                    await channel.send({ content: finalContent });
+                    await channel.send(messageOptions);
 
                     if (msg.repeats && msg.remainingTimes > 1) {
                         const currentScheduled = new Date(msg.scheduledAt);
