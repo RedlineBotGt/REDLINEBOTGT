@@ -249,8 +249,15 @@ export async function handleEncuestaReactionAdd(reaction: any, user: any) {
         const poll = await activePollsCol.findOne({ messageId: reaction.message.id });
         if (!poll) return;
 
-        const emojiString = reaction.emoji.id ? `<:${reaction.emoji.name}:${reaction.emoji.id}>` : reaction.emoji.name;
-        const matchedOption = poll.options.find((o: any) => o.emoji === emojiString || o.emoji === reaction.emoji.name);
+        // Comprobamos el emoji de la reacción de manera flexible (unicode o id)
+        const emojiValue = reaction.emoji.id ? `<:${reaction.emoji.name}:${reaction.emoji.id}>` : reaction.emoji.name;
+        
+        const matchedOption = poll.options.find((o: any) => 
+            o.emoji === emojiValue || 
+            o.emoji === reaction.emoji.name || 
+            emojiValue.includes(o.emoji) ||
+            o.emoji.includes(reaction.emoji.name)
+        );
 
         if (!matchedOption) return;
 
