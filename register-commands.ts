@@ -9,6 +9,7 @@ import { data as formsCommand } from './commands/forms';
 import { data as colocarFormCommand } from './commands/ColocarForm';
 import { data as borrarCommand } from './commands/borrar'; // 🗑️ Importamos el comando borrar
 import { data as dashsheetsCommand } from './commands/dashSheets'; // 📊 ¡Importamos el comando dashSheets!
+import { data as dadoCommand } from './commands/dado'; // 🎲 ¡Nuevo import para el comando dado!
 
 // Mapeamos los comandos con su nombre para validar que ninguno llegue undefined
 const commandList = [
@@ -22,6 +23,7 @@ const commandList = [
     { name: 'colocarForm', data: colocarFormCommand },
     { name: 'borrar', data: borrarCommand }, // 🗑️ Lo añadimos a la lista de registro
     { name: 'dashsheets', data: dashsheetsCommand }, // 📊 ¡Añadido el comando dashsheets aquí!
+    { name: 'dado', data: dadoCommand }, // 🎲 ¡Añadido el comando dado aquí!
 ];
 
 const commands = commandList.map(cmd => {
