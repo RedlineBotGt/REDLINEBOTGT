@@ -130,7 +130,7 @@ export async function handleEventChannelSelect(interaction: any): Promise<boolea
     return true;
 }
 
-// 4. Rol seleccionado o saltado -> Pregunta si se desea configurar repetición
+// 4. Rol seleccionado o saltado -> Pregunta si se desea configurar intervalo y repetición
 export async function handleEventRoleSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'event_select_role' && interaction.customId !== 'event_skip_role') return false;
 
@@ -149,11 +149,11 @@ export async function handleEventRoleSelect(interaction: any): Promise<boolean> 
     }
 
     const rowRepeat = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('event_repeat_yes').setLabel('🔄 Sí, configurar repetición y fecha').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('event_repeat_yes').setLabel('🔄 Sí, configurar intervalo y repetición').setStyle(ButtonStyle.Primary),
         new ButtonBuilder().setCustomId('event_repeat_no').setLabel('⚡ Enviar / Programar única vez').setStyle(ButtonStyle.Secondary)
     );
 
-    const contentMsg = '📅 **Paso 4/4:** ¿Deseas programar este evento para una fecha específica o configurarlo de forma recurrente?';
+    const contentMsg = '📅 **Paso 4/4:** ¿Deseas programar este evento para una fecha específica o configurarlo con intervalo recurrente?';
 
     if (interaction.isRepliable() && (interaction.deferred || interaction.replied)) {
         await interaction.followUp({ content: contentMsg, components: [rowRepeat], flags: [MessageFlags.Ephemeral] });
@@ -195,13 +195,13 @@ export async function handleEventRepeatNoButton(interaction: ButtonInteraction):
     return true;
 }
 
-// 5B. Si pulsa SÍ repetir -> Abre el Modal que incluye la fecha/hora de la primera publicación + frecuencia + total
+// 5B. Si pulsa SÍ repetir -> Abre el Modal con la 1ª publicación + Intervalo (Días, Horas, Minutos) + Nº total
 export async function handleEventRepeatYesButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_repeat_yes') return false;
 
     const modal = new ModalBuilder()
         .setCustomId('modal_event_repeat')
-        .setTitle('Configurar Evento Recurrente');
+        .setTitle('Configurar Evento con Intervalo');
 
     const dateInput = new TextInputBuilder()
         .setCustomId('event_first_date')
@@ -218,10 +218,24 @@ export async function handleEventRepeatYesButton(interaction: ButtonInteraction)
         .setRequired(true);
 
     const daysInput = new TextInputBuilder()
-        .setCustomId('event_repeat_days')
-        .setLabel('¿Cada cuántos días se repite?')
+        .setCustomId('event_interval_days')
+        .setLabel('Intervalo: Días')
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: 7 (Opcional)')
+        .setPlaceholder('Ej: 0')
+        .setRequired(false);
+
+    const hoursInput = new TextInputBuilder()
+        .setCustomId('event_interval_hours')
+        .setLabel('Intervalo: Horas')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Ej: 2')
+        .setRequired(false);
+
+    const minutesInput = new TextInputBuilder()
+        .setCustomId('event_interval_minutes')
+        .setLabel('Intervalo: Minutos')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Ej: 30')
         .setRequired(false);
 
     const timesInput = new TextInputBuilder()
@@ -235,6 +249,8 @@ export async function handleEventRepeatYesButton(interaction: ButtonInteraction)
         new ActionRowBuilder<TextInputBuilder>().addComponents(dateInput),
         new ActionRowBuilder<TextInputBuilder>().addComponents(timeInput),
         new ActionRowBuilder<TextInputBuilder>().addComponents(daysInput),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(hoursInput),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(minutesInput),
         new ActionRowBuilder<TextInputBuilder>().addComponents(timesInput)
     );
 
