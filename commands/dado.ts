@@ -1,5 +1,6 @@
 import { 
     ChatInputCommandInteraction, 
+    SlashCommandBuilder,
     ModalBuilder, 
     TextInputBuilder, 
     TextInputStyle, 
@@ -7,6 +8,11 @@ import {
     ModalSubmitInteraction, 
     MessageFlags 
 } from 'discord.js';
+
+// Definición oficial del Slash Command para que el script de registro lo reconozca
+export const data = new SlashCommandBuilder()
+    .setName('dado')
+    .setDescription('Lanza un dado personalizado indicando el número de caras.');
 
 // 1. Ejecuta el comando /dado y abre el modal preguntando las caras
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -46,7 +52,7 @@ export async function handleDadoModalSubmit(interaction: ModalSubmitInteraction)
     // Número al azar entre 1 y el número de caras indicado
     const resultado = Math.floor(Math.random() * caras) + 1;
 
-    // Se publica para que todos en el canal puedan ver la tirada
+    // Se publica públicamente para que todos vean la tirada
     await interaction.reply({
         content: `🎲 **¡Lanzamiento de Dado!**\n> Dado de **${caras} caras**: Ha salido el **${resultado}** 🎯`
     });
