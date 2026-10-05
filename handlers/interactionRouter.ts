@@ -50,6 +50,19 @@ import {
     handleSorteoLaunchButton 
 } from './sorteoHandler';
 
+// 📊 Sistema de Encuestas (DashStaff)
+import {
+    handleEncuestaStart,
+    handleEncuestaStep1Submit,
+    handleEncuestaStep2Submit,
+    handleEncuestaAddMoreButton,
+    handleEncuestaAddSingleSubmit,
+    handleEncuestaOptionsDoneButton,
+    handleEncuestaChannelSelect,
+    handleEncuestaRoleSelection,
+    handleEncuestaLogChannelSelect
+} from './encuestaSystem';
+
 import { handleFormCreateModal } from './formCreateModal';
 import { 
     handleDashColocarButton, 
@@ -86,7 +99,6 @@ import {
     handleCloseTicketButton, 
     activeTicketButtons 
 } from './ticketButtonHandler';
-
 import { 
     handleDashScheduledButton,
     handleSchedNewButton,
@@ -120,7 +132,7 @@ import {
 
 export async function handleInteraction(interaction: Interaction) {
     try {
-// 1. Manejo de Comandos de Barra (Slash Commands)
+        // 1. Manejo de Comandos de Barra (Slash Commands)
         if (interaction.isChatInputCommand()) {
             if (interaction.commandName === 'dash') {
                 await dash.execute(interaction);
@@ -147,8 +159,7 @@ export async function handleInteraction(interaction: Interaction) {
             }
             return;
         }
-
-        // 2. Manejo de Menús Desplegables de Texto (String Select Menus)
+  // 2. Manejo de Menús Desplegables de Texto (String Select Menus)
         if (interaction.isStringSelectMenu()) {
             if (interaction.customId === 'dash_select_colocar_form') {
                 await handleDashColocarFormSelect(interaction);
@@ -163,6 +174,7 @@ export async function handleInteraction(interaction: Interaction) {
             }
             return;
         }
+
         // 2.1. Manejo de Menús Desplegables de Canales (Channel Select Menus)
         if (interaction.isChannelSelectMenu()) {
             if (interaction.customId === 'sheets_select_channel') {
@@ -196,11 +208,14 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleWelcomeChannelSelect(interaction); 
             } else if (interaction.customId === 'sorteo_select_channel') {
                 await handleSorteoChannelSelect(interaction); 
+            } else if (interaction.customId === 'encuesta_select_channel') {
+                await handleEncuestaChannelSelect(interaction); // 📊 Canal de publicación encuesta
+            } else if (interaction.customId === 'encuesta_select_log_channel') {
+                await handleEncuestaLogChannelSelect(interaction); // 📊 Canal de logs encuesta
             }
             return;
         }
-
-        // 2.2. Manejo de Menús Desplegables de Roles (Role Select Menus)
+   // 2.2. Manejo de Menús Desplegables de Roles (Role Select Menus)
         if (interaction.isRoleSelectMenu()) {
             if (interaction.customId === 'sheets_select_role') {
                 if (!interaction.deferred && !interaction.replied) {
@@ -217,10 +232,11 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleRrRoleSelect(interaction);
             } else if (interaction.customId === 'sorteo_select_role') {
                 await handleSorteoRoleSelect(interaction); 
+            } else if (interaction.customId === 'encuesta_select_role') {
+                await handleEncuestaRoleSelection(interaction); // 📊 Rol encuesta
             }
             return;
         }
-
         // 3. Manejo de Botones interactivos
         if (interaction.isButton()) {
             if (interaction.customId.startsWith('sheets_') || interaction.customId.startsWith('pub_')) {
@@ -232,6 +248,14 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleDashAvisosButton(interaction); 
             } else if (interaction.customId === 'dash_btn_event_create') {
                 await handleDashEventButton(interaction); 
+            } else if (interaction.customId === 'dash_btn_encuesta_create') {
+                await handleEncuestaStart(interaction); // 📊 Botón panel staff para crear encuesta
+            } else if (interaction.customId === 'encuesta_add_more') {
+                await handleEncuestaAddMoreButton(interaction); // 📊 Botón añadir más opciones encuesta
+            } else if (interaction.customId === 'encuesta_options_done') {
+                await handleEncuestaOptionsDoneButton(interaction); // 📊 Botón continuar encuesta
+            } else if (interaction.customId === 'encuesta_skip_role') {
+                await handleEncuestaRoleSelection(interaction); // 📊 Botón omitir rol encuesta
             } else if (['event_rsvp_yes', 'event_rsvp_maybe', 'event_rsvp_no'].includes(interaction.customId)) {
                 await handleEventRsvpButton(interaction); 
             } else if (interaction.customId === 'event_repeat_yes') {
@@ -303,6 +327,7 @@ export async function handleInteraction(interaction: Interaction) {
             }
             return;
         }
+
         // 4. Manejo de Envíos de Formularios (Modals)
         if (interaction.isModalSubmit()) {
             if (interaction.customId === 'modal_event_create') {
@@ -311,6 +336,12 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleEventSingleDatetimeSubmit(interaction); 
             } else if (interaction.customId === 'modal_event_repeat') {
                 await handleEventRepeatModalSubmit(interaction); 
+            } else if (interaction.customId === 'modal_encuesta_step1') {
+                await handleEncuestaStep1Submit(interaction); // 📊 Modal título/desc encuesta
+            } else if (interaction.customId === 'modal_encuesta_step2') {
+                await handleEncuestaStep2Submit(interaction); // 📊 Modal opciones 1, 2, 3 encuesta
+            } else if (interaction.customId === 'modal_encuesta_add_single') {
+                await handleEncuestaAddSingleSubmit(interaction); // 📊 Modal opción extra encuesta
             } else if (interaction.customId === 'modal_envio_reporte') {
                 await handleReportModalSubmit(interaction);
             } else if (interaction.customId === 'modal_envio_defensa') {
