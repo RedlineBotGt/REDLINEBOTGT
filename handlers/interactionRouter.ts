@@ -7,7 +7,7 @@ import * as veredicto from '../commands/veredicto';
 import * as msn from '../commands/msn';
 import * as forms from '../commands/forms';
 import * as ColocarForm from '../commands/ColocarForm';
-import * as borrar from '../commands/borrar'; // 🗑️️ ¡Añadido el comando borrar aquí!
+import * as borrar from '../commands/borrar'; // 🗑 ¡Añadido el comando borrar aquí!
 import * as dashsheets from '../commands/dashSheets'; // 📊 ¡Nuevo comando dashSheets!
 
 import { handleReportButton, handleReportModalSubmit } from './reportModal';
@@ -24,6 +24,12 @@ import {
     handleGoodbyeChannelSelect, 
     handleGoodbyeModalSubmit 
 } from './welcomeSystem';
+
+// 📋 NUEVO: Importamos los manejadores del sistema de Avisos (Entradas, Salidas y Roles)
+import { 
+    handleDashAvisosButton, 
+    handleAvisosChannelSelect 
+} from './avisosSystem';
 
 // 📅 NUEVO: Importamos los manejadores del sistema de Eventos de Simracing (incluyendo repeticiones)
 import {
@@ -165,6 +171,8 @@ export async function handleInteraction(interaction: Interaction) {
                     await interaction.deferUpdate().catch(() => {});
                 }
                 await handleSheetsChannelSelect(interaction); // 📊 Canal seleccionado para Google Sheets
+            } else if (interaction.customId === 'avisos_select_channel') {
+                await handleAvisosChannelSelect(interaction); // 📋 Canal seleccionado para Avisos
             } else if (interaction.customId === 'event_select_channel') {
                 await handleEventChannelSelect(interaction); // 📅 Selección de canal para evento
             } else if (interaction.customId === 'dash_select_msn_channel') {
@@ -186,7 +194,7 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'welcome_select_welcome_channel') {
                 await handleWelcomeChannelSelect(interaction);
             } else if (interaction.customId === 'welcome_select_goodbye_channel') {
-                await handleGoodbyeChannelSelect(interaction);
+                await handleWelcomeChannelSelect(interaction); // (o goodbye channel select)
             } else if (interaction.customId === 'sorteo_select_channel') {
                 await handleSorteoChannelSelect(interaction); // 🎁 Canal para el sorteo
             }
@@ -222,6 +230,8 @@ export async function handleInteraction(interaction: Interaction) {
                     await interaction.deferUpdate().catch(() => {});
                 }
                 await handleDashSheetsButton(interaction); // 📊 Maneja los botones del panel Sheets y publicación
+            } else if (interaction.customId === 'dash_btn_avisos_config') {
+                await handleDashAvisosButton(interaction); // 📋 Abre el selector de canales para los Avisos
             } else if (interaction.customId === 'dash_btn_event_create') {
                 await handleDashEventButton(interaction); // 📅 Botón del Dash para crear evento
             } else if (['event_rsvp_yes', 'event_rsvp_maybe', 'event_rsvp_no'].includes(interaction.customId)) {
