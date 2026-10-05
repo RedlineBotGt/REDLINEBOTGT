@@ -1,21 +1,21 @@
 import { Interaction } from 'discord.js';
 import * as dash from '../commands/dash';
-import * as dashstaff from '../commands/dashstaff'; // ⚡ ¡Nuevo import para el panel de staff!
+import * as dashstaff from '../commands/dashstaff'; // ⚡ Panel operativo de staff
 import * as reporte from '../commands/reporte';
 import * as setupdefensa from '../commands/setupdefensa';
 import * as veredicto from '../commands/veredicto';
 import * as msn from '../commands/msn';
 import * as forms from '../commands/forms';
 import * as ColocarForm from '../commands/ColocarForm';
-import * as borrar from '../commands/borrar'; // 🗑 ¡Añadido el comando borrar aquí!
-import * as dashsheets from '../commands/dashSheets'; // 📊 ¡Nuevo comando dashSheets!
+import * as borrar from '../commands/borrar'; 
+import * as dashsheets from '../commands/dashSheets'; 
 
 import { handleReportButton, handleReportModalSubmit } from './reportModal';
 import { handleDefensaButton, handleDefensaModalSubmit } from './defensModal';
 import { handleVeredictoModalSubmit } from './veredictoModal';
 import { handleMsnModalSubmit } from './msnModal';
 
-// 👋 NUEVO: Importamos los manejadores del sistema de Bienvenidas y Despedidas
+// 👋 Sistema de Bienvenidas y Despedidas
 import { 
     handleDashWelcomeButton, 
     handleWelcomeMenuButton, 
@@ -25,13 +25,13 @@ import {
     handleGoodbyeModalSubmit 
 } from './welcomeSystem';
 
-// 📋 NUEVO: Importamos los manejadores del sistema de Avisos (Entradas, Salidas y Roles)
+// 📋 Sistema de Avisos (Entradas, Salidas y Roles)
 import { 
     handleDashAvisosButton, 
     handleAvisosChannelSelect 
 } from './avisosSystem';
 
-// 📅 NUEVO: Importamos los manejadores del sistema de Eventos de Simracing (incluyendo repeticiones)
+// 📅 Sistema de Eventos de Simracing
 import {
     handleDashEventButton,
     handleEventChannelSelect,
@@ -43,7 +43,7 @@ import {
     handleEventRepeatModalSubmit
 } from './eventSystem';
 
-// 🎁 NUEVO: Importamos los manejadores del sistema de Sorteos
+// 🎁 Sistema de Sorteos
 import { 
     handleDashSorteoButton, 
     handleSorteoModalSubmit, 
@@ -82,7 +82,7 @@ import {
     handleDashOpenPreguntasButton 
 } from './dashCreateFormHandler'; 
 
-// 🎟️ NUEVO: Importamos los manejadores del sistema de tickets
+// 🎟️ Sistema de tickets
 import { 
     handleDashCrearBotonButton, 
     handleTicketModalSubmit, 
@@ -92,10 +92,14 @@ import {
     activeTicketButtons 
 } from './ticketButtonHandler';
 
-// 📅 NUEVO: Importamos los manejadores del sistema de Mensajes Programados
+// 📅 NUEVO SISTEMA: Mensajes Programados con Plantillas y BD
 import { 
     handleDashScheduledButton,
-    handleSchedContentSubmit,
+    handleSchedNewButton,
+    handleSchedExistingButton,
+    handleSchedExistingSelect,
+    handleSchedActionButtons,
+    handleSchedModalSubmit,
     handleSchedChannelSelect,
     handleSchedRoleSelection,
     handleSchedDatetimeSubmit,
@@ -104,7 +108,7 @@ import {
     handleSchedRepeatModalSubmit
 } from './scheduledMessage';
 
-// 🎭 NUEVO: Importamos los manejadores del sistema de Roles por Reacción (incluyendo gestión y borrado de BD)
+// 🎭 Roles por Reacción
 import { 
     handleDashRrButton,
     handleRrContentSubmit,
@@ -115,7 +119,7 @@ import {
     handleRrStartCreate
 } from './reactionRoles';
 
-// 📊 NUEVO: Importamos los manejadores del panel de Google Sheets
+// 📊 Panel de Google Sheets
 import { 
     handleDashSheetsButton, 
     handleSheetsChannelSelect, 
@@ -129,7 +133,7 @@ export async function handleInteraction(interaction: Interaction) {
             if (interaction.commandName === 'dash') {
                 await dash.execute(interaction);
             } else if (interaction.commandName === 'dashstaff') {
-                await dashstaff.execute(interaction); // ⚡ Ejecuta el panel operativo de staff
+                await dashstaff.execute(interaction); 
             } else if (interaction.commandName === 'setup-reporte') {
                 await reporte.execute(interaction);
             } else if (interaction.commandName === 'setupdefensa') {
@@ -145,7 +149,7 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.commandName === 'borrar') {
                 await borrar.execute(interaction);
             } else if (interaction.commandName === 'dashsheets') {
-                await dashsheets.execute(interaction); // 📊 Ejecuta el panel de Google Sheets
+                await dashsheets.execute(interaction); 
             }
             return;
         }
@@ -159,22 +163,24 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'dash_select_editar_form') {
                 await handleDashEditFormSelect(interaction);
             } else if (interaction.customId === 'rr_select_existing_message') {
-                await handleRrExistingSelect(interaction); // 🎭 Selección de mensaje guardado de RR
+                await handleRrExistingSelect(interaction); 
+            } else if (interaction.customId === 'sched_select_existing') {
+                await handleSchedExistingSelect(interaction); // 📅 Selección de plantilla programada existente
             }
             return;
         }
+
         // 2.1. Manejo de Menús Desplegables de Canales (Channel Select Menus)
         if (interaction.isChannelSelectMenu()) {
             if (interaction.customId === 'sheets_select_channel') {
-                // ⚡ DIFERIR AL INSTANTE EN EL ROUTER PARA EVITAR TIMEOUT DE GOOGLE SHEETS
                 if (!interaction.deferred && !interaction.replied) {
                     await interaction.deferUpdate().catch(() => {});
                 }
-                await handleSheetsChannelSelect(interaction); // 📊 Canal seleccionado para Google Sheets
+                await handleSheetsChannelSelect(interaction); 
             } else if (interaction.customId === 'avisos_select_channel') {
-                await handleAvisosChannelSelect(interaction); // 📋 Canal seleccionado para Avisos
+                await handleAvisosChannelSelect(interaction); 
             } else if (interaction.customId === 'event_select_channel') {
-                await handleEventChannelSelect(interaction); // 📅 Selección de canal para evento
+                await handleEventChannelSelect(interaction); 
             } else if (interaction.customId === 'dash_select_msn_channel') {
                 await handleDashMsnChannelSelect(interaction);
             } else if (interaction.customId === 'dash_select_verd_channel') {
@@ -188,15 +194,15 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId.startsWith('ticket_deploy_channel_')) {
                 await handleTicketChannelSelect(interaction);
             } else if (interaction.customId === 'sched_select_channel') {
-                await handleSchedChannelSelect(interaction);
+                await handleSchedChannelSelect(interaction); // 📅 Canal seleccionado para programar
             } else if (interaction.customId === 'rr_select_channel') {
                 await handleRrChannelSelect(interaction);
             } else if (interaction.customId === 'welcome_select_welcome_channel') {
                 await handleWelcomeChannelSelect(interaction);
             } else if (interaction.customId === 'welcome_select_goodbye_channel') {
-                await handleWelcomeChannelSelect(interaction); // (o goodbye channel select)
+                await handleWelcomeChannelSelect(interaction); 
             } else if (interaction.customId === 'sorteo_select_channel') {
-                await handleSorteoChannelSelect(interaction); // 🎁 Canal para el sorteo
+                await handleSorteoChannelSelect(interaction); 
             }
             return;
         }
@@ -204,42 +210,41 @@ export async function handleInteraction(interaction: Interaction) {
         // 2.2. Manejo de Menús Desplegables de Roles (Role Select Menus)
         if (interaction.isRoleSelectMenu()) {
             if (interaction.customId === 'sheets_select_role') {
-                // ⚡ DIFERIR AL INSTANTE EN EL ROUTER
                 if (!interaction.deferred && !interaction.replied) {
                     await interaction.deferUpdate().catch(() => {});
                 }
-                await handleSheetsRoleSelect(interaction); // 📊 Rol seleccionado para Google Sheets
+                await handleSheetsRoleSelect(interaction); 
             } else if (interaction.customId === 'event_select_role') {
-                await handleEventRoleSelect(interaction); // 📅 Selección de rol de campeonato para evento
+                await handleEventRoleSelect(interaction); 
             } else if (interaction.customId === 'dash_select_verd_role') {
                 await handleDashVeredictoRoleSelect(interaction);
             } else if (interaction.customId === 'sched_select_role') {
-                await handleSchedRoleSelection(interaction);
+                await handleSchedRoleSelection(interaction); // 📅 Rol seleccionado para mención programada
             } else if (interaction.customId === 'rr_select_role') {
                 await handleRrRoleSelect(interaction);
             } else if (interaction.customId === 'sorteo_select_role') {
-                await handleSorteoRoleSelect(interaction); // 🎁 Rol participante para el sorteo
+                await handleSorteoRoleSelect(interaction); 
             }
             return;
         }
+
         // 3. Manejo de Botones interactivos
         if (interaction.isButton()) {
             if (interaction.customId.startsWith('sheets_') || interaction.customId.startsWith('pub_')) {
-                // ⚡ DIFERIR AL INSTANTE EN EL ROUTER ANTES DE LLAMAR A LA API DE SHEETS
                 if (!interaction.deferred && !interaction.replied) {
                     await interaction.deferUpdate().catch(() => {});
                 }
-                await handleDashSheetsButton(interaction); // 📊 Maneja los botones del panel Sheets y publicación
+                await handleDashSheetsButton(interaction); 
             } else if (interaction.customId === 'dash_btn_avisos_config') {
-                await handleDashAvisosButton(interaction); // 📋 Abre el selector de canales para los Avisos
+                await handleDashAvisosButton(interaction); 
             } else if (interaction.customId === 'dash_btn_event_create') {
-                await handleDashEventButton(interaction); // 📅 Botón del Dash para crear evento
+                await handleDashEventButton(interaction); 
             } else if (['event_rsvp_yes', 'event_rsvp_maybe', 'event_rsvp_no'].includes(interaction.customId)) {
-                await handleEventRsvpButton(interaction); // 📅 Botones RSVP de asistencia (Verde, Interrogante, Rojo)
+                await handleEventRsvpButton(interaction); 
             } else if (interaction.customId === 'event_repeat_yes') {
-                await handleEventRepeatYesButton(interaction); // 🔄 Botón para activar repetición de eventos
+                await handleEventRepeatYesButton(interaction); 
             } else if (interaction.customId === 'event_repeat_no') {
-                await handleEventRepeatNoButton(interaction); // ✅ Botón para finalizar creación de eventos sin repetir
+                await handleEventRepeatNoButton(interaction); 
             } else if (interaction.customId === 'dash_btn_crear_form') {
                 await handleDashCreateFormButton(interaction); 
             } else if (interaction.customId === 'dash_btn_abrir_preguntas') {
@@ -253,27 +258,33 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'dash_btn_crear_boton') {
                 await handleDashCrearBotonButton(interaction);
             } else if (interaction.customId === 'dash_btn_scheduled_msg') {
-                await handleDashScheduledButton(interaction);
+                await handleDashScheduledButton(interaction); // 📅 Abre menú Crear Nuevo / Existente
+            } else if (interaction.customId === 'sched_btn_new') {
+                await handleSchedNewButton(interaction); // 📅 Abre modal para crear plantilla nueva
+            } else if (interaction.customId === 'sched_btn_existing') {
+                await handleSchedExistingButton(interaction); // 📅 Abre selector de plantillas existentes
+            } else if (interaction.customId.startsWith('sched_action_')) {
+                await handleSchedActionButtons(interaction); // 📅 Acciones sobre plantilla (programar, editar, borrar)
+            } else if (interaction.customId === 'sched_skip_role') {
+                await handleSchedRoleSelection(interaction); // 📅 Saltar mención de rol
+            } else if (interaction.customId === 'sched_repeat_yes') {
+                await handleSchedRepeatYes(interaction); // 📅 Configurar repetición
+            } else if (interaction.customId === 'sched_repeat_no') {
+                await handleSchedFinalizeNo(interaction); // 📅 Finalizar sin repetición
             } else if (interaction.customId === 'rr_btn_create') {
-                await handleDashRrButton(interaction); // 🎭 Abre el panel principal de gestión de RR
+                await handleDashRrButton(interaction); 
             } else if (interaction.customId === 'rr_btn_start_create') {
-                await handleRrStartCreate(interaction); // 🎭 Botón "Crear Nuevo" dentro del panel de RR
+                await handleRrStartCreate(interaction); 
             } else if (interaction.customId.startsWith('rr_btn_delete_config_')) {
-                await handleRrDeleteConfig(interaction); // 🎭 Botón para borrar configuración de la BD
+                await handleRrDeleteConfig(interaction); 
             } else if (interaction.customId === 'dash_btn_welcome_config') {
                 await handleDashWelcomeButton(interaction);
             } else if (interaction.customId === 'welcome_menu_bienvenida' || interaction.customId === 'welcome_menu_despedida') {
                 await handleWelcomeMenuButton(interaction);
             } else if (interaction.customId === 'dash_btn_sorteo_create') {
-                await handleDashSorteoButton(interaction); // 🎁 Abre el modal de sorteo desde el /dash
+                await handleDashSorteoButton(interaction); 
             } else if (interaction.customId.startsWith('sorteo_launch_')) {
-                await handleSorteoLaunchButton(interaction); // 🎲 Ejecuta el sorteo público en 5 segundos
-            } else if (interaction.customId === 'sched_skip_role') {
-                await handleSchedRoleSelection(interaction);
-            } else if (interaction.customId === 'sched_repeat_yes') {
-                await handleSchedRepeatYes(interaction);
-            } else if (interaction.customId === 'sched_repeat_no') {
-                await handleSchedFinalizeNo(interaction);
+                await handleSorteoLaunchButton(interaction); 
             } else if (interaction.customId.startsWith('dash_confirm_borrar_')) {
                 await handleDashDeleteConfirmButton(interaction); 
             } else if (interaction.customId === 'dash_btn_msn_mensaje') {
@@ -303,9 +314,9 @@ export async function handleInteraction(interaction: Interaction) {
         // 4. Manejo de Envíos de Formularios (Modals)
         if (interaction.isModalSubmit()) {
             if (interaction.customId === 'modal_event_create') {
-                await handleEventModalSubmit(interaction); // 📅 Envío de datos del modal de eventos
+                await handleEventModalSubmit(interaction); 
             } else if (interaction.customId === 'modal_event_repeat') {
-                await handleEventRepeatModalSubmit(interaction); // 📋 Modal de configuración de repeticiones de eventos
+                await handleEventRepeatModalSubmit(interaction); 
             } else if (interaction.customId === 'modal_envio_reporte') {
                 await handleReportModalSubmit(interaction);
             } else if (interaction.customId === 'modal_envio_defensa') {
@@ -314,12 +325,12 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleVeredictoModalSubmit(interaction);
             } else if (interaction.customId.startsWith('modal_msn_')) {
                 await handleMsnModalSubmit(interaction);
-            } else if (interaction.customId === 'modal_sched_content') {
-                await handleSchedContentSubmit(interaction);
+            } else if (interaction.customId === 'modal_sched_new' || interaction.customId === 'modal_sched_edit') {
+                await handleSchedModalSubmit(interaction); // 📅 Guardar o editar plantilla en BD
             } else if (interaction.customId === 'modal_sched_datetime') {
-                await handleSchedDatetimeSubmit(interaction);
+                await handleSchedDatetimeSubmit(interaction); // 📅 Guardar fecha/hora programada
             } else if (interaction.customId === 'modal_sched_repeat') {
-                await handleSchedRepeatModalSubmit(interaction);
+                await handleSchedRepeatModalSubmit(interaction); // 📅 Guardar frecuencia de repetición
             } else if (interaction.customId === 'modal_rr_content') { 
                 await handleRrContentSubmit(interaction);
             } else if (interaction.customId === 'modal_welcome_text') {
@@ -329,7 +340,7 @@ export async function handleInteraction(interaction: Interaction) {
             } else if (interaction.customId === 'modal_crear_ticket_config') {
                 await handleTicketModalSubmit(interaction);
             } else if (interaction.customId === 'modal_sorteo_config') {
-                await handleSorteoModalSubmit(interaction); // 🎁 Guarda datos del modal y pide canal
+                await handleSorteoModalSubmit(interaction); 
             } else if (interaction.customId === 'modal_dash_form_titulo') {
                 await handleDashFormTituloModal(interaction); 
             } else if (interaction.customId === 'modal_crear_formulario_preguntas') {
