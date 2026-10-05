@@ -1,12 +1,13 @@
 import http from 'http';
-import { Client, GatewayIntentBits } from 'discord.js';
+import { Client, GatewayIntentBits, Partials } from 'discord.js';
 import { handleInteraction } from './handlers/interactionRouter';
 import { startScheduledWorker } from './handlers/scheduledMessage';
 import { initReactionRoles, handleReactionAdd, handleReactionRemove } from './handlers/reactionRoles';
-import { setupWelcomeSystem } from './handlers/welcomeSystem'; // 👋 Importamos la función general de bienvenidas/despedidas
-import { setupEventWorker } from './handlers/eventSystem'; // 📅 Importamos el worker del organizador de eventos
-import { setupNicknameSystem } from './handlers/nicknameSystem'; // 🏷️ Importamos el sistema de apodos jerárquicos por rol
-import { setupAvisosSystem } from './handlers/avisosSystem'; // 📋 ¡Nuevo! Importamos el sistema de Avisos y Registros
+import { handleEncuestaReactionAdd } from './handlers/encuestaSystem'; // 📊 ¡Importante para capturar los votos de las encuestas!
+import { setupWelcomeSystem } from './handlers/welcomeSystem'; 
+import { setupEventWorker } from './handlers/eventSystem'; 
+import { setupNicknameSystem } from './handlers/nicknameSystem'; 
+import { setupAvisosSystem } from './handlers/avisosSystem'; 
 
 // 0. Servidor HTTP auxiliar obligatorio para satisfacer el puerto de Render
 const server = http.createServer((req, res) => {
@@ -19,41 +20,35 @@ server.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`🌐 Servidor HTTP auxiliar escuchando en el puerto ${PORT}`);
 });
 
-// 1. Inicialización limpia con los intents multiserver necesarios
+// 1. Inicialización limpia con intents y partials imprescindibles
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMembers, // 🛡 Imprescindible para detectar miembros nuevos, salidas y cambios de roles
+        GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessageReactions
+    ],
+    partials: [
+        Partials.Message, 
+        Partials.Channel, 
+        Partials.Reaction // 👈 Imprescindible para leer reacciones en mensajes ya publicados
     ]
 });
 
-// 2. Evento de arranque (Arrancamos workers y sincronizamos sistemas persistentes)
+// 2. Evento de arranque
 client.once('ready', async () => {
     console.log(`✅ REDLINE GT Bot conectado y operativo como ${client.user?.tag}`);
-    
-    // ⏰ Activamos el bucle en segundo plano de mensajes programados
+
     startScheduledWorker(client);
-    
-    // 🎭 Sincronizamos y recuperamos los mensajes de roles por reacción desde MongoDB
     await initReactionRoles(client);
-
-    // 👋 Activamos el sistema completo de bienvenidas y despedidas
     setupWelcomeSystem(client);
-
-    // 📋 ¡Nuevo! Activamos el sistema de avisos de entradas, salidas y roles
     setupAvisosSystem(client);
-
-    // 📅 Activamos el worker de eventos, recordatorios y gestión de roles temporales
     setupEventWorker(client);
-
-    // 🏷️ Activamos el sistema de apodos automáticos según jerarquía de roles
     setupNicknameSystem(client);
 });
 
-// 3. Enrutador ciego: deriva cualquier interacción al sistema modular externo
+// 3. Enrutador de interacciones
 client.on('interactionCreate', async (interaction) => {
     try {
         await handleInteraction(interaction);
@@ -62,10 +57,11 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-// 🎭 4. Escuchas globales de Reacciones (Asignan y retiran roles de forma persistente)
+// 4. Escuchas globales de Reacciones (Roles y Encuestas)
 client.on('messageReactionAdd', async (reaction, user) => {
     try {
         await handleReactionAdd(reaction, user);
+        await handleEncuestaReactionAdd(reaction, user); // 📊 ¡Aquí procesamos el voto de la encuesta y enviamos el log!
     } catch (error) {
         console.error('❌ Error en messageReactionAdd:', error);
     }
