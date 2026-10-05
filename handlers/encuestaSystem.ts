@@ -110,7 +110,9 @@ export async function handleEncuestaOpenModalButton(interaction: ButtonInteracti
             flags: [MessageFlags.Ephemeral]
         });
         return true;
-const modal = new ModalBuilder()
+    }
+
+    const modal = new ModalBuilder()
         .setCustomId('modal_encuesta_final')
         .setTitle('Detalles de la Encuesta');
 
@@ -233,6 +235,7 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
 
     return true;
 }
+
 // 5. 🗳️ LISTENER DE REACCIONES (Canal de respuestas / Logs)
 export async function handleEncuestaReactionAdd(reaction: any, user: any) {
     try {
