@@ -57,7 +57,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             .setCustomId('dash_btn_veredicto')
             .setLabel('Veredicto')
             .setStyle(ButtonStyle.Danger)
-            .setEmoji('⚖️')
+            .setEmoji('⚖️'),
+        new ButtonBuilder()
+            .setCustomId('dash_btn_encuesta_create')
+            .setLabel('Encuesta')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('📊')
     );
 
     await interaction.reply({
