@@ -195,7 +195,7 @@ export async function handleEventRepeatNoButton(interaction: ButtonInteraction):
     return true;
 }
 
-// 5B. Si pulsa SÍ repetir -> Abre el Modal con la 1ª publicación + Intervalo (Días, Horas, Minutos) + Nº total
+// 5B. Si pulsa SÍ repetir -> Abre el Modal (Optimizado exactamente a 5 filas para cumplir con Discord)
 export async function handleEventRepeatYesButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_repeat_yes') return false;
 
@@ -217,26 +217,12 @@ export async function handleEventRepeatYesButton(interaction: ButtonInteraction)
         .setPlaceholder('Ej: 21:30')
         .setRequired(true);
 
-    const daysInput = new TextInputBuilder()
-        .setCustomId('event_interval_days')
-        .setLabel('Intervalo: Días')
+    const intervalInput = new TextInputBuilder()
+        .setCustomId('event_interval_hm')
+        .setLabel('Intervalo (Horas:Minutos o Días:Horas)')
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: 0')
-        .setRequired(false);
-
-    const hoursInput = new TextInputBuilder()
-        .setCustomId('event_interval_hours')
-        .setLabel('Intervalo: Horas')
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: 2')
-        .setRequired(false);
-
-    const minutesInput = new TextInputBuilder()
-        .setCustomId('event_interval_minutes')
-        .setLabel('Intervalo: Minutos')
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: 30')
-        .setRequired(false);
+        .setPlaceholder('Ej: 2:30 (o bien 1:0:0 para 1 día)')
+        .setRequired(true);
 
     const timesInput = new TextInputBuilder()
         .setCustomId('event_repeat_times')
@@ -248,9 +234,7 @@ export async function handleEventRepeatYesButton(interaction: ButtonInteraction)
     modal.addComponents(
         new ActionRowBuilder<TextInputBuilder>().addComponents(dateInput),
         new ActionRowBuilder<TextInputBuilder>().addComponents(timeInput),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(daysInput),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(hoursInput),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(minutesInput),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(intervalInput),
         new ActionRowBuilder<TextInputBuilder>().addComponents(timesInput)
     );
 
@@ -352,21 +336,14 @@ export async function handleEventSingleDatetimeSubmit(interaction: ModalSubmitIn
     return true;
 }
 
-// 7. Guardar Evento Recurrente con Intervalo (Días, Horas, Minutos)
+// 7. Guardar Evento Recurrente con formato de intervalo simplificado (Ej: "2:30" o "1:0:0")
 export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_event_repeat') return false;
 
     const dateStr = interaction.fields.getTextInputValue('event_first_date').trim();
     const timeStr = interaction.fields.getTextInputValue('event_first_time').trim();
-    const daysStr = interaction.fields.getTextInputValue('event_interval_days').trim();
-    const hoursStr = interaction.fields.getTextInputValue('event_interval_hours').trim();
-    const minutesStr = interaction.fields.getTextInputValue('event_interval_minutes').trim();
+    const intervalStr = interaction.fields.getTextInputValue('event_interval_hm').trim();
     const timesStr = interaction.fields.getTextInputValue('event_repeat_times').trim();
-
-    const days = daysStr ? parseInt(daysStr, 10) : 0;
-    const hours = hoursStr ? parseInt(hoursStr, 10) : 0;
-    const minutes = minutesStr ? parseInt(minutesStr, 10) : 0;
-    const totalTimes = parseInt(timesStr, 10);
 
     const scheduledAt = parseMadridDateTime(dateStr, timeStr);
     if (!scheduledAt || isNaN(scheduledAt.getTime())) {
@@ -374,12 +351,24 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
         return true;
     }
 
-    const intervalMs = (days * 24 * 60 * 60 * 1000) + (hours * 60 * 60 * 1000) + (minutes * 60 * 1000);
-    if (isNaN(intervalMs) || intervalMs <= 0) {
-        await interaction.reply({ content: '❌ Debes configurar un intervalo válido mayor a 0 (días, horas o minutos).', flags: [MessageFlags.Ephemeral] });
+    // Parsear intervalo en formato "Horas:Minutos" o "Días:Horas:Minutos"
+    const parts = intervalStr.split(':').map(Number);
+    let intervalMs = 0;
+
+    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        // Horas:Minutos
+        intervalMs = (parts[0] * 60 * 60 * 1000) + (parts[1] * 60 * 1000);
+    } else if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+        // Días:Horas:Minutos
+        intervalMs = (parts[0] * 24 * 60 * 60 * 1000) + (parts[1] * 60 * 60 * 1000) + (parts[2] * 60 * 1000);
+    }
+
+    if (intervalMs <= 0) {
+        await interaction.reply({ content: '❌ Formato de intervalo inválido. Usa por ejemplo `2:30` (2 horas y 30 minutos).', flags: [MessageFlags.Ephemeral] });
         return true;
     }
 
+    const totalTimes = parseInt(timesStr, 10);
     if (isNaN(totalTimes) || totalTimes < 2) {
         await interaction.reply({ content: '❌ Indica un número total de envíos válido (al menos 2).', flags: [MessageFlags.Ephemeral] });
         return true;
@@ -413,13 +402,8 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
 
         eventSessions.delete(interaction.user.id);
 
-        let parts = [];
-        if (days > 0) parts.push(`${days}d`);
-        if (hours > 0) parts.push(`${hours}h`);
-        if (minutes > 0) parts.push(`${minutes}m`);
-
         await interaction.reply({
-            content: `✅ **¡Evento recurrente configurado!**\n• 1ª Publicación: **${dateStr}** a las **${timeStr}**\n• Intervalo: Cada **${parts.join(' ')}**\n• Total de envíos: **${totalTimes}**`,
+            content: `✅ **¡Evento recurrente configurado con éxito!**\n• 1ª Publicación: **${dateStr}** a las **${timeStr}**\n• Intervalo: Cada **${intervalStr}**\n• Total de envíos: **${totalTimes}**`,
             flags: [MessageFlags.Ephemeral]
         });
     } catch (error) {
