@@ -6,6 +6,7 @@ import { initReactionRoles, handleReactionAdd, handleReactionRemove } from './ha
 import { setupWelcomeSystem } from './handlers/welcomeSystem'; // 👋 Importamos la función general de bienvenidas/despedidas
 import { setupEventWorker } from './handlers/eventSystem'; // 📅 Importamos el worker del organizador de eventos
 import { setupNicknameSystem } from './handlers/nicknameSystem'; // 🏷️ Importamos el sistema de apodos jerárquicos por rol
+import { setupAvisosSystem } from './handlers/avisosSystem'; // 📋 ¡Nuevo! Importamos el sistema de Avisos y Registros
 
 // 0. Servidor HTTP auxiliar obligatorio para satisfacer el puerto de Render
 const server = http.createServer((req, res) => {
@@ -41,6 +42,9 @@ client.once('ready', async () => {
 
     // 👋 Activamos el sistema completo de bienvenidas y despedidas
     setupWelcomeSystem(client);
+
+    // 📋 ¡Nuevo! Activamos el sistema de avisos de entradas, salidas y roles
+    setupAvisosSystem(client);
 
     // 📅 Activamos el worker de eventos, recordatorios y gestión de roles temporales
     setupEventWorker(client);
