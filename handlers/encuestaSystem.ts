@@ -194,7 +194,7 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
             .setColor(0x00AAFF)
             .setTitle(title)
             .setDescription(`${description}\n\n` + parsedOptions.map((o: any) => `${o.emoji} ➔ ${o.text}`).join('\n\n'))
-            .setFooter({ text: `Encuesta creada por ${interaction.user.tag}` })
+            .setFooter({ text: `Encuesta creada por ${server}` })
             .setTimestamp();
 
         let messageContent = pollData.roleId ? `<@&${pollData.roleId}>\n\n` : undefined;
