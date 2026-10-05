@@ -2,14 +2,14 @@ import http from 'http';
 import { Client, GatewayIntentBits, Partials } from 'discord.js';
 import { handleInteraction } from './handlers/interactionRouter';
 import { startScheduledWorker } from './handlers/scheduledMessage';
-import { initReactionRoles, handleReactionAdd, handleReactionRemove } from './handlers/reactionRoles';
-import { handleEncuestaReactionAdd } from './handlers/encuestaSystem'; // 📊 ¡Importante para capturar los votos de las encuestas!
+import { initReactionRoles } from './handlers/reactionRoles';
 import { setupWelcomeSystem } from './handlers/welcomeSystem'; 
 import { setupEventWorker } from './handlers/eventSystem'; 
 import { setupNicknameSystem } from './handlers/nicknameSystem'; 
 import { setupAvisosSystem } from './handlers/avisosSystem'; 
+import { handleReactionAddRouter, handleReactionRemoveRouter } from './handlers/reactionRouter'; // 👈 Todo gestionado aquí
 
-// 0. Servidor HTTP auxiliar obligatorio para satisfacer el puerto de Render
+// 0. Servidor HTTP auxiliar obligatorio para Render
 const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('REDLINE GT Bot is active and running!');
@@ -57,22 +57,13 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-// 4. Escuchas globales de Reacciones (Roles y Encuestas)
+// 4. Escuchas de Reacciones delegadas limpiamente al Router externo
 client.on('messageReactionAdd', async (reaction, user) => {
-    try {
-        await handleReactionAdd(reaction, user);
-        await handleEncuestaReactionAdd(reaction, user); // 📊 ¡Aquí procesamos el voto de la encuesta y enviamos el log!
-    } catch (error) {
-        console.error('❌ Error en messageReactionAdd:', error);
-    }
+    await handleReactionAddRouter(reaction, user);
 });
 
 client.on('messageReactionRemove', async (reaction, user) => {
-    try {
-        await handleReactionRemove(reaction, user);
-    } catch (error) {
-        console.error('❌ Error en messageReactionRemove:', error);
-    }
+    await handleReactionRemoveRouter(reaction, user);
 });
 
 // 5. Conexión definitiva
