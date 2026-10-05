@@ -9,6 +9,9 @@ import {
     ButtonBuilder, 
     ButtonStyle, 
     ChannelType, 
+    ModalSubmitInteraction, 
+    TextChannel, 
+    EmbedBuilder,
     MessageFlags
 } from 'discord.js';
 import { MongoClient as MongoDriver } from 'mongodb';
@@ -35,31 +38,112 @@ export async function handleEncuestaStart(interaction: ButtonInteraction): Promi
 
     const selectPublishChannel = new ChannelSelectMenuBuilder()
         .setCustomId('encuesta_pre_publish_channel')
-        .setPlaceholder('📢 1. Canal de publicación...')
+        .setPlaceholder('Canal de publicacion...')
         .addChannelTypes(ChannelType.GuildText);
 
     const selectRole = new RoleSelectMenuBuilder()
         .setCustomId('encuesta_pre_role')
-        .setPlaceholder('🏷️ 2. Rol a mencionar (Opcional)...');
+        .setPlaceholder('Rol a mencionar (Opcional)...');
 
     const selectLogChannel = new ChannelSelectMenuBuilder()
         .setCustomId('encuesta_pre_log_channel')
-        .setPlaceholder('📥 3. Canal de respuestas / logs...');
+        .setPlaceholder('Canal de respuestas / logs...');
 
     const rowButton = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
             .setCustomId('encuesta_btn_open_modal')
-            .setLabel('📝 Siguiente: Rellenar Título, Descripción y Opciones')
+            .setLabel('Siguiente: Rellenar Titulo y Opciones')
             .setStyle(ButtonStyle.Primary)
     );
 
     await interaction.reply({
-        content: '📊
-import { 
-    ModalSubmitInteraction, 
-    TextChannel, 
-    EmbedBuilder
-} from 'discord.js';
+        content: 'Configuracion de Encuesta: Selecciona primero el canal de publicacion, el rol y el canal de respuestas, y luego pulsa el boton:',
+        components: [
+            new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(selectPublishChannel),
+            new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(selectRole),
+            new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(selectLogChannel),
+            rowButton
+        ],
+        flags: [MessageFlags.Ephemeral]
+    });
+
+    return true;
+}
+
+// 2. Guardar selecciones de los menús en MongoDB temporalmente
+export async function handleEncuestaPreSelections(interaction: any): Promise<boolean> {
+    if (!['encuesta_pre_publish_channel', 'encuesta_pre_role', 'encuesta_pre_log_channel'].includes(interaction.customId)) {
+        return false;
+    }
+
+    const { pendingPollsCol } = await getCollections();
+    const updateData: any = {};
+
+    if (interaction.customId === 'encuesta_pre_publish_channel') {
+        updateData.publishChannelId = interaction.values[0];
+    } else if (interaction.customId === 'encuesta_pre_role') {
+        updateData.roleId = interaction.values[0];
+    } else if (interaction.customId === 'encuesta_pre_log_channel') {
+        updateData.logChannelId = interaction.values[0];
+    }
+
+    await pendingPollsCol.updateOne(
+        { userId: interaction.user.id },
+        { $set: { userId: interaction.user.id, guildId: interaction.guildId, ...updateData } },
+        { upsert: true }
+    );
+
+    await interaction.update({ content: 'Seleccion guardada correctamente. Continua con los demas campos o pulsa el boton.' });
+    return true;
+}
+
+// 3. Botón "Siguiente" -> Valida que estén los canales y abre el modal
+export async function handleEncuestaOpenModalButton(interaction: ButtonInteraction): Promise<boolean> {
+    if (interaction.customId !== 'encuesta_btn_open_modal') return false;
+
+    const { pendingPollsCol } = await getCollections();
+    const pollData = await pendingPollsCol.findOne({ userId: interaction.user.id });
+
+    if (!pollData || !pollData.publishChannelId || !pollData.logChannelId) {
+        await interaction.reply({
+            content: 'Debes seleccionar obligatoriamente el Canal de publicacion y el Canal de respuestas en los menus antes de abrir el formulario.',
+            flags: [MessageFlags.Ephemeral]
+        });
+        return true;
+const modal = new ModalBuilder()
+        .setCustomId('modal_encuesta_final')
+        .setTitle('Detalles de la Encuesta');
+
+    const titleInput = new TextInputBuilder()
+        .setCustomId('encuesta_title')
+        .setLabel('Titulo de la encuesta')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Ej: Que circuito corremos la proxima semana?')
+        .setRequired(true);
+
+    const descInput = new TextInputBuilder()
+        .setCustomId('encuesta_desc')
+        .setLabel('Descripcion detallada')
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder('Escribe los detalles o contexto de la votacion...')
+        .setRequired(true);
+
+    const optionsInput = new TextInputBuilder()
+        .setCustomId('encuesta_options_block')
+        .setLabel('Opciones (Una por linea con emoji)')
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder('Monza\nSpa-Francorchamps\nSilverstone\nNurburgring')
+        .setRequired(true);
+
+    modal.addComponents(
+        new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(descInput),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(optionsInput)
+    );
+
+    await interaction.showModal(modal);
+    return true;
+}
 
 // 4. Procesar el envío del modal -> Publicar encuesta definitiva
 export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
@@ -73,7 +157,7 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
 
     if (lines.length < 2) {
         await interaction.reply({ 
-            content: '❌ Debes introducir al menos **2 opciones** (una por línea).', 
+            content: 'Debes introducir al menos 2 opciones (una por linea).', 
             flags: [MessageFlags.Ephemeral] 
         });
         return true;
@@ -84,7 +168,7 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
 
     if (!pollData || !pollData.publishChannelId || !pollData.logChannelId || !interaction.guild) {
         await interaction.reply({
-            content: '❌ Faltan los datos de los canales. Por favor, vuelve a iniciar la encuesta desde el panel.',
+            content: 'Faltan los datos de los canales. Por favor, vuelve a iniciar la encuesta desde el panel.',
             flags: [MessageFlags.Ephemeral]
         });
         return true;
@@ -93,7 +177,7 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
     try {
         const publishChannel = await interaction.guild.channels.fetch(pollData.publishChannelId) as TextChannel;
         if (!publishChannel || !publishChannel.isTextBased()) {
-            await interaction.reply({ content: '❌ El canal de publicación seleccionado no es válido.', flags: [MessageFlags.Ephemeral] });
+            await interaction.reply({ content: 'El canal de publicacion seleccionado no es valido.', flags: [MessageFlags.Ephemeral] });
             return true;
         }
 
@@ -106,7 +190,7 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
 
         const embed = new EmbedBuilder()
             .setColor(0x00AAFF)
-            .setTitle(`📊 ${title}`)
+            .setTitle(title)
             .setDescription(`${description}\n\n` + parsedOptions.map((o: any) => `${o.emoji} ➔ ${o.text}`).join('\n\n'))
             .setFooter({ text: `Encuesta creada por ${interaction.user.tag}` })
             .setTimestamp();
@@ -122,7 +206,7 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
             try {
                 await pollMessage.react(o.emoji);
             } catch (err) {
-                console.error(`❌ No se pudo añadir la reacción ${o.emoji}:`, err);
+                console.error(`No se pudo añadir la reacción ${o.emoji}:`, err);
             }
         }
 
@@ -138,18 +222,17 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
         await pendingPollsCol.deleteOne({ userId: interaction.user.id });
 
         await interaction.reply({
-            content: `✅ **¡Encuesta publicada con éxito en <#${pollData.publishChannelId}>!**\nLos votos se auditarán en el canal de respuestas <#${pollData.logChannelId}>.`,
+            content: `Encuesta publicada con exito. Los votos se auditaran en el canal de respuestas.`,
             flags: [MessageFlags.Ephemeral]
         });
 
     } catch (error) {
-        console.error('❌ Error al publicar la encuesta:', error);
-        await interaction.reply({ content: '❌ Hubo un error al publicar la encuesta o guardar en la base de datos.', flags: [MessageFlags.Ephemeral] });
+        console.error('Error al publicar la encuesta:', error);
+        await interaction.reply({ content: 'Hubo un error al publicar la encuesta o guardar en la base de datos.', flags: [MessageFlags.Ephemeral] });
     }
 
     return true;
 }
-
 // 5. 🗳️ LISTENER DE REACCIONES (Canal de respuestas / Logs)
 export async function handleEncuestaReactionAdd(reaction: any, user: any) {
     try {
@@ -175,13 +258,13 @@ export async function handleEncuestaReactionAdd(reaction: any, user: any) {
 
         const logEmbed = new EmbedBuilder()
             .setColor(0x00FF00)
-            .setTitle('📥 Nuevo Voto Registrado')
+            .setTitle('Nuevo Voto Registrado')
             .setDescription(`**Encuesta:** ${poll.title}\n**Usuario:** <@${user.id}> (${user.tag})\n**Ha votado por:** ${matchedOption.emoji} ${matchedOption.text}`)
             .setTimestamp();
 
         await logChannel.send({ embeds: [logEmbed] });
 
     } catch (error) {
-        console.error('❌ Error al registrar voto de encuesta:', error);
+        console.error('Error al registrar voto de encuesta:', error);
     }
 }
