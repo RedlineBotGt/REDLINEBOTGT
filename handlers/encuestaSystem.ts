@@ -31,11 +31,11 @@ async function getPollsCollection() {
     return pollsCollection;
 }
 
-// 1. Iniciar encuesta (Título, Descripción y Opciones base)
+// 1. Iniciar encuesta desde el panel staff -> Muestra el modal con Título, Descripción y Opciones en bloque
 export async function handleEncuestaStart(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_encuesta_create') return false;
 
-    encuestaSessions.set(interaction.user.id, { options: [] });
+    encuestaSessions.set(interaction.user.id, {});
 
     const modal = new ModalBuilder()
         .setCustomId('modal_encuesta_create')
@@ -43,52 +43,36 @@ export async function handleEncuestaStart(interaction: ButtonInteraction): Promi
 
     const titleInput = new TextInputBuilder()
         .setCustomId('encuesta_title')
-        .setLabel('Título de la encuesta')
+        .setLabel('Línea 1: Título de la encuesta')
         .setStyle(TextInputStyle.Short)
         .setPlaceholder('Ej: ¿Qué circuito corrimos la próxima semana?')
         .setRequired(true);
 
     const descInput = new TextInputBuilder()
         .setCustomId('encuesta_desc')
-        .setLabel('Descripción detallada')
+        .setLabel('Línea 2: Descripción detallada')
         .setStyle(TextInputStyle.Paragraph)
         .setPlaceholder('Escribe los detalles o contexto de la votación...')
         .setRequired(true);
 
-    const opt1 = new TextInputBuilder()
-        .setCustomId('encuesta_opt1')
-        .setLabel('Opción 1 (Emoji y texto)')
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: 🟢 Monza')
-        .setRequired(true);
-
-    const opt2 = new TextInputBuilder()
-        .setCustomId('encuesta_opt2')
-        .setLabel('Opción 2 (Emoji y texto)')
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: 🔴 Spa-Francorchamps')
-        .setRequired(true);
-
-    const opt3 = new TextInputBuilder()
-        .setCustomId('encuesta_opt3')
-        .setLabel('Opción 3 (Emoji y texto)')
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: 🟡 Silverstone')
+    const optionsInput = new TextInputBuilder()
+        .setCustomId('encuesta_options_block')
+        .setLabel('Cajón 3: Opciones (Escribe una por línea)')
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder('🟢 Monza\n🔴 Spa-Francorchamps\n🟡 Silverstone\n🔵 Nürburgring')
         .setRequired(true);
 
     modal.addComponents(
         new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput),
         new ActionRowBuilder<TextInputBuilder>().addComponents(descInput),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(opt1),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(opt2),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(opt3)
+        new ActionRowBuilder<TextInputBuilder>().addComponents(optionsInput)
     );
 
     await interaction.showModal(modal);
     return true;
 }
 
-// 2. Procesar Modal Principal -> Muestra opciones para añadir más o continuar
+// 2. Procesar el formulario -> Guarda Título, Desc y parsea las opciones línea por línea, luego pide Canal de Publicación
 export async function handleEncuestaCreateSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_encuesta_create') return false;
 
@@ -101,82 +85,23 @@ export async function handleEncuestaCreateSubmit(interaction: ModalSubmitInterac
     session.title = interaction.fields.getTextInputValue('encuesta_title');
     session.description = interaction.fields.getTextInputValue('encuesta_desc');
     
-    const o1 = interaction.fields.getTextInputValue('encuesta_opt1').trim();
-    const o2 = interaction.fields.getTextInputValue('encuesta_opt2').trim();
-    const o3 = interaction.fields.getTextInputValue('encuesta_opt3').trim();
+    const optionsRaw = interaction.fields.getTextInputValue('encuesta_options_block');
+    
+    // Separar por saltos de línea y limpiar líneas vacías
+    const lines = optionsRaw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-    session.options = [o1, o2, o3];
-    encuestaSessions.set(interaction.user.id, session);
-
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('encuesta_add_more').setLabel('➕ Añadir otra opción').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('encuesta_options_done').setLabel('✅ Continuar (Canales)').setStyle(ButtonStyle.Success)
-    );
-
-    let listText = session.options.map((opt: string, idx: number) => `**${idx + 1}.** ${opt}`).join('\n');
-
-    await interaction.reply({
-        content: `📊 **Opciones actuales configuradas:**\n${listText}\n\n¿Deseas añadir más opciones o prefieres continuar al siguiente paso?`,
-        components: [row],
-        flags: [MessageFlags.Ephemeral]
-    });
-
-    return true;
-}
-
-// 3. Botón "Añadir otra opción" -> Mini modal para opción extra
-export async function handleEncuestaAddMoreButton(interaction: ButtonInteraction): Promise<boolean> {
-    if (interaction.customId !== 'encuesta_add_more') return false;
-
-    const modal = new ModalBuilder()
-        .setCustomId('modal_encuesta_add_single')
-        .setTitle('➕ Añadir Opción Extra');
-
-    const extraOpt = new TextInputBuilder()
-        .setCustomId('encuesta_extra_opt')
-        .setLabel('Nueva Opción (Emoji y texto)')
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: 🔵 Nürburgring')
-        .setRequired(true);
-
-    modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(extraOpt));
-    await interaction.showModal(modal);
-    return true;
-}
-
-// 4. Procesar opción extra
-export async function handleEncuestaAddSingleSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
-    if (interaction.customId !== 'modal_encuesta_add_single') return false;
-
-    const session = encuestaSessions.get(interaction.user.id);
-    if (!session) {
-        await interaction.reply({ content: '❌ Sesión caducada.', flags: [MessageFlags.Ephemeral] });
+    if (lines.length < 2) {
+        await interaction.reply({ 
+            content: '❌ Debes introducir al menos **2 opciones** (una por línea).', 
+            flags: [MessageFlags.Ephemeral] 
+        });
         return true;
     }
 
-    const extra = interaction.fields.getTextInputValue('encuesta_extra_opt').trim();
-    session.options.push(extra);
+    session.options = lines;
     encuestaSessions.set(interaction.user.id, session);
 
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('encuesta_add_more').setLabel('➕ Añadir otra opción').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('encuesta_options_done').setLabel('✅ Continuar (Canales)').setStyle(ButtonStyle.Success)
-    );
-
-    let listText = session.options.map((opt: string, idx: number) => `**${idx + 1}.** ${opt}`).join('\n');
-
-    await interaction.update({
-        content: `📊 **Opciones actuales configuradas:**\n${listText}\n\n¿Deseas añadir más opciones o prefieres continuar al siguiente paso?`,
-        components: [row]
-    });
-
-    return true;
-}
-
-// 5. Botón Continuar -> Pide Canal de Publicación
-export async function handleEncuestaOptionsDoneButton(interaction: ButtonInteraction): Promise<boolean> {
-    if (interaction.customId !== 'encuesta_options_done') return false;
-
+    // Siguiente paso: Pedir Canal de Publicación
     const selectChannel = new ChannelSelectMenuBuilder()
         .setCustomId('encuesta_select_channel')
         .setPlaceholder('📢 Selecciona el canal de publicación de la encuesta...')
@@ -184,15 +109,16 @@ export async function handleEncuestaOptionsDoneButton(interaction: ButtonInterac
 
     const row = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(selectChannel);
 
-    await interaction.update({
+    await interaction.reply({
         content: '📢 **Paso 1/3 (Canal de publicación):** Selecciona el canal de destino donde se enviará la encuesta:',
-        components: [row]
+        components: [row],
+        flags: [MessageFlags.Ephemeral]
     });
 
     return true;
 }
 
-// 6. Canal de publicación seleccionado -> Pide Rol opcional
+// 3. Canal de publicación seleccionado -> Pide Rol opcional
 export async function handleEncuestaChannelSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'encuesta_select_channel') return false;
 
@@ -222,7 +148,7 @@ export async function handleEncuestaChannelSelect(interaction: any): Promise<boo
     return true;
 }
 
-// 7. Rol seleccionado o saltado -> Pide Canal de Respuestas (Logs)
+// 4. Rol seleccionado o saltado -> Pide Canal de Respuestas (Logs)
 export async function handleEncuestaRoleSelection(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'encuesta_select_role' && interaction.customId !== 'encuesta_skip_role') return false;
 
@@ -254,7 +180,7 @@ export async function handleEncuestaRoleSelection(interaction: any): Promise<boo
     return true;
 }
 
-// 8. Canal de respuestas seleccionado -> Publica la encuesta y guarda en BD
+// 5. Canal de respuestas seleccionado -> Publica la encuesta, añade reacciones y guarda en BD
 export async function handleEncuestaLogChannelSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'encuesta_select_log_channel') return false;
 
@@ -273,6 +199,7 @@ export async function handleEncuestaLogChannelSelect(interaction: any): Promise<
             return true;
         }
 
+        // Parsear cada línea extraorndo el emoji del inicio
         const parsedOptions = session.options.map((optStr: string) => {
             const match = optStr.match(/^(\p{Extended_Pictographic}|\p{Emoji_Component}|\p{Symbol})+/u);
             const emoji = match ? match[0] : '📌';
@@ -315,7 +242,7 @@ export async function handleEncuestaLogChannelSelect(interaction: any): Promise<
         encuestaSessions.delete(interaction.user.id);
 
         await interaction.update({
-            content: `✅ **¡Encuesta publicada con éxito en <#${session.publishChannelId}>!**\nLos avisos y votos de los usuarios se registrarán en el canal de respuestas <#${session.logChannelId}>.`,
+            content: `✅ **¡Encuesta publicada con éxito en <#${session.publishChannelId}>!**\nLos votos se auditarán en el canal de respuestas <#${session.logChannelId}>.`,
             components: []
         });
 
@@ -327,7 +254,7 @@ export async function handleEncuestaLogChannelSelect(interaction: any): Promise<
     return true;
 }
 
-// 9. 🗳️ LISTENER DE REACCIONES (Canal de respuestas / Logs)
+// 6. 🗳️ LISTENER DE REACCIONES (Canal de respuestas / Logs)
 export async function handleEncuestaReactionAdd(reaction: any, user: any) {
     try {
         if (user.bot) return;
