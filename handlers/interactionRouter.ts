@@ -77,8 +77,7 @@ import {
     handleDashCreateFormChannelSelect, 
     handleDashFormTituloModal,
     handleDashOpenPreguntasButton 
-} from './dashCreateFormHandler'; 
-
+} from './dashCreateFormHandler';
 import { 
     handleDashCrearBotonButton, 
     handleTicketModalSubmit, 
@@ -121,6 +120,7 @@ import {
 
 export async function handleInteraction(interaction: Interaction) {
     try {
+// 1. Manejo de Comandos de Barra (Slash Commands)
         if (interaction.isChatInputCommand()) {
             if (interaction.commandName === 'dash') {
                 await dash.execute(interaction);
@@ -148,6 +148,7 @@ export async function handleInteraction(interaction: Interaction) {
             return;
         }
 
+        // 2. Manejo de Menús Desplegables de Texto (String Select Menus)
         if (interaction.isStringSelectMenu()) {
             if (interaction.customId === 'dash_select_colocar_form') {
                 await handleDashColocarFormSelect(interaction);
@@ -162,7 +163,7 @@ export async function handleInteraction(interaction: Interaction) {
             }
             return;
         }
-
+        // 2.1. Manejo de Menús Desplegables de Canales (Channel Select Menus)
         if (interaction.isChannelSelectMenu()) {
             if (interaction.customId === 'sheets_select_channel') {
                 if (!interaction.deferred && !interaction.replied) {
@@ -191,7 +192,36 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleRrChannelSelect(interaction);
             } else if (interaction.customId === 'welcome_select_welcome_channel') {
                 await handleWelcomeChannelSelect(interaction);
-            } else if (interaction
+            } else if (interaction.customId === 'welcome_select_goodbye_channel') {
+                await handleWelcomeChannelSelect(interaction); 
+            } else if (interaction.customId === 'sorteo_select_channel') {
+                await handleSorteoChannelSelect(interaction); 
+            }
+            return;
+        }
+
+        // 2.2. Manejo de Menús Desplegables de Roles (Role Select Menus)
+        if (interaction.isRoleSelectMenu()) {
+            if (interaction.customId === 'sheets_select_role') {
+                if (!interaction.deferred && !interaction.replied) {
+                    await interaction.deferUpdate().catch(() => {});
+                }
+                await handleSheetsRoleSelect(interaction); 
+            } else if (interaction.customId === 'event_select_role') {
+                await handleEventRoleSelect(interaction); 
+            } else if (interaction.customId === 'dash_select_verd_role') {
+                await handleDashVeredictoRoleSelect(interaction);
+            } else if (interaction.customId === 'sched_select_role') {
+                await handleSchedRoleSelection(interaction); 
+            } else if (interaction.customId === 'rr_select_role') {
+                await handleRrRoleSelect(interaction);
+            } else if (interaction.customId === 'sorteo_select_role') {
+                await handleSorteoRoleSelect(interaction); 
+            }
+            return;
+        }
+
+        // 3. Manejo de Botones interactivos
         if (interaction.isButton()) {
             if (interaction.customId.startsWith('sheets_') || interaction.customId.startsWith('pub_')) {
                 if (!interaction.deferred && !interaction.replied) {
@@ -273,7 +303,7 @@ export async function handleInteraction(interaction: Interaction) {
             }
             return;
         }
-
+        // 4. Manejo de Envíos de Formularios (Modals)
         if (interaction.isModalSubmit()) {
             if (interaction.customId === 'modal_event_create') {
                 await handleEventModalSubmit(interaction); 
