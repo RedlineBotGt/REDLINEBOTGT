@@ -9,9 +9,6 @@ import {
     ButtonBuilder, 
     ButtonStyle, 
     ChannelType, 
-    ModalSubmitInteraction, 
-    TextChannel, 
-    EmbedBuilder,
     MessageFlags
 } from 'discord.js';
 import { MongoClient as MongoDriver } from 'mongodb';
@@ -32,53 +29,46 @@ async function getCollections() {
     return { pendingPollsCol, activePollsCol };
 }
 
-// 1. Iniciar encuesta desde el panel staff -> Muestra el modal limpio
+// 1. Iniciar encuesta -> Muestra los 3 selectores y el botón para abrir el formulario
 export async function handleEncuestaStart(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_encuesta_create') return false;
 
-    const modal = new ModalBuilder()
-        .setCustomId('modal_encuesta_create')
-        .setTitle('📊 Crear Nueva Encuesta');
+    const selectPublishChannel = new ChannelSelectMenuBuilder()
+        .setCustomId('encuesta_pre_publish_channel')
+        .setPlaceholder('📢 1. Canal de publicación...')
+        .addChannelTypes(ChannelType.GuildText);
 
-    const titleInput = new TextInputBuilder()
-        .setCustomId('encuesta_title')
-        .setLabel('Línea 1: Título de la encuesta')
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: ¿Qué circuito corrimos la próxima semana?')
-        .setRequired(true);
+    const selectRole = new RoleSelectMenuBuilder()
+        .setCustomId('encuesta_pre_role')
+        .setPlaceholder('🏷️ 2. Rol a mencionar (Opcional)...');
 
-    const descInput = new TextInputBuilder()
-        .setCustomId('encuesta_desc')
-        .setLabel('Línea 2: Descripción detallada')
-        .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('Escribe los detalles o contexto de la votación...')
-        .setRequired(true);
+    const selectLogChannel = new ChannelSelectMenuBuilder()
+        .setCustomId('encuesta_pre_log_channel')
+        .setPlaceholder('📥 3. Canal de respuestas / logs...');
 
-    const optionsInput = new TextInputBuilder()
-        .setCustomId('encuesta_options_block')
-        .setLabel('Cajón 3: Opciones (Escribe una por línea)')
-        .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('🟢 Monza\n🔴 Spa-Francorchamps\n🟡 Silverstone\n🔵 Nürburgring')
-        .setRequired(true);
-
-    modal.addComponents(
-        new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(descInput),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(optionsInput)
+    const rowButton = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+            .setCustomId('encuesta_btn_open_modal')
+            .setLabel('📝 Siguiente: Rellenar Título, Descripción y Opciones')
+            .setStyle(ButtonStyle.Primary)
     );
 
-    await interaction.showModal(modal);
-    return true;
-}
+    await interaction.reply({
+        content: '📊
+import { 
+    ModalSubmitInteraction, 
+    TextChannel, 
+    EmbedBuilder
+} from 'discord.js';
 
-// 2. Procesar el formulario -> Guarda temporalmente en MongoDB y pide Canal de Publicación
-export async function handleEncuestaCreateSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
-    if (interaction.customId !== 'modal_encuesta_create') return false;
+// 4. Procesar el envío del modal -> Publicar encuesta definitiva
+export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
+    if (interaction.customId !== 'modal_encuesta_final') return false;
 
     const title = interaction.fields.getTextInputValue('encuesta_title');
     const description = interaction.fields.getTextInputValue('encuesta_desc');
     const optionsRaw = interaction.fields.getTextInputValue('encuesta_options_block');
-    
+
     const lines = optionsRaw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
     if (lines.length < 2) {
@@ -89,120 +79,25 @@ export async function handleEncuestaCreateSubmit(interaction: ModalSubmitInterac
         return true;
     }
 
-    const { pendingPollsCol } = await getCollections();
-
-    // Guardar en MongoDB (persistente ante reinicios)
-    await pendingPollsCol.updateOne(
-        { userId: interaction.user.id },
-        { 
-            $set: { 
-                userId: interaction.user.id,
-                guildId: interaction.guildId,
-                title, 
-                description, 
-                options: lines, 
-                createdAt: new Date() 
-            } 
-        },
-        { upsert: true }
-    );
-
-    const selectChannel = new ChannelSelectMenuBuilder()
-        .setCustomId('encuesta_select_channel')
-        .setPlaceholder('📢 Selecciona el canal de publicación de la encuesta...')
-        .addChannelTypes(ChannelType.GuildText);
-
-    const row = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(selectChannel);
-
-    await interaction.reply({
-        content: '📢 **Paso 1/3 (Canal de publicación):** Selecciona el canal de destino donde se enviará la encuesta:',
-        components: [row],
-        flags: [MessageFlags.Ephemeral]
-    });
-
-    return true;
-}
-
-// 3. Canal de publicación seleccionado -> Pide Rol opcional
-export async function handleEncuestaChannelSelect(interaction: any): Promise<boolean> {
-    if (interaction.customId !== 'encuesta_select_channel') return false;
-
-    const publishChannelId = interaction.values[0];
-    const { pendingPollsCol } = await getCollections();
-
-    await pendingPollsCol.updateOne(
-        { userId: interaction.user.id },
-        { $set: { publishChannelId } }
-    );
-
-    const selectRole = new RoleSelectMenuBuilder()
-        .setCustomId('encuesta_select_role')
-        .setPlaceholder('🏷️ Selecciona un rol a mencionar (Opcional)...');
-
-    const rowRole = new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(selectRole);
-    const rowSkip = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('encuesta_skip_role').setLabel('Omitir mención de rol').setStyle(ButtonStyle.Secondary)
-    );
-
-    await interaction.update({
-        content: `📢 Canal de publicación seleccionado (<#${publishChannelId}>).\n**Paso 2/3 (Mención):** Selecciona un rol si deseas mencionarlo al publicar, o pulsa omitir:`,
-        components: [rowRole, rowSkip]
-    });
-
-    return true;
-}
-
-// 4. Rol seleccionado o saltado -> Pide Canal de Respuestas (Logs)
-export async function handleEncuestaRoleSelection(interaction: any): Promise<boolean> {
-    if (interaction.customId !== 'encuesta_select_role' && interaction.customId !== 'encuesta_skip_role') return false;
-
-    let roleId = null;
-    if (interaction.isRoleSelectMenu()) {
-        roleId = interaction.values[0];
-    }
-
-    const { pendingPollsCol } = await getCollections();
-    await pendingPollsCol.updateOne(
-        { userId: interaction.user.id },
-        { $set: { roleId } }
-    );
-
-    const selectLogChannel = new ChannelSelectMenuBuilder()
-        .setCustomId('encuesta_select_log_channel')
-        .setPlaceholder('📥 Selecciona el canal de respuestas / registro de votos...')
-        .addChannelTypes(ChannelType.GuildText);
-
-    const row = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(selectLogChannel);
-
-    await interaction.update({
-        content: '📥 **Paso 3/3 (Canal de respuestas):** Selecciona el canal donde el bot registrará y avisará cada vez que alguien vote:',
-        components: [row]
-    });
-
-    return true;
-}
-
-// 5. Canal de respuestas seleccionado -> Publica la encuesta, añade reacciones y guarda en BD definitiva
-export async function handleEncuestaLogChannelSelect(interaction: any): Promise<boolean> {
-    if (interaction.customId !== 'encuesta_select_log_channel') return false;
-
-    const logChannelId = interaction.values[0];
     const { pendingPollsCol, activePollsCol } = await getCollections();
-
     const pollData = await pendingPollsCol.findOne({ userId: interaction.user.id });
-    if (!pollData || !interaction.guild) {
-        await interaction.update({ content: '❌ Sesión no encontrada. Vuelve a iniciar la encuesta desde el panel.', components: [] });
+
+    if (!pollData || !pollData.publishChannelId || !pollData.logChannelId || !interaction.guild) {
+        await interaction.reply({
+            content: '❌ Faltan los datos de los canales. Por favor, vuelve a iniciar la encuesta desde el panel.',
+            flags: [MessageFlags.Ephemeral]
+        });
         return true;
     }
 
     try {
         const publishChannel = await interaction.guild.channels.fetch(pollData.publishChannelId) as TextChannel;
         if (!publishChannel || !publishChannel.isTextBased()) {
-            await interaction.update({ content: '❌ El canal de publicación seleccionado no es válido.', components: [] });
+            await interaction.reply({ content: '❌ El canal de publicación seleccionado no es válido.', flags: [MessageFlags.Ephemeral] });
             return true;
         }
 
-        const parsedOptions = pollData.options.map((optStr: string) => {
+        const parsedOptions = lines.map((optStr: string) => {
             const match = optStr.match(/^(\p{Extended_Pictographic}|\p{Emoji_Component}|\p{Symbol})+/u);
             const emoji = match ? match[0] : '📌';
             const text = optStr.replace(emoji, '').trim();
@@ -211,8 +106,8 @@ export async function handleEncuestaLogChannelSelect(interaction: any): Promise<
 
         const embed = new EmbedBuilder()
             .setColor(0x00AAFF)
-            .setTitle(`📊 ${pollData.title}`)
-            .setDescription(`${pollData.description}\n\n` + parsedOptions.map((o: any) => `${o.emoji} ➔ ${o.text}`).join('\n\n'))
+            .setTitle(`📊 ${title}`)
+            .setDescription(`${description}\n\n` + parsedOptions.map((o: any) => `${o.emoji} ➔ ${o.text}`).join('\n\n'))
             .setFooter({ text: `Encuesta creada por ${interaction.user.tag}` })
             .setTimestamp();
 
@@ -231,33 +126,31 @@ export async function handleEncuestaLogChannelSelect(interaction: any): Promise<
             }
         }
 
-        // Guardar en la colección definitiva de encuestas activas
         await activePollsCol.insertOne({
             guildId: interaction.guildId,
             messageId: pollMessage.id,
-            logChannelId: logChannelId,
-            title: pollData.title,
+            logChannelId: pollData.logChannelId,
+            title: title,
             options: parsedOptions,
             createdAt: new Date()
         });
 
-        // Borrar el registro temporal pendiente
         await pendingPollsCol.deleteOne({ userId: interaction.user.id });
 
-        await interaction.update({
-            content: `✅ **¡Encuesta publicada con éxito en <#${pollData.publishChannelId}>!**\nLos votos se auditarán en el canal de respuestas <#${logChannelId}>.`,
-            components: []
+        await interaction.reply({
+            content: `✅ **¡Encuesta publicada con éxito en <#${pollData.publishChannelId}>!**\nLos votos se auditarán en el canal de respuestas <#${pollData.logChannelId}>.`,
+            flags: [MessageFlags.Ephemeral]
         });
 
     } catch (error) {
         console.error('❌ Error al publicar la encuesta:', error);
-        await interaction.update({ content: '❌ Hubo un error al publicar la encuesta o guardar en la base de datos.', components: [] });
+        await interaction.reply({ content: '❌ Hubo un error al publicar la encuesta o guardar en la base de datos.', flags: [MessageFlags.Ephemeral] });
     }
 
     return true;
 }
 
-// 6. 🗳️ LISTENER DE REACCIONES (Canal de respuestas / Logs)
+// 5. 🗳️ LISTENER DE REACCIONES (Canal de respuestas / Logs)
 export async function handleEncuestaReactionAdd(reaction: any, user: any) {
     try {
         if (user.bot) return;
