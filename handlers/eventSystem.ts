@@ -7,7 +7,13 @@ import {
     ChannelSelectMenuBuilder, 
     ChannelType, 
     ModalSubmitInteraction, 
-    MessageFlags
+    MessageFlags,
+    RoleSelectMenuBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    TextChannel,
+    EmbedBuilder,
+    Client
 } from 'discord.js';
 import { MongoClient as MongoDriver } from 'mongodb';
 
@@ -26,7 +32,6 @@ export async function getEventsCollection() {
 }
 
 export const eventSessions = new Map<string, any>();
-
 export async function handleDashEventButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_event_create') return false;
 
@@ -91,15 +96,6 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
 
     return true;
 }
-import { 
-    RoleSelectMenuBuilder, 
-    ButtonBuilder, 
-    ButtonStyle, 
-    ActionRowBuilder, 
-    MessageFlags,
-    TextChannel,
-    EmbedBuilder
-} from 'discord.js';
 
 export async function handleEventChannelSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'event_select_channel') return false;
@@ -129,7 +125,6 @@ export async function handleEventChannelSelect(interaction: any): Promise<boolea
 
     return true;
 }
-
 export async function handleEventRoleSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'event_select_role' && interaction.customId !== 'event_skip_role') return false;
 
@@ -147,7 +142,6 @@ export async function handleEventRoleSelect(interaction: any): Promise<boolean> 
         session.roleId = null;
     }
 
-    // 🚀 Solo 2 botones: Publicar Directamente y Repetir / Intervalo
     const rowModes = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('event_publish_now').setLabel('🚀 Publicar Directamente').setStyle(ButtonStyle.Success),
         new ButtonBuilder().setCustomId('event_repeat_yes').setLabel('🔄 Repetir / Intervalo').setStyle(ButtonStyle.Primary)
@@ -252,15 +246,6 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
 
     return true;
 }
-import { 
-    ModalBuilder, 
-    TextInputBuilder, 
-    TextInputStyle, 
-    ActionRowBuilder, 
-    ModalSubmitInteraction, 
-    EmbedBuilder 
-} from 'discord.js';
-
 export async function handleEventRepeatYesButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_repeat_yes') return false;
 
@@ -419,7 +404,6 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
 
     return true;
 }
-
 export async function handleEventRsvpButton(interaction: ButtonInteraction): Promise<boolean> {
     const customId = interaction.customId;
     if (!['event_rsvp_yes', 'event_rsvp_maybe', 'event_rsvp_no'].includes(customId)) return false;
@@ -508,7 +492,6 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
 
     return true;
 }
-import { Client, TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 
 export function setupEventWorker(client: Client) {
     console.log('📅 [Worker] Sistema de eventos y campeonatos activo en segundo plano.');
