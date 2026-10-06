@@ -7,7 +7,13 @@ import {
     ChannelSelectMenuBuilder, 
     ChannelType, 
     ModalSubmitInteraction, 
-    MessageFlags
+    MessageFlags,
+    RoleSelectMenuBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    TextChannel,
+    EmbedBuilder,
+    Client
 } from 'discord.js';
 import { MongoClient as MongoDriver } from 'mongodb';
 
@@ -26,7 +32,6 @@ export async function getEventsCollection() {
 }
 
 export const eventSessions = new Map<string, any>();
-
 export async function handleDashEventButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_event_create') return false;
 
@@ -66,14 +71,6 @@ export async function handleDashEventButton(interaction: ButtonInteraction): Pro
     await interaction.showModal(modal);
     return true;
 }
-import { 
-    RoleSelectMenuBuilder, 
-    ButtonBuilder, 
-    ButtonStyle, 
-    ActionRowBuilder, 
-    MessageFlags,
-    ModalSubmitInteraction
-} from 'discord.js';
 
 export async function handleEventModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_event_create') return false;
@@ -99,7 +96,6 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
 
     return true;
 }
-
 export async function handleEventChannelSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'event_select_channel') return false;
 
@@ -128,13 +124,6 @@ export async function handleEventChannelSelect(interaction: any): Promise<boolea
 
     return true;
 }
-import { 
-    TextChannel, 
-    EmbedBuilder,
-    TextInputBuilder,
-    TextInputStyle,
-    ModalBuilder
-} from 'discord.js';
 
 export async function handleEventRoleSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'event_select_role' && interaction.customId !== 'event_skip_role') return false;
@@ -168,7 +157,6 @@ export async function handleEventRoleSelect(interaction: any): Promise<boolean> 
 
     return true;
 }
-
 export async function handleEventPublishNowButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_publish_now') return false;
 
@@ -315,7 +303,6 @@ function parseMadridDateTime(dateStr: string, timeStr: string): Date | null {
 
         const madridOffsetMinutes = getMadridOffsetMinutes(tempDate);
         const finalTimestamp = tempDate.getTime() - (madridOffsetMinutes * 60 * 1000);
-
         const targetDate = new Date(finalTimestamp);
         return isNaN(targetDate.getTime()) ? null : targetDate;
     } catch (error) {
@@ -503,8 +490,6 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
 
     return true;
 }
-import { Client, TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-
 export function setupEventWorker(client: Client) {
     console.log('📅 [Worker] Sistema de eventos y campeonatos activo en segundo plano.');
 
@@ -582,9 +567,9 @@ export function setupEventWorker(client: Client) {
                     );
 
                     const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Me Apunto').setStyle(ButtonStyle.Success).setEmoji('✔️️'),
+                        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Me Apunto').setStyle(ButtonStyle.Success).setEmoji('✔️'),
                         new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❔'),
-                        new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
+                        new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️️')
                     );
 
                     let contentToSend: string | undefined = undefined;
