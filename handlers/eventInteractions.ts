@@ -19,7 +19,7 @@ import { getEventsCollection } from './interactionRouter';
 // Memoria temporal para la sesión de creación de eventos de cada usuario
 export const eventSessions = new Map<string, any>();
 
-// 🛡 ENRUTADOR LOCAL DE EVENTOS
+// 🛡 ENRUTADOR LOCAL DE EVENTOS (PARTE 1)
 export async function handleEventInteraction(interaction: any): Promise<boolean> {
     try {
         // 1. Botones del flujo de eventos
@@ -30,7 +30,7 @@ export async function handleEventInteraction(interaction: any): Promise<boolean>
             if (interaction.customId === 'event_config_repeat') return await handleEventConfigRepeatButton(interaction);
             if (['event_rsvp_yes', 'event_rsvp_maybe', 'event_rsvp_no'].includes(interaction.customId)) return await handleEventRsvpButton(interaction);
         }
-        
+
         // 2. Modales
         if (interaction.isModalSubmit()) {
             if (interaction.customId === 'modal_event_create') return await handleEventModalSubmit(interaction);
@@ -195,8 +195,7 @@ async function handleEventModalSubmit(interaction: ModalSubmitInteraction): Prom
 
     return true;
 }
-
-// --- Publicar Inmediatamente (Estilo Apollo) ---
+// --- Publicar Inmediatamente (Estilo Apollo) (PARTE 2) ---
 async function handleEventPublishNowButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_publish_now') return false;
 
@@ -225,13 +224,13 @@ async function handleEventPublishNowButton(interaction: ButtonInteraction): Prom
         if (session.image) embed.setImage(session.image);
 
         embed.addFields(
-            { name: '✅ Asistiré (0)', value: 'Ninguno', inline: false },
+            { name: '✔️ Asistiré (0/16)', value: 'Ninguno', inline: false },
             { name: '❔ Duda (0)', value: 'Ninguno', inline: false },
             { name: '❌ No puedo (0)', value: 'Ninguno', inline: false }
         );
 
         const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✔️'),
+            new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✔️️'),
             new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❔'),
             new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
         );
@@ -336,7 +335,7 @@ async function handleEventRepeatModalSubmit(interaction: ModalSubmitInteraction)
     return true;
 }
 
-// --- GESTIÓN DE RSVP Y ROL @asistente EN MINÚSCULA ---
+// --- GESTIÓN DE RSVP, LÍMITE DE 16 PLAZAS Y AUTO-PROMOCIÓN DESDE DUDA ---
 async function handleEventRsvpButton(interaction: ButtonInteraction): Promise<boolean> {
     const customId = interaction.customId;
     const userId = interaction.user.id;
@@ -355,6 +354,10 @@ async function handleEventRsvpButton(interaction: ButtonInteraction): Promise<bo
 
     if (!eventDoc.rsvps) eventDoc.rsvps = { yes: [], maybe: [], no: [] };
 
+    // Detectar si el usuario estaba previamente en 'yes'
+    const wasInYes = eventDoc.rsvps.yes.includes(userId);
+
+    // Limpiar usuario de cualquier otra lista anterior
     eventDoc.rsvps.yes = eventDoc.rsvps.yes.filter((id: string) => id !== userId);
     eventDoc.rsvps.maybe = eventDoc.rsvps.maybe.filter((id: string) => id !== userId);
     eventDoc.rsvps.no = eventDoc.rsvps.no.filter((id: string) => id !== userId);
@@ -374,21 +377,41 @@ async function handleEventRsvpButton(interaction: ButtonInteraction): Promise<bo
 
     const member = await guild.members.fetch(userId).catch(() => null);
     let statusText = '';
+    let responseContent = '';
 
     if (customId === 'event_rsvp_yes') {
-        eventDoc.rsvps.yes.push(userId);
-        statusText = 'Asistiré';
-        if (asistenteRole && member) await member.roles.add(asistenteRole).catch(() => {});
+        // Comprobar si hay hueco (máximo 16 plazas)
+        if (eventDoc.rsvps.yes.length < 16) {
+            eventDoc.rsvps.yes.push(userId);
+            statusText = 'Asistiré';
+            responseContent = '✅ ¡Tu asistencia (**Asistiré**) ha quedado registrada!';
+            if (asistenteRole && member) await member.roles.add(asistenteRole).catch(() => {});
+        } else {
+            // Si está lleno, va automáticamente a Duda (lista de espera)
+            eventDoc.rsvps.maybe.push(userId);
+            statusText = 'Duda (Parrilla llena)';
+            responseContent = '⚠️ La parrilla titular (16 plazas) está llena. Has sido colocado automáticamente en **Duda** (en lista de espera).';
+            if (asistenteRole && member) await member.roles.add(asistenteRole).catch(() => {});
+        }
     } else if (customId === 'event_rsvp_maybe') {
         eventDoc.rsvps.maybe.push(userId);
         statusText = 'Duda';
+        responseContent = '✅ ¡Tu estado (**Duda**) ha quedado registrado!';
         if (asistenteRole && member) await member.roles.add(asistenteRole).catch(() => {});
     } else if (customId === 'event_rsvp_no') {
         eventDoc.rsvps.no.push(userId);
         statusText = 'No puedo';
+        responseContent = '❌ Tu asistencia ha sido marcada como **No puedo**.';
         if (asistenteRole && member && member.roles.cache.has(asistenteRole.id)) {
             await member.roles.remove(asistenteRole).catch(() => {});
         }
+    }
+
+    // Efecto Cascada / Auto-Promoción: Si alguien estaba en 'yes' y se ha salido (o cambiado), y hay hueco, sube el primer 'duda'
+    const leftYes = wasInYes && !eventDoc.rsvps.yes.includes(userId);
+    if (leftYes && eventDoc.rsvps.yes.length < 16 && eventDoc.rsvps.maybe.length > 0) {
+        const promotedId = eventDoc.rsvps.maybe.shift()!;
+        eventDoc.rsvps.yes.push(promotedId);
     }
 
     await col.updateOne({ messageId }, { $set: { rsvps: eventDoc.rsvps } });
@@ -404,13 +427,13 @@ async function handleEventRsvpButton(interaction: ButtonInteraction): Promise<bo
     const formatVerticalList = (ids: string[]) => ids.length > 0 ? ids.map(id => `<@${id}>`).join('\n') : 'Ninguno';
 
     embed.addFields(
-        { name: `✔️ Asistiré (${eventDoc.rsvps.yes.length})`, value: formatVerticalList(eventDoc.rsvps.yes), inline: false },
+        { name: `✔️ Asistiré (${eventDoc.rsvps.yes.length}/16)`, value: formatVerticalList(eventDoc.rsvps.yes), inline: false },
         { name: `❔ Duda (${eventDoc.rsvps.maybe.length})`, value: formatVerticalList(eventDoc.rsvps.maybe), inline: false },
         { name: `✖️ No puedo (${eventDoc.rsvps.no.length})`, value: formatVerticalList(eventDoc.rsvps.no), inline: false }
     );
 
     const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✔️'),
+        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✔️️'),
         new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❔'),
         new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
     );
@@ -418,7 +441,7 @@ async function handleEventRsvpButton(interaction: ButtonInteraction): Promise<bo
     await interaction.message.edit({ embeds: [embed], components: [rowRsvp] }).catch(() => {});
 
     await interaction.reply({
-        content: `✅ ¡Tu asistencia (**${statusText}**) ha quedado registrada!`,
+        content: responseContent,
         flags: [MessageFlags.Ephemeral]
     });
 
