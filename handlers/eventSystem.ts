@@ -32,6 +32,7 @@ export async function getEventsCollection() {
 }
 
 export const eventSessions = new Map<string, any>();
+
 export async function handleDashEventButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_event_create') return false;
 
@@ -95,8 +96,6 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
     });
 
     return true;
-}
-
 export async function handleEventChannelSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'event_select_channel') return false;
 
@@ -119,12 +118,13 @@ export async function handleEventChannelSelect(interaction: any): Promise<boolea
     );
 
     await interaction.update({
-        content: `📢 Canal seleccionado (<#${channelId}>).\n**Paso 3/3:** Selecciona el rol del campeonato a mencionar:`,
+        content: `📢 Canal seleccionado (<#${channelId}>).\n**Paso 3/4:** Selecciona el rol del campeonato a mencionar:`,
         components: [rowRole, rowSkip]
     });
 
     return true;
 }
+
 export async function handleEventRoleSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'event_select_role' && interaction.customId !== 'event_skip_role') return false;
 
@@ -147,7 +147,7 @@ export async function handleEventRoleSelect(interaction: any): Promise<boolean> 
         new ButtonBuilder().setCustomId('event_repeat_yes').setLabel('🔄 Repetir / Intervalo').setStyle(ButtonStyle.Primary)
     );
 
-    const contentMsg = '📅 **Paso Final:** ¿Cómo deseas publicar este evento?';
+    const contentMsg = '📅 **Paso Final (4/4):** ¿Cómo deseas publicar este evento?';
 
     if (interaction.isRepliable() && (interaction.deferred || interaction.replied)) {
         await interaction.followUp({ content: contentMsg, components: [rowModes], flags: [MessageFlags.Ephemeral] });
@@ -246,6 +246,7 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
 
     return true;
 }
+
 export async function handleEventRepeatYesButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_repeat_yes') return false;
 
@@ -296,7 +297,6 @@ function parseMadridDateTime(dateStr: string, timeStr: string): Date | null {
     try {
         const [day, month, year] = dateStr.split('/').map(Number);
         const [hour, minute] = timeStr.split(':').map(Number);
-
         if (!day || !month || !year || isNaN(hour) || isNaN(minute)) return null;
 
         const targetString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00Z`;
@@ -313,7 +313,6 @@ function parseMadridDateTime(dateStr: string, timeStr: string): Date | null {
         return null;
     }
 }
-
 function getMadridOffsetMinutes(date: Date): number {
     const madridDateStr = new Intl.DateTimeFormat('en-US', {
         timeZone: 'Europe/Madrid',
@@ -492,7 +491,6 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
 
     return true;
 }
-
 export function setupEventWorker(client: Client) {
     console.log('📅 [Worker] Sistema de eventos y campeonatos activo en segundo plano.');
 
@@ -630,4 +628,43 @@ export function setupEventWorker(client: Client) {
             console.error('❌ [Worker] Error general en el worker de eventos:', error);
         }
     }, 60000);
+}
+/**
+ * Función central de enrutamiento que busca el bot.
+ * Recoge cualquier interacción (botón, modal, select menu) y la deriva a su función correspondiente.
+ */
+export async function handleInteraction(interaction: any): Promise<void> {
+    try {
+        // 1. Botones
+        if (interaction.isButton()) {
+            if (await handleDashEventButton(interaction)) return;
+            if (await handleEventPublishNowButton(interaction)) return;
+            if (await handleEventRepeatYesButton(interaction)) return;
+            if (await handleEventRsvpButton(interaction)) return;
+            if (interaction.customId === 'event_skip_role') {
+                if (await handleEventRoleSelect(interaction)) return;
+            }
+        }
+
+        // 2. Modales (Formularios)
+        if (interaction.isModalSubmit()) {
+            if (await handleEventModalSubmit(interaction)) return;
+            if (await handleEventRepeatModalSubmit(interaction)) return;
+        }
+
+        // 3. Menús desplegables (Canales y Roles)
+        if (interaction.isChannelSelectMenu()) {
+            if (await handleEventChannelSelect(interaction)) return;
+        }
+
+        if (interaction.isRoleSelectMenu()) {
+            if (await handleEventRoleSelect(interaction)) return;
+        }
+
+    } catch (error) {
+        console.error('❌ Error procesando la interacción en el enrutador:', error);
+        if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+            await interaction.reply({ content: '❌ Hubo un error al procesar esta acción.', flags: [MessageFlags.Ephemeral] }).catch(() => {});
+        }
+    }
 }
