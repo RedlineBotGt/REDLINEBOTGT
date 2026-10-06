@@ -404,6 +404,9 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
 
     const userId = interaction.user.id;
     const messageId = interaction.message.id;
+    const guild = interaction.guild;
+
+    if (!guild) return true;
 
     const col = await getEventsCollection();
     const eventDoc = await col.findOne({ messageId });
@@ -425,16 +428,29 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
     eventDoc.rsvps.maybe = eventDoc.rsvps.maybe.filter((id: string) => id !== userId);
     eventDoc.rsvps.no = eventDoc.rsvps.no.filter((id: string) => id !== userId);
 
+    // Buscar el rol 'asistente' en el servidor
+    const asistenteRole = guild.roles.cache.find(r => r.name.toLowerCase() === 'asistente');
+    const member = await guild.members.fetch(userId).catch(() => null);
+
     let statusText = '';
     if (customId === 'event_rsvp_yes') {
         eventDoc.rsvps.yes.push(userId);
-        statusText = 'Asistiré';
+        statusText = 'Me Apunto';
+        if (asistenteRole && member) {
+            await member.roles.add(asistenteRole).catch(() => {});
+        }
     } else if (customId === 'event_rsvp_maybe') {
         eventDoc.rsvps.maybe.push(userId);
-        statusText = 'Quizás';
+        statusText = 'Duda';
+        if (asistenteRole && member) {
+            await member.roles.add(asistenteRole).catch(() => {});
+        }
     } else if (customId === 'event_rsvp_no') {
         eventDoc.rsvps.no.push(userId);
-        statusText = 'No Asistiré';
+        statusText = 'No puedo';
+        if (asistenteRole && member && member.roles.cache.has(asistenteRole.id)) {
+            await member.roles.remove(asistenteRole).catch(() => {});
+        }
     }
 
     // Actualizar en MongoDB
@@ -454,15 +470,15 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
     const formatList = (ids: string[]) => ids.length > 0 ? ids.map(id => `<@${id}>`).join(', ') : 'Ninguno';
 
     embed.addFields(
-        { name: `✅ Asistiré (${eventDoc.rsvps.yes.length})`, value: formatList(eventDoc.rsvps.yes), inline: false },
-        { name: `❓ Quizás (${eventDoc.rsvps.maybe.length})`, value: formatList(eventDoc.rsvps.maybe), inline: false },
-        { name: `❌ No Asistiré (${eventDoc.rsvps.no.length})`, value: formatList(eventDoc.rsvps.no), inline: false }
+        { name: `✔️ Me Apunto (${eventDoc.rsvps.yes.length})`, value: formatList(eventDoc.rsvps.yes), inline: false },
+        { name: `❔ Duda (${eventDoc.rsvps.maybe.length})`, value: formatList(eventDoc.rsvps.maybe), inline: false },
+        { name: `✖️ No puedo (${eventDoc.rsvps.no.length})`, value: formatList(eventDoc.rsvps.no), inline: false }
     );
 
     const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✅'),
-        new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Quizás').setStyle(ButtonStyle.Secondary).setEmoji('❓'),
-        new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No Asistiré').setStyle(ButtonStyle.Danger).setEmoji('❌')
+        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Me Apunto').setStyle(ButtonStyle.Success).setEmoji('✔️'),
+        new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❔'),
+        new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
     );
 
     // Editar el mensaje original del evento en Discord para reflejar el cambio al instante
@@ -483,6 +499,37 @@ export function setupEventWorker(client: Client) {
             const col = await getEventsCollection();
             const now = new Date();
 
+            // 1. ⏰ GESTIÓN DE RECORDATORIOS (30 minutos antes)
+            const thirtyMinsLater = new Date(now.getTime() + 30 * 60 * 1000);
+            const upcomingEvents = await col.find({
+                status: 'pending',
+                reminderSent: { $ne: true },
+                scheduledAt: { $lte: thirtyMinsLater,$gt: now }
+            }).toArray();
+
+            for (const ev of upcomingEvents) {
+                try {
+                    const guild = await client.guilds.fetch(ev.guildId).catch(() => null);
+                    if (!guild) continue;
+
+                    const channel = await guild.channels.fetch(ev.channelId).catch(() => null) as TextChannel;
+                    if (!channel || !channel.isTextBased()) continue;
+
+                    const asistenteRole = guild.roles.cache.find(r => r.name.toLowerCase() === 'asistente');
+                    const roleMention = asistenteRole ? `<@&${asistenteRole.id}>` : '@asistente';
+
+                    await channel.send({
+                        content: `⏰ **¡Atención!** El evento **"${ev.title}"** comienza en **30 minutos**. ${roleMention}`
+                    });
+
+                    await col.updateOne({ _id: ev._id }, { $set: { reminderSent: true } });
+                    console.log(`⏰ [Worker] Recordatorio de 30 min enviado para el evento "${ev.title}".`);
+                } catch (remErr) {
+                    console.error('❌ Error enviando recordatorio de evento:', remErr);
+                }
+            }
+
+            // 2. 🚀 GESTIÓN DE PUBLICACIÓN DE EVENTOS
             const pendingEvents = await col.find({
                 status: 'pending',
                 scheduledAt: { $lte: now }
@@ -514,17 +561,17 @@ export function setupEventWorker(client: Client) {
                         embed.setImage(ev.image);
                     }
 
-                    // Campos iniciales vacíos de RSVP
+                    // Campos iniciales vacíos con los nuevos textos
                     embed.addFields(
-                        { name: '✅ Asistiré (0)', value: 'Ninguno', inline: false },
-                        { name: '❓ Quizás (0)', value: 'Ninguno', inline: false },
-                        { name: '❌ No Asistiré (0)', value: 'Ninguno', inline: false }
+                        { name: '✔️ Me Apunto (0)', value: 'Ninguno', inline: false },
+                        { name: '❔ Duda (0)', value: 'Ninguno', inline: false },
+                        { name: '✖️ No puedo (0)', value: 'Ninguno', inline: false }
                     );
 
                     const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✅'),
-                        new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Quizás').setStyle(ButtonStyle.Secondary).setEmoji('❓'),
-                        new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No Asistiré').setStyle(ButtonStyle.Danger).setEmoji('❌')
+                        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Me Apunto').setStyle(ButtonStyle.Success).setEmoji('✔️️'),
+                        new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❔'),
+                        new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
                     );
 
                     const messageOptions = {
@@ -535,7 +582,22 @@ export function setupEventWorker(client: Client) {
 
                     const sentMessage = await channel.send(messageOptions);
 
-                    // Guardamos el ID del mensaje enviado para que los botones de RSVP sepan qué evento actualizar
+                    // 🧹 Al comenzar el evento, barremos y retiramos el rol temporal `@asistente` a todos los usuarios que lo tuvieran
+                    const asistenteRole = guild.roles.cache.find(r => r.name.toLowerCase() === 'asistente');
+                    if (asistenteRole) {
+                        try {
+                            await guild.members.fetch(); // Asegurar caché completa de miembros
+                            for (const [memberId, member] of guild.members.cache) {
+                                if (member.roles.cache.has(asistenteRole.id)) {
+                                    await member.roles.remove(asistenteRole).catch(() => {});
+                                }
+                            }
+                        } catch (roleCleanErr) {
+                            console.error('❌ Error barriendo rol asistente:', roleCleanErr);
+                        }
+                    }
+
+                    // Guardamos el ID del mensaje enviado
                     await col.updateOne({ _id: ev._id }, { $set: { messageId: sentMessage.id } });
 
                     if (ev.repeats && ev.remainingTimes > 1) {
@@ -545,7 +607,7 @@ export function setupEventWorker(client: Client) {
                         await col.updateOne(
                             { _id: ev._id },
                             { 
-                                $set: { scheduledAt: nextDate, messageId: undefined },$inc: { remainingTimes: -1 } 
+                                $set: { scheduledAt: nextDate, messageId: undefined, reminderSent: false, rsvps: { yes: [], maybe: [], no: [] } },$inc: { remainingTimes: -1 } 
                             }
                         );
                         console.log(`🔄 [Worker] Evento recurrente reprogramado para: ${nextDate}. Quedan ${ev.remainingTimes - 1} envíos.`);
