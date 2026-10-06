@@ -37,9 +37,8 @@ import {
     handleEventModalSubmit,
     handleEventRsvpButton,
     handleEventRepeatYesButton,
-    handleEventRepeatNoButton,
-    handleEventRepeatModalSubmit,
-    handleEventSingleDatetimeSubmit 
+    handleEventPublishNowButton,
+    handleEventRepeatModalSubmit
 } from './eventSystem';
 
 import { 
@@ -85,239 +84,7 @@ import {
     handleDashFormTituloModal,
     handleDashOpenPreguntasButton 
 } from './dashCreateFormHandler';
-import { 
-    handleDashCrearBotonButton, 
-    handleTicketModalSubmit, 
-    handleTicketChannelSelect, 
-    handleTicketButtonClick, 
-    handleCloseTicketButton, 
-    activeTicketButtons 
-} from './ticketButtonHandler';
-import { 
-    handleDashScheduledButton,
-    handleSchedNewButton,
-    handleSchedExistingButton,
-    handleSchedExistingSelect,
-    handleSchedActionButtons,
-    handleSchedModalSubmit,
-    handleSchedChannelSelect,
-    handleSchedRoleSelection,
-    handleSchedDatetimeSubmit,
-    handleSchedRepeatYes,
-    handleSchedFinalizeNo,
-    handleSchedRepeatModalSubmit
-} from './scheduledMessage';
-
-import { 
-    handleDashRrButton,
-    handleRrContentSubmit,
-    handleRrChannelSelect,
-    handleRrRoleSelect,
-    handleRrExistingSelect,
-    handleRrDeleteConfig,
-    handleRrStartCreate
-} from './reactionRoles';
-
-import { 
-    handleDashSheetsButton, 
-    handleSheetsChannelSelect, 
-    handleSheetsRoleSelect 
-} from './dashSheetsHandler';
-export async function handleInteraction(interaction: Interaction) {
-    try {
-        // 1. Manejo de Comandos de Barra (Slash Commands)
-        if (interaction.isChatInputCommand()) {
-            if (interaction.commandName === 'dash') {
-                await dash.execute(interaction);
-            } else if (interaction.commandName === 'dashstaff') {
-                await dashstaff.execute(interaction); 
-            } else if (interaction.commandName === 'setup-reporte') {
-                await reporte.execute(interaction);
-            } else if (interaction.commandName === 'setupdefensa') {
-                await setupdefensa.execute(interaction);
-            } else if (interaction.commandName === 'veredicto') {
-                await veredicto.execute(interaction);
-            } else if (interaction.commandName === 'msn') {
-                await msn.execute(interaction);
-            } else if (interaction.commandName === 'forms') {
-                await forms.execute(interaction);
-            } else if (interaction.commandName === 'colocarform') {
-                await ColocarForm.execute(interaction);
-            } else if (interaction.commandName === 'borrar') {
-                await borrar.execute(interaction);
-            } else if (interaction.commandName === 'dashsheets') {
-                await dashsheets.execute(interaction); 
-            } else if (interaction.commandName === 'dado') {
-                await dado.execute(interaction);
-            }
-            return;
-        }
-
-        // 2. Manejo de Menús Desplegables de Texto (String Select Menus)
-        if (interaction.isStringSelectMenu()) {
-            if (interaction.customId === 'dash_select_colocar_form') {
-                await handleDashColocarFormSelect(interaction);
-            } else if (interaction.customId === 'dash_select_eliminar_form') {
-                await handleDashDeleteFormSelect(interaction);
-            } else if (interaction.customId === 'dash_select_editar_form') {
-                await handleDashEditFormSelect(interaction);
-            } else if (interaction.customId === 'rr_select_existing_message') {
-                await handleRrExistingSelect(interaction); 
-            } else if (interaction.customId === 'sched_select_existing') {
-                await handleSchedExistingSelect(interaction); 
-            }
-            return;
-        }
-// 2.1. Manejo de Menús Desplegables de Canales (Channel Select Menus)
-        if (interaction.isChannelSelectMenu()) {
-            if (['encuesta_pre_publish_channel', 'encuesta_pre_log_channel'].includes(interaction.customId)) {
-                await handleEncuestaPreSelections(interaction);
-            } else if (interaction.customId === 'sheets_select_channel') {
-                if (!interaction.deferred && !interaction.replied) {
-                    await interaction.deferUpdate().catch(() => {});
-                }
-                await handleSheetsChannelSelect(interaction); 
-            } else if (interaction.customId === 'avisos_select_channel') {
-                await handleAvisosChannelSelect(interaction); 
-            } else if (interaction.customId === 'event_select_channel') {
-                await handleEventChannelSelect(interaction); 
-            } else if (interaction.customId === 'dash_select_msn_channel') {
-                await handleDashMsnChannelSelect(interaction);
-            } else if (interaction.customId === 'dash_select_verd_channel') {
-                await handleDashVeredictoChannelSelect(interaction);
-            } else if (interaction.customId === 'dash_select_defensa_channel') {
-                await handleDashDefensaChannelSelect(interaction);
-            } else if (interaction.customId === 'dash_select_form_create_channel') {
-                await handleDashCreateFormChannelSelect(interaction);
-            } else if (interaction.customId.startsWith('dash_channel_colocar_')) {
-                await handleDashColocarChannelSelect(interaction);
-            } else if (interaction.customId.startsWith('ticket_deploy_channel_')) {
-                await handleTicketChannelSelect(interaction);
-            } else if (interaction.customId === 'sched_select_channel') {
-                await handleSchedChannelSelect(interaction); 
-            } else if (interaction.customId === 'rr_select_channel') {
-                await handleRrChannelSelect(interaction);
-            } else if (interaction.customId === 'welcome_select_welcome_channel') {
-                await handleWelcomeChannelSelect(interaction);
-            } else if (interaction.customId === 'welcome_select_goodbye_channel') {
-                await handleWelcomeChannelSelect(interaction); 
-            } else if (interaction.customId === 'sorteo_select_channel') {
-                await handleSorteoChannelSelect(interaction); 
-            }
-            return;
-        }
- // 2.2. Manejo de Menús Desplegables de Roles (Role Select Menus)
-        if (interaction.isRoleSelectMenu()) {
-            if (interaction.customId === 'encuesta_pre_role') {
-                await handleEncuestaPreSelections(interaction);
-            } else if (interaction.customId === 'sheets_select_role') {
-                if (!interaction.deferred && !interaction.replied) {
-                    await interaction.deferUpdate().catch(() => {});
-                }
-                await handleSheetsRoleSelect(interaction); 
-            } else if (interaction.customId === 'event_select_role') {
-                await handleEventRoleSelect(interaction); 
-            } else if (interaction.customId === 'dash_select_verd_role') {
-                await handleDashVeredictoRoleSelect(interaction);
-            } else if (interaction.customId === 'sched_select_role') {
-                await handleSchedRoleSelection(interaction); 
-            } else if (interaction.customId === 'rr_select_role') {
-                await handleRrRoleSelect(interaction);
-            } else if (interaction.customId === 'sorteo_select_role') {
-                await handleSorteoRoleSelect(interaction); 
-            }
-            return;
-        }
-
-        // 3. Manejo de Botones interactivos
-        if (interaction.isButton()) {
-            const customId = interaction.customId;
-
-            if (customId === 'dash_btn_encuesta_create') {
-                await handleEncuestaStart(interaction);
-            } else if (customId === 'encuesta_btn_open_modal') {
-                await handleEncuestaOpenModalButton(interaction);
-            } else if (customId.startsWith('sheets_') || customId.startsWith('pub_')) {
-                if (!interaction.deferred && !interaction.replied) {
-                    await interaction.deferUpdate().catch(() => {});
-                }
-                await handleDashSheetsButton(interaction); 
-            } else if (customId === 'dash_btn_avisos_config') {
-                await handleDashAvisosButton(interaction); 
-            } else if (customId === 'dash_btn_event_create') {
-                await handleDashEventButton(interaction); 
-            } else if (['event_rsvp_yes', 'event_rsvp_maybe', 'event_rsvp_no'].includes(customId)) {
-                await handleEventRsvpButton(interaction); 
-            } else if (customId === 'event_repeat_yes') {
-                await handleEventRepeatYesButton(interaction); 
-            } else if (customId === 'event_repeat_no') {
-                await handleEventRepeatNoButton(interaction); 
-            } else if (customId === 'dash_btn_crear_form') {
-                await handleDashCreateFormButton(interaction); 
-            } else if (customId === 'dash_btn_abrir_preguntas') {
-                await handleDashOpenPreguntasButton(interaction); 
-            } else if (customId === 'dash_btn_editar_form') {
-                await handleDashEditButton(interaction); 
-            } else if (customId === 'dash_btn_borrar_form') {
-                await handleDashDeleteButton(interaction); 
-            } else if (customId === 'dash_btn_colocar_form') {
-                await handleDashColocarButton(interaction); 
-            } else if (customId === 'dash_btn_crear_boton') {
-                await handleDashCrearBotonButton(interaction);
-            } else if (customId === 'dash_btn_scheduled_msg') {
-                await handleDashScheduledButton(interaction); 
-            } else if (customId === 'sched_btn_new') {
-                await handleSchedNewButton(interaction); 
-            } else if (customId === 'sched_btn_existing') {
-                await handleSchedExistingButton(interaction); 
-            } else if (customId.startsWith('sched_action_')) {
-                await handleSchedActionButtons(interaction); 
-            } else if (customId === 'sched_skip_role') {
-                await handleSchedRoleSelection(interaction); 
-            } else if (customId === 'sched_repeat_yes') {
-                await handleSchedRepeatYes(interaction); 
-            } else if (customId === 'sched_repeat_no') {
-                await handleSchedFinalizeNo(interaction); 
-            } else if (customId === 'rr_btn_create') {
-                await handleDashRrButton(interaction); 
-            } else if (customId === 'rr_btn_start_create') {
-                await handleRrStartCreate(interaction); 
-            } else if (customId.startsWith('rr_btn_delete_config_')) {
-                await handleRrDeleteConfig(interaction); 
-            } else if (customId === 'dash_btn_welcome_config') {
-                await handleDashWelcomeButton(interaction);
-            } else if (customId === 'welcome_menu_bienvenida' || customId === 'welcome_menu_despedida') {
-                await handleWelcomeMenuButton(interaction);
-            } else if (customId === 'dash_btn_sorteo_create') {
-                await handleDashSorteoButton(interaction); 
-            } else if (customId.startsWith('sorteo_launch_')) {
-                await handleSorteoLaunchButton(interaction); 
-            } else if (customId.startsWith('dash_confirm_borrar_')) {
-                await handleDashDeleteConfirmButton(interaction); 
-            } else if (customId === 'dash_btn_msn_mensaje') {
-                await handleDashMsnButton(interaction); 
-            } else if (customId === 'dash_btn_veredicto') {
-                await handleDashVeredictoButton(interaction); 
-            } else if (customId === 'dash_btn_setup_reporte') {
-                await handleDashReporteButton(interaction);
-            } else if (customId === 'dash_btn_setup_defensa') {
-                await handleDashDefensaButton(interaction);
-            } else if (customId === 'close_ticket') {
-                await handleCloseTicketButton(interaction);
-            } else if (customId === 'btn_abrir_reporte') {
-                const handled = await handleReportButton(interaction);
-                if (handled) return;
-            } else if (customId === 'btn_abrir_defensa') {
-                const handledDef = await handleDefensaButton(interaction);
-                if (handledDef) return;
-            } else if (customId.startsWith('open_form_')) {
-                await handleFormButtonClick(interaction);
-            } else if (activeTicketButtons.has(customId)) {
-                await handleTicketButtonClick(interaction);
-            }
-            return;
-        }
-// 4. Manejo de Envíos de Formularios (Modals)
+        // 4. Manejo de Envíos de Formularios (Modals)
         if (interaction.isModalSubmit()) {
             const modalId = interaction.customId;
 
@@ -325,8 +92,6 @@ export async function handleInteraction(interaction: Interaction) {
                 await handleEncuestaFinalSubmit(interaction);
             } else if (modalId === 'modal_event_create') {
                 await handleEventModalSubmit(interaction); 
-            } else if (modalId === 'modal_event_single_datetime') {
-                await handleEventSingleDatetimeSubmit(interaction); 
             } else if (modalId === 'modal_event_repeat') {
                 await handleEventRepeatModalSubmit(interaction); 
             } else if (modalId === 'modal_envio_reporte') {
@@ -366,7 +131,7 @@ export async function handleInteraction(interaction: Interaction) {
             }
             return;
         }
-} catch (error) {
+    } catch (error) {
         console.error('❌ Error al procesar la interacción:', error);
         if (interaction.isRepliable()) {
             const errorMessage = {
