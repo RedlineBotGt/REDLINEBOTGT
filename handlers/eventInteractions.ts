@@ -225,9 +225,9 @@ async function handleEventPublishNowButton(interaction: ButtonInteraction): Prom
         if (session.image) embed.setImage(session.image);
 
         embed.addFields(
-            { name: '✔️ Asistiré (0)', value: 'Ninguno', inline: false },
+            { name: '✅ Asistiré (0)', value: 'Ninguno', inline: false },
             { name: '❔ Duda (0)', value: 'Ninguno', inline: false },
-            { name: '✖️ No puedo (0)', value: 'Ninguno', inline: false }
+            { name: '❌ No puedo (0)', value: 'Ninguno', inline: false }
         );
 
         const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
