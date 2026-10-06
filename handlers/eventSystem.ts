@@ -33,7 +33,6 @@ async function getEventsCollection() {
 
 const eventSessions = new Map<string, any>();
 
-// 1. Botón del Dashboard para iniciar la creación de un Evento
 export async function handleDashEventButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_event_create') return false;
 
@@ -74,7 +73,6 @@ export async function handleDashEventButton(interaction: ButtonInteraction): Pro
     return true;
 }
 
-// 2. Procesar modal de creación y pedir canal
 export async function handleEventModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_event_create') return false;
 
@@ -100,7 +98,6 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
     return true;
 }
 
-// 3. Canal seleccionado -> Pide rol del campeonato
 export async function handleEventChannelSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'event_select_channel') return false;
 
@@ -130,7 +127,6 @@ export async function handleEventChannelSelect(interaction: any): Promise<boolea
     return true;
 }
 
-// 4. Rol seleccionado o saltado -> Pregunta si se desea configurar intervalo y repetición
 export async function handleEventRoleSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'event_select_role' && interaction.customId !== 'event_skip_role') return false;
 
@@ -163,8 +159,6 @@ export async function handleEventRoleSelect(interaction: any): Promise<boolean> 
 
     return true;
 }
-
-// 5A. Si pulsa NO repetir -> Pide fecha y hora única mediante modal rápido
 export async function handleEventRepeatNoButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_repeat_no') return false;
 
@@ -195,7 +189,6 @@ export async function handleEventRepeatNoButton(interaction: ButtonInteraction):
     return true;
 }
 
-// 5B. Si pulsa SÍ repetir -> Abre el Modal (Optimizado exactamente a 5 filas para cumplir con Discord)
 export async function handleEventRepeatYesButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_repeat_yes') return false;
 
@@ -221,14 +214,14 @@ export async function handleEventRepeatYesButton(interaction: ButtonInteraction)
         .setCustomId('event_interval_hm')
         .setLabel('Intervalo (Horas:Minutos o Días:Horas)')
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: 2:30 (o bien 1:0:0 para 1 día)')
+        .setPlaceholder('Ej: 2:30 (o bien 1:0:0)')
         .setRequired(true);
 
     const timesInput = new TextInputBuilder()
         .setCustomId('event_repeat_times')
         .setLabel('Nº total de envíos (ej: 3)')
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: 3 (Mínimo 2)')
+        .setPlaceholder('Ej: 3')
         .setRequired(true);
 
     modal.addComponents(
@@ -241,7 +234,7 @@ export async function handleEventRepeatYesButton(interaction: ButtonInteraction)
     await interaction.showModal(modal);
     return true;
 }
-// 🌍 Funciones auxiliares para calcular hora en Madrid
+
 function parseMadridDateTime(dateStr: string, timeStr: string): Date | null {
     try {
         const [day, month, year] = dateStr.split('/').map(Number);
@@ -267,13 +260,8 @@ function parseMadridDateTime(dateStr: string, timeStr: string): Date | null {
 function getMadridOffsetMinutes(date: Date): number {
     const madridDateStr = new Intl.DateTimeFormat('en-US', {
         timeZone: 'Europe/Madrid',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
     }).format(date);
 
     const [datePart, timePart] = madridDateStr.split(', ');
@@ -285,7 +273,6 @@ function getMadridOffsetMinutes(date: Date): number {
     return Math.round(diffMs / (1000 * 60));
 }
 
-// 6. Guardar Evento de Única Vez
 export async function handleEventSingleDatetimeSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_event_single_datetime') return false;
 
@@ -319,6 +306,7 @@ export async function handleEventSingleDatetimeSubmit(interaction: ModalSubmitIn
             time: timeStr,
             repeats: false,
             status: 'pending',
+            rsvps: { yes: [], maybe: [], no: [] },
             createdAt: new Date()
         });
 
@@ -336,7 +324,6 @@ export async function handleEventSingleDatetimeSubmit(interaction: ModalSubmitIn
     return true;
 }
 
-// 7. Guardar Evento Recurrente con formato de intervalo simplificado (Ej: "2:30" o "1:0:0")
 export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_event_repeat') return false;
 
@@ -351,20 +338,17 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
         return true;
     }
 
-    // Parsear intervalo en formato "Horas:Minutos" o "Días:Horas:Minutos"
     const parts = intervalStr.split(':').map(Number);
     let intervalMs = 0;
 
     if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-        // Horas:Minutos
-        intervalMs = (parts[0] * 60 * 60 * 1000) + (parts[1] * 60 * 1000);
+        intervalMs = (parts[0] * 3600000) + (parts[1] * 60000);
     } else if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
-        // Días:Horas:Minutos
-        intervalMs = (parts[0] * 24 * 60 * 60 * 1000) + (parts[1] * 60 * 60 * 1000) + (parts[2] * 60 * 1000);
+        intervalMs = (parts[0] * 86400000) + (parts[1] * 3600000) + (parts[2] * 60000);
     }
 
     if (intervalMs <= 0) {
-        await interaction.reply({ content: '❌ Formato de intervalo inválido. Usa por ejemplo `2:30` (2 horas y 30 minutos).', flags: [MessageFlags.Ephemeral] });
+        await interaction.reply({ content: '❌ Formato de intervalo inválido. Usa por ejemplo `2:30`.', flags: [MessageFlags.Ephemeral] });
         return true;
     }
 
@@ -397,6 +381,7 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
             intervalMs,
             remainingTimes: totalTimes,
             status: 'pending',
+            rsvps: { yes: [], maybe: [], no: [] },
             createdAt: new Date()
         });
 
@@ -413,21 +398,83 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
 
     return true;
 }
-
-// 8. Manejador de botones RSVP (Asistencia: Sí, Quizás, No)
 export async function handleEventRsvpButton(interaction: ButtonInteraction): Promise<boolean> {
     const customId = interaction.customId;
     if (!['event_rsvp_yes', 'event_rsvp_maybe', 'event_rsvp_no'].includes(customId)) return false;
 
+    const userId = interaction.user.id;
+    const messageId = interaction.message.id;
+
+    const col = await getEventsCollection();
+    const eventDoc = await col.findOne({ messageId });
+
+    if (!eventDoc) {
+        await interaction.reply({
+            content: '❌ Este evento ya no está activo o no se encuentra registrado en la base de datos.',
+            flags: [MessageFlags.Ephemeral]
+        });
+        return true;
+    }
+
+    if (!eventDoc.rsvps) {
+        eventDoc.rsvps = { yes: [], maybe: [], no: [] };
+    }
+
+    // Limpiar votos anteriores del usuario en todas las listas
+    eventDoc.rsvps.yes = eventDoc.rsvps.yes.filter((id: string) => id !== userId);
+    eventDoc.rsvps.maybe = eventDoc.rsvps.maybe.filter((id: string) => id !== userId);
+    eventDoc.rsvps.no = eventDoc.rsvps.no.filter((id: string) => id !== userId);
+
+    let statusText = '';
+    if (customId === 'event_rsvp_yes') {
+        eventDoc.rsvps.yes.push(userId);
+        statusText = 'Asistiré';
+    } else if (customId === 'event_rsvp_maybe') {
+        eventDoc.rsvps.maybe.push(userId);
+        statusText = 'Quizás';
+    } else if (customId === 'event_rsvp_no') {
+        eventDoc.rsvps.no.push(userId);
+        statusText = 'No Asistiré';
+    }
+
+    // Actualizar en MongoDB
+    await col.updateOne({ messageId }, { $set: { rsvps: eventDoc.rsvps } });
+
+    // Reconstruir el embed con las listas actualizadas de usuarios
+    const embed = new EmbedBuilder()
+        .setColor(0x0055FF)
+        .setTitle(`🏁 ${eventDoc.title}`)
+        .setDescription(eventDoc.description)
+        .setTimestamp();
+
+    if (eventDoc.image) {
+        embed.setImage(eventDoc.image);
+    }
+
+    const formatList = (ids: string[]) => ids.length > 0 ? ids.map(id => `<@${id}>`).join(', ') : 'Ninguno';
+
+    embed.addFields(
+        { name: `✅ Asistiré (${eventDoc.rsvps.yes.length})`, value: formatList(eventDoc.rsvps.yes), inline: false },
+        { name: `❓ Quizás (${eventDoc.rsvps.maybe.length})`, value: formatList(eventDoc.rsvps.maybe), inline: false },
+        { name: `❌ No Asistiré (${eventDoc.rsvps.no.length})`, value: formatList(eventDoc.rsvps.no), inline: false }
+    );
+
+    const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✅'),
+        new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Quizás').setStyle(ButtonStyle.Secondary).setEmoji('❓'),
+        new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No Asistiré').setStyle(ButtonStyle.Danger).setEmoji('❌')
+    );
+
+    // Editar el mensaje original del evento en Discord para reflejar el cambio al instante
+    await interaction.message.edit({ embeds: [embed], components: [rowRsvp] }).catch(() => {});
+
     await interaction.reply({
-        content: `✅ ¡Tu asistencia (**${customId === 'event_rsvp_yes' ? 'Asistiré' : customId === 'event_rsvp_maybe' ? 'Quizás' : 'No asistiré'}**) ha quedado registrada!`,
+        content: `✅ ¡Tu asistencia (**${statusText}**) ha quedado registrada y el evento se ha actualizado!`,
         flags: [MessageFlags.Ephemeral]
     });
 
     return true;
 }
-
-// 9. ⏰ WORKER EN SEGUNDO PLANO (Con antídoto contra doble envío instantáneo)
 export function setupEventWorker(client: Client) {
     console.log('📅 [Worker] Sistema de eventos y campeonatos activo en segundo plano.');
 
@@ -467,6 +514,13 @@ export function setupEventWorker(client: Client) {
                         embed.setImage(ev.image);
                     }
 
+                    // Campos iniciales vacíos de RSVP
+                    embed.addFields(
+                        { name: '✅ Asistiré (0)', value: 'Ninguno', inline: false },
+                        { name: '❓ Quizás (0)', value: 'Ninguno', inline: false },
+                        { name: '❌ No Asistiré (0)', value: 'Ninguno', inline: false }
+                    );
+
                     const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
                         new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✅'),
                         new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Quizás').setStyle(ButtonStyle.Secondary).setEmoji('❓'),
@@ -479,9 +533,11 @@ export function setupEventWorker(client: Client) {
                         components: [rowRsvp]
                     };
 
-                    await channel.send(messageOptions);
+                    const sentMessage = await channel.send(messageOptions);
 
-                    // 🛡️ Antídoto contra doble envío: Calcula el siguiente intervalo basándose estrictamente en el tiempo actual o futuro
+                    // Guardamos el ID del mensaje enviado para que los botones de RSVP sepan qué evento actualizar
+                    await col.updateOne({ _id: ev._id }, { $set: { messageId: sentMessage.id } });
+
                     if (ev.repeats && ev.remainingTimes > 1) {
                         const baseTime = Math.max(now.getTime(), new Date(ev.scheduledAt).getTime());
                         const nextDate = new Date(baseTime + ev.intervalMs);
@@ -489,7 +545,7 @@ export function setupEventWorker(client: Client) {
                         await col.updateOne(
                             { _id: ev._id },
                             { 
-                                $set: { scheduledAt: nextDate },$inc: { remainingTimes: -1 } 
+                                $set: { scheduledAt: nextDate, messageId: undefined },$inc: { remainingTimes: -1 } 
                             }
                         );
                         console.log(`🔄 [Worker] Evento recurrente reprogramado para: ${nextDate}. Quedan ${ev.remainingTimes - 1} envíos.`);
