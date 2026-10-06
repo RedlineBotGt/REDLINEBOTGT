@@ -96,6 +96,7 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
     });
 
     return true;
+}
 export async function handleEventChannelSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'event_select_channel') return false;
 
