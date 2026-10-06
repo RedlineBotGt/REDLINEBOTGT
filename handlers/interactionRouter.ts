@@ -32,6 +32,37 @@ export async function getEventsCollection() {
 }
 
 export const eventSessions = new Map<string, any>();
+// 🛡️ ENRUTADOR CENTRAL: Resuelve el error crítico de index.ts
+export async function handleInteraction(interaction: any): Promise<boolean> {
+    try {
+        if (interaction.isButton()) {
+            if (interaction.customId === 'dash_btn_event_create') return await handleDashEventButton(interaction);
+            if (interaction.customId === 'event_skip_role' || interaction.customId === 'event_select_role') return await handleEventRoleSelect(interaction);
+            if (interaction.customId === 'event_publish_now') return await handleEventPublishNowButton(interaction);
+            if (interaction.customId === 'event_repeat_yes') return await handleEventRepeatYesButton(interaction);
+            if (['event_rsvp_yes', 'event_rsvp_maybe', 'event_rsvp_no'].includes(interaction.customId)) return await handleEventRsvpButton(interaction);
+        }
+        
+        if (interaction.isModalSubmit()) {
+            if (interaction.customId === 'modal_event_create') return await handleEventModalSubmit(interaction);
+            if (interaction.customId === 'modal_event_repeat') return await handleEventRepeatModalSubmit(interaction);
+        }
+
+        if (interaction.isChannelSelectMenu()) {
+            if (interaction.customId === 'event_select_channel') return await handleEventChannelSelect(interaction);
+        }
+
+        if (interaction.isRoleSelectMenu()) {
+            if (interaction.customId === 'event_select_role') return await handleEventRoleSelect(interaction);
+        }
+
+        return false;
+    } catch (error) {
+        console.error('❌ Error en el enrutador de interacciones de eventos:', error);
+        return false;
+    }
+}
+
 export async function handleDashEventButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_event_create') return false;
 
@@ -71,7 +102,6 @@ export async function handleDashEventButton(interaction: ButtonInteraction): Pro
     await interaction.showModal(modal);
     return true;
 }
-
 export async function handleEventModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_event_create') return false;
 
@@ -125,6 +155,7 @@ export async function handleEventChannelSelect(interaction: any): Promise<boolea
 
     return true;
 }
+
 export async function handleEventRoleSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'event_select_role' && interaction.customId !== 'event_skip_role') return false;
 
@@ -157,7 +188,6 @@ export async function handleEventRoleSelect(interaction: any): Promise<boolean> 
 
     return true;
 }
-
 export async function handleEventPublishNowButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_publish_now') return false;
 
@@ -193,7 +223,7 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
         embed.addFields(
             { name: '✔️ Me Apunto (0)', value: 'Ninguno', inline: false },
             { name: '❔ Duda (0)', value: 'Ninguno', inline: false },
-            { name: '✖️️ No puedo (0)', value: 'Ninguno', inline: false }
+            { name: '✖ No puedo (0)', value: 'Ninguno', inline: false }
         );
 
         const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -246,6 +276,7 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
 
     return true;
 }
+
 export async function handleEventRepeatYesButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_repeat_yes') return false;
 
@@ -290,43 +321,6 @@ export async function handleEventRepeatYesButton(interaction: ButtonInteraction)
     await interaction.showModal(modal);
     return true;
 }
-
-function parseMadridDateTime(dateStr: string, timeStr: string): Date | null {
-    try {
-        const [day, month, year] = dateStr.split('/').map(Number);
-        const [hour, minute] = timeStr.split(':').map(Number);
-
-        if (!day || !month || !year || isNaN(hour) || isNaN(minute)) return null;
-        const targetString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00Z`;
-        const tempDate = new Date(targetString);
-        if (isNaN(tempDate.getTime())) return null;
-
-        const madridOffsetMinutes = getMadridOffsetMinutes(tempDate);
-        const finalTimestamp = tempDate.getTime() - (madridOffsetMinutes * 60 * 1000);
-        const targetDate = new Date(finalTimestamp);
-        return isNaN(targetDate.getTime()) ? null : targetDate;
-    } catch (error) {
-        console.error('❌ Error al parsear fecha de Madrid:', error);
-        return null;
-    }
-}
-
-function getMadridOffsetMinutes(date: Date): number {
-    const madridDateStr = new Intl.DateTimeFormat('en-US', {
-        timeZone: 'Europe/Madrid',
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-    }).format(date);
-
-    const [datePart, timePart] = madridDateStr.split(', ');
-    const [m, d, y] = datePart.split('/').map(Number);
-    const [h, min] = timePart.split(':').map(Number);
-
-    const asUTC = Date.UTC(y, m - 1, d, h, min, 0);
-    const diffMs = asUTC - date.getTime();
-    return Math.round(diffMs / (1000 * 60));
-}
-
 export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_event_repeat') return false;
 
@@ -401,6 +395,7 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
 
     return true;
 }
+
 export async function handleEventRsvpButton(interaction: ButtonInteraction): Promise<boolean> {
     const customId = interaction.customId;
     if (!['event_rsvp_yes', 'event_rsvp_maybe', 'event_rsvp_no'].includes(customId)) return false;
@@ -489,6 +484,41 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
 
     return true;
 }
+function parseMadridDateTime(dateStr: string, timeStr: string): Date | null {
+    try {
+        const [day, month, year] = dateStr.split('/').map(Number);
+        const [hour, minute] = timeStr.split(':').map(Number);
+        if (!day || !month || !year || isNaN(hour) || isNaN(minute)) return null;
+        const targetString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00Z`;
+        const tempDate = new Date(targetString);
+        if (isNaN(tempDate.getTime())) return null;
+
+        const madridOffsetMinutes = getMadridOffsetMinutes(tempDate);
+        const finalTimestamp = tempDate.getTime() - (madridOffsetMinutes * 60 * 1000);
+        const targetDate = new Date(finalTimestamp);
+        return isNaN(targetDate.getTime()) ? null : targetDate;
+    } catch (error) {
+        console.error('❌ Error al parsear fecha de Madrid:', error);
+        return null;
+    }
+}
+
+function getMadridOffsetMinutes(date: Date): number {
+    const madridDateStr = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Europe/Madrid',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+    }).format(date);
+
+    const [datePart, timePart] = madridDateStr.split(', ');
+    const [m, d, y] = datePart.split('/').map(Number);
+    const [h, min] = timePart.split(':').map(Number);
+
+    const asUTC = Date.UTC(y, m - 1, d, h, min, 0);
+    const diffMs = asUTC - date.getTime();
+    return Math.round(diffMs / (1000 * 60));
+}
+
 export function setupEventWorker(client: Client) {
     console.log('📅 [Worker] Sistema de eventos y campeonatos activo en segundo plano.');
 
