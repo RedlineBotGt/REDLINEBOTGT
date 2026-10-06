@@ -13,9 +13,11 @@ import {
     ButtonStyle,
     TextChannel,
     EmbedBuilder,
-    Client
+    Client,
+    ChatInputCommandInteraction
 } from 'discord.js';
 import { MongoClient as MongoDriver } from 'mongodb';
+import * as dashstaffCommand from '../commands/dashstaff';
 
 const uri = process.env.MONGODB_URI || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
 const clientMongo = new MongoDriver(uri);
@@ -32,37 +34,58 @@ export async function getEventsCollection() {
 }
 
 export const eventSessions = new Map<string, any>();
-// 🛡️ ENRUTADOR CENTRAL: Resuelve el error crítico de index.ts
+// 🛡️ ENRUTADOR CENTRAL: Resuelve comandos de barra y eventos
 export async function handleInteraction(interaction: any): Promise<boolean> {
     try {
+        // 1. Comandos de Barra (Ej: /dashstaff)
+        if (interaction.isChatInputCommand()) {
+            if (interaction.commandName === 'dashstaff') {
+                await dashstaffCommand.execute(interaction);
+                return true;
+            }
+            return false;
+        }
+
+        // 2. Botones
         if (interaction.isButton()) {
             if (interaction.customId === 'dash_btn_event_create') return await handleDashEventButton(interaction);
             if (interaction.customId === 'event_skip_role' || interaction.customId === 'event_select_role') return await handleEventRoleSelect(interaction);
             if (interaction.customId === 'event_publish_now') return await handleEventPublishNowButton(interaction);
             if (interaction.customId === 'event_repeat_yes') return await handleEventRepeatYesButton(interaction);
             if (['event_rsvp_yes', 'event_rsvp_maybe', 'event_rsvp_no'].includes(interaction.customId)) return await handleEventRsvpButton(interaction);
+            
+            // Respuesta defensiva para otros botones del panel por si acaso
+            if (['dash_btn_colocar_form', 'dash_btn_msn_mensaje', 'dash_btn_veredicto', 'dash_btn_encuesta_create'].includes(interaction.customId)) {
+                await interaction.reply({ content: '⚙️ Este módulo se está procesando o requiere su manejador específico.', flags: [MessageFlags.Ephemeral] });
+                return true;
+            }
         }
         
+        // 3. Modales
         if (interaction.isModalSubmit()) {
             if (interaction.customId === 'modal_event_create') return await handleEventModalSubmit(interaction);
             if (interaction.customId === 'modal_event_repeat') return await handleEventRepeatModalSubmit(interaction);
         }
 
+        // 4. Menús de Canales
         if (interaction.isChannelSelectMenu()) {
             if (interaction.customId === 'event_select_channel') return await handleEventChannelSelect(interaction);
         }
 
+        // 5. Menús de Roles
         if (interaction.isRoleSelectMenu()) {
             if (interaction.customId === 'event_select_role') return await handleEventRoleSelect(interaction);
         }
 
         return false;
     } catch (error) {
-        console.error('❌ Error en el enrutador de interacciones de eventos:', error);
+        console.error('❌ Error en el enrutador de interacciones:', error);
+        if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+            await interaction.reply({ content: '❌ Ocurrió un error al procesar esta interacción.', flags: [MessageFlags.Ephemeral] }).catch(() => {});
+        }
         return false;
     }
 }
-
 export async function handleDashEventButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_event_create') return false;
 
@@ -321,6 +344,7 @@ export async function handleEventRepeatYesButton(interaction: ButtonInteraction)
     await interaction.showModal(modal);
     return true;
 }
+
 export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_event_repeat') return false;
 
