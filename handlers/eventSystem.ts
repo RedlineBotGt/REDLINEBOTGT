@@ -123,7 +123,7 @@ export async function handleEventChannelSelect(interaction: any): Promise<boolea
     );
 
     await interaction.update({
-        content: `📢 Canal seleccionado (<#${channelId}>).\n**Paso 3/4:** Selecciona el rol del campeonato a mencionar:`,
+        content: `📢 Canal seleccionado (<#${channelId}>).\n**Paso 3/3:** Selecciona el rol del campeonato a mencionar:`,
         components: [rowRole, rowSkip]
     });
 
@@ -147,13 +147,13 @@ export async function handleEventRoleSelect(interaction: any): Promise<boolean> 
         session.roleId = null;
     }
 
+    // 🚀 Solo 2 botones: Publicar Directamente y Repetir / Intervalo
     const rowModes = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('event_publish_now').setLabel('🚀 Publicar Directamente').setStyle(ButtonStyle.Success),
-        new ButtonBuilder().setCustomId('event_single_datetime').setLabel('📅 Programar Fecha/Hora').setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId('event_repeat_yes').setLabel('🔄 Repetir / Intervalo').setStyle(ButtonStyle.Primary)
     );
 
-    const contentMsg = '📅 **Paso 4/4:** ¿Cómo deseas proceder con este evento?';
+    const contentMsg = '📅 **Paso Final:** ¿Cómo deseas publicar este evento?';
 
     if (interaction.isRepliable() && (interaction.deferred || interaction.replied)) {
         await interaction.followUp({ content: contentMsg, components: [rowModes], flags: [MessageFlags.Ephemeral] });
@@ -169,7 +169,7 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
 
     const session = eventSessions.get(interaction.user.id);
     if (!session) {
-        await interaction.reply({ content: '❌ Sesión caducada.', flags: [MessageFlags.Ephemeral] });
+        await interaction.reply({ content: '❌ Sesión caducada o ya procesada. Vuelve a iniciar el formulario.', flags: [MessageFlags.Ephemeral] });
         return true;
     }
 
@@ -192,7 +192,7 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
             .setDescription(session.description)
             .setTimestamp();
 
-        if (session.image) {
+        if (session.image && typeof session.image === 'string' && session.image.startsWith('http')) {
             embed.setImage(session.image);
         }
 
@@ -208,13 +208,16 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
             new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
         );
 
-        const messageOptions = {
-            content: session.roleId ? `<@&${session.roleId}>` : undefined,
+        let contentToSend: string | undefined = undefined;
+        if (session.roleId && typeof session.roleId === 'string' && session.roleId !== 'null' && session.roleId !== 'undefined' && /^\d+$/.test(session.roleId)) {
+            contentToSend = `<@&${session.roleId}>`;
+        }
+
+        const sentMessage = await channel.send({
+            content: contentToSend,
             embeds: [embed],
             components: [rowRsvp]
-        };
-
-        const sentMessage = await channel.send(messageOptions);
+        });
 
         const col = await getEventsCollection();
         await col.insertOne({
@@ -236,7 +239,7 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
         eventSessions.delete(interaction.user.id);
 
         await interaction.update({
-            content: `✅ **¡Evento publicado directamente con éxito en <#${session.channelId}>!**`,
+            content: `🚀 **¡Evento publicado directamente con éxito en <#${session.channelId}>!**`,
             components: []
         });
     } catch (error) {
@@ -244,7 +247,7 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
         await interaction.update({
             content: '❌ Error al publicar el evento en el canal.',
             components: []
-        });
+        }).catch(() => {});
     }
 
     return true;
@@ -255,41 +258,8 @@ import {
     TextInputStyle, 
     ActionRowBuilder, 
     ModalSubmitInteraction, 
-    ButtonInteraction, 
-    EmbedBuilder, 
-    ButtonStyle, 
-    MessageFlags 
+    EmbedBuilder 
 } from 'discord.js';
-
-export async function handleEventSingleDatetimeButton(interaction: ButtonInteraction): Promise<boolean> {
-    if (interaction.customId !== 'event_single_datetime') return false;
-
-    const modal = new ModalBuilder()
-        .setCustomId('modal_event_single_datetime')
-        .setTitle('Fecha y Hora del Evento');
-
-    const dateInput = new TextInputBuilder()
-        .setCustomId('event_date')
-        .setLabel('Fecha (DD/MM/YYYY)')
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: 15/10/2026')
-        .setRequired(true);
-
-    const timeInput = new TextInputBuilder()
-        .setCustomId('event_time')
-        .setLabel('Hora peninsular (HH:MM)')
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: 21:30')
-        .setRequired(true);
-
-    modal.addComponents(
-        new ActionRowBuilder<TextInputBuilder>().addComponents(dateInput),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(timeInput)
-    );
-
-    await interaction.showModal(modal);
-    return true;
-}
 
 export async function handleEventRepeatYesButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_repeat_yes') return false;
@@ -373,57 +343,6 @@ function getMadridOffsetMinutes(date: Date): number {
     const asUTC = Date.UTC(y, m - 1, d, h, min, 0);
     const diffMs = asUTC - date.getTime();
     return Math.round(diffMs / (1000 * 60));
-}
-
-export async function handleEventSingleDatetimeSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
-    if (interaction.customId !== 'modal_event_single_datetime') return false;
-
-    const dateStr = interaction.fields.getTextInputValue('event_date').trim();
-    const timeStr = interaction.fields.getTextInputValue('event_time').trim();
-
-    const session = eventSessions.get(interaction.user.id);
-    if (!session) {
-        await interaction.reply({ content: '❌ Sesión caducada.', flags: [MessageFlags.Ephemeral] });
-        return true;
-    }
-
-    const scheduledAt = parseMadridDateTime(dateStr, timeStr);
-    if (!scheduledAt || isNaN(scheduledAt.getTime()) || scheduledAt.getTime() <= Date.now()) {
-        await interaction.reply({ content: '❌ Fecha u hora inválida o en el pasado. Usa `DD/MM/YYYY` y `HH:MM`.', flags: [MessageFlags.Ephemeral] });
-        return true;
-    }
-
-    try {
-        const col = await getEventsCollection();
-        await col.insertOne({
-            guildId: interaction.guildId,
-            userId: interaction.user.id,
-            title: session.title,
-            description: session.description,
-            image: session.image,
-            channelId: session.channelId,
-            roleId: session.roleId,
-            scheduledAt,
-            date: dateStr,
-            time: timeStr,
-            repeats: false,
-            status: 'pending',
-            rsvps: { yes: [], maybe: [], no: [] },
-            createdAt: new Date()
-        });
-
-        eventSessions.delete(interaction.user.id);
-
-        await interaction.reply({
-            content: `✅ **¡Evento programado con éxito!**\nSe publicará el **${dateStr}** a las **${timeStr}** (hora peninsular).`,
-            flags: [MessageFlags.Ephemeral]
-        });
-    } catch (error) {
-        console.error('❌ Error guardando evento único:', error);
-        await interaction.reply({ content: '❌ Error al guardar en base de datos.', flags: [MessageFlags.Ephemeral] });
-    }
-
-    return true;
 }
 
 export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
@@ -629,7 +548,7 @@ export function setupEventWorker(client: Client) {
                 }
             }
 
-            // 2. 🚀 GESTIÓN DE PUBLICACIÓN DE EVENTOS
+            // 2. 🚀 GESTIÓN DE PUBLICACIÓN DE EVENTOS RECURRENTES PROGRAMADOS
             const pendingEvents = await col.find({
                 status: 'pending',
                 scheduledAt: { $lte: now }
@@ -657,7 +576,7 @@ export function setupEventWorker(client: Client) {
                         .setDescription(ev.description)
                         .setTimestamp();
 
-                    if (ev.image) {
+                    if (ev.image && typeof ev.image === 'string' && ev.image.startsWith('http')) {
                         embed.setImage(ev.image);
                     }
 
@@ -673,13 +592,16 @@ export function setupEventWorker(client: Client) {
                         new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
                     );
 
-                    const messageOptions = {
-                        content: ev.roleId ? `<@&${ev.roleId}>` : undefined,
+                    let contentToSend: string | undefined = undefined;
+                    if (ev.roleId && typeof ev.roleId === 'string' && ev.roleId !== 'null' && ev.roleId !== 'undefined' && /^\d+$/.test(ev.roleId)) {
+                        contentToSend = `<@&${ev.roleId}>`;
+                    }
+
+                    const sentMessage = await channel.send({
+                        content: contentToSend,
                         embeds: [embed],
                         components: [rowRsvp]
-                    };
-
-                    const sentMessage = await channel.send(messageOptions);
+                    });
 
                     const asistenteRole = guild.roles.cache.find(r => r.name.toLowerCase() === 'asistente');
                     if (asistenteRole) {
