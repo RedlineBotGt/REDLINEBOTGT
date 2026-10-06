@@ -5,14 +5,8 @@ import {
     TextInputStyle, 
     ActionRowBuilder, 
     ChannelSelectMenuBuilder, 
-    RoleSelectMenuBuilder, 
-    ButtonBuilder, 
-    ButtonStyle, 
     ChannelType, 
     ModalSubmitInteraction, 
-    Client,
-    TextChannel, 
-    EmbedBuilder,
     MessageFlags
 } from 'discord.js';
 import { MongoClient as MongoDriver } from 'mongodb';
@@ -22,7 +16,7 @@ const clientMongo = new MongoDriver(uri);
 
 let eventsCollection: any = null;
 
-async function getEventsCollection() {
+export async function getEventsCollection() {
     if (!eventsCollection) {
         await clientMongo.connect();
         eventsCollection = clientMongo.db('redline_bot').collection('event_jobs');
@@ -31,7 +25,7 @@ async function getEventsCollection() {
     return eventsCollection;
 }
 
-const eventSessions = new Map<string, any>();
+export const eventSessions = new Map<string, any>();
 
 export async function handleDashEventButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_event_create') return false;
@@ -97,6 +91,15 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
 
     return true;
 }
+import { 
+    RoleSelectMenuBuilder, 
+    ButtonBuilder, 
+    ButtonStyle, 
+    ActionRowBuilder, 
+    MessageFlags,
+    TextChannel,
+    EmbedBuilder
+} from 'discord.js';
 
 export async function handleEventChannelSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'event_select_channel') return false;
@@ -144,23 +147,122 @@ export async function handleEventRoleSelect(interaction: any): Promise<boolean> 
         session.roleId = null;
     }
 
-    const rowRepeat = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('event_repeat_yes').setLabel('🔄 Sí, configurar intervalo y repetición').setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId('event_repeat_no').setLabel('⚡ Enviar / Programar única vez').setStyle(ButtonStyle.Secondary)
+    const rowModes = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId('event_publish_now').setLabel('🚀 Publicar Directamente').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('event_single_datetime').setLabel('📅 Programar Fecha/Hora').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('event_repeat_yes').setLabel('🔄 Repetir / Intervalo').setStyle(ButtonStyle.Primary)
     );
 
-    const contentMsg = '📅 **Paso 4/4:** ¿Deseas programar este evento para una fecha específica o configurarlo con intervalo recurrente?';
+    const contentMsg = '📅 **Paso 4/4:** ¿Cómo deseas proceder con este evento?';
 
     if (interaction.isRepliable() && (interaction.deferred || interaction.replied)) {
-        await interaction.followUp({ content: contentMsg, components: [rowRepeat], flags: [MessageFlags.Ephemeral] });
+        await interaction.followUp({ content: contentMsg, components: [rowModes], flags: [MessageFlags.Ephemeral] });
     } else if (interaction.isRepliable()) {
-        await interaction.update({ content: contentMsg, components: [rowRepeat] });
+        await interaction.update({ content: contentMsg, components: [rowModes] });
     }
 
     return true;
 }
-export async function handleEventRepeatNoButton(interaction: ButtonInteraction): Promise<boolean> {
-    if (interaction.customId !== 'event_repeat_no') return false;
+
+export async function handleEventPublishNowButton(interaction: ButtonInteraction): Promise<boolean> {
+    if (interaction.customId !== 'event_publish_now') return false;
+
+    const session = eventSessions.get(interaction.user.id);
+    if (!session) {
+        await interaction.reply({ content: '❌ Sesión caducada.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    const guild = interaction.guild;
+    if (!guild) {
+        await interaction.reply({ content: '❌ Error: Servidor no encontrado.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    const channel = await guild.channels.fetch(session.channelId).catch(() => null) as TextChannel;
+    if (!channel || !channel.isTextBased()) {
+        await interaction.reply({ content: '❌ Canal de destino no válido o no accesible.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    try {
+        const embed = new EmbedBuilder()
+            .setColor(0x0055FF)
+            .setTitle(`🏁 ${session.title}`)
+            .setDescription(session.description)
+            .setTimestamp();
+
+        if (session.image) {
+            embed.setImage(session.image);
+        }
+
+        embed.addFields(
+            { name: '✔️ Me Apunto (0)', value: 'Ninguno', inline: false },
+            { name: '❔ Duda (0)', value: 'Ninguno', inline: false },
+            { name: '✖️ No puedo (0)', value: 'Ninguno', inline: false }
+        );
+
+        const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Me Apunto').setStyle(ButtonStyle.Success).setEmoji('✔️'),
+            new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❔'),
+            new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
+        );
+
+        const messageOptions = {
+            content: session.roleId ? `<@&${session.roleId}>` : undefined,
+            embeds: [embed],
+            components: [rowRsvp]
+        };
+
+        const sentMessage = await channel.send(messageOptions);
+
+        const col = await getEventsCollection();
+        await col.insertOne({
+            guildId: guild.id,
+            userId: interaction.user.id,
+            title: session.title,
+            description: session.description,
+            image: session.image,
+            channelId: session.channelId,
+            roleId: session.roleId,
+            scheduledAt: new Date(),
+            status: 'sent',
+            messageId: sentMessage.id,
+            sentAt: new Date(),
+            rsvps: { yes: [], maybe: [], no: [] },
+            createdAt: new Date()
+        });
+
+        eventSessions.delete(interaction.user.id);
+
+        await interaction.update({
+            content: `✅ **¡Evento publicado directamente con éxito en <#${session.channelId}>!**`,
+            components: []
+        });
+    } catch (error) {
+        console.error('❌ Error publicando evento directamente:', error);
+        await interaction.update({
+            content: '❌ Error al publicar el evento en el canal.',
+            components: []
+        });
+    }
+
+    return true;
+}
+import { 
+    ModalBuilder, 
+    TextInputBuilder, 
+    TextInputStyle, 
+    ActionRowBuilder, 
+    ModalSubmitInteraction, 
+    ButtonInteraction, 
+    EmbedBuilder, 
+    ButtonStyle, 
+    MessageFlags 
+} from 'discord.js';
+
+export async function handleEventSingleDatetimeButton(interaction: ButtonInteraction): Promise<boolean> {
+    if (interaction.customId !== 'event_single_datetime') return false;
 
     const modal = new ModalBuilder()
         .setCustomId('modal_event_single_datetime')
@@ -398,6 +500,7 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
 
     return true;
 }
+
 export async function handleEventRsvpButton(interaction: ButtonInteraction): Promise<boolean> {
     const customId = interaction.customId;
     if (!['event_rsvp_yes', 'event_rsvp_maybe', 'event_rsvp_no'].includes(customId)) return false;
@@ -423,12 +526,10 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
         eventDoc.rsvps = { yes: [], maybe: [], no: [] };
     }
 
-    // Limpiar votos anteriores del usuario en todas las listas
     eventDoc.rsvps.yes = eventDoc.rsvps.yes.filter((id: string) => id !== userId);
     eventDoc.rsvps.maybe = eventDoc.rsvps.maybe.filter((id: string) => id !== userId);
     eventDoc.rsvps.no = eventDoc.rsvps.no.filter((id: string) => id !== userId);
 
-    // Buscar el rol 'asistente' en el servidor
     const asistenteRole = guild.roles.cache.find(r => r.name.toLowerCase() === 'asistente');
     const member = await guild.members.fetch(userId).catch(() => null);
 
@@ -453,10 +554,8 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
         }
     }
 
-    // Actualizar en MongoDB
     await col.updateOne({ messageId }, { $set: { rsvps: eventDoc.rsvps } });
 
-    // Reconstruir el embed con las listas actualizadas de usuarios
     const embed = new EmbedBuilder()
         .setColor(0x0055FF)
         .setTitle(`🏁 ${eventDoc.title}`)
@@ -481,7 +580,6 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
         new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
     );
 
-    // Editar el mensaje original del evento en Discord para reflejar el cambio al instante
     await interaction.message.edit({ embeds: [embed], components: [rowRsvp] }).catch(() => {});
 
     await interaction.reply({
@@ -491,6 +589,8 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
 
     return true;
 }
+import { Client, TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+
 export function setupEventWorker(client: Client) {
     console.log('📅 [Worker] Sistema de eventos y campeonatos activo en segundo plano.');
 
@@ -561,7 +661,6 @@ export function setupEventWorker(client: Client) {
                         embed.setImage(ev.image);
                     }
 
-                    // Campos iniciales vacíos con los nuevos textos
                     embed.addFields(
                         { name: '✔️ Me Apunto (0)', value: 'Ninguno', inline: false },
                         { name: '❔ Duda (0)', value: 'Ninguno', inline: false },
@@ -569,7 +668,7 @@ export function setupEventWorker(client: Client) {
                     );
 
                     const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Me Apunto').setStyle(ButtonStyle.Success).setEmoji('✔️️'),
+                        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Me Apunto').setStyle(ButtonStyle.Success).setEmoji('✔️'),
                         new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❔'),
                         new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
                     );
@@ -582,12 +681,11 @@ export function setupEventWorker(client: Client) {
 
                     const sentMessage = await channel.send(messageOptions);
 
-                    // 🧹 Al comenzar el evento, barremos y retiramos el rol temporal `@asistente` a todos los usuarios que lo tuvieran
                     const asistenteRole = guild.roles.cache.find(r => r.name.toLowerCase() === 'asistente');
                     if (asistenteRole) {
                         try {
-                            await guild.members.fetch(); // Asegurar caché completa de miembros
-                            for (const [memberId, member] of guild.members.cache) {
+                            await guild.members.fetch();
+                            for (const [, member] of guild.members.cache) {
                                 if (member.roles.cache.has(asistenteRole.id)) {
                                     await member.roles.remove(asistenteRole).catch(() => {});
                                 }
@@ -597,7 +695,6 @@ export function setupEventWorker(client: Client) {
                         }
                     }
 
-                    // Guardamos el ID del mensaje enviado
                     await col.updateOne({ _id: ev._id }, { $set: { messageId: sentMessage.id } });
 
                     if (ev.repeats && ev.remainingTimes > 1) {
