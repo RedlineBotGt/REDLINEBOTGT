@@ -98,7 +98,11 @@ import {
     ActionRowBuilder, 
     MessageFlags,
     TextChannel,
-    EmbedBuilder
+    EmbedBuilder,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle,
+    ModalSubmitInteraction
 } from 'discord.js';
 
 export async function handleEventChannelSelect(interaction: any): Promise<boolean> {
@@ -147,7 +151,6 @@ export async function handleEventRoleSelect(interaction: any): Promise<boolean> 
         session.roleId = null;
     }
 
-    // 🚀 Solo 2 botones: Publicar Directamente y Repetir / Intervalo
     const rowModes = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('event_publish_now').setLabel('🚀 Publicar Directamente').setStyle(ButtonStyle.Success),
         new ButtonBuilder().setCustomId('event_repeat_yes').setLabel('🔄 Repetir / Intervalo').setStyle(ButtonStyle.Primary)
@@ -197,7 +200,7 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
         }
 
         embed.addFields(
-            { name: '✔️ Me Apunto (0)', value: 'Ninguno', inline: false },
+            { name: '✔️️ Me Apunto (0)', value: 'Ninguno', inline: false },
             { name: '❔ Duda (0)', value: 'Ninguno', inline: false },
             { name: '✖️ No puedo (0)', value: 'Ninguno', inline: false }
         );
@@ -487,7 +490,7 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
     );
 
     const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Me Apunto').setStyle(ButtonStyle.Success).setEmoji('✔️️'),
+        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Me Apunto').setStyle(ButtonStyle.Success).setEmoji('✔️'),
         new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❔'),
         new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
     );
