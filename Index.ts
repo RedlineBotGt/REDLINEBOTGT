@@ -1,6 +1,6 @@
 import http from 'http';
 import { Client, GatewayIntentBits, Partials } from 'discord.js';
-import { handleInteraction } from './handlers/interactionRouter';
+import * as interactionRouter from './handlers/interactionRouter'; // 👈 Importación segura como módulo completo
 import { startScheduledWorker } from './handlers/scheduledMessage';
 import { initReactionRoles } from './handlers/reactionRoles';
 import { setupWelcomeSystem } from './handlers/welcomeSystem'; 
@@ -50,10 +50,16 @@ client.once('ready', async () => {
     setupNicknameSystem(client);
 });
 
-// 3. Enrutador de interacciones
+// 3. Enrutador de interacciones seguro contra fallos de carga
 client.on('interactionCreate', async (interaction) => {
     try {
-        await handleInteraction(interaction);
+        const routerFn = interactionRouter.handleInteraction || (interactionRouter as any).default;
+        
+        if (typeof routerFn === 'function') {
+            await routerFn(interaction);
+        } else {
+            console.error('❌ Error crítico: handleInteraction no se encontró en interactionRouter.');
+        }
     } catch (error) {
         console.error('❌ Error crítico en el enrutador de interacciones:', error);
     }
