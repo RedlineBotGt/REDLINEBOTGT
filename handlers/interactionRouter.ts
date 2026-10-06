@@ -66,6 +66,14 @@ export async function handleDashEventButton(interaction: ButtonInteraction): Pro
     await interaction.showModal(modal);
     return true;
 }
+import { 
+    RoleSelectMenuBuilder, 
+    ButtonBuilder, 
+    ButtonStyle, 
+    ActionRowBuilder, 
+    MessageFlags,
+    ModalSubmitInteraction
+} from 'discord.js';
 
 export async function handleEventModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_event_create') return false;
@@ -91,19 +99,6 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
 
     return true;
 }
-import { 
-    RoleSelectMenuBuilder, 
-    ButtonBuilder, 
-    ButtonStyle, 
-    ActionRowBuilder, 
-    MessageFlags,
-    TextChannel,
-    EmbedBuilder,
-    ModalBuilder,
-    TextInputBuilder,
-    TextInputStyle,
-    ModalSubmitInteraction
-} from 'discord.js';
 
 export async function handleEventChannelSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'event_select_channel') return false;
@@ -133,6 +128,13 @@ export async function handleEventChannelSelect(interaction: any): Promise<boolea
 
     return true;
 }
+import { 
+    TextChannel, 
+    EmbedBuilder,
+    TextInputBuilder,
+    TextInputStyle,
+    ModalBuilder
+} from 'discord.js';
 
 export async function handleEventRoleSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'event_select_role' && interaction.customId !== 'event_skip_role') return false;
@@ -200,7 +202,7 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
         }
 
         embed.addFields(
-            { name: '✔️️ Me Apunto (0)', value: 'Ninguno', inline: false },
+            { name: '✔️ Me Apunto (0)', value: 'Ninguno', inline: false },
             { name: '❔ Duda (0)', value: 'Ninguno', inline: false },
             { name: '✖️ No puedo (0)', value: 'Ninguno', inline: false }
         );
@@ -297,11 +299,9 @@ export async function handleEventRepeatYesButton(interaction: ButtonInteraction)
         new ActionRowBuilder<TextInputBuilder>().addComponents(intervalInput),
         new ActionRowBuilder<TextInputBuilder>().addComponents(timesInput)
     );
-
     await interaction.showModal(modal);
     return true;
 }
-
 function parseMadridDateTime(dateStr: string, timeStr: string): Date | null {
     try {
         const [day, month, year] = dateStr.split('/').map(Number);
@@ -414,7 +414,6 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
 
     return true;
 }
-import { Client, TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction } from 'discord.js';
 
 export async function handleEventRsvpButton(interaction: ButtonInteraction): Promise<boolean> {
     const customId = interaction.customId;
@@ -504,6 +503,7 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
 
     return true;
 }
+import { Client, TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 
 export function setupEventWorker(client: Client) {
     console.log('📅 [Worker] Sistema de eventos y campeonatos activo en segundo plano.');
@@ -582,7 +582,7 @@ export function setupEventWorker(client: Client) {
                     );
 
                     const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Me Apunto').setStyle(ButtonStyle.Success).setEmoji('✔️'),
+                        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Me Apunto').setStyle(ButtonStyle.Success).setEmoji('✔️️'),
                         new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❔'),
                         new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
                     );
