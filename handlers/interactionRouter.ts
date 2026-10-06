@@ -3,10 +3,26 @@ import {
     MessageFlags, 
     Client 
 } from 'discord.js';
+import { MongoClient as MongoDriver } from 'mongodb';
 import * as dashCommand from '../commands/dash';
 import * as dashstaffCommand from '../commands/dashstaff';
+import * as eventHandler from './eventInteractions';
 
-// 🛡️ ENRUTADOR CENTRAL LIMPIO (Sin Sistema de Eventos)
+// Configuración de MongoDB para los eventos
+const uri = process.env.MONGODB_URI || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
+const clientMongo = new MongoDriver(uri);
+let eventsCollection: any = null;
+
+export async function getEventsCollection() {
+    if (!eventsCollection) {
+        await clientMongo.connect();
+        eventsCollection = clientMongo.db('redline_bot').collection('event_jobs');
+        console.log('📅 [MongoDB] Conectado al sistema de eventos de simracing.');
+    }
+    return eventsCollection;
+}
+
+// 🛡️ ENRUTADOR CENTRAL
 export async function handleInteraction(interaction: any): Promise<boolean> {
     try {
         // 1. Comandos de Barra Principales (/dash y /dashstaff)
@@ -22,7 +38,11 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
             return false;
         }
 
-        // 2. Botones del Panel Admin y Staff
+        // 2. Delegar interacciones de eventos (Botones, Modales, Menús de Canales y Roles de eventos)
+        const handledByEvents = await eventHandler.handleEventInteraction(interaction);
+        if (handledByEvents) return true;
+
+        // 3. Botones del Panel Admin y Staff (Resto de opciones)
         if (interaction.isButton()) {
             const customId = interaction.customId;
 
