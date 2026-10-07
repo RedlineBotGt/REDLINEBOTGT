@@ -82,7 +82,7 @@ export async function handleEncuestaStart(interaction: ButtonInteraction): Promi
             new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectDuration),
             rowButton
         ],
-        flags: [MessageFlags.Ephemeral]
+        ephemeral: true
     });
 
     return true;
@@ -129,7 +129,7 @@ export async function handleEncuestaOpenModalButton(interaction: ButtonInteracti
     if (!pollData || !pollData.publishChannelId || !pollData.logChannelId || !pollData.avisoChannelId || !pollData.durationDays) {
         await interaction.reply({
             content: '❌ Debes configurar obligatoriamente todos los campos en los menús desplegables (Canal de publicación, Canal de respuestas, Canal de avisos y Duración) antes de abrir el formulario.',
-            flags: [MessageFlags.Ephemeral]
+            ephemeral: true
         });
         return true;
     }
@@ -183,7 +183,7 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
     if (!pollData || !pollData.publishChannelId || !pollData.logChannelId || !pollData.avisoChannelId || !pollData.durationDays || !interaction.guild) {
         await interaction.reply({
             content: '❌ Faltan datos de configuración. Por favor, vuelve a iniciar la encuesta desde el panel.',
-            flags: [MessageFlags.Ephemeral]
+            ephemeral: true
         });
         return true;
     }
@@ -193,7 +193,7 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
     if (lines.length < 2) {
         await interaction.reply({ 
             content: '❌ Debes introducir al menos 2 opciones (formato: [icono] [espacio] [opción] por cada fila).', 
-            flags: [MessageFlags.Ephemeral] 
+            ephemeral: true 
         });
         return true;
     }
@@ -201,7 +201,7 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
     try {
         const publishChannel = await interaction.guild.channels.fetch(pollData.publishChannelId) as TextChannel;
         if (!publishChannel || !publishChannel.isTextBased()) {
-            await interaction.reply({ content: '❌ El canal de publicación seleccionado no es válido.', flags: [MessageFlags.Ephemeral] });
+            await interaction.reply({ content: '❌ El canal de publicación seleccionado no es válido.', ephemeral: true });
             return true;
         }
 
@@ -229,7 +229,6 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
             .setTimestamp();
 
         let messageContent = pollData.roleId ? `<@&${pollData.roleId}>\n\n` : undefined;
-
         const pollMessage = await publishChannel.send({
             content: messageContent,
             embeds: [embed]
@@ -242,7 +241,6 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
                 console.error(`No se pudo añadir la reacción ${o.emoji}:`, err);
             }
         }
-
         await activePollsCol.insertOne({
             guildId: interaction.guildId,
             messageId: pollMessage.id,
@@ -261,12 +259,12 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
 
         await interaction.reply({
             content: `✅ ¡Encuesta publicada con éxito! Estará activa durante ${durationDays} días.`,
-            flags: [MessageFlags.Ephemeral]
+            ephemeral: true
         });
 
     } catch (error) {
         console.error('Error al publicar la encuesta:', error);
-        await interaction.reply({ content: '❌ Hubo un error al publicar la encuesta o guardar en la base de datos.', flags: [MessageFlags.Ephemeral] });
+        await interaction.reply({ content: '❌ Hubo un error al publicar la encuesta o guardar en la base de datos.', ephemeral: true });
     }
 
     return true;
