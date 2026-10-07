@@ -54,7 +54,7 @@ export async function handleDashMsnChannelSelect(interaction: ChannelSelectMenuI
 
     const inputImagen = new TextInputBuilder()
         .setCustomId('input_msn_imagen')
-        .setLabel('URL de imagen o archivo (Opcional)') // 👈 Etiqueta acortada para cumplir el límite de 45 caracteres
+        .setLabel('URL de imagen o archivo (Opcional)')
         .setStyle(TextInputStyle.Short)
         .setPlaceholder('https://ejemplo.com/imagen.png (opcional)')
         .setRequired(false);
@@ -87,7 +87,10 @@ export async function handleDashMsnModalSubmit(interaction: ModalSubmitInteracti
 
     try {
         const opcionesEnvio: any = {
-            content: texto
+            content: texto,
+            allowedMentions: {
+                parse: ['users', 'roles', 'everyone'] // 👈 Permite que el bot active pings a roles y usuarios
+            }
         };
 
         if (archivoUrl && archivoUrl.startsWith('http')) {
@@ -97,7 +100,7 @@ export async function handleDashMsnModalSubmit(interaction: ModalSubmitInteracti
         await canalDestino.send(opcionesEnvio);
 
         await interaction.reply({
-            content: '✅ ¡Mensaje enviado con éxito como usuario normal!',
+            content: '✅ ¡Mensaje enviado con éxito y menciones de roles habilitadas!',
             ephemeral: true
         });
     } catch (error) {
