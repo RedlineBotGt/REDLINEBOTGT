@@ -10,7 +10,8 @@ import * as eventHandler from './eventInteractions';
 import * as formHandler from './formInteractions'; 
 import * as messageHandler from './messageInteractions'; 
 import * as encuestaHandler from './encuestaSystem'; 
-import * as welcomeHandler from './welcomeInteraction'; // 👈 Módulo de Bienvenidas y Despedidas integrado
+import * as welcomeHandler from './welcomeInteraction'; 
+import * as avisosHandler from './avisosSystem'; // 👈 Módulo de Avisos integrado
 
 // Módulos de Comisarios con las mayúsculas/minúsculas exactas de tus archivos
 import * as dashReporteHandler from './dashReporteHandler';
@@ -66,11 +67,11 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
         const handledByEncuesta = await encuestaHandler.handleEncuestaInteraction(interaction);
         if (handledByEncuesta) return true;
 
-        // 6. Delegar interacciones de Bienvenidas y Despedidas (Edit Hola/Adiós)
+        // 6. Delegar interacciones de Bienvenidas y Despedidas
         const handledByWelcome = await welcomeHandler.handleWelcomeInteraction(interaction);
         if (handledByWelcome) return true;
 
-        // 7. Delegar interacciones de Comisarios
+        // 7. Delegar interacciones de Comisarios y Avisos
         
         // --- BOTONES ---
         if (interaction.isButton()) {
@@ -91,12 +92,21 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
             if (customId === 'btn_abrir_defensa') {
                 return await defensaModal.handleDefensaButton(interaction);
             }
+            if (customId === 'dash_btn_avisos_config') {
+                return await avisosHandler.handleDashAvisosButton(interaction); // 👈 Botón de configuración de Avisos
+            }
         }
 
         // --- MENÚS DESPLEGABLES ---
-        if (interaction.isChannelSelectMenu() && interaction.customId === 'dash_select_verd_channel') {
-            return await veredictoHandler.handleDashVeredictoChannelSelect(interaction);
+        if (interaction.isChannelSelectMenu()) {
+            if (interaction.customId === 'dash_select_verd_channel') {
+                return await veredictoHandler.handleDashVeredictoChannelSelect(interaction);
+            }
+            if (interaction.customId === 'avisos_select_channel') {
+                return await avisosHandler.handleAvisosChannelSelect(interaction); // 👈 Selector de canal para Avisos
+            }
         }
+
         if (interaction.isRoleSelectMenu() && interaction.customId === 'dash_select_verd_role') {
             return await veredictoHandler.handleDashVeredictoRoleSelect(interaction);
         }
@@ -116,19 +126,13 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
             }
         }
 
-        // 8. Botones del Panel Admin y Staff (Resto de módulos pendientes)
+        // 8. Botones del Panel Admin y Staff (Resto de módulos restantes)
         if (interaction.isButton()) {
             const customId = interaction.customId;
 
-            // --- COMUNICACIONES, SORTEOS Y AUTOROL ---
+            // --- COMUNICACIONES Y SORTEOS ---
             if (['dash_btn_sorteo_create', 'dash_btn_scheduled_msg', 'dash_btn_crear_boton', 'rr_btn_create'].includes(customId)) {
                 await interaction.reply({ content: '💬 Módulo de Comunicaciones/Sorteos enlazado correctamente.', ephemeral: true });
-                return true;
-            }
-
-            // --- AVISOS ---
-            if (customId === 'dash_btn_avisos_config') {
-                await interaction.reply({ content: '📋 Módulo de Avisos enlazado correctamente.', ephemeral: true });
                 return true;
             }
         }
