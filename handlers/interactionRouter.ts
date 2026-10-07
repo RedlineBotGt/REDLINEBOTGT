@@ -11,13 +11,13 @@ import * as formHandler from './formInteractions'; // 👈 Módulo de formulario
 import * as messageHandler from './messageInteractions'; // 👈 Módulo de mensajes (/msn y dash) integrado
 import * as encuestaHandler from './encuestaSystem'; // 👈 Módulo de encuestas integrado corregido
 
-// Módulos de Comisarios (Reportes, Defensas y Veredictos)
+// Módulos de Comisarios (Reportes, Defensas y Veredictos) con tus nombres exactos
 import * as dashReporteHandler from './dashReporteHandler';
 import * as dashDefensaHandler from './dashDefensaHandler';
-import * as veredictoHandler from './dashVeredictoHandler'; // 👈 Nombre de archivo corregido
+import * as veredictoHandler from './dashVeredictoHandler';
 import * as reportModal from './reportModal';
-import * as defensaModal from './defensaModal';
-import * as veredictoModal from './veredictoModal';
+import * as defensaModal from './DefensModal';       // 👈 Corregido con la D mayúscula
+import * as veredictoModal from './VeredictoModal';   // 👈 Corregido con V y M mayúsculas
 
 // Configuración de MongoDB para los eventos
 const uri = process.env.MONGODB_URI || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
