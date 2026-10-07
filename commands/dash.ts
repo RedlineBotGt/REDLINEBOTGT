@@ -37,13 +37,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         new ButtonBuilder().setCustomId('dash_btn_avisos_config').setLabel('Configurar Avisos').setStyle(ButtonStyle.Secondary).setEmoji('📋')
     );
 
-    // Fila 2: Crear F y Editar F (Botón de borrar integrado en la edición)
+    // Fila 2: Crear F y Editar F
     const row2 = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('dash_btn_crear_form').setLabel('Crear F').setStyle(ButtonStyle.Primary).setEmoji('➕'),
         new ButtonBuilder().setCustomId('dash_btn_editar_form').setLabel('Editar F').setStyle(ButtonStyle.Secondary).setEmoji('📝')
     );
 
-    // Fila 3: Crear Sorteo (Verde) y Crear Botón (Azul)
+    // Fila 3: Crear Sorteo y Crear Botón
     const row3 = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('dash_btn_sorteo_create').setLabel('Crear Sorteo').setStyle(ButtonStyle.Success).setEmoji('🎁'),
         new ButtonBuilder().setCustomId('dash_btn_crear_boton').setLabel('Crear Botón').setStyle(ButtonStyle.Primary).setEmoji('🎟️')
@@ -55,9 +55,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         new ButtonBuilder().setCustomId('dash_btn_setup_defensa').setLabel('Editar Defensa').setStyle(ButtonStyle.Secondary).setEmoji('⚖️')
     );
 
+    // Fila 5: Progr. Mensaje (Recuperado)
+    const row5 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId('dash_btn_scheduled_msg').setLabel('Progr. Mensaje').setStyle(ButtonStyle.Primary).setEmoji('⏰')
+    );
+
     await interaction.reply({
         embeds: [embed],
-        components: [row1, row2, row3, row4],
+        components: [row1, row2, row3, row4, row5],
         ephemeral: true
     });
 }
