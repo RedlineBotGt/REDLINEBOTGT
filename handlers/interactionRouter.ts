@@ -10,6 +10,7 @@ import * as eventHandler from './eventInteractions';
 import * as formHandler from './formInteractions'; 
 import * as messageHandler from './messageInteractions'; 
 import * as encuestaHandler from './encuestaSystem'; 
+import * as welcomeHandler from './welcomeInteraction'; // 👈 Módulo de Bienvenidas y Despedidas integrado
 
 // Módulos de Comisarios con las mayúsculas/minúsculas exactas de tus archivos
 import * as dashReporteHandler from './dashReporteHandler';
@@ -17,7 +18,7 @@ import * as dashDefensaHandler from './dashDefensaHandler';
 import * as veredictoHandler from './dashVeredictoHandler';
 import * as reportModal from './reportModal';
 import * as defensaModal from './defensModal';       
-import * as veredictoModal from './veredictoModal';   // 👈 Corregido con minúscula exacta
+import * as veredictoModal from './veredictoModal';   
 
 // Configuración de MongoDB para los eventos
 const uri = process.env.MONGODB_URI || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
@@ -65,7 +66,11 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
         const handledByEncuesta = await encuestaHandler.handleEncuestaInteraction(interaction);
         if (handledByEncuesta) return true;
 
-        // 6. Delegar interacciones de Comisarios
+        // 6. Delegar interacciones de Bienvenidas y Despedidas (Edit Hola/Adiós)
+        const handledByWelcome = await welcomeHandler.handleWelcomeInteraction(interaction);
+        if (handledByWelcome) return true;
+
+        // 7. Delegar interacciones de Comisarios
         
         // --- BOTONES ---
         if (interaction.isButton()) {
@@ -111,20 +116,17 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
             }
         }
 
-        // 7. Botones del Panel Admin y Staff (Resto de módulos)
+        // 8. Botones del Panel Admin y Staff (Resto de módulos pendientes)
         if (interaction.isButton()) {
             const customId = interaction.customId;
 
-            if (customId === 'dash_btn_welcome_config') {
-                await interaction.reply({ content: '👋 Módulo de Bienvenidas enlazado correctamente.', ephemeral: true });
-                return true;
-            }
-
+            // --- COMUNICACIONES, SORTEOS Y AUTOROL ---
             if (['dash_btn_sorteo_create', 'dash_btn_scheduled_msg', 'dash_btn_crear_boton', 'rr_btn_create'].includes(customId)) {
                 await interaction.reply({ content: '💬 Módulo de Comunicaciones/Sorteos enlazado correctamente.', ephemeral: true });
                 return true;
             }
 
+            // --- AVISOS ---
             if (customId === 'dash_btn_avisos_config') {
                 await interaction.reply({ content: '📋 Módulo de Avisos enlazado correctamente.', ephemeral: true });
                 return true;
