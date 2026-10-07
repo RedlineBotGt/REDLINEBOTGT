@@ -12,7 +12,8 @@ import * as messageHandler from './messageInteractions';
 import * as encuestaHandler from './encuestaSystem'; 
 import * as welcomeHandler from './welcomeInteraction'; 
 import * as avisosHandler from './avisosSystem'; 
-import * as ticketHandler from './ticketButtonHandler'; // 👈 Módulo de Tickets y Botones integrado
+import * as ticketHandler from './ticketButtonHandler'; 
+import * as sorteoHandler from './sorteoHandler'; // 👈 Módulo de Sorteos integrado
 
 // Módulos de Comisarios con las mayúsculas/minúsculas exactas de tus archivos
 import * as dashReporteHandler from './dashReporteHandler';
@@ -72,7 +73,7 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
         const handledByWelcome = await welcomeHandler.handleWelcomeInteraction(interaction);
         if (handledByWelcome) return true;
 
-        // 7. Delegar interacciones de Comisarios, Avisos y Tickets
+        // 7. Delegar interacciones de Comisarios, Avisos, Tickets y Sorteos
         
         // --- BOTONES ---
         if (interaction.isButton()) {
@@ -97,13 +98,21 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
                 return await avisosHandler.handleDashAvisosButton(interaction);
             }
             if (customId === 'dash_btn_crear_boton') {
-                return await ticketHandler.handleDashCrearBotonButton(interaction); // 👈 Botón del Dash para crear ticket
+                return await ticketHandler.handleDashCrearBotonButton(interaction);
             }
             if (customId === 'close_ticket') {
-                return await ticketHandler.handleCloseTicketButton(interaction); // 👈 Botón de cerrar ticket en canal privado
+                return await ticketHandler.handleCloseTicketButton(interaction);
             }
             if (customId.startsWith('open_ticket_')) {
-                return await ticketHandler.handleTicketButtonClick(interaction); // 👈 Botón dinámico de ticket desplegado
+                return await ticketHandler.handleTicketButtonClick(interaction);
+            }
+            if (customId === 'dash_btn_sorteo_create') {
+                await sorteoHandler.handleDashSorteoButton(interaction); // 👈 Abre modal del sorteo
+                return true;
+            }
+            if (customId.startsWith('sorteo_launch_')) {
+                await sorteoHandler.handleSorteoLaunchButton(interaction); // 👈 Dispara el sorteo de 1 clic
+                return true;
             }
         }
 
@@ -116,12 +125,22 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
                 return await avisosHandler.handleAvisosChannelSelect(interaction);
             }
             if (interaction.customId.startsWith('ticket_deploy_channel_')) {
-                return await ticketHandler.handleTicketChannelSelect(interaction); // 👈 Selector de canal para ubicar el ticket
+                return await ticketHandler.handleTicketChannelSelect(interaction);
+            }
+            if (interaction.customId === 'sorteo_select_channel') {
+                await sorteoHandler.handleSorteoChannelSelect(interaction); // 👈 Selecciona canal del sorteo
+                return true;
             }
         }
 
-        if (interaction.isRoleSelectMenu() && interaction.customId === 'dash_select_verd_role') {
-            return await veredictoHandler.handleDashVeredictoRoleSelect(interaction);
+        if (interaction.isRoleSelectMenu()) {
+            if (interaction.customId === 'dash_select_verd_role') {
+                return await veredictoHandler.handleDashVeredictoRoleSelect(interaction);
+            }
+            if (interaction.customId === 'sorteo_select_role') {
+                await sorteoHandler.handleSorteoRoleSelect(interaction); // 👈 Selecciona rol del sorteo y publica
+                return true;
+            }
         }
 
         // --- MODALES ---
@@ -138,7 +157,11 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
                 return await veredictoModal.handleVeredictoModalSubmit(interaction);
             }
             if (customId === 'modal_crear_ticket_config') {
-                return await ticketHandler.handleTicketModalSubmit(interaction); // 👈 Modal de configuración del ticket
+                return await ticketHandler.handleTicketModalSubmit(interaction);
+            }
+            if (customId === 'modal_sorteo_config') {
+                await sorteoHandler.handleSorteoModalSubmit(interaction); // 👈 Recoge datos del modal del sorteo
+                return true;
             }
         }
 
@@ -146,9 +169,9 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
         if (interaction.isButton()) {
             const customId = interaction.customId;
 
-            // --- COMUNICACIONES Y SORTEOS ---
-            if (['dash_btn_sorteo_create', 'dash_btn_scheduled_msg', 'rr_btn_create'].includes(customId)) {
-                await interaction.reply({ content: '💬 Módulo de Comunicaciones/Sorteos enlazado correctamente.', ephemeral: true });
+            // --- COMUNICACIONES Y MENSAJES PROGRAMADOS ---
+            if (['dash_btn_scheduled_msg', 'dash_btn_crear_boton', 'rr_btn_create'].includes(customId)) {
+                await interaction.reply({ content: '💬 Módulo de Comunicaciones enlazado correctamente.', ephemeral: true });
                 return true;
             }
         }
