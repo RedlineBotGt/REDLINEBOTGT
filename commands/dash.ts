@@ -55,9 +55,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         new ButtonBuilder().setCustomId('dash_btn_setup_defensa').setLabel('Editar Defensa').setStyle(ButtonStyle.Secondary).setEmoji('⚖️')
     );
 
-    // Fila 5: Progr. Mensaje (Recuperado)
+    // Fila 5: Progr. Mensaje (Verde) y Reaction Role (Azul)
     const row5 = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('dash_btn_scheduled_msg').setLabel('Progr. Mensaje').setStyle(ButtonStyle.Primary).setEmoji('⏰')
+        new ButtonBuilder().setCustomId('dash_btn_scheduled_msg').setLabel('Progr. Mensaje').setStyle(ButtonStyle.Success).setEmoji('⏰'),
+        new ButtonBuilder().setCustomId('rr_btn_create').setLabel('Reaction Role').setStyle(ButtonStyle.Primary).setEmoji('🎭')
     );
 
     await interaction.reply({
