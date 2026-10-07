@@ -1,29 +1,21 @@
 import { REST, Routes } from 'discord.js';
 import { data as dashCommand } from './commands/dash';
-import { data as dashstaffCommand } from './commands/dashstaff'; // ⚡ ¡Importamos el comando de staff!
-import { data as reporteCommand } from './commands/reporte';
-import { data as setupdefensaCommand } from './commands/setupdefensa';
-import { data as veredictoCommand } from './commands/veredicto';
+import { data as dashstaffCommand } from './commands/dashstaff';
 import { data as msnCommand } from './commands/msn';
 import { data as formsCommand } from './commands/forms';
-import { data as colocarFormCommand } from './commands/ColocarForm';
-import { data as borrarCommand } from './commands/borrar'; // 🗑️ Importamos el comando borrar
-import { data as dashsheetsCommand } from './commands/dashSheets'; // 📊 ¡Importamos el comando dashSheets!
-import { data as dadoCommand } from './commands/dado'; // 🎲 ¡Nuevo import para el comando dado!
+import { data as borrarCommand } from './commands/borrar';
+import { data as dashsheetsCommand } from './commands/dashSheets';
+import { data as dadoCommand } from './commands/dado';
 
-// Mapeamos los comandos con su nombre para validar que ninguno llegue undefined
+// Mapeamos únicamente los comandos activos que quieres que aparezcan en Discord
 const commandList = [
     { name: 'dash', data: dashCommand },
-    { name: 'dashstaff', data: dashstaffCommand }, // ⚡ ¡Lo añadimos a la lista de registro!
-    { name: 'reporte', data: reporteCommand },
-    { name: 'setupdefensa', data: setupdefensaCommand },
-    { name: 'veredicto', data: veredictoCommand },
+    { name: 'dashstaff', data: dashstaffCommand },
     { name: 'msn', data: msnCommand },
     { name: 'forms', data: formsCommand },
-    { name: 'colocarForm', data: colocarFormCommand },
-    { name: 'borrar', data: borrarCommand }, // 🗑️ Lo añadimos a la lista de registro
-    { name: 'dashsheets', data: dashsheetsCommand }, // 📊 ¡Añadido el comando dashsheets aquí!
-    { name: 'dado', data: dadoCommand }, // 🎲 ¡Añadido el comando dado aquí!
+    { name: 'borrar', data: borrarCommand },
+    { name: 'dashsheets', data: dashsheetsCommand },
+    { name: 'dado', data: dadoCommand },
 ];
 
 const commands = commandList.map(cmd => {
@@ -37,17 +29,17 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
 
 (async () => {
     try {
-        console.log('🔄 Registrando comandos en la API de Discord...');
+        console.log('🔄 Registrando comandos activos en la API de Discord...');
 
         await rest.put(
             Routes.applicationCommands(process.env.CLIENT_ID!),
             { body: commands },
         );
 
-        console.log('✅ ¡Comandos registrados con éxito!');
-        process.exit(0); // Cierra el proceso para que Render termine el build con éxito
+        console.log('✅ ¡Comandos actualizados y registrados con éxito!');
+        process.exit(0);
     } catch (error) {
         console.error('❌ Error al registrar comandos:', error);
-        process.exit(1); // Sale con error si falla
+        process.exit(1);
     }
 })();
