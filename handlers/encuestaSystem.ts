@@ -1,4 +1,4 @@
- import { 
+import { 
     ButtonInteraction, 
     ModalBuilder, 
     TextInputBuilder, 
@@ -319,7 +319,13 @@ export async function handleEncuestaReactionAdd(reaction: any, user: any) {
 }
 
 // 6. Worker que evalúa el cierre de encuestas, calcula porcentajes, empates y publica resultados
-export function startPollsWorker(client: Client) {
+export function setupPollSystem(client: Client) {
+    // Escucha interna de reacciones para los avisos de votos
+    client.on('messageReactionAdd', async (reaction, user) => {
+        await handleEncuestaReactionAdd(reaction, user);
+    });
+
+    // Worker periódico de expiración
     setInterval(async () => {
         try {
             const { activePollsCol } = await getCollections();
@@ -419,6 +425,8 @@ export function startPollsWorker(client: Client) {
             console.error('Error crítico en el worker de encuestas:', error);
         }
     }, 60 * 1000);
+
+    console.log('📊 [PollSystem] Sistema de encuestas y worker iniciados correctamente.');
 }
 
 // 7. Enrutador central del módulo de encuestas
