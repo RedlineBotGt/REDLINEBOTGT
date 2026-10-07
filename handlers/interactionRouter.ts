@@ -77,7 +77,6 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
         // 7. Delegar interacciones de Mensajes Programados
         const handledByScheduled = await scheduledHandler.handleScheduledInteraction(interaction);
         if (handledByScheduled) return true;
-
         // 8. Delegar interacciones de Comisarios, Avisos, Tickets y Sorteos
         
         // --- BOTONES ---
