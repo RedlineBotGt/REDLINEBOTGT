@@ -87,15 +87,54 @@ export async function handleScheduledInteraction(interaction: any): Promise<bool
         if (interaction.isButton()) {
             const customId = interaction.customId;
 
+            // Menú Principal con el nuevo botón de listar
             if (customId === 'dash_btn_scheduled_msg') {
                 const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                    new ButtonBuilder().setCustomId('sched_btn_new').setLabel('Crear Nuevo Mensaje').setStyle(ButtonStyle.Success).setEmoji('➕'),
-                    new ButtonBuilder().setCustomId('sched_btn_existing').setLabel('Usar Mensaje Existente').setStyle(ButtonStyle.Primary).setEmoji('📂')
+                    new ButtonBuilder().setCustomId('sched_btn_new').setLabel('Crear Nuevo').setStyle(ButtonStyle.Success).setEmoji('➕'),
+                    new ButtonBuilder().setCustomId('sched_btn_existing').setLabel('Usar Plantilla').setStyle(ButtonStyle.Primary).setEmoji('📂'),
+                    new ButtonBuilder().setCustomId('sched_btn_list').setLabel('Ver Programados').setStyle(ButtonStyle.Secondary).setEmoji('📋')
                 );
 
                 await interaction.reply({
-                    content: '📅 **Sistema de Mensajes Programados**\n¿Qué deseas hacer con tus plantillas de mensajes?',
+                    content: '📅 **Sistema de Mensajes Programados**\n¿Qué deseas hacer?',
                     components: [row],
+                    flags: [MessageFlags.Ephemeral]
+                });
+                return true;
+            }
+
+            // NUEVO: Ver lista de mensajes programados pendientes en el servidor
+            if (customId === 'sched_btn_list') {
+                if (!interaction.guildId) return true;
+
+                const { jobs } = await getSchedCollections();
+                const pendingJobs = await jobs.find({ guildId: interaction.guildId, status: 'pending' }).toArray();
+
+                if (pendingJobs.length === 0) {
+                    await interaction.reply({
+                        content: '❌ No hay ningún mensaje programado pendiente en este servidor ahora mismo.',
+                        flags: [MessageFlags.Ephemeral]
+                    });
+                    return true;
+                }
+
+                const embed = new EmbedBuilder()
+                    .setColor(0x00AAFF)
+                    .setTitle('📋 Mensajes Programados Activos')
+                    .setDescription(`Se encontraron **${pendingJobs.length}** mensaje(s) en cola:`)
+                    .setTimestamp();
+
+                pendingJobs.forEach((job: any, index: number) => {
+                    const previewText = job.text ? job.text.substring(0, 60) + '...' : '[Sin texto]';
+                    embed.addFields({
+                        name: `🆔 #${index + 1} | Canal: <#${job.channelId}>`,
+                        value: `📅 Fecha: **${job.date} a las ${job.time}**\n💬 Texto: *${previewText}*\n🔄 Repite: ${job.repeats ? 'Sí' : 'No'}`,
+                        inline: false
+                    });
+                });
+
+                await interaction.reply({
+                    embeds: [embed],
                     flags: [MessageFlags.Ephemeral]
                 });
                 return true;
