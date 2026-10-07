@@ -9,6 +9,7 @@ import * as dashstaffCommand from '../commands/dashstaff';
 import * as eventHandler from './eventInteractions';
 import * as formHandler from './formInteractions'; // 👈 Módulo de formularios integrado
 import * as messageHandler from './messageInteractions'; // 👈 Módulo de mensajes (/msn y dash) integrado
+import * as encuestaHandler from './encuestasystem'; // 👈 Módulo de encuestas integrado
 
 // Configuración de MongoDB para los eventos
 const uri = process.env.MONGODB_URI || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
@@ -52,7 +53,11 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
         const handledByMessages = await messageHandler.handleMsnInteraction(interaction);
         if (handledByMessages) return true;
 
-        // 5. Botones del Panel Admin y Staff (Resto de módulos pendientes)
+        // 5. Delegar interacciones de encuestas (Botones, Menús desplegables y Modales del sistema de encuestas)
+        const handledByEncuesta = await encuestaHandler.handleEncuestaInteraction(interaction);
+        if (handledByEncuesta) return true;
+
+        // 6. Botones del Panel Admin y Staff (Resto de módulos pendientes)
         if (interaction.isButton()) {
             const customId = interaction.customId;
 
@@ -71,12 +76,6 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
             // --- COMISARIOS Y VEREDICTOS ---
             if (['dash_btn_setup_reporte', 'dash_btn_setup_defensa', 'dash_btn_veredicto'].includes(customId)) {
                 await interaction.reply({ content: '⚖️ Módulo de Comisarios enlazado correctamente.', flags: [MessageFlags.Ephemeral] });
-                return true;
-            }
-
-            // --- ENCUESTAS ---
-            if (customId === 'dash_btn_encuesta_create') {
-                await interaction.reply({ content: '📊 Módulo de Encuestas enlazado correctamente.', flags: [MessageFlags.Ephemeral] });
                 return true;
             }
 
