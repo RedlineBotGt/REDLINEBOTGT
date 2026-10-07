@@ -34,7 +34,7 @@ async function getCollections() {
     return { pendingPollsCol, activePollsCol };
 }
 
-// 1. Paso inicial: Menús desplegables para configuración previa
+// 1. Paso inicial: Menús desplegables para configuración previa (Máximo 5 filas permitidas por Discord)
 export async function handleEncuestaStart(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_encuesta_create') return false;
 
@@ -42,10 +42,6 @@ export async function handleEncuestaStart(interaction: ButtonInteraction): Promi
         .setCustomId('encuesta_pre_publish_channel')
         .setPlaceholder('Canal destino de la encuesta...')
         .addChannelTypes(ChannelType.GuildText);
-
-    const selectRole = new RoleSelectMenuBuilder()
-        .setCustomId('encuesta_pre_role')
-        .setPlaceholder('Rol a mencionar (Opcional)...');
 
     const selectLogChannel = new ChannelSelectMenuBuilder()
         .setCustomId('encuesta_pre_log_channel')
@@ -76,7 +72,6 @@ export async function handleEncuestaStart(interaction: ButtonInteraction): Promi
         content: '📊 **Configuración de Encuesta:** Selecciona las opciones en los menús desplegables y pulsa el botón:',
         components: [
             new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(selectPublishChannel),
-            new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(selectRole),
             new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(selectLogChannel),
             new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(selectAvisoChannel),
             new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectDuration),
@@ -87,7 +82,6 @@ export async function handleEncuestaStart(interaction: ButtonInteraction): Promi
 
     return true;
 }
-
 // 2. Maneja las selecciones de los menús previos
 export async function handleEncuestaPreSelections(interaction: any): Promise<boolean> {
     if (!['encuesta_pre_publish_channel', 'encuesta_pre_role', 'encuesta_pre_log_channel', 'encuesta_pre_aviso_channel', 'encuesta_pre_duration'].includes(interaction.customId)) {
