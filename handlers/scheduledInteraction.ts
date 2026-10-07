@@ -87,12 +87,11 @@ export async function handleScheduledInteraction(interaction: any): Promise<bool
         if (interaction.isButton()) {
             const customId = interaction.customId;
 
-            // Menú Principal con el nuevo botón de listar
             if (customId === 'dash_btn_scheduled_msg') {
                 const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
                     new ButtonBuilder().setCustomId('sched_btn_new').setLabel('Crear Nuevo').setStyle(ButtonStyle.Success).setEmoji('➕'),
                     new ButtonBuilder().setCustomId('sched_btn_existing').setLabel('Usar Plantilla').setStyle(ButtonStyle.Primary).setEmoji('📂'),
-                    new ButtonBuilder().setCustomId('sched_btn_list').setLabel('Ver Programados').setStyle(ButtonStyle.Secondary).setEmoji('📋')
+                    new ButtonBuilder().setCustomId('sched_btn_list').setLabel('Ver Historial / Programados').setStyle(ButtonStyle.Secondary).setEmoji('📋')
                 );
 
                 await interaction.reply({
@@ -103,16 +102,16 @@ export async function handleScheduledInteraction(interaction: any): Promise<bool
                 return true;
             }
 
-            // NUEVO: Ver lista de mensajes programados pendientes en el servidor
+            // MODIFICADO: Muestra TODO el historial (pendientes y enviados)
             if (customId === 'sched_btn_list') {
                 if (!interaction.guildId) return true;
 
                 const { jobs } = await getSchedCollections();
-                const pendingJobs = await jobs.find({ guildId: interaction.guildId, status: 'pending' }).toArray();
+                const allJobs = await jobs.find({ guildId: interaction.guildId }).toArray();
 
-                if (pendingJobs.length === 0) {
+                if (allJobs.length === 0) {
                     await interaction.reply({
-                        content: '❌ No hay ningún mensaje programado pendiente en este servidor ahora mismo.',
+                        content: '❌ No hay ningún registro de mensajes (ni pendientes ni enviados) en la base de datos para este servidor.',
                         flags: [MessageFlags.Ephemeral]
                     });
                     return true;
@@ -120,21 +119,37 @@ export async function handleScheduledInteraction(interaction: any): Promise<bool
 
                 const embed = new EmbedBuilder()
                     .setColor(0x00AAFF)
-                    .setTitle('📋 Mensajes Programados Activos')
-                    .setDescription(`Se encontraron **${pendingJobs.length}** mensaje(s) en cola:`)
+                    .setTitle('📋 Historial Completo de Mensajes Programados')
+                    .setDescription(`Se encontraron **${allJobs.length}** registro(s) en total:`)
                     .setTimestamp();
 
-                pendingJobs.forEach((job: any, index: number) => {
-                    const previewText = job.text ? job.text.substring(0, 60) + '...' : '[Sin texto]';
+                allJobs.forEach((job: any, index: number) => {
+                    const previewText = job.text ? job.text.substring(0, 45) + '...' : '[Sin texto]';
+                    let statusEmoji = '⏳ Pendiente';
+                    if (job.status === 'sent') statusEmoji = '✅ Enviado';
+                    else if (job.status) statusEmoji = `📌 ${job.status}`;
+
                     embed.addFields({
-                        name: `🆔 #${index + 1} | Canal: <#${job.channelId}>`,
-                        value: `📅 Fecha: **${job.date} a las ${job.time}**\n💬 Texto: *${previewText}*\n🔄 Repite: ${job.repeats ? 'Sí' : 'No'}`,
+                        name: `🆔 Trabajo #${index + 1} [${statusEmoji}]`,
+                        value: `📢 Canal: <#${job.channelId}>\n📅 Fecha: **${job.date || 'N/A'} a las ${job.time || 'N/A'}**\n💬 Texto: *${previewText}*\n🔄 Repite: ${job.repeats ? 'Sí' : 'No'}`,
                         inline: false
                     });
                 });
 
+                const selectMenu = new StringSelectMenuBuilder()
+                    .setCustomId('sched_delete_job_select')
+                    .setPlaceholder('🗑️ Selecciona un registro para borrarlo de la base de datos...')
+                    .addOptions(allJobs.map((job: any, index: number) => ({
+                        label: `Borrar #${index + 1} (${job.date || 'S/F'} - ${job.status || 'pend.'})`,
+                        description: (job.text ? job.text.substring(0, 75) : 'Sin texto'),
+                        value: job._id.toString()
+                    })));
+
+                const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
+
                 await interaction.reply({
                     embeds: [embed],
+                    components: [row],
                     flags: [MessageFlags.Ephemeral]
                 });
                 return true;
@@ -434,6 +449,28 @@ export async function handleScheduledInteraction(interaction: any): Promise<bool
                     embeds: [embed],
                     components: [row]
                 });
+                return true;
+            }
+
+            if (interaction.customId === 'sched_delete_job_select') {
+                const jobId = interaction.values[0];
+                const { jobs } = await getSchedCollections();
+                
+                const deleteResult = await jobs.deleteOne({ _id: new ObjectId(jobId) });
+
+                if (deleteResult.deletedCount > 0) {
+                    await interaction.update({
+                        content: '🗑️ **¡Registro eliminado de la base de datos con éxito!**',
+                        embeds: [],
+                        components: []
+                    });
+                } else {
+                    await interaction.update({
+                        content: '❌ No se encontró ese registro en la base de datos.',
+                        embeds: [],
+                        components: []
+                    });
+                }
                 return true;
             }
         }
