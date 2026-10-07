@@ -14,7 +14,7 @@ import * as encuestaHandler from './encuestaSystem'; // 👈 Módulo de encuesta
 // Módulos de Comisarios (Reportes, Defensas y Veredictos)
 import * as dashReporteHandler from './dashReporteHandler';
 import * as dashDefensaHandler from './dashDefensaHandler';
-import * as veredictoHandler from './veredictoHandler';
+import * as veredictoHandler from './dashVeredictoHandler'; // 👈 Nombre de archivo corregido
 import * as reportModal from './reportModal';
 import * as defensaModal from './defensaModal';
 import * as veredictoModal from './veredictoModal';
