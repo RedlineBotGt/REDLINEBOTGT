@@ -9,7 +9,7 @@ import * as dashstaffCommand from '../commands/dashstaff';
 import * as eventHandler from './eventInteractions';
 import * as formHandler from './formInteractions'; // 👈 Módulo de formularios integrado
 import * as messageHandler from './messageInteractions'; // 👈 Módulo de mensajes (/msn y dash) integrado
-import * as encuestaHandler from './encuestasystem'; // 👈 Módulo de encuestas integrado
+import * as encuestaHandler from './encuestaSystem'; // 👈 Módulo de encuestas integrado corregido
 
 // Configuración de MongoDB para los eventos
 const uri = process.env.MONGODB_URI || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
