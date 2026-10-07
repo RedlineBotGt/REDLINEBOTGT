@@ -112,7 +112,6 @@ export async function handleDashColocarPubliChannelSelect(interaction: ChannelSe
         return true;
     }
 
-    // Guardamos temporalmente el contexto de este usuario
     colocationContext.set(interaction.user.id, { titulo: tituloFormulario, canalPublicacionId: canalPubliId });
 
     const channelSelect = new ChannelSelectMenuBuilder()
@@ -169,7 +168,6 @@ export async function handleDashColocarRespuestasChannelSelect(interaction: Chan
         return true;
     }
 
-    // Guardamos en la BD vinculando las preguntas al canal de respuestas
     await guardarFormulario(
         interaction.guildId,
         context.titulo,
@@ -215,7 +213,7 @@ export async function handleFormButtonClick(interaction: ButtonInteraction): Pro
 
     if (!formulario || !formulario.preguntas) {
         await interaction.reply({
-            content: '❌ Lo siento, este formulario ya não está disponible o ha sido eliminado en este servidor.',
+            content: '❌ Lo siento, este formulario ya no está disponible o ha sido eliminado en este servidor.',
             flags: [MessageFlags.Ephemeral]
         });
         return true;
@@ -400,7 +398,6 @@ export async function handleRenombrarModal(interaction: ModalSubmitInteraction):
 
     return true;
 }
-
 // 10. Maneja el clic en el botón "Editar F" del panel
 export async function handleDashEditarFormButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_editar_form') return false;
@@ -423,7 +420,7 @@ export async function handleDashEditarFormButton(interaction: ButtonInteraction)
 
     const selectMenu = new StringSelectMenuBuilder()
         .setCustomId('dash_select_editar_form')
-        .setPlaceholder('✏️ Selecciona el formulario que deseas editar...');
+        .setPlaceholder('✏️ Selecciona el formulario que deseas gestionar...');
 
     for (const titulo of titulos.slice(0, 25)) {
         const form = formularios[titulo];
@@ -437,7 +434,7 @@ export async function handleDashEditarFormButton(interaction: ButtonInteraction)
     const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
 
     await interaction.reply({
-        content: '✏️ **Editar Formulario:** Selecciona de la lista el formulario cuyas preguntas deseas modificar:',
+        content: '✏️ **Gestionar Formulario:** Selecciona de la lista el formulario que deseas editar o borrar:',
         components: [row],
         flags: [MessageFlags.Ephemeral]
     });
@@ -445,7 +442,7 @@ export async function handleDashEditarFormButton(interaction: ButtonInteraction)
     return true;
 }
 
-// 11. Maneja la selección del formulario a editar y muestra el modal con sus preguntas actuales
+// 11. Maneja la selección del formulario y pregunta si desea BORRARLO o SEGUIR EDITANDO
 export async function handleDashEditarFormSelect(interaction: StringSelectMenuInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_select_editar_form') return false;
 
@@ -455,18 +452,81 @@ export async function handleDashEditarFormSelect(interaction: StringSelectMenuIn
     }
 
     const tituloFormulario = interaction.values[0];
-    const formulario = await obtenerFormularioPorTitulo(interaction.guildId, tituloFormulario);
+    activeEditingForms.set(interaction.user.id, tituloFormulario);
 
-    if (!formulario) {
-        await interaction.update({ content: '❌ El formulario seleccionado ya no existe.', components: [] });
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+            .setCustomId('edit_btn_borrar_si')
+            .setLabel('Sí, borrar')
+            .setStyle(ButtonStyle.Danger)
+            .setEmoji('🗑️'),
+        new ButtonBuilder()
+            .setCustomId('edit_btn_borrar_no')
+            .setLabel('No, seguir editando')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('✏️')
+    );
+
+    await interaction.update({
+        content: `📌 Has seleccionado el formulario: **"${tituloFormulario}"**.\n\n¿Quieres **borrarlo** o prefieres **seguir editándolo**?`,
+        components: [row]
+    });
+
+    return true;
+}
+
+// 12. Maneja la opción de BORRAR el formulario seleccionado
+export async function handleEditDeleteButton(interaction: ButtonInteraction): Promise<boolean> {
+    if (interaction.customId !== 'edit_btn_borrar_si') return false;
+
+    const guildId = interaction.guildId;
+    if (!guildId) {
+        await interaction.update({ content: '❌ Acción no válida fuera de un servidor.', components: [] });
         return true;
     }
 
-    activeEditingForms.set(interaction.user.id, tituloFormulario);
+    const tituloFormulario = activeEditingForms.get(interaction.user.id);
+    if (!tituloFormulario) {
+        await interaction.update({ content: '❌ No se encontró el formulario seleccionado. Vuelve a iniciar la gestión.', components: [] });
+        return true;
+    }
+
+    await eliminarFormulario(guildId, tituloFormulario);
+    activeEditingForms.delete(interaction.user.id);
+
+    await interaction.update({
+        content: `✅ ¡Formulario **"${tituloFormulario}"** borrado con éxito de la base de datos!`,
+        components: []
+    });
+
+    return true;
+}
+
+// 13. Maneja la opción de SEGUIR EDITANDO (Abre el modal de preguntas)
+export async function handleEditContinueButton(interaction: ButtonInteraction): Promise<boolean> {
+    if (interaction.customId !== 'edit_btn_borrar_no') return false;
+
+    const guildId = interaction.guildId;
+    if (!guildId) {
+        await interaction.reply({ content: '❌ Acción no válida fuera de un servidor.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    const tituloFormulario = activeEditingForms.get(interaction.user.id);
+    if (!tituloFormulario) {
+        await interaction.reply({ content: '❌ No se encontró el formulario seleccionado.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    const formulario = await obtenerFormularioPorTitulo(guildId, tituloFormulario);
+    if (!formulario) {
+        await interaction.reply({ content: '❌ El formulario ya no existe.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
 
     const modal = new ModalBuilder()
         .setCustomId('modal_editar_formulario_preguntas')
-        .setTitle(`Editar: ${tituloFormulario.substring(0, 30)}`);
+        .setTitle(`Editar Preguntas: ${tituloFormulario.substring(0, 25)}`);
 
     for (let i = 0; i < 5; i++) {
         const preguntaActual = formulario.preguntas[i] || '';
@@ -484,7 +544,7 @@ export async function handleDashEditarFormSelect(interaction: StringSelectMenuIn
     return true;
 }
 
-// 12. Maneja el envío del modal de edición de preguntas
+// 14. Maneja el envío del modal de edición de preguntas y pregunta si desea CAMBIAR EL TÍTULO
 export async function handleEditarFormModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_editar_formulario_preguntas') return false;
 
@@ -523,17 +583,118 @@ export async function handleEditarFormModalSubmit(interaction: ModalSubmitIntera
     }
 
     await guardarFormulario(guildId, tituloFormulario, formulario.canalRespuestas || null, nuevasPreguntas);
-    activeEditingForms.delete(interaction.user.id);
+
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+            .setCustomId('edit_btn_titulo_si')
+            .setLabel('Sí, cambiar')
+            .setStyle(ButtonStyle.Success)
+            .setEmoji('✏️'),
+        new ButtonBuilder()
+            .setCustomId('edit_btn_titulo_no')
+            .setLabel('No, finalizar edición')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('✔️')
+    );
 
     await interaction.reply({
-        content: `✅ ¡Formulario **"${tituloFormulario}"** actualizado con éxito!\n- **Preguntas configuradas:** ${nuevasPreguntas.length}`,
+        content: `✅ ¡Preguntas actualizadas con éxito en **"${tituloFormulario}"**!\n\n¿Quieres **cambiarle el título** o prefieres **finalizar la edición**?`,
+        components: [row],
         flags: [MessageFlags.Ephemeral]
     });
 
     return true;
 }
 
-// 13. Maneja el envío de las respuestas del usuario final al canal de respuestas
+// 15. Maneja el botón de SÍ cambiar el título (Abre modal de 1 celda)
+export async function handleEditChangeTitleButton(interaction: ButtonInteraction): Promise<boolean> {
+    if (interaction.customId !== 'edit_btn_titulo_si') return false;
+
+    try {
+        const modal = new ModalBuilder()
+            .setCustomId('modal_editar_nuevo_titulo')
+            .setTitle('Cambiar Título del Formulario');
+
+        const input = new TextInputBuilder()
+            .setCustomId('nuevo_titulo_editado')
+            .setLabel('Nuevo título')
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('Escribe el nuevo nombre...')
+            .setRequired(true);
+
+        modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(input));
+        await interaction.showModal(modal);
+    } catch (error) {
+        console.error('❌ Error al abrir el modal de cambio de título:', error);
+    }
+    return true;
+}
+
+// 16. Maneja el envío del modal con el nuevo título definitivo
+export async function handleEditarNuevoTituloModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
+    if (interaction.customId !== 'modal_editar_nuevo_titulo') return false;
+
+    const guildId = interaction.guildId;
+    if (!guildId) {
+        await interaction.reply({ content: '❌ Acción no válida fuera de un servidor.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    try {
+        const nuevoTitulo = interaction.fields.getTextInputValue('nuevo_titulo_editado').trim();
+        const viejoTitulo = activeEditingForms.get(interaction.user.id);
+
+        if (!nuevoTitulo) {
+            await interaction.reply({ content: '❌ El título no puede estar vacío.', flags: [MessageFlags.Ephemeral] });
+            return true;
+        }
+
+        if (!viejoTitulo) {
+            await interaction.reply({ content: '❌ No se encontró la sesión del formulario.', flags: [MessageFlags.Ephemeral] });
+            return true;
+        }
+
+        const formulario = await obtenerFormularioPorTitulo(guildId, viejoTitulo);
+        if (!formulario) {
+            await interaction.reply({ content: '❌ El formulario ya no existe.', flags: [MessageFlags.Ephemeral] });
+            return true;
+        }
+
+        await guardarFormulario(guildId, nuevoTitulo, formulario.canalRespuestas || null, formulario.preguntas);
+        if (nuevoTitulo !== viejoTitulo) {
+            await eliminarFormulario(guildId, viejoTitulo);
+        }
+
+        activeEditingForms.delete(interaction.user.id);
+
+        await interaction.update({
+            content: `✅ ¡Formulario actualizado con éxito! Nuevo título: **"${nuevoTitulo}"**`,
+            components: [],
+            flags: [MessageFlags.Ephemeral]
+        });
+    } catch (error) {
+        console.error('❌ Error al actualizar el título:', error);
+        await interaction.reply({ content: '❌ Ocurrió un error al actualizar el título.', flags: [MessageFlags.Ephemeral] });
+    }
+
+    return true;
+}
+
+// 17. Maneja el botón de NO cambiar el título (Finaliza la edición)
+export async function handleEditFinishButton(interaction: ButtonInteraction): Promise<boolean> {
+    if (interaction.customId !== 'edit_btn_titulo_no') return false;
+
+    activeEditingForms.delete(interaction.user.id);
+
+    await interaction.update({
+        content: `✅ ¡Edición finalizada y guardada con éxito!`,
+        components: []
+    });
+
+    return true;
+}
+
+// 18. Maneja el envío de las respuestas del usuario final al canal de respuestas
 export async function handleFormSubmitModal(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (!interaction.customId.startsWith('submit_form_')) return false;
 
@@ -598,8 +759,7 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
 
     return true;
 }
-
-// 14. Enrutador interno del módulo de formularios
+// 19. Enrutador interno del módulo de formularios
 export async function handleFormInteraction(interaction: any): Promise<boolean> {
     if (interaction.isButton()) {
         if (await handleDashColocarButton(interaction)) return true;
@@ -607,6 +767,10 @@ export async function handleFormInteraction(interaction: any): Promise<boolean> 
         if (await handleDashCrearFormButton(interaction)) return true;
         if (await handlePromptRenombrarButton(interaction)) return true;
         if (await handleDashEditarFormButton(interaction)) return true;
+        if (await handleEditDeleteButton(interaction)) return true;
+        if (await handleEditContinueButton(interaction)) return true;
+        if (await handleEditChangeTitleButton(interaction)) return true;
+        if (await handleEditFinishButton(interaction)) return true;
     }
     if (interaction.isStringSelectMenu()) {
         if (await handleDashColocarFormSelect(interaction)) return true;
@@ -620,6 +784,7 @@ export async function handleFormInteraction(interaction: any): Promise<boolean> 
         if (await handleFormCreate5Modal(interaction)) return true;
         if (await handleRenombrarModal(interaction)) return true;
         if (await handleEditarFormModalSubmit(interaction)) return true;
+        if (await handleEditarNuevoTituloModalSubmit(interaction)) return true;
         if (await handleFormSubmitModal(interaction)) return true;
     }
     return false;
