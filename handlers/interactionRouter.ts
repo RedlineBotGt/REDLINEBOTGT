@@ -2,18 +2,18 @@ import { Interaction, MessageFlags } from 'discord.js';
 import { handleScheduledInteraction } from './scheduledInteraction';
 import { handleRolReactionInteraction } from './rolreactionInteraction';
 
-// Importa aquí las funciones de tus comandos (ajusta el nombre de la función exportada si en tus archivos se llama distinto, ej: execute o handle...)
-import { execute as handleDash } from './dash';
-import { execute as handleDashStaff } from './dashstaff';
-import { execute as handleDado } from './dado';
-import { execute as handleBorrar } from './borrar';
-import { execute as handleForms } from './forms';
-import { execute as handleColocarForm } from './ColocarForm';
-import { execute as handleMsn } from './msn';
-import { execute as handleReporte } from './reporte';
-import { execute as handleSetupDefensa } from './setupdefensa';
-import { execute as handleVeredicto } from './veredicto';
-import { execute as handleDashSheets } from './dashSheets';
+// Importación corregida apuntando a la carpeta commands/
+import { execute as handleDash } from './commands/dash';
+import { execute as handleDashStaff } from './commands/dashstaff';
+import { execute as handleDado } from './commands/dado';
+import { execute as handleBorrar } from './commands/borrar';
+import { execute as handleForms } from './commands/forms';
+import { execute as handleColocarForm } from './commands/ColocarForm';
+import { execute as handleMsn } from './commands/msn';
+import { execute as handleReporte } from './commands/reporte';
+import { execute as handleSetupDefensa } from './commands/setupdefensa';
+import { execute as handleVeredicto } from './commands/veredicto';
+import { execute as handleDashSheets } from './commands/dashSheets';
 
 /**
  * 🛡️ Enrutador Central de Interacciones
@@ -41,7 +41,7 @@ export async function handleInteraction(interaction: Interaction): Promise<void>
                 case 'forms':
                     await handleForms(interaction);
                     return;
-                case 'colocarform': // Ajusta el nombre si en Discord el comando es distinto
+                case 'colocarform':
                     await handleColocarForm(interaction);
                     return;
                 case 'msn':
