@@ -1,6 +1,7 @@
 import { Interaction, MessageFlags } from 'discord.js';
 import { handleScheduledInteraction } from './scheduledInteraction';
 import { handleRolReactionInteraction } from './rolreactionInteraction';
+import { handleSheetsInteraction } from './sheetsInteraction';
 
 // Importación de comandos subiendo un nivel desde handlers/ hacia commands/
 import { execute as handleDash } from '../commands/dash';
@@ -74,6 +75,9 @@ export async function handleInteraction(interaction: Interaction): Promise<void>
         // 2. Módulo de Reaction Roles / Autoroles por Botón (Componentes)
         if (await handleRolReactionInteraction(interaction)) return;
 
+        // 3. Módulo de Google Sheets (Panel, Botones y Menús Desplegables)
+        if (await handleSheetsInteraction(interaction)) return;
+
         // Si ninguna interacción fue manejada y es un componente de UI huérfano:
         if (interaction.isButton() || interaction.isAnySelectMenu() || interaction.isModalSubmit()) {
             if (!interaction.replied && !interaction.deferred) {
@@ -86,7 +90,7 @@ export async function handleInteraction(interaction: Interaction): Promise<void>
 
     } catch (error) {
         console.error('❌ Error crítico en el enrutador de interacciones (interactionRouter):', error);
-        
+
         if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
             await interaction.reply({
                 content: '❌ Ocurrió un error inesperado al procesar esta acción.',
