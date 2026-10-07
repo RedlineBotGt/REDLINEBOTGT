@@ -34,7 +34,7 @@ async function getCollections() {
     return { pendingPollsCol, activePollsCol };
 }
 
-// 1. Paso inicial: Menús desplegables para configuración previa (Máximo 5 filas permitidas por Discord)
+// 1. Paso inicial: Menús desplegables para configuración previa (Máximo 5 filas)
 export async function handleEncuestaStart(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_encuesta_create') return false;
 
@@ -82,6 +82,7 @@ export async function handleEncuestaStart(interaction: ButtonInteraction): Promi
 
     return true;
 }
+
 // 2. Maneja las selecciones de los menús previos
 export async function handleEncuestaPreSelections(interaction: any): Promise<boolean> {
     if (!['encuesta_pre_publish_channel', 'encuesta_pre_role', 'encuesta_pre_log_channel', 'encuesta_pre_aviso_channel', 'encuesta_pre_duration'].includes(interaction.customId)) {
@@ -312,10 +313,8 @@ export async function handleEncuestaReactionAdd(reaction: any, user: any) {
 
 // 6. Worker que evalúa el cierre de encuestas, calcula porcentajes, empates y publica resultados
 export function setupPollSystem(client: Client) {
-    // Escucha interna de reacciones para los avisos de votos
-    client.on('messageReactionAdd', async (reaction, user) => {
-        await handleEncuestaReactionAdd(reaction, user);
-    });
+    // NOTA: Se ha eliminado el listener duplicado client.on('messageReactionAdd') de aquí 
+    // para evitar que los avisos se envíen por duplicado.
 
     // Worker periódico de expiración
     setInterval(async () => {
