@@ -1,4 +1,4 @@
-import { MongoClient, ButtonStyle } from 'discord.js';
+import { ButtonStyle } from 'discord.js';
 import { MongoClient as MongoDriver } from 'mongodb';
 
 const uri = process.env.MONGODB_URI || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
