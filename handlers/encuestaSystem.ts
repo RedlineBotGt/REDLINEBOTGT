@@ -1,4 +1,4 @@
-import { 
+ import { 
     ButtonInteraction, 
     ModalBuilder, 
     TextInputBuilder, 
@@ -419,4 +419,37 @@ export function startPollsWorker(client: Client) {
             console.error('Error crítico en el worker de encuestas:', error);
         }
     }, 60 * 1000);
+}
+
+// 7. Enrutador central del módulo de encuestas
+export async function handleEncuestaInteraction(interaction: any): Promise<boolean> {
+    try {
+        // Clic en el botón inicial del panel /dashstaff
+        if (interaction.isButton() && interaction.customId === 'dash_btn_encuesta_create') {
+            return await handleEncuestaStart(interaction);
+        }
+
+        // Selección en los menús desplegables previos (canales, rol, duración)
+        if (
+            (interaction.isChannelSelectMenu() || interaction.isRoleSelectMenu() || interaction.isStringSelectMenu()) &&
+            ['encuesta_pre_publish_channel', 'encuesta_pre_role', 'encuesta_pre_log_channel', 'encuesta_pre_aviso_channel', 'encuesta_pre_duration'].includes(interaction.customId)
+        ) {
+            return await handleEncuestaPreSelections(interaction);
+        }
+
+        // Clic en el botón para abrir el formulario modal final
+        if (interaction.isButton() && interaction.customId === 'encuesta_btn_open_modal') {
+            return await handleEncuestaOpenModalButton(interaction);
+        }
+
+        // Envío del modal con los datos de la encuesta
+        if (interaction.isModalSubmit() && interaction.customId === 'modal_encuesta_final') {
+            return await handleEncuestaFinalSubmit(interaction);
+        }
+
+        return false;
+    } catch (error) {
+        console.error('❌ Error en el manejador de interacciones de encuesta:', error);
+        return false;
+    }
 }
