@@ -6,6 +6,7 @@ import {
     ActionRowBuilder, 
     ChannelSelectMenuBuilder, 
     RoleSelectMenuBuilder, 
+    StringSelectMenuBuilder,
     ButtonBuilder, 
     ButtonStyle, 
     ChannelType, 
@@ -33,12 +34,13 @@ async function getCollections() {
     return { pendingPollsCol, activePollsCol };
 }
 
+// 1. Paso inicial: Menús desplegables para configuración previa
 export async function handleEncuestaStart(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_encuesta_create') return false;
 
     const selectPublishChannel = new ChannelSelectMenuBuilder()
         .setCustomId('encuesta_pre_publish_channel')
-        .setPlaceholder('Canal de publicación...')
+        .setPlaceholder('Canal destino de la encuesta...')
         .addChannelTypes(ChannelType.GuildText);
 
     const selectRole = new RoleSelectMenuBuilder()
@@ -47,21 +49,37 @@ export async function handleEncuestaStart(interaction: ButtonInteraction): Promi
 
     const selectLogChannel = new ChannelSelectMenuBuilder()
         .setCustomId('encuesta_pre_log_channel')
-        .setPlaceholder('Canal de respuestas / logs...');
+        .setPlaceholder('Canal destino respuestas...');
+
+    const selectAvisoChannel = new ChannelSelectMenuBuilder()
+        .setCustomId('encuesta_pre_aviso_channel')
+        .setPlaceholder('Canal avisos (reacciones)...');
+
+    const selectDuration = new StringSelectMenuBuilder()
+        .setCustomId('encuesta_pre_duration')
+        .setPlaceholder('Duración (en días hasta 15)...')
+        .addOptions(
+            Array.from({ length: 15 }, (_, i) => ({
+                label: `${i + 1} ${i === 0 ? 'día' : 'días'}`,
+                value: String(i + 1)
+            }))
+        );
 
     const rowButton = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
             .setCustomId('encuesta_btn_open_modal')
-            .setLabel('Siguiente: Rellenar Título, Opciones y Duración')
+            .setLabel('Siguiente: Rellenar Título, Descripción y Opciones')
             .setStyle(ButtonStyle.Primary)
     );
 
     await interaction.reply({
-        content: 'Configuración de Encuesta: Selecciona el canal de publicación, el rol y el canal de respuestas, y luego pulsa el botón:',
+        content: '📊 **Configuración de Encuesta:** Selecciona las opciones en los menús desplegables y pulsa el botón:',
         components: [
             new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(selectPublishChannel),
             new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(selectRole),
             new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(selectLogChannel),
+            new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(selectAvisoChannel),
+            new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectDuration),
             rowButton
         ],
         flags: [MessageFlags.Ephemeral]
@@ -70,8 +88,9 @@ export async function handleEncuestaStart(interaction: ButtonInteraction): Promi
     return true;
 }
 
+// 2. Maneja las selecciones de los menús previos
 export async function handleEncuestaPreSelections(interaction: any): Promise<boolean> {
-    if (!['encuesta_pre_publish_channel', 'encuesta_pre_role', 'encuesta_pre_log_channel'].includes(interaction.customId)) {
+    if (!['encuesta_pre_publish_channel', 'encuesta_pre_role', 'encuesta_pre_log_channel', 'encuesta_pre_aviso_channel', 'encuesta_pre_duration'].includes(interaction.customId)) {
         return false;
     }
 
@@ -84,6 +103,10 @@ export async function handleEncuestaPreSelections(interaction: any): Promise<boo
         updateData.roleId = interaction.values[0];
     } else if (interaction.customId === 'encuesta_pre_log_channel') {
         updateData.logChannelId = interaction.values[0];
+    } else if (interaction.customId === 'encuesta_pre_aviso_channel') {
+        updateData.avisoChannelId = interaction.values[0];
+    } else if (interaction.customId === 'encuesta_pre_duration') {
+        updateData.durationDays = parseInt(interaction.values[0], 10);
     }
 
     await pendingPollsCol.updateOne(
@@ -92,19 +115,20 @@ export async function handleEncuestaPreSelections(interaction: any): Promise<boo
         { upsert: true }
     );
 
-    await interaction.update({ content: 'Selección guardada correctamente. Continúa con los demás campos o pulsa el botón.' });
+    await interaction.update({ content: '✅ Selección guardada correctamente. Continúa con los demás menús o pulsa el botón.' });
     return true;
 }
 
+// 3. Abre el formulario modal para el contenido de la encuesta
 export async function handleEncuestaOpenModalButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'encuesta_btn_open_modal') return false;
 
     const { pendingPollsCol } = await getCollections();
     const pollData = await pendingPollsCol.findOne({ userId: interaction.user.id });
 
-    if (!pollData || !pollData.publishChannelId || !pollData.logChannelId) {
+    if (!pollData || !pollData.publishChannelId || !pollData.logChannelId || !pollData.avisoChannelId || !pollData.durationDays) {
         await interaction.reply({
-            content: 'Debes seleccionar obligatoriamente el Canal de publicación y el Canal de respuestas en los menús antes de abrir el formulario.',
+            content: '❌ Debes configurar obligatoriamente todos los campos en los menús desplegables (Canal de publicación, Canal de respuestas, Canal de avisos y Duración) antes de abrir el formulario.',
             flags: [MessageFlags.Ephemeral]
         });
         return true;
@@ -112,59 +136,53 @@ export async function handleEncuestaOpenModalButton(interaction: ButtonInteracti
 
     const modal = new ModalBuilder()
         .setCustomId('modal_encuesta_final')
-        .setTitle('Detalles de la Encuesta');
+        .setTitle('Formulario de Encuesta');
 
     const titleInput = new TextInputBuilder()
         .setCustomId('encuesta_title')
-        .setLabel('Título de la encuesta')
+        .setLabel('Título')
         .setStyle(TextInputStyle.Short)
         .setPlaceholder('Ej: Qué circuito corremos la próxima semana?')
         .setRequired(true);
 
     const descInput = new TextInputBuilder()
         .setCustomId('encuesta_desc')
-        .setLabel('Descripción detallada')
+        .setLabel('Descripción')
         .setStyle(TextInputStyle.Paragraph)
         .setPlaceholder('Escribe los detalles o contexto de la votación...')
         .setRequired(true);
 
     const optionsInput = new TextInputBuilder()
         .setCustomId('encuesta_options_block')
-        .setLabel('Opciones (Una por línea con emoji)')
+        .setLabel('Opciones (Icono + espacio + opción por fila)')
         .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('Monza\nSpa-Francorchamps\nSilverstone\nNürburgring')
-        .setRequired(true);
-
-    const durationInput = new TextInputBuilder()
-        .setCustomId('encuesta_duration')
-        .setLabel('Duración en días (1 al 7)')
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: 3')
-        .setMaxLength(2)
+        .setPlaceholder('1️⃣ Monza\n2️⃣ Spa-Francorchamps\n3️⃣ Silverstone')
         .setRequired(true);
 
     modal.addComponents(
         new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput),
         new ActionRowBuilder<TextInputBuilder>().addComponents(descInput),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(optionsInput),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(durationInput)
+        new ActionRowBuilder<TextInputBuilder>().addComponents(optionsInput)
     );
 
     await interaction.showModal(modal);
     return true;
 }
+
+// 4. Procesa el envío del modal, publica el mensaje y programa la encuesta
 export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_encuesta_final') return false;
 
     const title = interaction.fields.getTextInputValue('encuesta_title');
     const description = interaction.fields.getTextInputValue('encuesta_desc');
     const optionsRaw = interaction.fields.getTextInputValue('encuesta_options_block');
-    const durationRaw = interaction.fields.getTextInputValue('encuesta_duration');
 
-    const durationDays = parseInt(durationRaw.trim(), 10);
-    if (isNaN(durationDays) || durationDays < 1 || durationDays > 7) {
+    const { pendingPollsCol, activePollsCol } = await getCollections();
+    const pollData = await pendingPollsCol.findOne({ userId: interaction.user.id });
+
+    if (!pollData || !pollData.publishChannelId || !pollData.logChannelId || !pollData.avisoChannelId || !pollData.durationDays || !interaction.guild) {
         await interaction.reply({
-            content: '❌ La duración debe ser un número válido entre **1 y 7** días.',
+            content: '❌ Faltan datos de configuración. Por favor, vuelve a iniciar la encuesta desde el panel.',
             flags: [MessageFlags.Ephemeral]
         });
         return true;
@@ -174,19 +192,8 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
 
     if (lines.length < 2) {
         await interaction.reply({ 
-            content: 'Debes introducir al menos 2 opciones (una por línea).', 
+            content: '❌ Debes introducir al menos 2 opciones (formato: [icono] [espacio] [opción] por cada fila).', 
             flags: [MessageFlags.Ephemeral] 
-        });
-        return true;
-    }
-
-    const { pendingPollsCol, activePollsCol } = await getCollections();
-    const pollData = await pendingPollsCol.findOne({ userId: interaction.user.id });
-
-    if (!pollData || !pollData.publishChannelId || !pollData.logChannelId || !interaction.guild) {
-        await interaction.reply({
-            content: 'Faltan datos de configuración. Por favor, vuelve a iniciar la encuesta desde el panel.',
-            flags: [MessageFlags.Ephemeral]
         });
         return true;
     }
@@ -194,7 +201,7 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
     try {
         const publishChannel = await interaction.guild.channels.fetch(pollData.publishChannelId) as TextChannel;
         if (!publishChannel || !publishChannel.isTextBased()) {
-            await interaction.reply({ content: 'El canal de publicación seleccionado no es válido.', flags: [MessageFlags.Ephemeral] });
+            await interaction.reply({ content: '❌ El canal de publicación seleccionado no es válido.', flags: [MessageFlags.Ephemeral] });
             return true;
         }
 
@@ -205,6 +212,7 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
             return { raw: optStr, emoji, text };
         });
 
+        const durationDays = pollData.durationDays;
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + durationDays);
         const unixTimestamp = Math.floor(expiresAt.getTime() / 1000);
@@ -215,7 +223,7 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
             .setDescription(
                 `${description}\n\n` +
                 `🕒 **Duración:** ${durationDays} ${durationDays === 1 ? 'día' : 'días'} (Expira: <t:${unixTimestamp}:R>)\n\n` +
-                parsedOptions.map((o: any) => `${o.emoji} ➔ ${o.text}`).join('\n\n')
+                parsedOptions.map((o: any) => `${o.emoji} ${o.text}`).join('\n\n')
             )
             .setFooter({ text: `Encuesta creada por ${interaction.guild?.name}` })
             .setTimestamp();
@@ -240,6 +248,7 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
             messageId: pollMessage.id,
             publishChannelId: pollData.publishChannelId,
             logChannelId: pollData.logChannelId,
+            avisoChannelId: pollData.avisoChannelId,
             title: title,
             options: parsedOptions,
             durationDays: durationDays,
@@ -251,17 +260,19 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
         await pendingPollsCol.deleteOne({ userId: interaction.user.id });
 
         await interaction.reply({
-            content: `Encuesta publicada con éxito. Durará ${durationDays} días y publicará el resultado al finalizar.`,
+            content: `✅ ¡Encuesta publicada con éxito! Estará activa durante ${durationDays} días.`,
             flags: [MessageFlags.Ephemeral]
         });
 
     } catch (error) {
         console.error('Error al publicar la encuesta:', error);
-        await interaction.reply({ content: 'Hubo un error al publicar la encuesta o guardar en la base de datos.', flags: [MessageFlags.Ephemeral] });
+        await interaction.reply({ content: '❌ Hubo un error al publicar la encuesta o guardar en la base de datos.', flags: [MessageFlags.Ephemeral] });
     }
 
     return true;
 }
+
+// 5. Maneja las reacciones de los usuarios y envía aviso al canal de avisos seleccionado
 export async function handleEncuestaReactionAdd(reaction: any, user: any) {
     try {
         if (user.bot) return;
@@ -278,7 +289,7 @@ export async function handleEncuestaReactionAdd(reaction: any, user: any) {
         }
 
         const emojiValue = reaction.emoji.id ? `<:${reaction.emoji.name}:${reaction.emoji.id}>` : reaction.emoji.name;
-        
+
         const matchedOption = poll.options.find((o: any) => 
             o.emoji === emojiValue || 
             o.emoji === reaction.emoji.name || 
@@ -291,28 +302,29 @@ export async function handleEncuestaReactionAdd(reaction: any, user: any) {
         const guild = reaction.message.guild;
         if (!guild) return;
 
-        const logChannel = await guild.channels.fetch(poll.logChannelId).catch(() => null) as TextChannel;
-        if (!logChannel || !logChannel.isTextBased()) return;
+        const avisoChannel = await guild.channels.fetch(poll.avisoChannelId).catch(() => null) as TextChannel;
+        if (!avisoChannel || !avisoChannel.isTextBased()) return;
 
-        const logEmbed = new EmbedBuilder()
+        const avisoEmbed = new EmbedBuilder()
             .setColor(0x00FF00)
-            .setTitle('Nuevo Voto Registrado')
+            .setTitle('🔔 Nuevo Voto Registrado')
             .setDescription(`**Encuesta:** ${poll.title}\n**Usuario:** <@${user.id}> (${user.tag})\n**Ha votado por:** ${matchedOption.emoji} ${matchedOption.text}`)
             .setTimestamp();
 
-        await logChannel.send({ embeds: [logEmbed] });
+        await avisoChannel.send({ embeds: [avisoEmbed] });
 
     } catch (error) {
         console.error('Error al registrar voto de encuesta:', error);
     }
 }
 
+// 6. Worker que evalúa el cierre de encuestas, calcula porcentajes, empates y publica resultados
 export function startPollsWorker(client: Client) {
     setInterval(async () => {
         try {
             const { activePollsCol } = await getCollections();
             const now = new Date();
-            
+
             const expiredPolls = await activePollsCol.find({
                 expiresAt: { $lte: now },
                 closed: { $ne: true }
@@ -330,6 +342,8 @@ export function startPollsWorker(client: Client) {
                     const logChannel = await guild.channels.fetch(poll.logChannelId).catch(() => null) as TextChannel;
 
                     const results = [];
+                    let totalVotes = 0;
+
                     if (publishChannel) {
                         const message = await publishChannel.messages.fetch(poll.messageId).catch(() => null);
                         if (message) {
@@ -340,25 +354,46 @@ export function startPollsWorker(client: Client) {
                                     const users = await reaction.users.fetch();
                                     voteCount = users.filter(u => !u.bot).size;
                                 }
+                                totalVotes += voteCount;
                                 results.push({ ...opt, votes: voteCount });
                             }
 
-                            results.sort((a, b) => b.votes - a.votes);
-                            const winner = results[0];
+                            // Calcular porcentajes
+                            const resultsWithPercentage = results.map(o => {
+                                const percentage = totalVotes > 0 ? ((o.votes / totalVotes) * 100).toFixed(1) : '0.0';
+                                return { ...o, percentage };
+                            });
+
+                            resultsWithPercentage.sort((a, b) => b.votes - a.votes);
+
+                            // Detectar ganadores y empates
+                            const maxVotes = Math.max(...resultsWithPercentage.map(o => o.votes));
+                            const winners = resultsWithPercentage.filter(o => o.votes === maxVotes);
+
+                            let winnerText = '';
+                            if (maxVotes === 0) {
+                                winnerText = '❌ No se registraron votos.';
+                            } else if (winners.length > 1) {
+                                winnerText = `🤝 **¡Empate!** (${winners.map(w => `${w.emoji}${w.text}`).join(', ')}) con **${maxVotes}** votos (${winners[0].percentage}%)`;
+                            } else {
+                                winnerText = `🏆 **${winners[0].emoji} ${winners[0].text}** (${winners[0].votes} votos - **${winners[0].percentage}%**)`;
+                            }
 
                             const finalEmbed = new EmbedBuilder()
                                 .setColor(0xFF5500)
-                                .setTitle(`🔴 [ENCUESTA CERRADA] ${poll.title}`)
+                                .setTitle(`🔴 [RESULTADOS FINALES] ${poll.title}`)
                                 .setDescription(
                                     `La votación ha finalizado.\n\n` +
-                                    `🏆 **Opción Ganadora:** ${winner.emoji} ${winner.text} (${winner.votes} ${winner.votes === 1 ? 'voto' : 'votos'})\n\n` +
-                                    `**📊 Resultados finales:**\n` +
-                                    results.map(o => `${o.emoji} ➔ ${o.text}: **${o.votes}** ${o.votes === 1 ? 'voto' : 'votos'}`).join('\n')
+                                    `📊 **Total de votos:** ${totalVotes}\n\n` +
+                                    `✨ **Opción Ganadora:**\n${winnerText}\n\n` +
+                                    `📋 **Desglose completo:**\n` +
+                                    resultsWithPercentage.map(o => `${o.emoji} ➔ ${o.text}: **${o.votes}** votos (**${o.percentage}%**)`.trim()).join('\n')
                                 )
                                 .setFooter({ text: `Encuesta finalizada automáticamente` })
                                 .setTimestamp();
 
-                            await message.edit({ content: null, embeds: [finalEmbed] }).catch(() => {});
+                            // Envía un nuevo embed con los resultados al mismo canal donde se publicó
+                            await publishChannel.send({ embeds: [finalEmbed] }).catch(() => {});
                         }
                     }
 
@@ -366,7 +401,7 @@ export function startPollsWorker(client: Client) {
                         const logEmbed = new EmbedBuilder()
                             .setColor(0xFF5500)
                             .setTitle('🔴 Encuesta Finalizada')
-                            .setDescription(`La encuesta **"${poll.title}"** ha terminado automáticamente y se han publicado los resultados.`)
+                            .setDescription(`La encuesta **"${poll.title}"** ha terminado y se han publicado los resultados finales.`)
                             .setTimestamp();
                         await logChannel.send({ embeds: [logEmbed] }).catch(() => {});
                     }
