@@ -1,315 +1,44 @@
-import { 
-    Client, 
-    TextChannel, 
-    EmbedBuilder, 
-    ActionRowBuilder, 
-    ButtonBuilder, 
-    ButtonStyle, 
-    ChannelSelectMenuBuilder, 
-    RoleSelectMenuBuilder, 
-    ModalBuilder, 
-    TextInputBuilder, 
-    TextInputStyle, 
-    MessageFlags,
-    ChannelType 
-} from 'discord.js';
-import { MongoClient as MongoDriver } from 'mongodb';
+import { Interaction } from 'discord.js';
+import { handleScheduledInteraction } from './scheduledInteraction';
+import { handleReactionInteraction } from './reactionInteraction';
+// Importa aquí otros módulos si los tienes separados (ej: welcome, tickets, sorteos, etc.)
+// import { handleWelcomeInteraction } from './welcomeInteraction';
+// import { handleTicketInteraction } from './ticketInteraction';
 
-const uri = process.env.MONGODB_URI || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
-const clientMongo = new MongoDriver(uri);
-
-let reactionCollection: any = null;
-const rrSessions = new Map<string, {
-    channelId?: string;
-    roleId?: string;
-    content?: string;
-}>();
-
-async function getReactionCollection() {
-    if (!reactionCollection) {
-        await clientMongo.connect();
-        reactionCollection = clientMongo.db('redline_bot').collection('reaction_roles');
-    }
-    return reactionCollection;
-}
-
-// Inicializador con limpieza automática (Purga el error 10008 de MongoDB)
-export async function initReactionRoles(client: Client) {
+/**
+ * 🛡️ Enrutador Central de Interacciones
+ * Distribuye cada evento al módulo correspondiente según su customId o tipo.
+ */
+export async function handleInteraction(interaction: Interaction): Promise<void> {
     try {
-        const col = await getReactionCollection();
-        const configs = await col.find({}).toArray();
+        // 1. Módulo de Mensajes Programados
+        if (await handleScheduledInteraction(interaction)) return;
 
-        let synchronizedCount = 0;
-        for (const config of configs) {
-            try {
-                const channel = await client.channels.fetch(config.channelId) as TextChannel;
-                if (channel) {
-                    await channel.messages.fetch(config.messageId);
-                    synchronizedCount++;
-                }
-            } catch (error: any) {
-                if (error.code === 10008) {
-                    console.warn(`⚠️ [ReactionRoles] El mensaje ${config.messageId} ya no existe en Discord. Limpiando de la base de datos...`);
-                    await col.deleteOne({ messageId: config.messageId });
-                } else {
-                    console.error(`❌ [ReactionRoles] Error al verificar mensaje ${config.messageId}:`, error.message);
-                }
-            }
-        }
-        console.log(`🎭 [ReactionRoles] Sincronizados ${synchronizedCount} mensajes de roles por reacción con éxito.`);
-    } catch (error) {
-        console.error('❌ Error al inicializar Reaction Roles:', error);
-    }
-}
+        // 2. Módulo de Reaction Roles (Autoroles)
+        if (await handleReactionInteraction(interaction)) return;
 
-// 🛡️ ENRUTADOR INTERMEDIO DE REACTION ROLES
-export async function handleReactionInteraction(interaction: any): Promise<boolean> {
-    try {
-        // --- 1. BOTONES ---
-        if (interaction.isButton()) {
-            const customId = interaction.customId;
+        // 3. Añade aquí otros módulos futuros o existentes:
+        // if (await handleWelcomeInteraction(interaction)) return;
+        // if (await handleTicketInteraction(interaction)) return;
 
-            if (customId === 'rr_btn_create') {
-                const col = await getReactionCollection();
-                const configs = await col.find({ guildId: interaction.guildId }).toArray();
-
-                let description = '🎭 **Gestor de Autoroles (Roles por Reacción)**\n\nSelecciona una opción para gestionar los botones de roles de tu servidor:';
-                const rows: ActionRowBuilder<any>[] = [];
-
-                const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                    new ButtonBuilder().setCustomId('rr_btn_start_create').setLabel('Crear Nuevo Autorol').setStyle(ButtonStyle.Primary).setEmoji('➕')
-                );
-                rows.push(actionRow);
-
-                if (configs.length > 0) {
-                    const selectMenu = new StringSelectMenuBuilder()
-                        .setCustomId('rr_select_existing_message')
-                        .setPlaceholder('🗑️ Selecciona un mensaje para eliminar su configuración...');
-
-                    for (const cfg of configs.slice(0, 25)) {
-                        selectMenu.addOptions({
-                            label: `Canal: ${cfg.channelId.substring(0, 10)}... (Rol: ${cfg.roleId.substring(0, 10)}...)`,
-                            description: cfg.content ? cfg.content.substring(0, 50) : 'Sin texto',
-                            value: cfg.messageId
-                        });
-                    }
-                    rows.push(new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu));
-                }
-
+        // Si ninguna interacción fue manejada por los módulos anteriores y es un componente:
+        if (interaction.isButton() || interaction.isAnySelectMenu() || interaction.isModalSubmit()) {
+            if (!interaction.replied && !interaction.deferred) {
                 await interaction.reply({
-                    content: description,
-                    components: rows,
-                    flags: [MessageFlags.Ephemeral]
-                });
-                return true;
-            }
-
-            if (customId === 'rr_btn_start_create') {
-                const selectChannel = new ChannelSelectMenuBuilder()
-                    .setCustomId('rr_select_channel')
-                    .setPlaceholder('📢 Selecciona el canal donde se enviará el autorol...')
-                    .addChannelTypes(ChannelType.GuildText);
-
-                const row = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(selectChannel);
-
-                await interaction.update({
-                    content: '🎭 **Paso 1/3:** Selecciona el canal de destino para el mensaje de autorol:',
-                    components: [row]
-                });
-                return true;
-            }
-
-            if (customId.startsWith('rr_btn_delete_config_')) {
-                const messageId = customId.replace('rr_btn_delete_config_', '');
-                const col = await getReactionCollection();
-                await col.deleteOne({ messageId });
-
-                await interaction.update({
-                    content: '✅ Configuración eliminada correctamente.',
-                    components: []
-                });
-                return true;
-            }
-
-            // Comprobar si es un botón dinámico de reclamo de rol (ej: rr_claim_...)
-            const col = await getReactionCollection();
-            const config = await col.findOne({ buttonId: customId });
-            if (config) {
-                await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
-
-                try {
-                    const guild = interaction.guild;
-                    if (!guild) return true;
-
-                    const member = await guild.members.fetch(interaction.user.id);
-                    const role = await guild.roles.fetch(config.roleId);
-
-                    if (!role) {
-                        await interaction.editReply({ content: '❌ El rol configurado ya no existe en este servidor.' });
-                        return true;
-                    }
-
-                    if (member.roles.cache.has(config.roleId)) {
-                        await member.roles.remove(config.roleId);
-                        await interaction.editReply({ content: `❌ Te he **quitado** el rol **${role.name}**.` });
-                    } else {
-                        await member.roles.add(config.roleId);
-                        await interaction.editReply({ content: `✅ ¡Te he **asignado** el rol **${role.name}**!` });
-                    }
-                } catch (error) {
-                    console.error('❌ Error al gestionar rol por reacción/botón:', error);
-                    await interaction.editReply({ content: '❌ Ocurrió un error al intentar asignar o quitar el rol.' });
-                }
-                return true;
-            }
-        }
-        // --- 2. CHANNEL SELECT MENUS ---
-        if (interaction.isChannelSelectMenu()) {
-            if (interaction.customId === 'rr_select_channel') {
-                const channelId = interaction.values[0];
-                rrSessions.set(interaction.user.id, { channelId });
-
-                const selectRole = new RoleSelectMenuBuilder()
-                    .setCustomId('rr_select_role')
-                    .setPlaceholder('👥 Selecciona el rol que se otorgará...');
-
-                const row = new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(selectRole);
-
-                await interaction.update({
-                    content: '🎭 **Paso 2/3:** Selecciona el rol que los usuarios obtendrán al pulsar el botón:',
-                    components: [row]
-                });
-                return true;
+                    content: '❌ Este botón o componente no está vinculado a ningún módulo activo o la sesión ha expirado.',
+                    ephemeral: true
+                }).catch(() => {});
             }
         }
 
-        // --- 3. ROLE SELECT MENUS ---
-        if (interaction.isRoleSelectMenu()) {
-            if (interaction.customId === 'rr_select_role') {
-                const roleId = interaction.values[0];
-                const session = rrSessions.get(interaction.user.id);
-
-                if (!session || !session.channelId) {
-                    await interaction.reply({ content: '❌ Sesión caducada. Empieza de nuevo desde el Dash.', flags: [MessageFlags.Ephemeral] });
-                    return true;
-                }
-
-                session.roleId = roleId;
-                rrSessions.set(interaction.user.id, session);
-
-                const modal = new ModalBuilder()
-                    .setCustomId('modal_rr_content')
-                    .setTitle('Configurar Mensaje de Autorol');
-
-                const contentInput = new TextInputBuilder()
-                    .setCustomId('rr_content_text')
-                    .setLabel('Texto del Mensaje / Embed')
-                    .setStyle(TextInputStyle.Paragraph)
-                    .setPlaceholder('Ej: ¡Pulsa el botón de abajo para obtener tu rol de piloto!')
-                    .setRequired(true);
-
-                const labelInput = new TextInputBuilder()
-                    .setCustomId('rr_button_label')
-                    .setLabel('Texto del Botón (Ej: Reclamar Rol)')
-                    .setStyle(TextInputStyle.Short)
-                    .setPlaceholder('Ej: Obtener Rol')
-                    .setRequired(true);
-
-                modal.addComponents(
-                    new ActionRowBuilder<TextInputBuilder>().addComponents(contentInput),
-                    new ActionRowBuilder<TextInputBuilder>().addComponents(labelInput)
-                );
-
-                await interaction.showModal(modal);
-                return true;
-            }
-        }
-
-        // --- 4. STRING SELECT MENUS ---
-        if (interaction.isStringSelectMenu()) {
-            if (interaction.customId === 'rr_select_existing_message') {
-                const messageId = interaction.values[0];
-                const col = await getReactionCollection();
-
-                await col.deleteOne({ messageId });
-
-                await interaction.update({
-                    content: '🗑️ **Configuración de autorol eliminada de la base de datos con éxito.**',
-                    components: []
-                });
-                return true;
-            }
-        }
-
-        // --- 5. MODALS SUBMIT ---
-        if (interaction.isModalSubmit()) {
-            if (interaction.customId === 'modal_rr_content') {
-                const contentText = interaction.fields.getTextInputValue('rr_content_text');
-                const buttonLabel = interaction.fields.getTextInputValue('rr_button_label');
-
-                const session = rrSessions.get(interaction.user.id);
-                if (!session || !session.channelId || !session.roleId || !interaction.guild) {
-                    await interaction.reply({ content: '❌ Sesión caducada. Empieza de nuevo.', flags: [MessageFlags.Ephemeral] });
-                    return true;
-                }
-
-                try {
-                    const guild = interaction.guild;
-                    const channel = await guild.channels.fetch(session.channelId) as TextChannel;
-                    if (!channel) {
-                        await interaction.reply({ content: '❌ Canal no encontrado.', flags: [MessageFlags.Ephemeral] });
-                        return true;
-                    }
-
-                    const customButtonId = `rr_claim_${Date.now()}`;
-
-                    const embed = new EmbedBuilder()
-                        .setColor(0x0055FF)
-                        .setTitle('🎭 Asignación de Roles')
-                        .setDescription(contentText)
-                        .setFooter({ text: guild.name, iconURL: guild.iconURL() || undefined })
-                        .setTimestamp();
-
-                    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                        new ButtonBuilder()
-                            .setCustomId(customButtonId)
-                            .setLabel(buttonLabel)
-                            .setStyle(ButtonStyle.Primary)
-                            .setEmoji('✨')
-                    );
-
-                    const message = await channel.send({
-                        embeds: [embed],
-                        components: [row]
-                    });
-
-                    const col = await getReactionCollection();
-                    await col.insertOne({
-                        guildId: guild.id,
-                        channelId: channel.id,
-                        messageId: message.id,
-                        buttonId: customButtonId,
-                        roleId: session.roleId,
-                        content: contentText
-                    });
-
-                    rrSessions.delete(interaction.user.id);
-
-                    await interaction.reply({
-                        content: `✅ **¡Autorol creado y publicado con éxito en <#${channel.id}>!**`,
-                        flags: [MessageFlags.Ephemeral]
-                    });
-                } catch (error) {
-                    console.error('❌ Error al crear autorol:', error);
-                    await interaction.reply({ content: '❌ Ocurrió un error al crear el autorol.', flags: [MessageFlags.Ephemeral] });
-                }
-                return true;
-            }
-        }
-
-        return false;
     } catch (error) {
-        console.error('❌ Error en el manejador de Reaction Roles:', error);
-        return false;
+        console.error('❌ Error crítico en el enrutador de interacciones (interactionRouter):', error);
+        
+        if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+            await interaction.reply({
+                content: '❌ Ocurrió un error inesperado al procesar esta acción.',
+                ephemeral: true
+            }).catch(() => {});
+        }
     }
 }
