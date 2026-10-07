@@ -2,18 +2,18 @@ import { Interaction, MessageFlags } from 'discord.js';
 import { handleScheduledInteraction } from './scheduledInteraction';
 import { handleRolReactionInteraction } from './rolreactionInteraction';
 
-// Importación de comandos desde la carpeta commands (sin extensiones, tal como el resto del bot)
-import { execute as handleDash } from './commands/dash';
-import { execute as handleDashStaff } from './commands/dashstaff';
-import { execute as handleDado } from './commands/dado';
-import { execute as handleBorrar } from './commands/borrar';
-import { execute as handleForms } from './commands/forms';
-import { execute as handleColocarForm } from './commands/ColocarForm';
-import { execute as handleMsn } from './commands/msn';
-import { execute as handleReporte } from './commands/reporte';
-import { execute as handleSetupDefensa } from './commands/setupdefensa';
-import { execute as handleVeredicto } from './commands/veredicto';
-import { execute as handleDashSheets } from './commands/dashSheets';
+// Importación de comandos subiendo un nivel desde handlers/ hacia commands/
+import { execute as handleDash } from '../commands/dash';
+import { execute as handleDashStaff } from '../commands/dashstaff';
+import { execute as handleDado } from '../commands/dado';
+import { execute as handleBorrar } from '../commands/borrar';
+import { execute as handleForms } from '../commands/forms';
+import { execute as handleColocarForm } from '../commands/ColocarForm';
+import { execute as handleMsn } from '../commands/msn';
+import { execute as handleReporte } from '../commands/reporte';
+import { execute as handleSetupDefensa } from '../commands/setupdefensa';
+import { execute as handleVeredicto } from '../commands/veredicto';
+import { execute as handleDashSheets } from '../commands/dashSheets';
 
 /**
  * 🛡️ Enrutador Central de Interacciones
