@@ -49,7 +49,7 @@ export async function handleDashMsnChannelSelect(interaction: ChannelSelectMenuI
         .setCustomId('input_msn_texto')
         .setLabel('Contenido del mensaje')
         .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('Escribe tu mensaje con Markdown, menciones, emojis...')
+        .setPlaceholder('Escribe tu mensaje (ej: @NombreDeUsuario o @Rol)...')
         .setRequired(true);
 
     const inputImagen = new TextInputBuilder()
@@ -68,12 +68,12 @@ export async function handleDashMsnChannelSelect(interaction: ChannelSelectMenuI
     return true;
 }
 
-// 3. Maneja el envío del Modal (Funciona tanto para /msn como para el botón del Dash)
+// 3. Maneja el envío del Modal con conversión automática de roles y usuarios
 export async function handleDashMsnModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (!interaction.customId.startsWith('modal_msn_')) return false;
 
     const channelId = interaction.customId.replace('modal_msn_', '');
-    const texto = interaction.fields.getTextInputValue('input_msn_texto');
+    let texto = interaction.fields.getTextInputValue('input_msn_texto');
     const archivoUrl = interaction.fields.getTextInputValue('input_msn_imagen').trim();
 
     const guild = interaction.guild;
@@ -86,10 +86,35 @@ export async function handleDashMsnModalSubmit(interaction: ModalSubmitInteracti
     }
 
     try {
+        // 🔥 1. AUTO-CONVERSIÓN DE ROLES (@NombreDelRol -> <@&ID>)
+        const roles = await guild.roles.fetch();
+        roles.forEach(role => {
+            if (!role) return;
+            const patronRole = `@${role.name}`;
+            if (texto.includes(patronRole)) {
+                texto = texto.replaceAll(patronRole, `<@&${role.id}>`);
+            }
+        });
+
+        // 🔥 2. AUTO-CONVERSIÓN DE USUARIOS (@Username o @DisplayName -> <@ID>)
+        const members = await guild.members.fetch();
+        members.forEach(member => {
+            if (!member) return;
+            const patronUsername = `@${member.user.username}`;
+            const patronDisplayName = `@${member.displayName}`;
+
+            if (texto.includes(patronUsername)) {
+                texto = texto.replaceAll(patronUsername, `<@${member.id}>`);
+            }
+            if (texto.includes(patronDisplayName) && patronDisplayName !== patronUsername) {
+                texto = texto.replaceAll(patronDisplayName, `<@${member.id}>`);
+            }
+        });
+
         const opcionesEnvio: any = {
             content: texto,
             allowedMentions: {
-                parse: ['users', 'roles', 'everyone'] // 👈 Permite que el bot active pings a roles y usuarios
+                parse: ['users', 'roles', 'everyone'] // Permite notificar a usuarios, roles y everyone
             }
         };
 
@@ -100,7 +125,7 @@ export async function handleDashMsnModalSubmit(interaction: ModalSubmitInteracti
         await canalDestino.send(opcionesEnvio);
 
         await interaction.reply({
-            content: '✅ ¡Mensaje enviado con éxito y menciones de roles habilitadas!',
+            content: '✅ ¡Mensaje enviado con éxito y menciones convertidas correctamente!',
             ephemeral: true
         });
     } catch (error) {
