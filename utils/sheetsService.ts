@@ -1,11 +1,12 @@
 import { google } from 'googleapis';
+import { Buffer } from 'buffer';
 
 // 📌 ID de tu Google Sheet para REDLINE GT
 const SPREADSHEET_ID = '1E-dMxBrK7gZLAGR2Ge7OuGEt-IvzVK8BWOTtxZojsXs';
 
 function getAuthClient() {
   console.log('🔍 [Google Auth] Verificando credenciales individuales...');
-
+  
   const privateKeyRaw = process.env.GOOGLE_PRIVATE_KEY || process.env.PRIVATE_KEY;
   const clientEmail = process.env.GOOGLE_CLIENT_EMAIL || process.env.CLIENT_EMAIL;
 
@@ -16,15 +17,24 @@ function getAuthClient() {
     throw new Error('❌ Faltan las variables GOOGLE_PRIVATE_KEY o GOOGLE_CLIENT_EMAIL en Render.');
   }
 
-  // 🛡️ Blindaje total para la clave privada (limpia comillas, dobles escapes y saltos de línea)
   let privateKey = privateKeyRaw.trim();
 
-  // Si se pegó con comillas envolventes por error, las eliminamos
+  // Limpiar comillas envolventes si las hubiera por error al pegar
   if ((privateKey.startsWith('"') && privateKey.endsWith('"')) || (privateKey.startsWith("'") && privateKey.endsWith("'"))) {
     privateKey = privateKey.slice(1, -1);
   }
 
-  // Normalizamos los saltos de línea (maneja tanto \n normal como \\n escapado o doble \\\\n)
+  // 🛡️ MAGIA AUTOMÁTICA: Si la clave NO empieza por '-----BEGIN', asumimos que está en Base64 y la decodificamos al vuelo
+  if (!privateKey.startsWith('-----BEGIN')) {
+    try {
+      privateKey = Buffer.from(privateKey, 'base64').toString('utf8');
+      console.log('🔓 [Google Auth] Clave privada decodificada con éxito desde Base64.');
+    } catch (error: any) {
+      console.error('❌ Error al decodificar la clave Base64:', error.message);
+    }
+  }
+
+  // Normalizamos los saltos de línea por si acaso viene en formato clásico con escapes
   privateKey = privateKey
     .replace(/\\\\n/g, '\n')
     .replace(/\\n/g, '\n');
@@ -43,12 +53,12 @@ export async function getSheetData(range: string): Promise<any[][] | undefined> 
   try {
     const auth = getAuthClient();
     const sheets = google.sheets({ version: 'v4', auth });
-
+    
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
       range,
     });
-
+    
     return response.data.values;
   } catch (error: any) {
     console.error(`❌ Error al leer Google Sheets en el rango ${range}:`, error.message);
