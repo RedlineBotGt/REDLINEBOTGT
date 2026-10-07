@@ -12,7 +12,8 @@ import {
     ButtonBuilder, 
     ButtonStyle, 
     ChannelType,
-    TextChannel 
+    TextChannel,
+    MessageFlags 
 } from 'discord.js';
 import { obtenerFormularios, obtenerFormularioPorTitulo, guardarFormulario } from '../utils/formsStorage';
 import { activeFormTitles } from '../commands/forms';
@@ -22,7 +23,7 @@ export async function handleDashColocarButton(interaction: ButtonInteraction): P
     if (interaction.customId !== 'dash_btn_colocar_form') return false;
 
     if (!interaction.guildId) {
-        await interaction.reply({ content: '❌ Acción no válida fuera de un servidor.', ephemeral: true });
+        await interaction.reply({ content: '❌ Acción no válida fuera de un servidor.', flags: [MessageFlags.Ephemeral] });
         return true;
     }
 
@@ -32,7 +33,7 @@ export async function handleDashColocarButton(interaction: ButtonInteraction): P
     if (titulos.length === 0) {
         await interaction.reply({
             content: '❌ No hay formularios guardados en este servidor para colocar.',
-            ephemeral: true
+            flags: [MessageFlags.Ephemeral]
         });
         return true;
     }
@@ -55,7 +56,7 @@ export async function handleDashColocarButton(interaction: ButtonInteraction): P
     await interaction.reply({
         content: '📌 **Colocar Formulario:** Selecciona de la lista el formulario que deseas publicar:',
         components: [row],
-        ephemeral: true
+        flags: [MessageFlags.Ephemeral]
     });
 
     return true;
@@ -158,7 +159,7 @@ export async function handleFormButtonClick(interaction: ButtonInteraction): Pro
     if (!interaction.customId.startsWith('open_form_')) return false;
 
     if (!interaction.guildId) {
-        await interaction.reply({ content: '❌ Este botón solo se puede usar dentro de un servidor.', ephemeral: true });
+        await interaction.reply({ content: '❌ Este botón solo se puede usar dentro de un servidor.', flags: [MessageFlags.Ephemeral] });
         return true;
     }
 
@@ -168,7 +169,7 @@ export async function handleFormButtonClick(interaction: ButtonInteraction): Pro
     if (!formulario || !formulario.preguntas) {
         await interaction.reply({
             content: '❌ Lo siento, este formulario ya no está disponible o ha sido eliminado en este servidor.',
-            ephemeral: true
+            flags: [MessageFlags.Ephemeral]
         });
         return true;
     }
@@ -180,7 +181,7 @@ export async function handleFormButtonClick(interaction: ButtonInteraction): Pro
     if (preguntasValidas.length === 0) {
         await interaction.reply({
             content: '❌ Este formulario no tiene preguntas válidas configuradas.',
-            ephemeral: true
+            flags: [MessageFlags.Ephemeral]
         });
         return true;
     }
@@ -203,13 +204,71 @@ export async function handleFormButtonClick(interaction: ButtonInteraction): Pro
     return true;
 }
 
-// 5. Maneja el envío del modal de creación de preguntas
+// 5. Maneja el clic en el botón "Crear F" del panel /dash para pedir el título
+export async function handleDashCrearFormButton(interaction: ButtonInteraction): Promise<boolean> {
+    if (interaction.customId !== 'dash_btn_crear_form') return false;
+
+    try {
+        const modal = new ModalBuilder()
+            .setCustomId('modal_pedir_titulo_formulario')
+            .setTitle('Crear Nuevo Formulario');
+
+        const input = new TextInputBuilder()
+            .setCustomId('titulo_formulario_input')
+            .setLabel('Título del formulario')
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('Ej: Solicitud de Inscripción')
+            .setRequired(true);
+
+        modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(input));
+        await interaction.showModal(modal);
+    } catch (error) {
+        console.error('❌ Error al abrir el modal de creación de formulario:', error);
+    }
+    return true;
+}
+
+// 6. Maneja el envío del título y abre el modal para introducir las preguntas (1 a 5)
+export async function handleFormTitleModal(interaction: ModalSubmitInteraction): Promise<boolean> {
+    if (interaction.customId !== 'modal_pedir_titulo_formulario') return false;
+
+    try {
+        const titulo = interaction.fields.getTextInputValue('titulo_formulario_input').trim();
+        if (!titulo) {
+            await interaction.reply({ content: '❌ El título no puede estar vacío.', flags: [MessageFlags.Ephemeral] });
+            return true;
+        }
+
+        activeFormTitles.set(interaction.user.id, titulo);
+
+        const modal = new ModalBuilder()
+            .setCustomId('modal_crear_formulario_preguntas')
+            .setTitle(`Preguntas para: ${titulo.substring(0, 30)}`);
+
+        for (let i = 1; i <= 5; i++) {
+            const input = new TextInputBuilder()
+                .setCustomId(`p${i}`)
+                .setLabel(`Pregunta ${i} (Opcional)`.substring(0, 45))
+                .setStyle(TextInputStyle.Short)
+                .setRequired(i === 1);
+
+            modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(input));
+        }
+
+        await interaction.showModal(modal);
+    } catch (error) {
+        console.error('❌ Error al procesar el título del formulario:', error);
+    }
+    return true;
+}
+
+// 7. Maneja el envío del modal de creación de preguntas
 export async function handleFormCreateModal(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_crear_formulario_preguntas') return false;
 
     const guildId = interaction.guildId;
     if (!guildId) {
-        await interaction.reply({ content: '❌ Este comando solo se puede usar dentro de un servidor.', ephemeral: true });
+        await interaction.reply({ content: '❌ Este comando solo se puede usar dentro de un servidor.', flags: [MessageFlags.Ephemeral] });
         return true;
     }
 
@@ -217,7 +276,7 @@ export async function handleFormCreateModal(interaction: ModalSubmitInteraction)
     if (!titulo) {
         await interaction.reply({
             content: '❌ No se encontró el título activo para este formulario. Vuelve a iniciar la creación.',
-            ephemeral: true
+            flags: [MessageFlags.Ephemeral]
         });
         return true;
     }
@@ -239,18 +298,18 @@ export async function handleFormCreateModal(interaction: ModalSubmitInteraction)
 
     await interaction.reply({
         content: `✅ ¡Formulario **"${titulo}"** guardado con éxito en la base de datos de este servidor!\n- **Preguntas válidas configuradas:** ${preguntas.length}\n\n*(Ya está listo para ser lanzado cuando quieras con /colocarform).*`,
-        ephemeral: true
+        flags: [MessageFlags.Ephemeral]
     });
 
     return true;
 }
 
-// 6. Maneja el envío de las respuestas del usuario final al canal de respuestas
+// 8. Maneja el envío de las respuestas del usuario final al canal de respuestas
 export async function handleFormSubmitModal(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (!interaction.customId.startsWith('submit_form_')) return false;
 
     if (!interaction.guildId) {
-        await interaction.reply({ content: '❌ Este formulario solo se puede enviar dentro de un servidor.', ephemeral: true });
+        await interaction.reply({ content: '❌ Este formulario solo se puede enviar dentro de un servidor.', flags: [MessageFlags.Ephemeral] });
         return true;
     }
 
@@ -260,7 +319,7 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
     if (!formulario) {
         await interaction.reply({
             content: '❌ Error: No se encontró la configuración de este formulario en la base de datos de este servidor.',
-            ephemeral: true
+            flags: [MessageFlags.Ephemeral]
         });
         return true;
     }
@@ -268,7 +327,7 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
     if (!formulario.canalRespuestas) {
         await interaction.reply({
             content: '❌ Este formulario no tiene ningún canal de respuestas configurado actualmente. Contacta con un administrador.',
-            ephemeral: true
+            flags: [MessageFlags.Ephemeral]
         });
         return true;
     }
@@ -292,30 +351,31 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
             await canalRespuestas.send({ content: resumen });
             await interaction.reply({
                 content: '✅ ¡Tus respuestas se han enviado correctamente al staff!',
-                ephemeral: true
+                flags: [MessageFlags.Ephemeral]
             });
         } else {
             await interaction.reply({
                 content: '❌ Las respuestas se han procesado, pero no se pudo encontrar el canal de respuestas configurado.',
-                ephemeral: true
+                flags: [MessageFlags.Ephemeral]
             });
         }
     } catch (error) {
         console.error('❌ Error al enviar la respuesta al canal:', error);
         await interaction.reply({
             content: '❌ Las respuestas se procesaron, pero ocurrió un error al enviarlas al canal (es posible que el canal haya sido eliminado o el bot no tenga permisos).',
-            ephemeral: true
+            flags: [MessageFlags.Ephemeral]
         });
     }
 
     return true;
 }
 
-// 7. Enrutador interno del módulo de formularios (Para que el interactionRouter lo llame)
+// 9. Enrutador interno del módulo de formularios
 export async function handleFormInteraction(interaction: any): Promise<boolean> {
     if (interaction.isButton()) {
         if (await handleDashColocarButton(interaction)) return true;
         if (await handleFormButtonClick(interaction)) return true;
+        if (await handleDashCrearFormButton(interaction)) return true;
     }
     if (interaction.isStringSelectMenu()) {
         if (await handleDashColocarFormSelect(interaction)) return true;
@@ -324,60 +384,9 @@ export async function handleFormInteraction(interaction: any): Promise<boolean> 
         if (await handleDashColocarChannelSelect(interaction)) return true;
     }
     if (interaction.isModalSubmit()) {
+        if (await handleFormTitleModal(interaction)) return true;
         if (await handleFormCreateModal(interaction)) return true;
         if (await handleFormSubmitModal(interaction)) return true;
     }
     return false;
 }
-// 7. Maneja el clic en el botón "Crear F" del panel /dash para pedir el título
-export async function handleDashCrearFormButton(interaction: ButtonInteraction): Promise<boolean> {
-    if (interaction.customId !== 'dash_btn_crear_form') return false;
-
-    const modal = new ModalBuilder()
-        .setCustomId('modal_pedir_titulo_formulario')
-        .setTitle('Crear Nuevo Formulario');
-
-    const input = new TextInputBuilder()
-        .setCustomId('titulo_formulario_input')
-        .setLabel('Título del formulario')
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: Solicitud de Inscripción')
-        .setRequired(true);
-
-    modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(input));
-    await interaction.showModal(modal);
-    return true;
-}
-
-// 8. Maneja el envío del título y abre el modal para introducir las preguntas (1 a 5)
-export async function handleFormTitleModal(interaction: ModalSubmitInteraction): Promise<boolean> {
-    if (interaction.customId !== 'modal_pedir_titulo_formulario') return false;
-
-    const titulo = interaction.fields.getTextInputValue('titulo_formulario_input').trim();
-    if (!titulo) {
-        await interaction.reply({ content: '❌ El título no puede estar vacío.', ephemeral: true });
-        return true;
-    }
-
-    // Guardamos temporalmente el título asociado al usuario
-    activeFormTitles.set(interaction.user.id, titulo);
-
-    // Creamos el modal para introducir las preguntas
-    const modal = new ModalBuilder()
-        .setCustomId('modal_crear_formulario_preguntas')
-        .setTitle(`Preguntas para: ${titulo.substring(0, 30)}`);
-
-    for (let i = 1; i <= 5; i++) {
-        const input = new TextInputBuilder()
-            .setCustomId(`p${i}`)
-            .setLabel(`Pregunta ${i} (Opcional)`.substring(0, 45))
-            .setStyle(TextInputStyle.Short)
-            .setRequired(i === 1); // Solo la primera es estrictamente obligatoria
-
-        modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(input));
-    }
-
-    await interaction.showModal(modal);
-    return true;
-}
-
