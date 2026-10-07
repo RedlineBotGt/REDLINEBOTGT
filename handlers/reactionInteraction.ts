@@ -11,7 +11,8 @@ import {
     TextInputBuilder, 
     TextInputStyle, 
     MessageFlags,
-    ChannelType 
+    ChannelType,
+    StringSelectMenuBuilder 
 } from 'discord.js';
 import { MongoClient as MongoDriver } from 'mongodb';
 
@@ -163,6 +164,7 @@ export async function handleReactionInteraction(interaction: any): Promise<boole
                 return true;
             }
         }
+
         // --- 2. CHANNEL SELECT MENUS ---
         if (interaction.isChannelSelectMenu()) {
             if (interaction.customId === 'rr_select_channel') {
