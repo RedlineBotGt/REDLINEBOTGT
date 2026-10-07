@@ -11,6 +11,14 @@ import * as formHandler from './formInteractions'; // 👈 Módulo de formulario
 import * as messageHandler from './messageInteractions'; // 👈 Módulo de mensajes (/msn y dash) integrado
 import * as encuestaHandler from './encuestaSystem'; // 👈 Módulo de encuestas integrado corregido
 
+// Módulos de Comisarios (Reportes, Defensas y Veredictos)
+import * as dashReporteHandler from './dashReporteHandler';
+import * as dashDefensaHandler from './dashDefensaHandler';
+import * as veredictoHandler from './veredictoHandler';
+import * as reportModal from './reportModal';
+import * as defensaModal from './defensaModal';
+import * as veredictoModal from './veredictoModal';
+
 // Configuración de MongoDB para los eventos
 const uri = process.env.MONGODB_URI || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
 const clientMongo = new MongoDriver(uri);
@@ -57,31 +65,71 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
         const handledByEncuesta = await encuestaHandler.handleEncuestaInteraction(interaction);
         if (handledByEncuesta) return true;
 
-        // 6. Botones del Panel Admin y Staff (Resto de módulos pendientes)
+        // 6. Delegar interacciones de Comisarios (Configuraciones de /dash, botones públicos y modales)
+        
+        // --- BOTONES (Configuraciones y Aperturas de Formularios) ---
+        if (interaction.isButton()) {
+            const customId = interaction.customId;
+
+            if (customId === 'dash_btn_setup_reporte') {
+                return await dashReporteHandler.handleDashReporteButton(interaction);
+            }
+            if (customId === 'dash_btn_setup_defensa') {
+                return await dashDefensaHandler.handleDashDefensaButton(interaction);
+            }
+            if (customId === 'dash_btn_veredicto') {
+                return await veredictoHandler.handleDashVeredictoButton(interaction);
+            }
+            if (customId === 'btn_abrir_reporte') {
+                return await reportModal.handleReportButton(interaction);
+            }
+            if (customId === 'btn_abrir_defensa') {
+                return await defensaModal.handleDefensaButton(interaction);
+            }
+        }
+
+        // --- MENÚS DESPLEGABLES (Veredictos) ---
+        if (interaction.isChannelSelectMenu() && interaction.customId === 'dash_select_verd_channel') {
+            return await veredictoHandler.handleDashVeredictoChannelSelect(interaction);
+        }
+        if (interaction.isRoleSelectMenu() && interaction.customId === 'dash_select_verd_role') {
+            return await veredictoHandler.handleDashVeredictoRoleSelect(interaction);
+        }
+
+        // --- MODALES (Envíos de Reportes, Defensas y Veredictos) ---
+        if (interaction.isModalSubmit()) {
+            const customId = interaction.customId;
+
+            if (customId === 'modal_envio_reporte') {
+                return await reportModal.handleReportModalSubmit(interaction);
+            }
+            if (customId === 'modal_envio_defensa') {
+                return await defensaModal.handleDefensaModalSubmit(interaction);
+            }
+            if (customId.startsWith('modal_veredicto_')) {
+                return await veredictoModal.handleVeredictoModalSubmit(interaction);
+            }
+        }
+
+        // 7. Botones del Panel Admin y Staff (Resto de módulos)
         if (interaction.isButton()) {
             const customId = interaction.customId;
 
             // --- BIENVENIDAS ---
             if (customId === 'dash_btn_welcome_config') {
-                await interaction.reply({ content: '👋 Módulo de Bienvenidas enlazado correctamente.', flags: [MessageFlags.Ephemeral] });
+                await interaction.reply({ content: '👋 Módulo de Bienvenidas enlazado correctamente.', ephemeral: true });
                 return true;
             }
 
             // --- COMUNICACIONES, SORTEOS Y AUTOROL ---
             if (['dash_btn_sorteo_create', 'dash_btn_scheduled_msg', 'dash_btn_crear_boton', 'rr_btn_create'].includes(customId)) {
-                await interaction.reply({ content: '💬 Módulo de Comunicaciones/Sorteos enlazado correctamente.', flags: [MessageFlags.Ephemeral] });
-                return true;
-            }
-
-            // --- COMISARIOS Y VEREDICTOS ---
-            if (['dash_btn_setup_reporte', 'dash_btn_setup_defensa', 'dash_btn_veredicto'].includes(customId)) {
-                await interaction.reply({ content: '⚖️ Módulo de Comisarios enlazado correctamente.', flags: [MessageFlags.Ephemeral] });
+                await interaction.reply({ content: '💬 Módulo de Comunicaciones/Sorteos enlazado correctamente.', ephemeral: true });
                 return true;
             }
 
             // --- AVISOS ---
             if (customId === 'dash_btn_avisos_config') {
-                await interaction.reply({ content: '📋 Módulo de Avisos enlazado correctamente.', flags: [MessageFlags.Ephemeral] });
+                await interaction.reply({ content: '📋 Módulo de Avisos enlazado correctamente.', ephemeral: true });
                 return true;
             }
         }
@@ -90,7 +138,7 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
     } catch (error) {
         console.error('❌ Error en el enrutador de interacciones:', error);
         if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
-            await interaction.reply({ content: '❌ Ocurrió un error al procesar esta acción.', flags: [MessageFlags.Ephemeral] }).catch(() => {});
+            await interaction.reply({ content: '❌ Ocurrió un error al procesar esta acción.', ephemeral: true }).catch(() => {});
         }
         return false;
     }
