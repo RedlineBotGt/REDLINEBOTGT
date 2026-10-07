@@ -4,7 +4,7 @@ import { data as dashstaffCommand } from './commands/dashstaff';
 import { data as msnCommand } from './commands/msn';
 import { data as borrarCommand } from './commands/borrar';
 import { data as dashsheetsCommand } from './commands/dashSheets';
-import { data as dadoCommand } from './commands/dado';
+import { data as dadoCommand } from './commands/dado'; // 🎲 ¡Recuperamos /dado!
 
 // Mapeamos únicamente los comandos activos que quieres que aparezcan en Discord
 const commandList = [
@@ -13,7 +13,7 @@ const commandList = [
     { name: 'msn', data: msnCommand },
     { name: 'borrar', data: borrarCommand },
     { name: 'dashsheets', data: dashsheetsCommand },
-    { name: 'dado', data: dadoCommand },
+    { name: 'dado', data: dadoCommand }, // 🎲 ¡Añadido de nuevo a la lista de registro!
 ];
 
 const commands = commandList.map(cmd => {
