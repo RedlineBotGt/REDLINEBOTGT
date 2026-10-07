@@ -15,7 +15,10 @@ import {
     TextChannel,
     MessageFlags 
 } from 'discord.js';
-import { obtenerFormularios, obtenerFormularioPorTitulo, guardarFormulario } from '../utils/formsStorage';
+import { obtenerFormularios, obtenerFormularioPorTitulo, guardarFormulario, eliminarFormulario } from '../utils/formsStorage';
+
+// Mapa temporal para recordar el título provisional de cada usuario mientras decide si lo renombra
+export const recentUserForms = new Map<string, string>();
 
 // 1. Maneja el clic en el botón "Formulario" del panel de staff (/dashstaff)
 export async function handleDashColocarButton(interaction: ButtonInteraction): Promise<boolean> {
@@ -203,27 +206,16 @@ export async function handleFormButtonClick(interaction: ButtonInteraction): Pro
     return true;
 }
 
-// 5. Maneja el clic en el botón "Crear F" del panel /dash (Abre un único modal para Título y Preguntas)
+// 5. Maneja el clic en "Crear F" (Abre el modal con las 5 preguntas exactas)
 export async function handleDashCrearFormButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_crear_form') return false;
 
     try {
         const modal = new ModalBuilder()
-            .setCustomId('modal_crear_formulario_unificado')
-            .setTitle('Crear Nuevo Formulario');
+            .setCustomId('modal_crear_5_preguntas')
+            .setTitle('Crear Formulario (5 Preguntas)');
 
-        // Campo 1: Título del formulario
-        const titleInput = new TextInputBuilder()
-            .setCustomId('input_titulo')
-            .setLabel('Título del formulario')
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder('Ej: Solicitud de Inscripción')
-            .setRequired(true);
-
-        modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput));
-
-        // Campos 2 a 5: Preguntas (4 preguntas para ajustarse al límite de 5 de Discord)
-        for (let i = 1; i <= 4; i++) {
+        for (let i = 1; i <= 5; i++) {
             const input = new TextInputBuilder()
                 .setCustomId(`p${i}`)
                 .setLabel(`Pregunta ${i} ${i === 1 ? '(Obligatoria)' : '(Opcional)'}`.substring(0, 45))
@@ -235,14 +227,14 @@ export async function handleDashCrearFormButton(interaction: ButtonInteraction):
 
         await interaction.showModal(modal);
     } catch (error) {
-        console.error('❌ Error al abrir el modal unificado de creación:', error);
+        console.error('❌ Error al abrir el modal de 5 preguntas:', error);
     }
     return true;
 }
 
-// 6. Maneja el envío del modal unificado de creación (Título + Preguntas) y lo guarda en la BD
-export async function handleFormCreateModal(interaction: ModalSubmitInteraction): Promise<boolean> {
-    if (interaction.customId !== 'modal_crear_formulario_unificado') return false;
+// 6. Maneja el envío del modal de 5 preguntas (Guarda provisionalmente y ofrece el botón de poner nombre)
+export async function handleFormCreate5Modal(interaction: ModalSubmitInteraction): Promise<boolean> {
+    if (interaction.customId !== 'modal_crear_5_preguntas') return false;
 
     const guildId = interaction.guildId;
     if (!guildId) {
@@ -251,22 +243,14 @@ export async function handleFormCreateModal(interaction: ModalSubmitInteraction)
     }
 
     try {
-        const titulo = interaction.fields.getTextInputValue('input_titulo').trim();
-        if (!titulo) {
-            await interaction.reply({ content: '❌ El título no puede estar vacío.', flags: [MessageFlags.Ephemeral] });
-            return true;
-        }
-
         const preguntas: string[] = [];
-        for (let i = 1; i <= 4; i++) {
+        for (let i = 1; i <= 5; i++) {
             try {
                 const val = interaction.fields.getTextInputValue(`p${i}`);
                 if (val && val.trim().length > 0) {
                     preguntas.push(val.trim());
                 }
-            } catch {
-                // Si el campo no existe se omite
-            }
+            } catch {}
         }
 
         if (preguntas.length === 0) {
@@ -274,21 +258,110 @@ export async function handleFormCreateModal(interaction: ModalSubmitInteraction)
             return true;
         }
 
-        await guardarFormulario(guildId, titulo, null, preguntas);
+        // Título provisional único
+        const provisionalTitle = `Formulario #${Math.floor(1000 + Math.random() * 9000)}`;
+        recentUserForms.set(interaction.user.id, provisionalTitle);
+
+        // Guardamos en la BD con el título provisional
+        await guardarFormulario(guildId, provisionalTitle, null, preguntas);
+
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder()
+                .setCustomId('dash_btn_prompt_renombrar')
+                .setLabel('¿Quieres ponerle nombre? (Sí)')
+                .setStyle(ButtonStyle.Success)
+                .setEmoji('✏️')
+        );
 
         await interaction.reply({
-            content: `✅ ¡Formulario **"${titulo}"** guardado con éxito en la base de datos de este servidor!\n- **Preguntas configuradas:** ${preguntas.length}\n\n*(Ya está listo para ser lanzado cuando quieras desde el panel de staff).*`,
+            content: `✅ ¡Formulario guardado con **${preguntas.length} preguntas**!\n- **Título provisional:** \`${provisionalTitle}\`\n\n¿Quieres ponerle un nombre personalizado ahora?`,
+            components: [row],
             flags: [MessageFlags.Ephemeral]
         });
     } catch (error) {
-        console.error('❌ Error al guardar el formulario unificado:', error);
+        console.error('❌ Error al guardar el formulario de 5 preguntas:', error);
         await interaction.reply({ content: '❌ Ocurrió un error al guardar el formulario.', flags: [MessageFlags.Ephemeral] });
     }
 
     return true;
 }
 
-// 7. Maneja el envío de las respuestas del usuario final al canal de respuestas
+// 7. Maneja el clic en el botón "¿Quieres ponerle nombre?" (Abre el modal con 1 celda)
+export async function handlePromptRenombrarButton(interaction: ButtonInteraction): Promise<boolean> {
+    if (interaction.customId !== 'dash_btn_prompt_renombrar') return false;
+
+    try {
+        const modal = new ModalBuilder()
+            .setCustomId('modal_renombrar_formulario')
+            .setTitle('Personalizar Nombre del Formulario');
+
+        const input = new TextInputBuilder()
+            .setCustomId('nuevo_titulo_input')
+            .setLabel('Título / Nombre del formulario')
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('Ej: Inscripciones Temporada 3')
+            .setRequired(true);
+
+        modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(input));
+        await interaction.showModal(modal);
+    } catch (error) {
+        console.error('❌ Error al abrir el modal de renombrar:', error);
+    }
+    return true;
+}
+
+// 8. Maneja el envío del modal de renombrar (Actualiza la BD con el título definitivo)
+export async function handleRenombrarModal(interaction: ModalSubmitInteraction): Promise<boolean> {
+    if (interaction.customId !== 'modal_renombrar_formulario') return false;
+
+    const guildId = interaction.guildId;
+    if (!guildId) {
+        await interaction.reply({ content: '❌ Acción no válida fuera de un servidor.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    try {
+        const nuevoTitulo = interaction.fields.getTextInputValue('nuevo_titulo_input').trim();
+        const viejoTitulo = recentUserForms.get(interaction.user.id);
+
+        if (!nuevoTitulo) {
+            await interaction.reply({ content: '❌ El título no puede estar vacío.', flags: [MessageFlags.Ephemeral] });
+            return true;
+        }
+
+        if (!viejoTitulo) {
+            await interaction.reply({ content: '❌ No se encontró el formulario provisional reciente. Es posible que ya se haya guardado.', flags: [MessageFlags.Ephemeral] });
+            return true;
+        }
+
+        const formActual = await obtenerFormularioPorTitulo(guildId, viejoTitulo);
+        if (!formActual) {
+            await interaction.reply({ content: '❌ El formulario provisional ya no existe en la base de datos.', flags: [MessageFlags.Ephemeral] });
+            return true;
+        }
+
+        // Guardamos con el nuevo título definitivo
+        await guardarFormulario(guildId, nuevoTitulo, formActual.canalRespuestas || null, formActual.preguntas);
+        
+        // Borramos el título provisional antiguo para dejarlo limpio
+        await eliminarFormulario(guildId, viejoTitulo);
+
+        recentUserForms.delete(interaction.user.id);
+
+        await interaction.update({
+            content: `✅ ¡Formulario renombrado y guardado con éxito como **"${nuevoTitulo}"**! Ya está listo para editarse o colocarse.`,
+            components: [],
+            flags: [MessageFlags.Ephemeral]
+        });
+    } catch (error) {
+        console.error('❌ Error al renombrar el formulario:', error);
+        await interaction.reply({ content: '❌ Ocurrió un error al actualizar el nombre.', flags: [MessageFlags.Ephemeral] });
+    }
+
+    return true;
+}
+
+// 9. Maneja el envío de las respuestas del usuario final al canal de respuestas
 export async function handleFormSubmitModal(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (!interaction.customId.startsWith('submit_form_')) return false;
 
@@ -354,12 +427,13 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
     return true;
 }
 
-// 8. Enrutador interno del módulo de formularios
+// 10. Enrutador interno del módulo de formularios
 export async function handleFormInteraction(interaction: any): Promise<boolean> {
     if (interaction.isButton()) {
         if (await handleDashColocarButton(interaction)) return true;
         if (await handleFormButtonClick(interaction)) return true;
         if (await handleDashCrearFormButton(interaction)) return true;
+        if (await handlePromptRenombrarButton(interaction)) return true;
     }
     if (interaction.isStringSelectMenu()) {
         if (await handleDashColocarFormSelect(interaction)) return true;
@@ -368,7 +442,8 @@ export async function handleFormInteraction(interaction: any): Promise<boolean> 
         if (await handleDashColocarChannelSelect(interaction)) return true;
     }
     if (interaction.isModalSubmit()) {
-        if (await handleFormCreateModal(interaction)) return true;
+        if (await handleFormCreate5Modal(interaction)) return true;
+        if (await handleRenombrarModal(interaction)) return true;
         if (await handleFormSubmitModal(interaction)) return true;
     }
     return false;
