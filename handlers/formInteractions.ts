@@ -329,3 +329,55 @@ export async function handleFormInteraction(interaction: any): Promise<boolean> 
     }
     return false;
 }
+// 7. Maneja el clic en el botón "Crear F" del panel /dash para pedir el título
+export async function handleDashCrearFormButton(interaction: ButtonInteraction): Promise<boolean> {
+    if (interaction.customId !== 'dash_btn_crear_form') return false;
+
+    const modal = new ModalBuilder()
+        .setCustomId('modal_pedir_titulo_formulario')
+        .setTitle('Crear Nuevo Formulario');
+
+    const input = new TextInputBuilder()
+        .setCustomId('titulo_formulario_input')
+        .setLabel('Título del formulario')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Ej: Solicitud de Inscripción')
+        .setRequired(true);
+
+    modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(input));
+    await interaction.showModal(modal);
+    return true;
+}
+
+// 8. Maneja el envío del título y abre el modal para introducir las preguntas (1 a 5)
+export async function handleFormTitleModal(interaction: ModalSubmitInteraction): Promise<boolean> {
+    if (interaction.customId !== 'modal_pedir_titulo_formulario') return false;
+
+    const titulo = interaction.fields.getTextInputValue('titulo_formulario_input').trim();
+    if (!titulo) {
+        await interaction.reply({ content: '❌ El título no puede estar vacío.', ephemeral: true });
+        return true;
+    }
+
+    // Guardamos temporalmente el título asociado al usuario
+    activeFormTitles.set(interaction.user.id, titulo);
+
+    // Creamos el modal para introducir las preguntas
+    const modal = new ModalBuilder()
+        .setCustomId('modal_crear_formulario_preguntas')
+        .setTitle(`Preguntas para: ${titulo.substring(0, 30)}`);
+
+    for (let i = 1; i <= 5; i++) {
+        const input = new TextInputBuilder()
+            .setCustomId(`p${i}`)
+            .setLabel(`Pregunta ${i} (Opcional)`.substring(0, 45))
+            .setStyle(TextInputStyle.Short)
+            .setRequired(i === 1); // Solo la primera es estrictamente obligatoria
+
+        modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(input));
+    }
+
+    await interaction.showModal(modal);
+    return true;
+}
+
