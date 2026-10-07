@@ -4,6 +4,44 @@ import { Buffer } from 'buffer';
 // 📌 ID de tu Google Sheet para REDLINE GT
 const SPREADSHEET_ID = '1E-dMxBrK7gZLAGR2Ge7OuGEt-IvzVK8BWOTtxZojsXs';
 
+function cleanAndFormatPrivateKey(raw: string): string {
+  let cleaned = raw.trim();
+
+  // Quitar comillas envolventes si las hubiera
+  if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+    cleaned = cleaned.slice(1, -1);
+  }
+
+  // Si está en Base64 (no empieza por -----BEGIN), la decodificamos
+  if (!cleaned.startsWith('-----BEGIN')) {
+    try {
+      cleaned = Buffer.from(cleaned, 'base64').toString('utf8');
+      console.log('🔓 [Google Auth] Clave decodificada con éxito desde Base64.');
+    } catch (e) {
+      console.error('❌ Error al decodificar Base64, usando valor directo.');
+    }
+  }
+
+  // Normalizar escapes de saltos de línea
+  cleaned = cleaned
+    .replace(/\\\\n/g, '\n')
+    .replace(/\\n/g, '\n');
+
+  const pemHeader = '-----BEGIN PRIVATE KEY-----';
+  const pemFooter = '-----END PRIVATE KEY-----';
+
+  // Extraer exclusivamente el contenido base64 de la clave, limpiando espacios y saltos viejos
+  const body = cleaned
+    .replace(pemHeader, '')
+    .replace(pemFooter, '')
+    .replace(/[\r\n\s]+/g, '');
+
+  // Reconstruir el PEM perfectamente formateado en bloques de 64 caracteres (requisito de OpenSSL 3.0)
+  const chunkedBody = body.match(/.{1,64}/g)?.join('\n') || body;
+
+  return `${pemHeader}\n${chunkedBody}\n${pemFooter}\n`;
+}
+
 function getAuthClient() {
   console.log('🔍 [Google Auth] Verificando credenciales individuales...');
   
@@ -17,27 +55,7 @@ function getAuthClient() {
     throw new Error('❌ Faltan las variables GOOGLE_PRIVATE_KEY o GOOGLE_CLIENT_EMAIL en Render.');
   }
 
-  let privateKey = privateKeyRaw.trim();
-
-  // Limpiar comillas envolventes si las hubiera por error al pegar
-  if ((privateKey.startsWith('"') && privateKey.endsWith('"')) || (privateKey.startsWith("'") && privateKey.endsWith("'"))) {
-    privateKey = privateKey.slice(1, -1);
-  }
-
-  // 🛡️ MAGIA AUTOMÁTICA: Si la clave NO empieza por '-----BEGIN', asumimos que está en Base64 y la decodificamos al vuelo
-  if (!privateKey.startsWith('-----BEGIN')) {
-    try {
-      privateKey = Buffer.from(privateKey, 'base64').toString('utf8');
-      console.log('🔓 [Google Auth] Clave privada decodificada con éxito desde Base64.');
-    } catch (error: any) {
-      console.error('❌ Error al decodificar la clave Base64:', error.message);
-    }
-  }
-
-  // Normalizamos los saltos de línea por si acaso viene en formato clásico con escapes
-  privateKey = privateKey
-    .replace(/\\\\n/g, '\n')
-    .replace(/\\n/g, '\n');
+  const privateKey = cleanAndFormatPrivateKey(privateKeyRaw);
 
   return new google.auth.JWT({
     email: clientEmail,
