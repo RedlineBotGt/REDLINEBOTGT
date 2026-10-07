@@ -2,7 +2,6 @@ import { REST, Routes } from 'discord.js';
 import { data as dashCommand } from './commands/dash';
 import { data as dashstaffCommand } from './commands/dashstaff';
 import { data as msnCommand } from './commands/msn';
-import { data as formsCommand } from './commands/forms';
 import { data as borrarCommand } from './commands/borrar';
 import { data as dashsheetsCommand } from './commands/dashSheets';
 import { data as dadoCommand } from './commands/dado';
@@ -12,7 +11,6 @@ const commandList = [
     { name: 'dash', data: dashCommand },
     { name: 'dashstaff', data: dashstaffCommand },
     { name: 'msn', data: msnCommand },
-    { name: 'forms', data: formsCommand },
     { name: 'borrar', data: borrarCommand },
     { name: 'dashsheets', data: dashsheetsCommand },
     { name: 'dado', data: dadoCommand },
