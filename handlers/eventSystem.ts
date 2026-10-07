@@ -97,6 +97,7 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
 
     return true;
 }
+
 export async function handleEventChannelSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'event_select_channel') return false;
 
@@ -192,15 +193,15 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
         }
 
         embed.addFields(
-            { name: '✔️ Me Apunto (0)', value: 'Ninguno', inline: false },
-            { name: '❔ Duda (0)', value: 'Ninguno', inline: false },
-            { name: '✖️ No puedo (0)', value: 'Ninguno', inline: false }
+            { name: '✅ Me Apunto (0/16)', value: 'Ninguno', inline: false },
+            { name: '❓ Duda (0)', value: 'Ninguno', inline: false },
+            { name: '❌ No puedo (0)', value: 'Ninguno', inline: false }
         );
 
         const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Me Apunto').setStyle(ButtonStyle.Success).setEmoji('✔️'),
-            new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❔'),
-            new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
+            new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Me Apunto').setStyle(ButtonStyle.Success).setEmoji('✅'),
+            new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓'),
+            new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('❌')
         );
 
         let contentToSend: string | undefined = undefined;
@@ -247,7 +248,6 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
 
     return true;
 }
-
 export async function handleEventRepeatYesButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_repeat_yes') return false;
 
@@ -314,6 +314,7 @@ function parseMadridDateTime(dateStr: string, timeStr: string): Date | null {
         return null;
     }
 }
+
 function getMadridOffsetMinutes(date: Date): number {
     const madridDateStr = new Intl.DateTimeFormat('en-US', {
         timeZone: 'Europe/Madrid',
@@ -324,7 +325,6 @@ function getMadridOffsetMinutes(date: Date): number {
     const [datePart, timePart] = madridDateStr.split(', ');
     const [m, d, y] = datePart.split('/').map(Number);
     const [h, min] = timePart.split(':').map(Number);
-
     const asUTC = Date.UTC(y, m - 1, d, h, min, 0);
     const diffMs = asUTC - date.getTime();
     return Math.round(diffMs / (1000 * 60));
@@ -404,6 +404,7 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
 
     return true;
 }
+
 export async function handleEventRsvpButton(interaction: ButtonInteraction): Promise<boolean> {
     const customId = interaction.customId;
     if (!['event_rsvp_yes', 'event_rsvp_maybe', 'event_rsvp_no'].includes(customId)) return false;
@@ -429,6 +430,8 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
         eventDoc.rsvps = { yes: [], maybe: [], no: [] };
     }
 
+    const wasInYes = eventDoc.rsvps.yes.includes(userId);
+
     eventDoc.rsvps.yes = eventDoc.rsvps.yes.filter((id: string) => id !== userId);
     eventDoc.rsvps.maybe = eventDoc.rsvps.maybe.filter((id: string) => id !== userId);
     eventDoc.rsvps.no = eventDoc.rsvps.no.filter((id: string) => id !== userId);
@@ -437,27 +440,59 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
     const member = await guild.members.fetch(userId).catch(() => null);
 
     let statusText = '';
+    let responseContent = '';
+
     if (customId === 'event_rsvp_yes') {
-        eventDoc.rsvps.yes.push(userId);
-        statusText = 'Me Apunto';
-        if (asistenteRole && member) {
-            await member.roles.add(asistenteRole).catch(() => {});
+        if (eventDoc.rsvps.yes.length < 16) {
+            eventDoc.rsvps.yes.push(userId);
+            statusText = 'Me Apunto';
+            responseContent = '✅ ¡Tu asistencia (**Me Apunto**) ha quedado registrada!';
+            if (asistenteRole && member) {
+                await member.roles.add(asistenteRole).catch(() => {});
+            }
+        } else {
+            eventDoc.rsvps.maybe.push(userId);
+            statusText = 'Duda (Parrilla llena)';
+            responseContent = '⚠️ La parrilla titular (16 plazas) está llena. Has sido colocado automáticamente en **Duda** (en lista de espera).';
+            if (asistenteRole && member) {
+                await member.roles.add(asistenteRole).catch(() => {});
+            }
         }
     } else if (customId === 'event_rsvp_maybe') {
         eventDoc.rsvps.maybe.push(userId);
         statusText = 'Duda';
+        responseContent = '✅ ¡Tu estado (**Duda**) ha quedado registrado!';
         if (asistenteRole && member) {
             await member.roles.add(asistenteRole).catch(() => {});
         }
     } else if (customId === 'event_rsvp_no') {
         eventDoc.rsvps.no.push(userId);
         statusText = 'No puedo';
+        responseContent = '❌ Tu asistencia ha sido marcada como **No puedo**.';
         if (asistenteRole && member && member.roles.cache.has(asistenteRole.id)) {
             await member.roles.remove(asistenteRole).catch(() => {});
         }
     }
 
+    const leftYes = wasInYes && !eventDoc.rsvps.yes.includes(userId);
+    if (leftYes && eventDoc.rsvps.yes.length < 16 && eventDoc.rsvps.maybe.length > 0) {
+        const promotedId = eventDoc.rsvps.maybe.shift()!;
+        eventDoc.rsvps.yes.push(promotedId);
+    }
+
     await col.updateOne({ messageId }, { $set: { rsvps: eventDoc.rsvps } });
+
+    const formatListResolved = async (ids: string[]) => {
+        if (ids.length === 0) return 'Ninguno';
+        const lines = await Promise.all(ids.map(async (id) => {
+            let m = guild.members.cache.get(id);
+            if (!m) {
+                m = await guild.members.fetch(id).catch(() => null);
+            }
+            return m ? `@${m.displayName}` : `<@${id}>`;
+        }));
+        return lines.join(', ');
+    };
 
     const embed = new EmbedBuilder()
         .setColor(0x0055FF)
@@ -469,29 +504,28 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
         embed.setImage(eventDoc.image);
     }
 
-    const formatList = (ids: string[]) => ids.length > 0 ? ids.map(id => `<@${id}>`).join(', ') : 'Ninguno';
-
     embed.addFields(
-        { name: `✔️ Me Apunto (${eventDoc.rsvps.yes.length})`, value: formatList(eventDoc.rsvps.yes), inline: false },
-        { name: `❔ Duda (${eventDoc.rsvps.maybe.length})`, value: formatList(eventDoc.rsvps.maybe), inline: false },
-        { name: `✖️ No puedo (${eventDoc.rsvps.no.length})`, value: formatList(eventDoc.rsvps.no), inline: false }
+        { name: `✅ Me Apunto (${eventDoc.rsvps.yes.length}/16)`, value: await formatListResolved(eventDoc.rsvps.yes), inline: false },
+        { name: `❓ Duda (${eventDoc.rsvps.maybe.length})`, value: await formatListResolved(eventDoc.rsvps.maybe), inline: false },
+        { name: `❌ No puedo (${eventDoc.rsvps.no.length})`, value: await formatListResolved(eventDoc.rsvps.no), inline: false }
     );
 
     const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Me Apunto').setStyle(ButtonStyle.Success).setEmoji('✔️'),
-        new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❔'),
-        new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
+        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Me Apunto').setStyle(ButtonStyle.Success).setEmoji('✅'),
+        new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓'),
+        new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('❌')
     );
 
     await interaction.message.edit({ embeds: [embed], components: [rowRsvp] }).catch(() => {});
 
     await interaction.reply({
-        content: `✅ ¡Tu asistencia (**${statusText}**) ha quedado registrada y el evento se ha actualizado!`,
+        content: responseContent,
         flags: [MessageFlags.Ephemeral]
     });
 
     return true;
 }
+
 export function setupEventWorker(client: Client) {
     console.log('📅 [Worker] Sistema de eventos y campeonatos activo en segundo plano.');
 
@@ -500,7 +534,6 @@ export function setupEventWorker(client: Client) {
             const col = await getEventsCollection();
             const now = new Date();
 
-            // 1. ⏰ GESTIÓN DE RECORDATORIOS (30 minutos antes)
             const thirtyMinsLater = new Date(now.getTime() + 30 * 60 * 1000);
             const upcomingEvents = await col.find({
                 status: 'pending',
@@ -530,7 +563,6 @@ export function setupEventWorker(client: Client) {
                 }
             }
 
-            // 2. 🚀 GESTIÓN DE PUBLICACIÓN DE EVENTOS RECURRENTES PROGRAMADOS
             const pendingEvents = await col.find({
                 status: 'pending',
                 scheduledAt: { $lte: now }
@@ -563,15 +595,15 @@ export function setupEventWorker(client: Client) {
                     }
 
                     embed.addFields(
-                        { name: '✔️ Me Apunto (0)', value: 'Ninguno', inline: false },
-                        { name: '❔ Duda (0)', value: 'Ninguno', inline: false },
-                        { name: '✖️ No puedo (0)', value: 'Ninguno', inline: false }
+                        { name: '✅ Me Apunto (0/16)', value: 'Ninguno', inline: false },
+                        { name: '❓ Duda (0)', value: 'Ninguno', inline: false },
+                        { name: '❌ No puedo (0)', value: 'Ninguno', inline: false }
                     );
 
                     const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Me Apunto').setStyle(ButtonStyle.Success).setEmoji('✔️'),
-                        new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❔'),
-                        new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
+                        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Me Apunto').setStyle(ButtonStyle.Success).setEmoji('✅'),
+                        new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓'),
+                        new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('❌')
                     );
 
                     let contentToSend: string | undefined = undefined;
@@ -630,13 +662,9 @@ export function setupEventWorker(client: Client) {
         }
     }, 60000);
 }
-/**
- * Función central de enrutamiento que busca el bot.
- * Recoge cualquier interacción (botón, modal, select menu) y la deriva a su función correspondiente.
- */
+
 export async function handleInteraction(interaction: any): Promise<void> {
     try {
-        // 1. Botones
         if (interaction.isButton()) {
             if (await handleDashEventButton(interaction)) return;
             if (await handleEventPublishNowButton(interaction)) return;
@@ -647,13 +675,11 @@ export async function handleInteraction(interaction: any): Promise<void> {
             }
         }
 
-        // 2. Modales (Formularios)
         if (interaction.isModalSubmit()) {
             if (await handleEventModalSubmit(interaction)) return;
             if (await handleEventRepeatModalSubmit(interaction)) return;
         }
 
-        // 3. Menús desplegables (Canales y Roles)
         if (interaction.isChannelSelectMenu()) {
             if (await handleEventChannelSelect(interaction)) return;
         }
