@@ -1,39 +1,43 @@
-import { ChatInputCommandInteraction, ButtonInteraction, ChannelSelectMenuInteraction, RoleSelectMenuInteraction } from 'discord.js';
-// Importa tus manejadores del panel de sheets
-import { handleDashSheetsButton, handleSheetsChannelSelect, handleSheetsRoleSelect } from '../Handler/dashSheetsHandler';
-import * as dashSheetsCommand from '../Handlers/dashSheets'; // O la ruta donde tengas el comando /dashsheets
+import { Interaction } from 'discord.js';
+import { 
+    handleDashSheetsButton, 
+    handleSheetsChannelSelect, 
+    handleSheetsRoleSelect 
+} from './dashSheetsHandler';
 
-export async function handleInteraction(interaction: any) {
-    // 1. Manejo de Slash Commands (Ej: /dashsheets)
-    if (interaction.isChatInputCommand()) {
-        if (interaction.commandName === 'dashsheets') {
-            await dashSheetsCommand.execute(interaction);
+/**
+ * Módulo de Interacciones del Panel de Google Sheets
+ */
+export async function handleSheetsInteraction(interaction: Interaction): Promise<boolean> {
+    try {
+        // Manejo de botones (Panel de Sheets y Publicación)
+        if (interaction.isButton()) {
+            const customId = interaction.customId;
+            if (customId.startsWith('sheets_') || customId === 'pub_yes' || customId === 'pub_no') {
+                await handleDashSheetsButton(interaction);
+                return true;
+            }
         }
-        // ... otros comandos ...
-    }
 
-    // 2. Manejo de Botones del Panel de Sheets y Publicación
-    if (interaction.isButton()) {
-        const customId = interaction.customId;
-        
-        // Si es un botón del panel de sheets (comienza con sheets_) o los de publicar (pub_yes, pub_no)
-        if (customId.startsWith('sheets_') || customId === 'pub_yes' || customId === 'pub_no') {
-            await handleDashSheetsButton(interaction);
+        // Manejo del menú desplegable de canales
+        if (interaction.isChannelSelectMenu()) {
+            if (interaction.customId === 'sheets_select_channel') {
+                await handleSheetsChannelSelect(interaction);
+                return true;
+            }
         }
-        // ... otros botones ...
-    }
 
-    // 3. Manejo de Menús Desplegables de Canales
-    if (interaction.isChannelSelectMenu()) {
-        if (interaction.customId === 'sheets_select_channel') {
-            await handleSheetsChannelSelect(interaction);
+        // Manejo del menú desplegable de roles
+        if (interaction.isRoleSelectMenu()) {
+            if (interaction.customId === 'sheets_select_role') {
+                await handleSheetsRoleSelect(interaction);
+                return true;
+            }
         }
-    }
 
-    // 4. Manejo de Menús Desplegables de Roles
-    if (interaction.isRoleSelectMenu()) {
-        if (interaction.customId === 'sheets_select_role') {
-            await handleSheetsRoleSelect(interaction);
-        }
+        return false;
+    } catch (error) {
+        console.error('❌ Error en el módulo sheetsInteraction:', error);
+        return false;
     }
 }
