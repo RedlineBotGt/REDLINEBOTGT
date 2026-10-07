@@ -47,14 +47,14 @@ export async function handleDashMsnChannelSelect(interaction: ChannelSelectMenuI
 
     const inputTexto = new TextInputBuilder()
         .setCustomId('input_msn_texto')
-        .setLabel('💬 Contenido del mensaje')
+        .setLabel('Contenido del mensaje')
         .setStyle(TextInputStyle.Paragraph)
         .setPlaceholder('Escribe tu mensaje con Markdown, menciones, emojis...')
         .setRequired(true);
 
     const inputImagen = new TextInputBuilder()
         .setCustomId('input_msn_imagen')
-        .setLabel('🖼️ URL de imagen o archivo adjunto (Opcional)')
+        .setLabel('URL de imagen o archivo (Opcional)') // 👈 Etiqueta acortada para cumplir el límite de 45 caracteres
         .setStyle(TextInputStyle.Short)
         .setPlaceholder('https://ejemplo.com/imagen.png (opcional)')
         .setRequired(false);
@@ -86,12 +86,10 @@ export async function handleDashMsnModalSubmit(interaction: ModalSubmitInteracti
     }
 
     try {
-        // Preparamos el mensaje igual que un usuario normal
         const opcionesEnvio: any = {
             content: texto
         };
 
-        // Si se proporciona una URL de imagen/archivo, Discord lo adjunta de forma nativa
         if (archivoUrl && archivoUrl.startsWith('http')) {
             opcionesEnvio.files = [{ attachment: archivoUrl }];
         }
