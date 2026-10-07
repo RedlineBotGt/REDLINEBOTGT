@@ -1,9 +1,6 @@
 import { Interaction } from 'discord.js';
 import { handleScheduledInteraction } from './scheduledInteraction';
-import { handleReactionInteraction } from './reactionInteraction';
-// Importa aquí otros módulos si los tienes separados (ej: welcome, tickets, sorteos, etc.)
-// import { handleWelcomeInteraction } from './welcomeInteraction';
-// import { handleTicketInteraction } from './ticketInteraction';
+import { handleRolReactionInteraction } from './rolreactionInteraction'; // 👈 Conectado con el nuevo archivo y su función
 
 /**
  * 🛡️ Enrutador Central de Interacciones
@@ -14,12 +11,8 @@ export async function handleInteraction(interaction: Interaction): Promise<void>
         // 1. Módulo de Mensajes Programados
         if (await handleScheduledInteraction(interaction)) return;
 
-        // 2. Módulo de Reaction Roles (Autoroles)
-        if (await handleReactionInteraction(interaction)) return;
-
-        // 3. Añade aquí otros módulos futuros o existentes:
-        // if (await handleWelcomeInteraction(interaction)) return;
-        // if (await handleTicketInteraction(interaction)) return;
+        // 2. Módulo de Reaction Roles / Autoroles por Botón
+        if (await handleRolReactionInteraction(interaction)) return;
 
         // Si ninguna interacción fue manejada por los módulos anteriores y es un componente:
         if (interaction.isButton() || interaction.isAnySelectMenu() || interaction.isModalSubmit()) {
