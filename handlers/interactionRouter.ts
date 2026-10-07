@@ -1,19 +1,19 @@
 import { Interaction, MessageFlags } from 'discord.js';
-import { handleScheduledInteraction } from './scheduledInteraction';
-import { handleRolReactionInteraction } from './rolreactionInteraction';
+import { handleScheduledInteraction } from './scheduledInteraction.ts';
+import { handleRolReactionInteraction } from './rolreactionInteraction.ts';
 
-// Importación corregida apuntando a la carpeta commands/
-import { execute as handleDash } from './commands/dash';
-import { execute as handleDashStaff } from './commands/dashstaff';
-import { execute as handleDado } from './commands/dado';
-import { execute as handleBorrar } from './commands/borrar';
-import { execute as handleForms } from './commands/forms';
-import { execute as handleColocarForm } from './commands/ColocarForm';
-import { execute as handleMsn } from './commands/msn';
-import { execute as handleReporte } from './commands/reporte';
-import { execute as handleSetupDefensa } from './commands/setupdefensa';
-import { execute as handleVeredicto } from './commands/veredicto';
-import { execute as handleDashSheets } from './commands/dashSheets';
+// Importación de comandos con extensión .ts incluida
+import { execute as handleDash } from './commands/dash.ts';
+import { execute as handleDashStaff } from './commands/dashstaff.ts';
+import { execute as handleDado } from './commands/dado.ts';
+import { execute as handleBorrar } from './commands/borrar.ts';
+import { execute as handleForms } from './commands/forms.ts';
+import { execute as handleColocarForm } from './commands/ColocarForm.ts';
+import { execute as handleMsn } from './commands/msn.ts';
+import { execute as handleReporte } from './commands/reporte.ts';
+import { execute as handleSetupDefensa } from './commands/setupdefensa.ts';
+import { execute as handleVeredicto } from './commands/veredicto.ts';
+import { execute as handleDashSheets } from './commands/dashSheets.ts';
 
 /**
  * 🛡️ Enrutador Central de Interacciones
