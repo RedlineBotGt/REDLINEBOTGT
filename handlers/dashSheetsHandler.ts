@@ -11,7 +11,7 @@ import {
     ChannelType,
     MessageFlags 
 } from 'discord.js';
-import { getSheetData } from '../utils/sheetService';
+import { getSheetData } from '../utils/sheetsService';
 
 // Almacén temporal en memoria para guardar el estado de la consulta por usuario
 const userSheetState = new Map<string, { content: string; title: string; channelId?: string; roleId?: string }>();
