@@ -11,7 +11,8 @@ import * as formHandler from './formInteractions';
 import * as messageHandler from './messageInteractions'; 
 import * as encuestaHandler from './encuestaSystem'; 
 import * as welcomeHandler from './welcomeInteraction'; 
-import * as avisosHandler from './avisosSystem'; // 👈 Módulo de Avisos integrado
+import * as avisosHandler from './avisosSystem'; 
+import * as ticketHandler from './ticketButtonHandler'; // 👈 Módulo de Tickets y Botones integrado
 
 // Módulos de Comisarios con las mayúsculas/minúsculas exactas de tus archivos
 import * as dashReporteHandler from './dashReporteHandler';
@@ -71,7 +72,7 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
         const handledByWelcome = await welcomeHandler.handleWelcomeInteraction(interaction);
         if (handledByWelcome) return true;
 
-        // 7. Delegar interacciones de Comisarios y Avisos
+        // 7. Delegar interacciones de Comisarios, Avisos y Tickets
         
         // --- BOTONES ---
         if (interaction.isButton()) {
@@ -93,7 +94,16 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
                 return await defensaModal.handleDefensaButton(interaction);
             }
             if (customId === 'dash_btn_avisos_config') {
-                return await avisosHandler.handleDashAvisosButton(interaction); // 👈 Botón de configuración de Avisos
+                return await avisosHandler.handleDashAvisosButton(interaction);
+            }
+            if (customId === 'dash_btn_crear_boton') {
+                return await ticketHandler.handleDashCrearBotonButton(interaction); // 👈 Botón del Dash para crear ticket
+            }
+            if (customId === 'close_ticket') {
+                return await ticketHandler.handleCloseTicketButton(interaction); // 👈 Botón de cerrar ticket en canal privado
+            }
+            if (customId.startsWith('open_ticket_')) {
+                return await ticketHandler.handleTicketButtonClick(interaction); // 👈 Botón dinámico de ticket desplegado
             }
         }
 
@@ -103,7 +113,10 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
                 return await veredictoHandler.handleDashVeredictoChannelSelect(interaction);
             }
             if (interaction.customId === 'avisos_select_channel') {
-                return await avisosHandler.handleAvisosChannelSelect(interaction); // 👈 Selector de canal para Avisos
+                return await avisosHandler.handleAvisosChannelSelect(interaction);
+            }
+            if (interaction.customId.startsWith('ticket_deploy_channel_')) {
+                return await ticketHandler.handleTicketChannelSelect(interaction); // 👈 Selector de canal para ubicar el ticket
             }
         }
 
@@ -124,6 +137,9 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
             if (customId.startsWith('modal_veredicto_')) {
                 return await veredictoModal.handleVeredictoModalSubmit(interaction);
             }
+            if (customId === 'modal_crear_ticket_config') {
+                return await ticketHandler.handleTicketModalSubmit(interaction); // 👈 Modal de configuración del ticket
+            }
         }
 
         // 8. Botones del Panel Admin y Staff (Resto de módulos restantes)
@@ -131,7 +147,7 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
             const customId = interaction.customId;
 
             // --- COMUNICACIONES Y SORTEOS ---
-            if (['dash_btn_sorteo_create', 'dash_btn_scheduled_msg', 'dash_btn_crear_boton', 'rr_btn_create'].includes(customId)) {
+            if (['dash_btn_sorteo_create', 'dash_btn_scheduled_msg', 'rr_btn_create'].includes(customId)) {
                 await interaction.reply({ content: '💬 Módulo de Comunicaciones/Sorteos enlazado correctamente.', ephemeral: true });
                 return true;
             }
