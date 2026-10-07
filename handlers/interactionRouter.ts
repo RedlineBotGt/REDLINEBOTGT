@@ -7,17 +7,17 @@ import { MongoClient as MongoDriver } from 'mongodb';
 import * as dashCommand from '../commands/dash';
 import * as dashstaffCommand from '../commands/dashstaff';
 import * as eventHandler from './eventInteractions';
-import * as formHandler from './formInteractions'; // 👈 Módulo de formularios integrado
-import * as messageHandler from './messageInteractions'; // 👈 Módulo de mensajes (/msn y dash) integrado
-import * as encuestaHandler from './encuestaSystem'; // 👈 Módulo de encuestas integrado corregido
+import * as formHandler from './formInteractions'; 
+import * as messageHandler from './messageInteractions'; 
+import * as encuestaHandler from './encuestaSystem'; 
 
-// Módulos de Comisarios (Reportes, Defensas y Veredictos) con tus nombres exactos
+// Módulos de Comisarios con las mayúsculas/minúsculas exactas de tus archivos
 import * as dashReporteHandler from './dashReporteHandler';
 import * as dashDefensaHandler from './dashDefensaHandler';
 import * as veredictoHandler from './dashVeredictoHandler';
 import * as reportModal from './reportModal';
-import * as defensaModal from './defensModal';       // 👈 Corregido con minúsculas exactas
-import * as veredictoModal from './VeredictoModal';   // 👈 VeredictoModal con mayúsculas
+import * as defensaModal from './defensModal';       
+import * as veredictoModal from './veredictoModal';   // 👈 Corregido con minúscula exacta
 
 // Configuración de MongoDB para los eventos
 const uri = process.env.MONGODB_URI || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
@@ -49,25 +49,25 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
             return false;
         }
 
-        // 2. Delegar interacciones de eventos (Botones, Modales, Menús de Canales y Roles de eventos)
+        // 2. Delegar interacciones de eventos
         const handledByEvents = await eventHandler.handleEventInteraction(interaction);
         if (handledByEvents) return true;
 
-        // 3. Delegar interacciones de formularios (Botones, Selectores y Modales de formularios)
+        // 3. Delegar interacciones de formularios
         const handledByForms = await formHandler.handleFormInteraction(interaction);
         if (handledByForms) return true;
 
-        // 4. Delegar interacciones de mensajes (Botones, Selectores de canal y Modales de /msn y dash)
+        // 4. Delegar interacciones de mensajes
         const handledByMessages = await messageHandler.handleMsnInteraction(interaction);
         if (handledByMessages) return true;
 
-        // 5. Delegar interacciones de encuestas (Botones, Menús desplegables y Modales del sistema de encuestas)
+        // 5. Delegar interacciones de encuestas
         const handledByEncuesta = await encuestaHandler.handleEncuestaInteraction(interaction);
         if (handledByEncuesta) return true;
 
-        // 6. Delegar interacciones de Comisarios (Configuraciones de /dash, botones públicos y modales)
+        // 6. Delegar interacciones de Comisarios
         
-        // --- BOTONES (Configuraciones y Aperturas de Formularios) ---
+        // --- BOTONES ---
         if (interaction.isButton()) {
             const customId = interaction.customId;
 
@@ -88,7 +88,7 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
             }
         }
 
-        // --- MENÚS DESPLEGABLES (Veredictos) ---
+        // --- MENÚS DESPLEGABLES ---
         if (interaction.isChannelSelectMenu() && interaction.customId === 'dash_select_verd_channel') {
             return await veredictoHandler.handleDashVeredictoChannelSelect(interaction);
         }
@@ -96,7 +96,7 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
             return await veredictoHandler.handleDashVeredictoRoleSelect(interaction);
         }
 
-        // --- MODALES (Envíos de Reportes, Defensas y Veredictos) ---
+        // --- MODALES ---
         if (interaction.isModalSubmit()) {
             const customId = interaction.customId;
 
@@ -115,19 +115,16 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
         if (interaction.isButton()) {
             const customId = interaction.customId;
 
-            // --- BIENVENIDAS ---
             if (customId === 'dash_btn_welcome_config') {
                 await interaction.reply({ content: '👋 Módulo de Bienvenidas enlazado correctamente.', ephemeral: true });
                 return true;
             }
 
-            // --- COMUNICACIONES, SORTEOS Y AUTOROL ---
             if (['dash_btn_sorteo_create', 'dash_btn_scheduled_msg', 'dash_btn_crear_boton', 'rr_btn_create'].includes(customId)) {
                 await interaction.reply({ content: '💬 Módulo de Comunicaciones/Sorteos enlazado correctamente.', ephemeral: true });
                 return true;
             }
 
-            // --- AVISOS ---
             if (customId === 'dash_btn_avisos_config') {
                 await interaction.reply({ content: '📋 Módulo de Avisos enlazado correctamente.', ephemeral: true });
                 return true;
