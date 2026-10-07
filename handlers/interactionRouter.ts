@@ -8,6 +8,7 @@ import * as dashCommand from '../commands/dash';
 import * as dashstaffCommand from '../commands/dashstaff';
 import * as eventHandler from './eventInteractions';
 import * as formHandler from './formInteractions'; // 👈 Módulo de formularios integrado
+import * as messageHandler from './messageInteractions'; // 👈 Módulo de mensajes (/msn y dash) integrado
 
 // Configuración de MongoDB para los eventos
 const uri = process.env.MONGODB_URI || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
@@ -47,7 +48,11 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
         const handledByForms = await formHandler.handleFormInteraction(interaction);
         if (handledByForms) return true;
 
-        // 4. Botones del Panel Admin y Staff (Resto de módulos pendientes)
+        // 4. Delegar interacciones de mensajes (Botones, Selectores de canal y Modales de /msn y dash)
+        const handledByMessages = await messageHandler.handleMsnInteraction(interaction);
+        if (handledByMessages) return true;
+
+        // 5. Botones del Panel Admin y Staff (Resto de módulos pendientes)
         if (interaction.isButton()) {
             const customId = interaction.customId;
 
@@ -58,7 +63,7 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
             }
 
             // --- COMUNICACIONES, SORTEOS Y AUTOROL ---
-            if (['dash_btn_sorteo_create', 'dash_btn_scheduled_msg', 'dash_btn_crear_boton', 'rr_btn_create', 'dash_btn_msn_mensaje'].includes(customId)) {
+            if (['dash_btn_sorteo_create', 'dash_btn_scheduled_msg', 'dash_btn_crear_boton', 'rr_btn_create'].includes(customId)) {
                 await interaction.reply({ content: '💬 Módulo de Comunicaciones/Sorteos enlazado correctamente.', flags: [MessageFlags.Ephemeral] });
                 return true;
             }
