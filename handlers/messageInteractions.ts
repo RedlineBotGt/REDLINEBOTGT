@@ -49,7 +49,7 @@ export async function handleDashMsnChannelSelect(interaction: ChannelSelectMenuI
         .setCustomId('input_msn_texto')
         .setLabel('Contenido del mensaje')
         .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('Escribe tu mensaje (ej: @NombreDeUsuario o @Rol)...')
+        .setPlaceholder('Escribe tu mensaje (ej: @almero o @staff)...')
         .setRequired(true);
 
     const inputImagen = new TextInputBuilder()
@@ -68,7 +68,7 @@ export async function handleDashMsnChannelSelect(interaction: ChannelSelectMenuI
     return true;
 }
 
-// 3. Maneja el envío del Modal con conversión automática de roles y usuarios
+// 3. Maneja el envío del Modal con conversión inteligente en cualquier parte del texto
 export async function handleDashMsnModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (!interaction.customId.startsWith('modal_msn_')) return false;
 
@@ -86,35 +86,40 @@ export async function handleDashMsnModalSubmit(interaction: ModalSubmitInteracti
     }
 
     try {
-        // 🔥 1. AUTO-CONVERSIÓN DE ROLES (@NombreDelRol -> <@&ID>)
+        // 🔥 1. AUTO-CONVERSIÓN DE ROLES (Insensible a mayúsculas/minúsculas)
         const roles = await guild.roles.fetch();
         roles.forEach(role => {
-            if (!role) return;
-            const patronRole = `@${role.name}`;
-            if (texto.includes(patronRole)) {
-                texto = texto.replaceAll(patronRole, `<@&${role.id}>`);
-            }
+            if (!role || role.name === '@everyone') return;
+            const escapedRoleName = role.name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+            const regex = new RegExp(`@${escapedRoleName}\\b`, 'gi');
+            texto = texto.replace(regex, `<@&${role.id}>`);
         });
 
-        // 🔥 2. AUTO-CONVERSIÓN DE USUARIOS (@Username o @DisplayName -> <@ID>)
+        // 🔥 2. AUTO-CONVERSIÓN FLEXIBLE DE USUARIOS (Busca lo que escribas en CUALQUIER parte del username o apodo)
         const members = await guild.members.fetch();
-        members.forEach(member => {
-            if (!member) return;
-            const patronUsername = `@${member.user.username}`;
-            const patronDisplayName = `@${member.displayName}`;
+        const userMentionRegex = /@([a-zA-Z0-9_]+)/g;
+        let match;
 
-            if (texto.includes(patronUsername)) {
-                texto = texto.replaceAll(patronUsername, `<@${member.id}>`);
+        while ((match = userMentionRegex.exec(texto)) !== null) {
+            const query = match[1].toLowerCase();
+            
+            // Busca un miembro cuyo username o apodo CONTENGA el texto escrito
+            const foundMember = members.find(m => {
+                const username = m.user.username.toLowerCase();
+                const displayName = m.displayName.toLowerCase();
+                return username.includes(query) || displayName.includes(query);
+            });
+
+            if (foundMember) {
+                const fullMatch = `@${match[1]}`;
+                texto = texto.replaceAll(fullMatch, `<@${foundMember.id}>`);
             }
-            if (texto.includes(patronDisplayName) && patronDisplayName !== patronUsername) {
-                texto = texto.replaceAll(patronDisplayName, `<@${member.id}>`);
-            }
-        });
+        }
 
         const opcionesEnvio: any = {
             content: texto,
             allowedMentions: {
-                parse: ['users', 'roles', 'everyone'] // Permite notificar a usuarios, roles y everyone
+                parse: ['users', 'roles', 'everyone']
             }
         };
 
@@ -125,13 +130,13 @@ export async function handleDashMsnModalSubmit(interaction: ModalSubmitInteracti
         await canalDestino.send(opcionesEnvio);
 
         await interaction.reply({
-            content: '✅ ¡Mensaje enviado con éxito y menciones convertidas correctamente!',
+            content: '✅ ¡Mensaje enviado con éxito y menciones flexibles procesadas!',
             ephemeral: true
         });
     } catch (error) {
         console.error('❌ Error al enviar mensaje MSN:', error);
         await interaction.reply({
-            content: '❌ Hubo un error al enviar el mensaje o el archivo adjunto (verifica que la URL sea válida y accesible).',
+            content: '❌ Hubo an error al enviar el mensaje o el archivo adjunto (verifica que la URL sea válida y accesible).',
             ephemeral: true
         });
     }
