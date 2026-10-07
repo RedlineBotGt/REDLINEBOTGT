@@ -7,6 +7,7 @@ import { MongoClient as MongoDriver } from 'mongodb';
 import * as dashCommand from '../commands/dash';
 import * as dashstaffCommand from '../commands/dashstaff';
 import * as eventHandler from './eventInteractions';
+import * as formHandler from './formInteractions'; // 👈 Módulo de formularios integrado
 
 // Configuración de MongoDB para los eventos
 const uri = process.env.MONGODB_URI || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
@@ -42,19 +43,17 @@ export async function handleInteraction(interaction: any): Promise<boolean> {
         const handledByEvents = await eventHandler.handleEventInteraction(interaction);
         if (handledByEvents) return true;
 
-        // 3. Botones del Panel Admin y Staff (Resto de opciones)
+        // 3. Delegar interacciones de formularios (Botones, Selectores y Modales de formularios)
+        const handledByForms = await formHandler.handleFormInteraction(interaction);
+        if (handledByForms) return true;
+
+        // 4. Botones del Panel Admin y Staff (Resto de módulos pendientes)
         if (interaction.isButton()) {
             const customId = interaction.customId;
 
             // --- BIENVENIDAS ---
             if (customId === 'dash_btn_welcome_config') {
                 await interaction.reply({ content: '👋 Módulo de Bienvenidas enlazado correctamente.', flags: [MessageFlags.Ephemeral] });
-                return true;
-            }
-
-            // --- FORMULARIOS (Admin y Staff) ---
-            if (['dash_btn_crear_form', 'dash_btn_editar_form', 'dash_btn_borrar_form', 'dash_btn_colocar_form'].includes(customId)) {
-                await interaction.reply({ content: '📋 Módulo de Formularios enlazado correctamente.', flags: [MessageFlags.Ephemeral] });
                 return true;
             }
 
