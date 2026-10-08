@@ -1,5 +1,4 @@
 import { Interaction, MessageFlags } from 'discord.js';
-import mongoose from 'mongoose';
 import { handleScheduledInteraction } from './scheduledInteraction';
 import { handleRolReactionInteraction } from './rolreactionInteraction';
 import { handleSheetsInteraction } from './sheetsInteraction';
@@ -18,11 +17,15 @@ import { execute as handleSetupDefensa } from '../commands/setupdefensa';
 import { execute as handleVeredicto } from '../commands/veredicto';
 import { execute as handleDashSheets } from '../commands/dashSheets';
 
+// 📦 Importa tu cliente nativo de MongoDB desde el archivo principal (Index.ts o donde lo inicialices)
+import { client } from '../Index'; // Ajusta la ruta relativa si tu cliente está en otro archivo
+
 /**
- * 📦 Conexión centralizada a la colección de eventos en MongoDB
+ * 📦 Conexión centralizada a la colección de eventos usando el driver nativo de MongoDB
  */
 export async function getEventsCollection() {
-    return mongoose.connection.collection('events');
+    const database = client.db(); // Usa la base de datos por defecto de tu conexión nativa
+    return database.collection('events');
 }
 
 /**
