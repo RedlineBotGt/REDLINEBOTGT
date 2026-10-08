@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
-    "start": "npx tsx index.ts",
+    "start": "npx tsx Index.ts",
     "clear": "npx tsx clear-commands.js",
     "register": "npx tsx register-commands.ts"
   },
