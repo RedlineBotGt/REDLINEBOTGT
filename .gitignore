@@ -1,1 +1,10 @@
-ig
+# Dependencias
+node_modules/
+
+# Código compilado de TypeScript (si generas tu JS en una carpeta dist o build)
+dist/
+build/
+
+# Credenciales y variables de entorno secretas
+credentials.json
+.env
