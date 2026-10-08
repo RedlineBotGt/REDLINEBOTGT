@@ -80,10 +80,10 @@ function getMadridOffsetMinutes(date: Date): number {
     return Math.round(diffMs / (1000 * 60));
 }
 
-// 🛡️ ENRUTADOR PRINCIPAL DEL MÓDULO SCHEDULED
+// 🛡️ ENRUTADOR PRINCIPAL DEL MÓDULO SCHEDULED (PARTE 1)
 export async function handleScheduledInteraction(interaction: any): Promise<boolean> {
     try {
-        // --- 1. BOTONES ---
+        // --- 1. BOTONES (Parte A) ---
         if (interaction.isButton()) {
             const customId = interaction.customId;
 
@@ -102,7 +102,6 @@ export async function handleScheduledInteraction(interaction: any): Promise<bool
                 return true;
             }
 
-            // MODIFICADO: Muestra TODO el historial (pendientes y enviados)
             if (customId === 'sched_btn_list') {
                 if (!interaction.guildId) return true;
 
@@ -267,7 +266,6 @@ export async function handleScheduledInteraction(interaction: any): Promise<bool
                 await interaction.showModal(modal);
                 return true;
             }
-
             if (customId.startsWith('sched_action_delete_')) {
                 const templateId = customId.replace('sched_action_delete_', '');
                 const { templates } = await getSchedCollections();
@@ -414,6 +412,7 @@ export async function handleScheduledInteraction(interaction: any): Promise<bool
                 return true;
             }
         }
+
         // --- 2. STRING SELECT MENUS ---
         if (interaction.isStringSelectMenu()) {
             if (interaction.customId === 'sched_select_existing') {
@@ -445,7 +444,7 @@ export async function handleScheduledInteraction(interaction: any): Promise<bool
                 );
 
                 await interaction.update({
-                    content: '⚙️ **¿Qué deseas hacer con esta plantilla?**',
+                    content: `📄 **Plantilla seleccionada:** \`${template.title}\``,
                     embeds: [embed],
                     components: [row]
                 });
@@ -455,55 +454,53 @@ export async function handleScheduledInteraction(interaction: any): Promise<bool
             if (interaction.customId === 'sched_delete_job_select') {
                 const jobId = interaction.values[0];
                 const { jobs } = await getSchedCollections();
-                
-                const deleteResult = await jobs.deleteOne({ _id: new ObjectId(jobId) });
-
-                if (deleteResult.deletedCount > 0) {
-                    await interaction.update({
-                        content: '🗑️ **¡Registro eliminado de la base de datos con éxito!**',
-                        embeds: [],
-                        components: []
-                    });
-                } else {
-                    await interaction.update({
-                        content: '❌ No se encontró ese registro en la base de datos.',
-                        embeds: [],
-                        components: []
-                    });
-                }
-                return true;
-            }
-        }
-
-        // --- 3. CHANNEL SELECT MENUS ---
-        if (interaction.isChannelSelectMenu()) {
-            if (interaction.customId === 'sched_select_channel') {
-                const channelId = interaction.values[0];
-                const session = scheduledSessions.get(interaction.user.id) || {};
-                session.channelId = channelId;
-                scheduledSessions.set(interaction.user.id, session);
-
-                const selectRole = new RoleSelectMenuBuilder()
-                    .setCustomId('sched_select_role')
-                    .setPlaceholder('🏷️ Selecciona un rol a mencionar (Opcional)...');
-
-                const row = new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(selectRole);
-                const skipRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                    new ButtonBuilder().setCustomId('sched_skip_role').setLabel('Omitir mención de rol').setStyle(ButtonStyle.Secondary)
-                );
+                await jobs.deleteOne({ _id: new ObjectId(jobId) });
 
                 await interaction.update({
-                    content: `📢 Canal seleccionado (<#${channelId}>).\n**Paso 2/3:** Selecciona un rol si deseas mencionarlo al enviar el mensaje, o pulsa omitir:`,
-                    components: [row, skipRow]
+                    content: '✅ **¡Registro de mensaje programado borrado de la base de datos con éxito!**',
+                    embeds: [],
+                    components: []
                 });
                 return true;
             }
         }
 
-        // --- 4. ROLE SELECT MENUS ---
+        // --- 3. CHANNEL SELECT MENU ---
+        if (interaction.isChannelSelectMenu()) {
+            if (interaction.customId === 'sched_select_channel') {
+                const session = scheduledSessions.get(interaction.user.id);
+                if (!session) {
+                    await interaction.reply({ content: '❌ Sesión caducada.', flags: [MessageFlags.Ephemeral] });
+                    return true;
+                }
+                session.channelId = interaction.values[0];
+                scheduledSessions.set(interaction.user.id, session);
+
+                const selectRole = new RoleSelectMenuBuilder()
+                    .setCustomId('sched_select_role')
+                    .setPlaceholder('🏷️ Selecciona el rol a mencionar (Opcional)...');
+
+                const rowRole = new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(selectRole);
+                const rowSkip = new ActionRowBuilder<ButtonBuilder>().addComponents(
+                    new ButtonBuilder().setCustomId('sched_skip_role').setLabel('Omitir / Sin Rol').setStyle(ButtonStyle.Secondary).setEmoji('⏭️')
+                );
+
+                await interaction.update({
+                    content: '🏷️ **Paso 2/3:** Selecciona un rol para mencionar (o pulsa **Omitir**):',
+                    components: [rowRole, rowSkip]
+                });
+                return true;
+            }
+        }
+
+        // --- 4. ROLE SELECT MENU ---
         if (interaction.isRoleSelectMenu()) {
             if (interaction.customId === 'sched_select_role') {
-                const session = scheduledSessions.get(interaction.user.id) || {};
+                const session = scheduledSessions.get(interaction.user.id);
+                if (!session) {
+                    await interaction.reply({ content: '❌ Sesión caducada.', flags: [MessageFlags.Ephemeral] });
+                    return true;
+                }
                 session.roleId = interaction.values[0];
                 scheduledSessions.set(interaction.user.id, session);
 
@@ -534,105 +531,115 @@ export async function handleScheduledInteraction(interaction: any): Promise<bool
                 return true;
             }
         }
-
-        // --- 5. MODALS SUBMIT ---
+        // --- 5. MODAL SUBMITS ---
         if (interaction.isModalSubmit()) {
             const customId = interaction.customId;
 
-            if (customId === 'modal_sched_new' || customId === 'modal_sched_edit') {
-                if (!interaction.guildId) return true;
+            if (customId === 'modal_sched_new') {
+                const title = interaction.fields.getTextInputValue('sched_title_input').trim();
+                const content = interaction.fields.getTextInputValue('sched_content_input').trim();
+                const image = interaction.fields.getTextInputValue('sched_image_input').trim() || null;
 
-                const title = interaction.fields.getTextInputValue('sched_title_input');
-                const content = interaction.fields.getTextInputValue('sched_content_input');
-                const image = interaction.fields.getTextInputValue('sched_image_input').trim();
-                const session = scheduledSessions.get(interaction.user.id) || {};
                 const { templates } = await getSchedCollections();
+                await templates.insertOne({
+                    guildId: interaction.guildId,
+                    userId: interaction.user.id,
+                    title,
+                    content,
+                    image,
+                    createdAt: new Date()
+                });
 
-                if (customId === 'modal_sched_new') {
-                    await templates.insertOne({
-                        guildId: interaction.guildId,
-                        title,
-                        content,
-                        image: image || null,
-                        createdAt: new Date()
-                    });
-                    await interaction.reply({
-                        content: `✅ **¡Plantilla "${title}" creada y guardada en la base de datos con éxito!**`,
-                        flags: [MessageFlags.Ephemeral]
-                    });
-                } else if (customId === 'modal_sched_edit' && session.templateId) {
-                    await templates.updateOne(
-                        { _id: new ObjectId(session.templateId) },
-                        { $set: { title, content, image: image || null } }
-                    );
-                    await interaction.reply({
-                        content: `✅ **¡Plantilla "${title}" actualizada con éxito!**`,
-                        flags: [MessageFlags.Ephemeral]
-                    });
-                }
-
-                scheduledSessions.delete(interaction.user.id);
+                await interaction.reply({
+                    content: `✅ **¡Plantilla "${title}" creada y guardada con éxito en MongoDB!**`,
+                    flags: [MessageFlags.Ephemeral]
+                });
                 return true;
             }
 
-            if (customId === 'modal_sched_datetime') {
-                const dateStr = interaction.fields.getTextInputValue('sched_date').trim();
-                const timeStr = interaction.fields.getTextInputValue('sched_time').trim();
-
+            if (customId === 'modal_sched_edit') {
                 const session = scheduledSessions.get(interaction.user.id);
-                if (!session || !session.channelId || !session.text) {
+                if (!session || !session.templateId) {
                     await interaction.reply({ content: '❌ Sesión caducada.', flags: [MessageFlags.Ephemeral] });
                     return true;
                 }
 
-                const targetDate = parseMadridDateTime(dateStr, timeStr);
-                if (!targetDate || isNaN(targetDate.getTime()) || targetDate.getTime() <= Date.now()) {
+                const title = interaction.fields.getTextInputValue('sched_title_input').trim();
+                const content = interaction.fields.getTextInputValue('sched_content_input').trim();
+                const image = interaction.fields.getTextInputValue('sched_image_input').trim() || null;
+
+                const { templates } = await getSchedCollections();
+                await templates.updateOne(
+                    { _id: new ObjectId(session.templateId) },
+                    { $set: { title, content, image } }
+                );
+
+                scheduledSessions.delete(interaction.user.id);
+
+                await interaction.reply({
+                    content: `✅ **¡Plantilla actualizada con éxito!**`,
+                    flags: [MessageFlags.Ephemeral]
+                });
+                return true;
+            }
+
+            if (customId === 'modal_sched_datetime') {
+                const session = scheduledSessions.get(interaction.user.id);
+                if (!session) {
+                    await interaction.reply({ content: '❌ Sesión caducada.', flags: [MessageFlags.Ephemeral] });
+                    return true;
+                }
+
+                const date = interaction.fields.getTextInputValue('sched_date').trim();
+                const time = interaction.fields.getTextInputValue('sched_time').trim();
+
+                const parsedDate = parseMadridDateTime(date, time);
+                if (!parsedDate) {
                     await interaction.reply({
-                        content: '❌ Fecha u hora inválida, o es una hora que ya ha pasado. Usa `DD/MM/YYYY` y `HH:MM`.',
+                        content: '❌ Formato de fecha u hora inválido. Usa `DD/MM/YYYY` y `HH:MM`.',
                         flags: [MessageFlags.Ephemeral]
                     });
                     return true;
                 }
 
-                session.scheduledAt = targetDate;
-                session.date = dateStr;
-                session.time = timeStr;
+                session.date = date;
+                session.time = time;
+                session.scheduledAt = parsedDate;
+                scheduledSessions.set(interaction.user.id, session);
 
-                const rowRepeat = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                    new ButtonBuilder().setCustomId('sched_repeat_yes').setLabel('🔄 Sí, configurar repetición').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId('sched_repeat_no').setLabel('❌ No repetir (Única vez)').setStyle(ButtonStyle.Secondary)
+                const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+                    new ButtonBuilder().setCustomId('sched_repeat_yes').setLabel('Sí, configurar repetición').setStyle(ButtonStyle.Primary).setEmoji('🔄'),
+                    new ButtonBuilder().setCustomId('sched_repeat_no').setLabel('No, envío único').setStyle(ButtonStyle.Success).setEmoji('🚀')
                 );
 
                 await interaction.reply({
-                    content: `📅 **Programador (5/5):** Fecha programada para el **${dateStr} a las ${timeStr}** (Hora Peninsular).\n¿Deseas que este mensaje se repita automáticamente?`,
-                    components: [rowRepeat],
+                    content: `⏰ **Paso 3/3:** ¿Deseas que este mensaje programado se repita periódicamente?`,
+                    components: [row],
                     flags: [MessageFlags.Ephemeral]
                 });
                 return true;
             }
 
             if (customId === 'modal_sched_repeat') {
+                const session = scheduledSessions.get(interaction.user.id);
+                if (!session) {
+                    await interaction.reply({ content: '❌ Sesión caducada.', flags: [MessageFlags.Ephemeral] });
+                    return true;
+                }
+
                 const daysStr = interaction.fields.getTextInputValue('sched_repeat_days').trim();
                 const hoursStr = interaction.fields.getTextInputValue('sched_repeat_hours').trim();
                 const timesStr = interaction.fields.getTextInputValue('sched_repeat_times').trim();
 
-                const days = daysStr ? parseInt(daysStr, 10) : 0;
-                const hours = hoursStr ? parseInt(hoursStr, 10) : 0;
-                const totalTimes = timesStr ? parseInt(timesStr, 10) : 0;
+                const repeatDays = daysStr ? parseInt(daysStr, 10) : 0;
+                const repeatHours = hoursStr ? parseInt(hoursStr, 10) : 0;
+                const repeatTimes = parseInt(timesStr, 10);
 
-                if ((isNaN(days) || days < 0) || (isNaN(hours) || hours < 0) || (days === 0 && hours === 0)) {
-                    await interaction.reply({ content: '❌ Debes indicar al menos un valor válido mayor a 0 (en días o en horas).', flags: [MessageFlags.Ephemeral] });
-                    return true;
-                }
-
-                if (isNaN(totalTimes) || totalTimes < 2) {
-                    await interaction.reply({ content: '❌ El número total de repeticiones debe ser al menos 2.', flags: [MessageFlags.Ephemeral] });
-                    return true;
-                }
-
-                const session = scheduledSessions.get(interaction.user.id);
-                if (!session) {
-                    await interaction.reply({ content: '❌ Sesión caducada.', flags: [MessageFlags.Ephemeral] });
+                if (isNaN(repeatTimes) || repeatTimes < 2) {
+                    await interaction.reply({
+                        content: '❌ El número de repeticiones debe ser un número válido mayor o igual a 2.',
+                        flags: [MessageFlags.Ephemeral]
+                    });
                     return true;
                 }
 
@@ -649,26 +656,23 @@ export async function handleScheduledInteraction(interaction: any): Promise<bool
                         time: session.time,
                         scheduledAt: session.scheduledAt,
                         repeats: true,
-                        repeatDays: days,
-                        repeatHours: hours,
-                        remainingTimes: totalTimes,
+                        repeatIntervalDays: repeatDays,
+                        repeatIntervalHours: repeatHours,
+                        totalRepetitions: repeatTimes,
+                        repetitionsDone: 0,
                         status: 'pending',
                         createdAt: new Date()
                     });
 
                     scheduledSessions.delete(interaction.user.id);
 
-                    let repeatText = [];
-                    if (days > 0) repeatText.push(`${days} día(s)`);
-                    if (hours > 0) repeatText.push(`${hours} hora(s)`);
-
                     await interaction.reply({
-                        content: `✅ **¡Mensaje programado y recurrente configurado!**\n• Primer envío: **${session.date}** a las **${session.time}**\n• Se repetirá cada: **${repeatText.join(' y ')}**\n• Total de envíos: **${totalTimes}**`,
+                        content: `✅ **¡Mensaje programado con repetición configurado con éxito!** Se enviará por primera vez el **${session.date}** a las **${session.time}** (repetirá ${repeatTimes} veces).`,
                         flags: [MessageFlags.Ephemeral]
                     });
                 } catch (error) {
-                    console.error('❌ Error al guardar mensaje repetitivo:', error);
-                    await interaction.reply({ content: '❌ Error al guardar en la base de datos.', flags: [MessageFlags.Ephemeral] });
+                    console.error('❌ Error al guardar mensaje repetitivo en MongoDB:', error);
+                    await interaction.reply({ content: '❌ Hubo un error al guardar la programación en la base de datos.', flags: [MessageFlags.Ephemeral] });
                 }
                 return true;
             }
@@ -676,7 +680,7 @@ export async function handleScheduledInteraction(interaction: any): Promise<bool
 
         return false;
     } catch (error) {
-        console.error('❌ Error en el manejador de interacciones programadas:', error);
+        console.error('❌ Error en el manejador de scheduledInteraction:', error);
         return false;
     }
 }
