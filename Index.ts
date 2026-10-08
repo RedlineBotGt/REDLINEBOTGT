@@ -1,78 +1,126 @@
-import http from 'http';
-import { Client, GatewayIntentBits, Partials } from 'discord.js';
-import * as interactionRouter from './handlers/interactionRouter'; // 👈 Importación segura como módulo completo
-import { startScheduledWorker } from './handlers/scheduledMessage';
-import { initReactionRoles } from './handlers/reactionRoles';
-import { setupWelcomeSystem } from './handlers/welcomeSystem'; 
-import { setupEventWorker } from './handlers/eventSystem'; 
-import { setupNicknameSystem } from './handlers/nicknameSystem'; 
-import { setupAvisosSystem } from './handlers/avisosSystem'; 
-import { handleReactionAddRouter, handleReactionRemoveRouter } from './handlers/reactionRouter'; 
-import { setupPollSystem } from './handlers/encuestaSystem'; // 👈 Importamos el sistema completo de encuestas
+import { Interaction, MessageFlags } from 'discord.js';
+import { MongoClient, Collection } from 'mongodb';
+import { handleScheduledInteraction } from './scheduledInteraction';
+import { handleRolReactionInteraction } from './rolreactionInteraction';
+import { handleSheetsInteraction } from './sheetsInteraction';
+import { handleEventInteraction } from './eventInteractions';
 
-// 0. Servidor HTTP auxiliar obligatorio para Render
-const server = http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('REDLINE GT Bot is active and running!');
-});
+// Importación de comandos subiendo un nivel desde handlers/ hacia commands/
+import { execute as handleDash } from '../commands/dash';
+import { execute as handleDashStaff } from '../commands/dashstaff';
+import { execute as handleDado } from '../commands/dado';
+import { execute as handleBorrar } from '../commands/borrar';
+import { execute as handleForms } from '../commands/forms';
+import { execute as handleColocarForm } from '../commands/ColocarForm';
+import { execute as handleMsn } from '../commands/msn';
+import { execute as handleReporte } from '../commands/reporte';
+import { execute as handleSetupDefensa } from '../commands/setupdefensa';
+import { execute as handleVeredicto } from '../commands/veredicto';
+import { execute as handleDashSheets } from '../commands/dashSheets';
 
-const PORT = process.env.PORT || 3000;
-server.listen(Number(PORT), '0.0.0.0', () => {
-    console.log(`🌐 Servidor HTTP auxiliar escuchando en el puerto ${PORT}`);
-});
+/**
+ * 📦 Conexión centralizada y segura a la colección de eventos de MongoDB (con caché y soporte multipes de variables)
+ */
+let cachedCollection: Collection | null = null;
 
-// 1. Inicialización limpia con intents y partials imprescindibles
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildMessageReactions
-    ],
-    partials: [
-        Partials.Message, 
-        Partials.Channel, 
-        Partials.Reaction // 👈 Imprescindible para leer reacciones en mensajes ya publicados
-    ]
-});
+export async function getEventsCollection(): Promise<Collection> {
+    if (cachedCollection) return cachedCollection;
 
-// 2. Evento de arranque
-client.once('ready', async () => {
-    console.log(`✅ REDLINE GT Bot conectado y operativo como ${client.user?.tag}`);
-
-    startScheduledWorker(client);
-    setupPollSystem(client); // 👈 ¡Iniciamos el sistema de encuestas y su worker interno!
-    await initReactionRoles(client);
-    setupWelcomeSystem(client);
-    setupAvisosSystem(client);
-    setupEventWorker(client);
-    setupNicknameSystem(client);
-});
-
-// 3. Enrutador de interacciones seguro contra fallos de carga
-client.on('interactionCreate', async (interaction) => {
-    try {
-        const routerFn = interactionRouter.handleInteraction || (interactionRouter as any).default;
-
-        if (typeof routerFn === 'function') {
-            await routerFn(interaction);
-        } else {
-            console.error('❌ Error crítico: handleInteraction no se encontró en interactionRouter.');
-        }
-    } catch (error) {
-        console.error('❌ Error crítico en el enrutador de interacciones:', error);
+    const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL || process.env.MONGO_URL;
+    
+    if (!uri) {
+        throw new Error('❌ No se encontró ninguna variable de entorno para MongoDB (revisa si en Render se llama DATABASE_URL, MONGO_URL, etc.).');
     }
-});
 
-// 4. Escuchas de Reacciones delegadas limpiamente al Router externo
-client.on('messageReactionAdd', async (reaction, user) => {
-    await handleReactionAddRouter(reaction, user);
-});
+    const mongoClient = new MongoClient(uri);
+    await mongoClient.connect();
+    cachedCollection = mongoClient.db().collection('events');
+    return cachedCollection;
+}
 
-client.on('messageReactionRemove', async (reaction, user) => {
-    await handleReactionRemoveRouter(reaction, user);
-});
+/**
+ * 🛡️ Enrutador Central de Interacciones
+ * Distribuye cada evento (Comandos barra, Botones, Menús, Modales) al módulo correspondiente.
+ */
+export async function handleInteraction(interaction: Interaction): Promise<void> {
+    try {
+        // 0. Enrutador de Comandos de Barra (Slash Commands)
+        if (interaction.isChatInputCommand()) {
+            const { commandName } = interaction;
 
-// 5. Conexión definitiva
-client.login(process.env.DISCORD_TOKEN);
+            switch (commandName) {
+                case 'dash':
+                    await handleDash(interaction);
+                    return;
+                case 'dashstaff':
+                    await handleDashStaff(interaction);
+                    return;
+                case 'dado':
+                    await handleDado(interaction);
+                    return;
+                case 'borrar':
+                    await handleBorrar(interaction);
+                    return;
+                case 'forms':
+                    await handleForms(interaction);
+                    return;
+                case 'colocarform':
+                    await handleColocarForm(interaction);
+                    return;
+                case 'msn':
+                    await handleMsn(interaction);
+                    return;
+                case 'reporte':
+                    await handleReporte(interaction);
+                    return;
+                case 'setupdefensa':
+                    await handleSetupDefensa(interaction);
+                    return;
+                case 'veredicto':
+                    await handleVeredicto(interaction);
+                    return;
+                case 'dashsheets':
+                    await handleDashSheets(interaction);
+                    return;
+                default:
+                    await interaction.reply({
+                        content: '❌ Este comando no está registrado en el enrutador.',
+                        flags: [MessageFlags.Ephemeral]
+                    });
+                    return;
+            }
+        }
+
+        // 1. Módulo de Mensajes Programados (Componentes)
+        if (await handleScheduledInteraction(interaction)) return;
+
+        // 2. Módulo de Reaction Roles / Autoroles por Botón (Componentes)
+        if (await handleRolReactionInteraction(interaction)) return;
+
+        // 3. Módulo de Google Sheets (Panel, Botones y Menús Desplegables)
+        if (await handleSheetsInteraction(interaction)) return;
+
+        // 4. Módulo de Eventos y Asistencia (Creación, Modales y RSVPs)
+        if (await handleEventInteraction(interaction)) return;
+
+        // Si ninguna interacción fue manejada y es un componente de UI huérfano:
+        if (interaction.isButton() || interaction.isAnySelectMenu() || interaction.isModalSubmit()) {
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({
+                    content: '❌ Este botón o componente no está vinculado a ningún módulo activo o la sesión ha expirado.',
+                    flags: [MessageFlags.Ephemeral]
+                }).catch(() => {});
+            }
+        }
+
+    } catch (error) {
+        console.error('❌ Error crítico en el enrutador de interacciones (interactionRouter):', error);
+
+        if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+            await interaction.reply({
+                content: '❌ Ocurrió un error inesperado al procesar esta acción.',
+                flags: [MessageFlags.Ephemeral]
+            }).catch(() => {});
+        }
+    }
+}
