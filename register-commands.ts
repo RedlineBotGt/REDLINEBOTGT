@@ -3,8 +3,8 @@ import { data as dashCommand } from './commands/dash';
 import { data as dashstaffCommand } from './commands/dashstaff';
 import { data as msnCommand } from './commands/msn';
 import { data as borrarCommand } from './commands/borrar';
-import { data as dashsheetsCommand } from './commands/dashSheets';
-import { data as dadoCommand } from './commands/dado'; // 🎲 ¡Recuperamos /dado!
+import { data as dashsheetsCommand } from './dashsheet/dashsheet'; // ➔ Corregido a la nueva carpeta singular
+import { data as dadoCommand } from './commands/dado'; 
 
 // Mapeamos únicamente los comandos activos que quieres que aparezcan en Discord
 const commandList = [
@@ -13,12 +13,12 @@ const commandList = [
     { name: 'msn', data: msnCommand },
     { name: 'borrar', data: borrarCommand },
     { name: 'dashsheets', data: dashsheetsCommand },
-    { name: 'dado', data: dadoCommand }, // 🎲 ¡Añadido de nuevo a la lista de registro!
+    { name: 'dado', data: dadoCommand },
 ];
 
 const commands = commandList.map(cmd => {
     if (!cmd.data || typeof cmd.data.toJSON !== 'function') {
-        throw new Error(`❌ El comando en './commands/${cmd.name}' no está exportando 'data' correctamente (export const data = ...). Revisa ese archivo.`);
+        throw new Error(`❌ El comando no está exportando 'data' correctamente.`);
     }
     return cmd.data.toJSON();
 });
