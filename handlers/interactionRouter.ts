@@ -1,6 +1,5 @@
 import { Interaction, MessageFlags } from 'discord.js';
 import { MongoClient, Collection } from 'mongodb';
-import { handleScheduledInteraction } from './scheduledInteraction';
 import { handleRolReactionInteraction } from './rolreactionInteraction';
 import { handleSheetsInteraction } from './sheetsInteraction';
 import { handleEventInteraction } from './eventInteractions';
@@ -90,16 +89,13 @@ export async function handleInteraction(interaction: Interaction): Promise<void>
             }
         }
 
-        // 1. Módulo de Mensajes Programados (Componentes)
-        if (await handleScheduledInteraction(interaction)) return;
-
-        // 2. Módulo de Reaction Roles / Autoroles por Botón (Componentes)
+        // 1. Módulo de Reaction Roles / Autoroles por Botón (Componentes)
         if (await handleRolReactionInteraction(interaction)) return;
 
-        // 3. Módulo de Google Sheets (Panel, Botones y Menús Desplegables)
+        // 2. Módulo de Google Sheets (Panel, Botones y Menús Desplegables)
         if (await handleSheetsInteraction(interaction)) return;
 
-        // 4. Módulo de Eventos y Asistencia (Creación, Modales y RSVPs)
+        // 3. Módulo de Eventos y Asistencia (Creación, Modales y RSVPs)
         if (await handleEventInteraction(interaction)) return;
 
         // Si ninguna interacción fue manejada y es un componente de UI huérfano:
