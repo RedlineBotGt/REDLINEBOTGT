@@ -1,23 +1,20 @@
 import { 
-    ButtonInteraction, 
+    ButtonBuilder, 
+    ButtonStyle, 
+    ActionRowBuilder, 
+    StringSelectMenuBuilder, 
     ModalBuilder, 
     TextInputBuilder, 
     TextInputStyle, 
-    ActionRowBuilder, 
     ChannelSelectMenuBuilder, 
     RoleSelectMenuBuilder, 
-    ButtonBuilder, 
-    ButtonStyle, 
     ChannelType, 
-    ModalSubmitInteraction, 
     EmbedBuilder,
-    StringSelectMenuBuilder,
-    StringSelectMenuInteraction,
-    MessageFlags
+    MessageFlags 
 } from 'discord.js';
 import { MongoClient as MongoDriver, ObjectId } from 'mongodb';
 
-const uri = process.env.MONGODB_URI || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
+const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL || process.env.MONGO_URL || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
 const client = new MongoDriver(uri);
 
 let schedTemplatesCollection: any = null;
@@ -80,10 +77,10 @@ function getMadridOffsetMinutes(date: Date): number {
     return Math.round(diffMs / (1000 * 60));
 }
 
-// 🛡️ ENRUTADOR PRINCIPAL DEL MÓDULO SCHEDULED (PARTE 1)
+// 🛡️ ENRUTADOR PRINCIPAL DEL MÓDULO SCHEDULED
 export async function handleScheduledInteraction(interaction: any): Promise<boolean> {
     try {
-        // --- 1. BOTONES (Parte A) ---
+        // --- 1. BOTONES ---
         if (interaction.isButton()) {
             const customId = interaction.customId;
 
@@ -531,6 +528,7 @@ export async function handleScheduledInteraction(interaction: any): Promise<bool
                 return true;
             }
         }
+
         // --- 5. MODAL SUBMITS ---
         if (interaction.isModalSubmit()) {
             const customId = interaction.customId;
