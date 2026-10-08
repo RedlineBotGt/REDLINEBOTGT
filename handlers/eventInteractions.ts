@@ -12,20 +12,21 @@ import {
     ButtonStyle,
     ButtonBuilder,
     TextChannel,
-    EmbedBuilder
+    EmbedBuilder,
+    Interaction
 } from 'discord.js';
 import { getEventsCollection } from './interactionRouter';
 
-// 🛡 ENRUTADOR LOCAL DE EVENTOS (PARTE 1)
-export async function handleEventInteraction(interaction: any): Promise<boolean> {
+// 🛡 ENRUTADOR LOCAL DE EVENTOS
+export async function handleEventInteraction(interaction: Interaction): Promise<boolean> {
     try {
         // 1. Botones del flujo de eventos
         if (interaction.isButton()) {
-            if (interaction.customId === 'dash_btn_event_create') return await handleDashEventButton(interaction);
-            if (interaction.customId === 'event_proceed_to_modal') return await handleEventProceedToModal(interaction);
-            if (interaction.customId === 'event_publish_now') return await handleEventPublishNowButton(interaction);
-            if (interaction.customId === 'event_config_repeat') return await handleEventConfigRepeatButton(interaction);
-            if (['event_rsvp_yes', 'event_rsvp_maybe', 'event_rsvp_no'].includes(interaction.customId)) return await handleEventRsvpButton(interaction);
+            if (interaction.customId === 'dash_btn_event_create') return await handleDashEventButton(interaction as ButtonInteraction);
+            if (interaction.customId === 'event_proceed_to_modal') return await handleEventProceedToModal(interaction as ButtonInteraction);
+            if (interaction.customId === 'event_publish_now') return await handleEventPublishNowButton(interaction as ButtonInteraction);
+            if (interaction.customId === 'event_config_repeat') return await handleEventConfigRepeatButton(interaction as ButtonInteraction);
+            if (['event_rsvp_yes', 'event_rsvp_maybe', 'event_rsvp_no'].includes(interaction.customId)) return await handleEventRsvpButton(interaction as ButtonInteraction);
         }
 
         // 2. Modales
@@ -210,7 +211,8 @@ async function handleEventModalSubmit(interaction: ModalSubmitInteraction): Prom
 
     return true;
 }
-// --- Publicar Inmediatamente (Estilo Apollo) (PARTE 2) ---
+
+// --- Publicar Inmediatamente (Estilo Apollo) ---
 async function handleEventPublishNowButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_publish_now') return false;
 
