@@ -9,7 +9,7 @@
     "outDir": "dist"
   },
   "include": [
-    "index.ts",
+    "Index.ts",
     "generalinteraction.ts",
     "commands/**/*.ts",
     "dashadmin/**/*.ts",
