@@ -97,7 +97,6 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
 
     return true;
 }
-
 export async function handleEventChannelSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'event_select_channel') return false;
 
@@ -248,6 +247,7 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
 
     return true;
 }
+
 export async function handleEventRepeatYesButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_repeat_yes') return false;
 
@@ -346,7 +346,6 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
 
     const parts = intervalStr.split(':').map(Number);
     let intervalMs = 0;
-
     if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
         intervalMs = (parts[0] * 3600000) + (parts[1] * 60000);
     } else if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
@@ -404,7 +403,6 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
 
     return true;
 }
-
 export async function handleEventRsvpButton(interaction: ButtonInteraction): Promise<boolean> {
     const customId = interaction.customId;
     if (!['event_rsvp_yes', 'event_rsvp_maybe', 'event_rsvp_no'].includes(customId)) return false;
@@ -439,20 +437,17 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
     const asistenteRole = guild.roles.cache.find(r => r.name.toLowerCase() === 'asistente');
     const member = await guild.members.fetch(userId).catch(() => null);
 
-    let statusText = '';
     let responseContent = '';
 
     if (customId === 'event_rsvp_yes') {
         if (eventDoc.rsvps.yes.length < 16) {
             eventDoc.rsvps.yes.push(userId);
-            statusText = 'Me Apunto';
             responseContent = '✅ ¡Tu asistencia (**Me Apunto**) ha quedado registrada!';
             if (asistenteRole && member) {
                 await member.roles.add(asistenteRole).catch(() => {});
             }
         } else {
             eventDoc.rsvps.maybe.push(userId);
-            statusText = 'Duda (Parrilla llena)';
             responseContent = '⚠️ La parrilla titular (16 plazas) está llena. Has sido colocado automáticamente en **Duda** (en lista de espera).';
             if (asistenteRole && member) {
                 await member.roles.add(asistenteRole).catch(() => {});
@@ -460,14 +455,12 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
         }
     } else if (customId === 'event_rsvp_maybe') {
         eventDoc.rsvps.maybe.push(userId);
-        statusText = 'Duda';
         responseContent = '✅ ¡Tu estado (**Duda**) ha quedado registrado!';
         if (asistenteRole && member) {
             await member.roles.add(asistenteRole).catch(() => {});
         }
     } else if (customId === 'event_rsvp_no') {
         eventDoc.rsvps.no.push(userId);
-        statusText = 'No puedo';
         responseContent = '❌ Tu asistencia ha sido marcada como **No puedo**.';
         if (asistenteRole && member && member.roles.cache.has(asistenteRole.id)) {
             await member.roles.remove(asistenteRole).catch(() => {});
@@ -507,7 +500,7 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
     embed.addFields(
         { name: `✅ Me Apunto (${eventDoc.rsvps.yes.length}/16)`, value: await formatListResolved(eventDoc.rsvps.yes), inline: false },
         { name: `❓ Duda (${eventDoc.rsvps.maybe.length})`, value: await formatListResolved(eventDoc.rsvps.maybe), inline: false },
-        { name: `❌ No puedo (${eventDoc.rsvps.no.length})`, value: await formatListResolved(eventDoc.rsvps.no), inline: false }
+        { name: `✖️ No puedo (${eventDoc.rsvps.no.length})`, value: await formatListResolved(eventDoc.rsvps.no), inline: false }
     );
 
     const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -663,35 +656,37 @@ export function setupEventWorker(client: Client) {
     }, 60000);
 }
 
-export async function handleInteraction(interaction: any): Promise<void> {
+export async function handleEventInteraction(interaction: any): Promise<boolean> {
     try {
         if (interaction.isButton()) {
-            if (await handleDashEventButton(interaction)) return;
-            if (await handleEventPublishNowButton(interaction)) return;
-            if (await handleEventRepeatYesButton(interaction)) return;
-            if (await handleEventRsvpButton(interaction)) return;
+            if (await handleDashEventButton(interaction)) return true;
+            if (await handleEventPublishNowButton(interaction)) return true;
+            if (await handleEventRepeatYesButton(interaction)) return true;
+            if (await handleEventRsvpButton(interaction)) return true;
             if (interaction.customId === 'event_skip_role') {
-                if (await handleEventRoleSelect(interaction)) return;
+                if (await handleEventRoleSelect(interaction)) return true;
             }
         }
 
         if (interaction.isModalSubmit()) {
-            if (await handleEventModalSubmit(interaction)) return;
-            if (await handleEventRepeatModalSubmit(interaction)) return;
+            if (await handleEventModalSubmit(interaction)) return true;
+            if (await handleEventRepeatModalSubmit(interaction)) return true;
         }
 
         if (interaction.isChannelSelectMenu()) {
-            if (await handleEventChannelSelect(interaction)) return;
+            if (await handleEventChannelSelect(interaction)) return true;
         }
 
         if (interaction.isRoleSelectMenu()) {
-            if (await handleEventRoleSelect(interaction)) return;
+            if (await handleEventRoleSelect(interaction)) return true;
         }
 
+        return false;
     } catch (error) {
-        console.error('❌ Error procesando la interacción en el enrutador:', error);
+        console.error('❌ Error procesando la interacción en el módulo de eventos:', error);
         if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
             await interaction.reply({ content: '❌ Hubo un error al procesar esta acción.', flags: [MessageFlags.Ephemeral] }).catch(() => {});
         }
+        return false;
     }
 }
