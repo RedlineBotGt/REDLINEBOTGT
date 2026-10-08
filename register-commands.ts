@@ -1,15 +1,17 @@
 import { REST, Routes } from 'discord.js';
 import { data as dashCommand } from './commands/dash';
 import { data as dashstaffCommand } from './commands/dashstaff';
+import { data as dashadminCommand } from './commands/dashadmin'; // ➔ Comando dashadmin integrado
 import { data as msnCommand } from './commands/msn';
 import { data as borrarCommand } from './commands/borrar';
-import { data as dashsheetsCommand } from './dashsheet/dashsheet'; // ➔ Corregido a la nueva carpeta singular
-import { data as dadoCommand } from './commands/dado'; 
+import { data as dashsheetsCommand } from './dashsheet/dashsheet';
+import { data as dadoCommand } from './commands/dado';
 
-// Mapeamos únicamente los comandos activos que quieres que aparezcan en Discord
+// Mapeamos los comandos activos que se registrarán en Discord
 const commandList = [
     { name: 'dash', data: dashCommand },
     { name: 'dashstaff', data: dashstaffCommand },
+    { name: 'dashadmin', data: dashadminCommand }, // ➔ Añadido a la lista de registro
     { name: 'msn', data: msnCommand },
     { name: 'borrar', data: borrarCommand },
     { name: 'dashsheets', data: dashsheetsCommand },
@@ -27,7 +29,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
 
 (async () => {
     try {
-        console.log('🔄 Registrando comandos activos en la API de Discord...');
+        console.log('🔄 Registrando comandos activos (incluyendo dashadmin) en la API de Discord...');
 
         await rest.put(
             Routes.applicationCommands(process.env.CLIENT_ID!),
