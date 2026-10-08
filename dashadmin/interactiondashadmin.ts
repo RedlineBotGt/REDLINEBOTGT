@@ -8,11 +8,13 @@ import { handleReactionRoleInteractions } from './reactionrol/interactionreactio
 import { handleSorteoInteractions } from './sorteo/interactionsorteo';
 import { handleBotonesInteractions } from './botones/interactionbotones';
 import { handleAvisosInteractions } from './avisos/interactionavisos';
+import { handleWelcomeInteractions } from './welcome/interactionwelcome';
+import { handleEventInteractions } from './eventos/interactioneventos';
 
 /**
  * Enrutador principal del Panel de Administración (DashAdmin).
  * Se encarga de filtrar las interacciones del panel (botones, menús, modales)
- * y delegarlas al submódulo correspondiente (reportes, defensas, avisos, etc.).
+ * y delegarlas al submódulo correspondiente (reportes, defensas, avisos, eventos, etc.).
  */
 export async function handleDashAdminInteractions(interaction: Interaction): Promise<boolean> {
     try {
@@ -51,6 +53,14 @@ export async function handleDashAdminInteractions(interaction: Interaction): Pro
         // 9. Delegar interacciones al submódulo de Avisos y Logs
         const handledAvisos = await handleAvisosInteractions(interaction);
         if (handledAvisos) return true;
+
+        // 10. Delegar interacciones al submódulo de Bienvenidas y Despedidas
+        const handledWelcome = await handleWelcomeInteractions(interaction);
+        if (handledWelcome) return true;
+
+        // 11. Delegar interacciones al submódulo de Eventos y Campeonatos
+        const handledEvent = await handleEventInteractions(interaction);
+        if (handledEvent) return true;
 
         return false; // La interacción no pertenece a ningún submódulo administrado por el dash
     } catch (error) {
