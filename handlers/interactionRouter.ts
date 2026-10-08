@@ -1,8 +1,9 @@
 import { Interaction, MessageFlags } from 'discord.js';
+import { MongoClient, Collection } from 'mongodb';
 import { handleScheduledInteraction } from './scheduledInteraction';
 import { handleRolReactionInteraction } from './rolreactionInteraction';
 import { handleSheetsInteraction } from './sheetsInteraction';
-import { handleEventInteraction } from './eventInteractions'; // 👈 Importamos el manejador de eventos
+import { handleEventInteraction } from './eventInteractions';
 
 // Importación de comandos subiendo un nivel desde handlers/ hacia commands/
 import { execute as handleDash } from '../commands/dash';
@@ -17,15 +18,23 @@ import { execute as handleSetupDefensa } from '../commands/setupdefensa';
 import { execute as handleVeredicto } from '../commands/veredicto';
 import { execute as handleDashSheets } from '../commands/dashSheets';
 
-// 📦 Importa tu cliente nativo de MongoDB desde el archivo principal (Index.ts o donde lo inicialices)
-import { client } from '../Index'; // Ajusta la ruta relativa si tu cliente está en otro archivo
-
 /**
- * 📦 Conexión centralizada a la colección de eventos usando el driver nativo de MongoDB
+ * 📦 Conexión centralizada y segura a la colección de eventos de MongoDB (con caché)
  */
-export async function getEventsCollection() {
-    const database = client.db(); // Usa la base de datos por defecto de tu conexión nativa
-    return database.collection('events');
+let cachedCollection: Collection | null = null;
+
+export async function getEventsCollection(): Promise<Collection> {
+    if (cachedCollection) return cachedCollection;
+
+    const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
+    if (!uri) {
+        throw new Error('❌ MONGODB_URI o MONGO_URI no está definido en las variables de entorno.');
+    }
+
+    const mongoClient = new MongoClient(uri);
+    await mongoClient.connect();
+    cachedCollection = mongoClient.db().collection('events');
+    return cachedCollection;
 }
 
 /**
@@ -90,7 +99,7 @@ export async function handleInteraction(interaction: Interaction): Promise<void>
         // 3. Módulo de Google Sheets (Panel, Botones y Menús Desplegables)
         if (await handleSheetsInteraction(interaction)) return;
 
-        // 4. Módulo de Eventos y Asistencia (Creación, Modales y RSVPs) 👈 ¡AÑADIDO Y ACTIVO!
+        // 4. Módulo de Eventos y Asistencia (Creación, Modales y RSVPs)
         if (await handleEventInteraction(interaction)) return;
 
         // Si ninguna interacción fue manejada y es un componente de UI huérfano:
