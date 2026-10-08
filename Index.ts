@@ -1,35 +1,28 @@
-import { Interaction, MessageFlags } from 'discord.js';
-import { MongoClient, Collection } from 'mongodb';
-import { handleScheduledInteraction } from './scheduledInteraction';
-import { handleRolReactionInteraction } from './rolreactionInteraction';
-import { handleSheetsInteraction } from './sheetsInteraction';
-import { handleEventInteraction } from './eventInteractions';
+import { Client, GatewayIntentBits, Collection, Interaction } from 'discord.js';
+import { MongoClient, Collection as MongoCollection } from 'mongodb';
+import { handleGlobalInteraction } from './generalinteraction';
+import { setupNicknameSystem } from './dashadmin/nickname/nicknamemanager';
 
-// Importación de comandos subiendo un nivel desde handlers/ hacia commands/
-import { execute as handleDash } from '../commands/dash';
-import { execute as handleDashStaff } from '../commands/dashstaff';
-import { execute as handleDado } from '../commands/dado';
-import { execute as handleBorrar } from '../commands/borrar';
-import { execute as handleForms } from '../commands/forms';
-import { execute as handleColocarForm } from '../commands/ColocarForm';
-import { execute as handleMsn } from '../commands/msn';
-import { execute as handleReporte } from '../commands/reporte';
-import { execute as handleSetupDefensa } from '../commands/setupdefensa';
-import { execute as handleVeredicto } from '../commands/veredicto';
-import { execute as handleDashSheets } from '../commands/dashSheets';
+// 📌 Importación de comandos Slash principales
+import * as dashCommand from './commands/dash';
+import * as dashStaffCommand from './commands/dashstaff';
+import * as dadoCommand from './commands/dado';
+import * as borrarCommand from './commands/borrar';
+import * as dashSheetsCommand from './dashsheets/dashsheets';
+// (Añade aquí cualquier otro comando de barra individual que tengas en tu carpeta commands)
 
 /**
- * 📦 Conexión centralizada y segura a la colección de eventos de MongoDB (con caché y soporte multipes de variables)
+ * 📦 Conexión centralizada y segura a la colección de eventos de MongoDB
  */
-let cachedCollection: Collection | null = null;
+let cachedCollection: MongoCollection | null = null;
 
-export async function getEventsCollection(): Promise<Collection> {
+export async function getEventsCollection(): Promise<MongoCollection> {
     if (cachedCollection) return cachedCollection;
 
     const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL || process.env.MONGO_URL;
-    
+
     if (!uri) {
-        throw new Error('❌ No se encontró ninguna variable de entorno para MongoDB (revisa si en Render se llama DATABASE_URL, MONGO_URL, etc.).');
+        throw new Error('❌ No se encontró ninguna variable de entorno para MongoDB (revisa Render).');
     }
 
     const mongoClient = new MongoClient(uri);
@@ -38,89 +31,44 @@ export async function getEventsCollection(): Promise<Collection> {
     return cachedCollection;
 }
 
-/**
- * 🛡️ Enrutador Central de Interacciones
- * Distribuye cada evento (Comandos barra, Botones, Menús, Modales) al módulo correspondiente.
- */
-export async function handleInteraction(interaction: Interaction): Promise<void> {
-    try {
-        // 0. Enrutador de Comandos de Barra (Slash Commands)
-        if (interaction.isChatInputCommand()) {
-            const { commandName } = interaction;
+// 🤖 Inicialización del Cliente de Discord con los Intents necesarios
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMessageReactions
+    ]
+}) as Client & { commands: Collection<string, any> };
 
-            switch (commandName) {
-                case 'dash':
-                    await handleDash(interaction);
-                    return;
-                case 'dashstaff':
-                    await handleDashStaff(interaction);
-                    return;
-                case 'dado':
-                    await handleDado(interaction);
-                    return;
-                case 'borrar':
-                    await handleBorrar(interaction);
-                    return;
-                case 'forms':
-                    await handleForms(interaction);
-                    return;
-                case 'colocarform':
-                    await handleColocarForm(interaction);
-                    return;
-                case 'msn':
-                    await handleMsn(interaction);
-                    return;
-                case 'reporte':
-                    await handleReporte(interaction);
-                    return;
-                case 'setupdefensa':
-                    await handleSetupDefensa(interaction);
-                    return;
-                case 'veredicto':
-                    await handleVeredicto(interaction);
-                    return;
-                case 'dashsheets':
-                    await handleDashSheets(interaction);
-                    return;
-                default:
-                    await interaction.reply({
-                        content: '❌ Este comando no está registrado en el enrutador.',
-                        flags: [MessageFlags.Ephemeral]
-                    });
-                    return;
-            }
-        }
+// 🗂️ Inicializar la colección de comandos en el cliente
+client.commands = new Collection();
 
-        // 1. Módulo de Mensajes Programados (Componentes)
-        if (await handleScheduledInteraction(interaction)) return;
-
-        // 2. Módulo de Reaction Roles / Autoroles por Botón (Componentes)
-        if (await handleRolReactionInteraction(interaction)) return;
-
-        // 3. Módulo de Google Sheets (Panel, Botones y Menús Desplegables)
-        if (await handleSheetsInteraction(interaction)) return;
-
-        // 4. Módulo de Eventos y Asistencia (Creación, Modales y RSVPs)
-        if (await handleEventInteraction(interaction)) return;
-
-        // Si ninguna interacción fue manejada y es un componente de UI huérfano:
-        if (interaction.isButton() || interaction.isAnySelectMenu() || interaction.isModalSubmit()) {
-            if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({
-                    content: '❌ Este botón o componente no está vinculado a ningún módulo activo o la sesión ha expirado.',
-                    flags: [MessageFlags.Ephemeral]
-                }).catch(() => {});
-            }
-        }
-
-    } catch (error) {
-        console.error('❌ Error crítico en el enrutador de interacciones (interactionRouter):', error);
-
-        if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
-            await interaction.reply({
-                content: '❌ Ocurrió un error inesperado al procesar esta acción.',
-                flags: [MessageFlags.Ephemeral]
-            }).catch(() => {});
-        }
+// Registro de comandos en la colección
+const commandsList = [dashCommand, dashStaffCommand, dadoCommand, borrarCommand, dashSheetsCommand];
+for (const cmd of commandsList) {
+    if ('data' in cmd && 'execute' in cmd) {
+        client.commands.set((cmd.data as any).name, cmd);
     }
 }
+
+/**
+ * 🚀 Evento de Arranque (Ready)
+ */
+client.once('ready', () => {
+    console.log(`🤖 [REDLINE GT] Bot conectado exitosamente como ${client.user?.tag}`);
+
+    // Inicializar el sistema de apodos automáticos (evento guildMemberUpdate)
+    setupNicknameSystem(client);
+});
+
+/**
+ * ⚡ Enrutador Maestro de Interacciones (Conectado a generalinteraction.ts)
+ */
+client.on('interactionCreate', async (interaction: Interaction) => {
+    await handleGlobalInteraction(interaction, client);
+});
+
+// 🔐 Inicio de sesión del bot con el token de entorno
+client.login(process.env.DISCORD_TOKEN);
