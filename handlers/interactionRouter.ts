@@ -1,7 +1,9 @@
 import { Interaction, MessageFlags } from 'discord.js';
+import mongoose from 'mongoose';
 import { handleScheduledInteraction } from './scheduledInteraction';
 import { handleRolReactionInteraction } from './rolreactionInteraction';
 import { handleSheetsInteraction } from './sheetsInteraction';
+import { handleEventInteraction } from './eventInteractions'; // 👈 Importamos el manejador de eventos
 
 // Importación de comandos subiendo un nivel desde handlers/ hacia commands/
 import { execute as handleDash } from '../commands/dash';
@@ -15,6 +17,13 @@ import { execute as handleReporte } from '../commands/reporte';
 import { execute as handleSetupDefensa } from '../commands/setupdefensa';
 import { execute as handleVeredicto } from '../commands/veredicto';
 import { execute as handleDashSheets } from '../commands/dashSheets';
+
+/**
+ * 📦 Conexión centralizada a la colección de eventos en MongoDB
+ */
+export async function getEventsCollection() {
+    return mongoose.connection.collection('events');
+}
 
 /**
  * 🛡️ Enrutador Central de Interacciones
@@ -77,6 +86,9 @@ export async function handleInteraction(interaction: Interaction): Promise<void>
 
         // 3. Módulo de Google Sheets (Panel, Botones y Menús Desplegables)
         if (await handleSheetsInteraction(interaction)) return;
+
+        // 4. Módulo de Eventos y Asistencia (Creación, Modales y RSVPs) 👈 ¡AÑADIDO Y ACTIVO!
+        if (await handleEventInteraction(interaction)) return;
 
         // Si ninguna interacción fue manejada y es un componente de UI huérfano:
         if (interaction.isButton() || interaction.isAnySelectMenu() || interaction.isModalSubmit()) {
