@@ -2,6 +2,7 @@ import { Interaction } from 'discord.js';
 import { handleReporteInteractions } from './reporte/interactionreporte';
 import { handleDefensaInteractions } from './defensa/interactiondefensa';
 import { handleVeredictoInteractions } from './veredicto/interactionveredicto';
+import { handleScheduledInteractions } from './scheduled/interactionscheduled';
 
 /**
  * Enrutador principal del Panel de Administración (DashAdmin).
@@ -22,7 +23,11 @@ export async function handleDashAdminInteractions(interaction: Interaction): Pro
         const handledVeredicto = await handleVeredictoInteractions(interaction);
         if (handledVeredicto) return true;
 
-        // 4. Aquí iremos añadiendo los delegados de los demás botones del dash conforme los crees:
+        // 4. Delegar interacciones al submódulo de Mensajes Programados
+        const handledScheduled = await handleScheduledInteractions(interaction);
+        if (handledScheduled) return true;
+
+        // 5. Aquí iremos añadiendo los delegados de los demás botones del dash conforme los crees:
         // const handledWelcome = await handleWelcomeInteractions(interaction);
         // if (handledWelcome) return true;
 
