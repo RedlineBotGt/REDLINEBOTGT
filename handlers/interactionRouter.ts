@@ -26,9 +26,9 @@ let cachedCollection: Collection | null = null;
 export async function getEventsCollection(): Promise<Collection> {
     if (cachedCollection) return cachedCollection;
 
-    const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
+    const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL || process.env.MONGO_URL;
     if (!uri) {
-        throw new Error('❌ MONGODB_URI o MONGO_URI no está definido en las variables de entorno.');
+        throw new Error('❌ MONGODB_URI, MONGO_URI, DATABASE_URL o MONGO_URL no está definido en las variables de entorno.');
     }
 
     const mongoClient = new MongoClient(uri);
