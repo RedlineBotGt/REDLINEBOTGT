@@ -1,5 +1,6 @@
 import { Interaction } from 'discord.js';
 import { handleReporteInteractions } from './reporte/interactionreporte';
+import { handleDefensaInteractions } from './defensa/interactiondefensa';
 
 /**
  * Enrutador principal del Panel de Administración (DashAdmin).
@@ -9,14 +10,14 @@ import { handleReporteInteractions } from './reporte/interactionreporte';
 export async function handleDashAdminInteractions(interaction: Interaction): Promise<boolean> {
     try {
         // 1. Delegar interacciones al submódulo de Reportes
-        // (El enrutador local de reportes gestionará botones, menús de canales/roles y modales)
         const handledReporte = await handleReporteInteractions(interaction);
         if (handledReporte) return true;
 
-        // 2. Aquí iremos añadiendo los delegados de los demás botones del dash conforme los crees:
-        // const handledDefensa = await handleDefensaInteractions(interaction);
-        // if (handledDefensa) return true;
+        // 2. Delegar interacciones al submódulo de Defensas
+        const handledDefensa = await handleDefensaInteractions(interaction);
+        if (handledDefensa) return true;
 
+        // 3. Aquí iremos añadiendo los delegados de los demás botones del dash conforme los crees:
         // const handledWelcome = await handleWelcomeInteractions(interaction);
         // if (handledWelcome) return true;
 
