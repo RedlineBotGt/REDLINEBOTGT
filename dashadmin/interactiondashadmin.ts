@@ -4,6 +4,7 @@ import { handleDefensaInteractions } from './defensa/interactiondefensa';
 import { handleVeredictoInteractions } from './veredicto/interactionveredicto';
 import { handleScheduledInteractions } from './scheduled/interactionscheduled';
 import { handleFormInteractions } from './form/interactionform';
+import { handleReactionRoleInteractions } from './reactionrol/interactionreactionrole';
 
 /**
  * Enrutador principal del Panel de Administración (DashAdmin).
@@ -32,7 +33,11 @@ export async function handleDashAdminInteractions(interaction: Interaction): Pro
         const handledForm = await handleFormInteractions(interaction);
         if (handledForm) return true;
 
-        // 6. Aquí iremos añadiendo los delegados de los demás botones del dash conforme los crees:
+        // 6. Delegar interacciones al submódulo de Reaction Roles
+        const handledReactionRole = await handleReactionRoleInteractions(interaction);
+        if (handledReactionRole) return true;
+
+        // 7. Aquí iremos añadiendo los delegados de los demás botones del dash conforme los crees:
         // const handledWelcome = await handleWelcomeInteractions(interaction);
         // if (handledWelcome) return true;
 
