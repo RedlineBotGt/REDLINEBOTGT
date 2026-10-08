@@ -1,6 +1,6 @@
 import { Interaction, Client } from 'discord.js';
 import { handleDashAdminInteractions } from './dashadmin/interactionRouter'; // Router de los 12 submódulos de admin
-import { handleSheetsInteraction } from './dashsheets/sheetsInteraction';   // Router del panel de Google Sheets
+import { handleSheetsInteraction } from './dashsheet/sheetsInteraction';   // ➔ Corregido a 'dashsheet' (singular)
 
 /**
  * Enrutador Maestro Global de Interacciones
@@ -11,7 +11,7 @@ export async function handleGlobalInteraction(interaction: Interaction, client: 
         // 1. Manejo de Comandos Slash (ej: /dash, /dashstaff, /dashsheets, /borrar, /dado)
         if (interaction.isChatInputCommand()) {
             const command = client.commands?.get(interaction.commandName);
-            
+
             if (!command) {
                 console.warn(`⚠ Comando no encontrado en la colección: ${interaction.commandName}`);
                 if (interaction.isRepliable()) {
@@ -28,7 +28,7 @@ export async function handleGlobalInteraction(interaction: Interaction, client: 
         const handledByAdmin = await handleDashAdminInteractions(interaction);
         if (handledByAdmin) return;
 
-        // 3. Manejo de Interacciones del Panel de Google Sheets (`dashsheets`)
+        // 3. Manejo de Interacciones del Panel de Google Sheets (`dashsheet`)
         const handledBySheets = await handleSheetsInteraction(interaction);
         if (handledBySheets) return;
 
@@ -39,7 +39,7 @@ export async function handleGlobalInteraction(interaction: Interaction, client: 
 
     } catch (error) {
         console.error('❌ Error crítico en el enrutador global de interacciones:', error);
-        
+
         if (interaction.isRepliable()) {
             const errorPayload = { content: '❌ Hubo un error interno al procesar esta acción.', ephemeral: true };
             if (interaction.deferred || interaction.replied) {
