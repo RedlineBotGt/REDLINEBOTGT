@@ -74,71 +74,115 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
     // 3. Manejo de los botones del panel de Google Sheets
     if (customId.startsWith('sheets_')) {
         let titleHeader = '';
-        let filteredData: any[][] = [];
+        let formattedText = '';
 
         try {
             if (customId === 'sheets_clasificacion') {
                 titleHeader = '🏆 Clasificación General';
                 const rawData = (await getSheetData('Tabla!B8:N25')) || [];
 
-                filteredData = rawData
-                    .filter(row => row && row[0] !== undefined && row[0] !== '' && row[0] !== 'POS')
-                    .map(row => {
-                        const pos = row[0] || '';
-                        const piloto = row[1] || '';
-                        const num = row[2] || '';
-                        const puntos = row[12] || ''; // Columna N
-                        return [pos, piloto, num, '|', puntos];
+                const filteredData = rawData
+                    .filter(row => row && row[0] !== undefined && String(row[0]).trim() !== '' && row[0] !== 'POS' && row[1] && String(row[1]).trim() !== '')
+                    .map(row => [
+                        String(row[0] || '').trim(), // Pos
+                        String(row[1] || '').trim(), // Piloto
+                        String(row[2] || '').trim(), // Coche/Num
+                        String(row[12] || '0').trim() // Puntos (Columna N)
+                    ]);
+
+                if (filteredData.length > 0) {
+                    const maxPos = Math.max(...filteredData.map(r => r[0].length), 2);
+                    const maxPiloto = Math.max(...filteredData.map(r => r[1].length), 10);
+                    const maxNum = Math.max(...filteredData.map(r => r[2].length), 4);
+
+                    const lines = filteredData.map(r => {
+                        const pos = r[0].padStart(maxPos, ' ');
+                        const piloto = r[1].padEnd(maxPiloto, ' ');
+                        const num = r[2].padEnd(maxNum, ' ');
+                        const pts = r[3].padStart(4, ' ');
+                        return `${pos} | ${piloto} ${num} | ${pts}`;
                     });
+                    formattedText = '```text\n' + lines.join('\n') + '\n```';
+                }
             } 
             else if (customId === 'sheets_asistencia') {
                 titleHeader = '📋 Control de Asistencia';
                 const rawData = (await getSheetData('Ingreso!AE4:AF20')) || [];
 
-                filteredData = rawData
-                    .filter(row => row && row[0] !== undefined && row[0] !== '' && row[0] !== 'PILOTO')
-                    .map(row => {
-                        const piloto = row[0] || '';
-                        const apariciones = row[1] || '';
-                        return [piloto, '|', apariciones];
+                const filteredData = rawData
+                    .filter(row => row && row[0] !== undefined && String(row[0]).trim() !== '' && row[0] !== 'PILOTO' && row[1] !== undefined && String(row[1]).trim() !== '')
+                    .map(row => [
+                        String(row[0] || '').trim(), // Piloto
+                        String(row[1] || '').trim()  // Asistencias
+                    ]);
+
+                if (filteredData.length > 0) {
+                    const maxPiloto = Math.max(...filteredData.map(r => r[0].length), 10);
+
+                    const lines = filteredData.map(r => {
+                        const piloto = r[0].padEnd(maxPiloto, ' ');
+                        const asis = r[1].padStart(3, ' ');
+                        return `${piloto} | ${asis}`;
                     });
+                    formattedText = '```text\n' + lines.join('\n') + '\n```';
+                }
             } 
             else if (customId === 'sheets_vr') {
                 titleHeader = '⚡ Vueltas Rápidas (VR)';
                 const rawData = (await getSheetData('Tabla!B9:L25')) || [];
 
-                filteredData = rawData
-                    .filter(row => row && row[0] !== undefined && row[0] !== '')
-                    .map(row => {
-                        const pos = row[0] || '';
-                        const piloto = row[1] || '';
-                        const vr = row[10] || ''; // Columna L
-                        return [pos, piloto, '|', vr];
+                const filteredData = rawData
+                    .filter(row => row && row[0] !== undefined && String(row[0]).trim() !== '' && row[1] && String(row[1]).trim() !== '')
+                    .map(row => [
+                        String(row[0] || '').trim(), // Pos
+                        String(row[1] || '').trim(), // Piloto
+                        String(row[10] || '').trim() // VR (Columna L)
+                    ]);
+
+                if (filteredData.length > 0) {
+                    const maxPos = Math.max(...filteredData.map(r => r[0].length), 2);
+                    const maxPiloto = Math.max(...filteredData.map(r => r[1].length), 10);
+
+                    const lines = filteredData.map(r => {
+                        const pos = r[0].padStart(maxPos, ' ');
+                        const piloto = r[1].padEnd(maxPiloto, ' ');
+                        const vr = r[2];
+                        return `${pos} | ${piloto} | ${vr}`;
                     });
+                    formattedText = '```text\n' + lines.join('\n') + '\n```';
+                }
             } 
             else if (customId === 'sheets_pp') {
                 titleHeader = '🎯 Pole Positions (PP)';
                 const rawData = (await getSheetData('Tabla!B9:K25')) || [];
 
-                filteredData = rawData
-                    .filter(row => row && row[0] !== undefined && row[0] !== '')
-                    .map(row => {
-                        const pos = row[0] || '';
-                        const piloto = row[1] || '';
-                        const pp = row[9] || ''; // Columna K
-                        return [pos, piloto, '|', pp];
+                const filteredData = rawData
+                    .filter(row => row && row[0] !== undefined && String(row[0]).trim() !== '' && row[1] && String(row[1]).trim() !== '')
+                    .map(row => [
+                        String(row[0] || '').trim(), // Pos
+                        String(row[1] || '').trim(), // Piloto
+                        String(row[9] || '').trim()  // PP (Columna K)
+                    ]);
+
+                if (filteredData.length > 0) {
+                    const maxPos = Math.max(...filteredData.map(r => r[0].length), 2);
+                    const maxPiloto = Math.max(...filteredData.map(r => r[1].length), 10);
+
+                    const lines = filteredData.map(r => {
+                        const pos = r[0].padStart(maxPos, ' ');
+                        const piloto = r[1].padEnd(maxPiloto, ' ');
+                        const pp = r[2];
+                        return `${pos} | ${piloto} | ${pp}`;
                     });
+                    formattedText = '```text\n' + lines.join('\n') + '\n```';
+                }
             }
         } catch (error) {
             console.error('❌ Error al procesar los datos de Google Sheets:', error);
-            filteredData = [];
+            formattedText = '```text\nError al cargar los datos.\n```';
         }
 
-        // Formatear los datos en tabla de texto plano para Discord
-        let formattedText = '';
-        if (filteredData.length > 0) {
-            formattedText = '```text\n' + filteredData.map(row => row.join('\t')).join('\n') + '\n```';
-        } else {
+        if (!formattedText) {
             formattedText = '```text\nNo se encontraron datos en el rango especificado.\n```';
         }
 
