@@ -1,6 +1,7 @@
 import { Interaction } from 'discord.js';
 import { handleReporteInteractions } from './reporte/interactionreporte';
 import { handleDefensaInteractions } from './defensa/interactiondefensa';
+import { handleVeredictoInteractions } from './veredicto/interactionveredicto';
 
 /**
  * Enrutador principal del Panel de Administración (DashAdmin).
@@ -17,7 +18,11 @@ export async function handleDashAdminInteractions(interaction: Interaction): Pro
         const handledDefensa = await handleDefensaInteractions(interaction);
         if (handledDefensa) return true;
 
-        // 3. Aquí iremos añadiendo los delegados de los demás botones del dash conforme los crees:
+        // 3. Delegar interacciones al submódulo de Veredictos
+        const handledVeredicto = await handleVeredictoInteractions(interaction);
+        if (handledVeredicto) return true;
+
+        // 4. Aquí iremos añadiendo los delegados de los demás botones del dash conforme los crees:
         // const handledWelcome = await handleWelcomeInteractions(interaction);
         // if (handledWelcome) return true;
 
