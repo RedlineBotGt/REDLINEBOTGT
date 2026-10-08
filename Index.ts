@@ -8,7 +8,7 @@ import * as dashCommand from './commands/dash';
 import * as dashStaffCommand from './commands/dashstaff';
 import * as dadoCommand from './commands/dado';
 import * as borrarCommand from './commands/borrar';
-import * as dashSheetsCommand from './dashsheets/dashsheets';
+import * as dashSheetsCommand from './dashsheet/dashsheet'; // ➔ Corregido a 'dashsheet/dashsheet' (singular)
 // (Añade aquí cualquier otro comando de barra individual que tengas en tu carpeta commands)
 
 /**
