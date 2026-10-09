@@ -4,6 +4,7 @@ import {
     ButtonStyle, 
     ChannelSelectMenuBuilder, 
     RoleSelectMenuBuilder, 
+    StringSelectMenuBuilder, 
     ChannelType, 
     ModalBuilder, 
     TextInputBuilder, 
@@ -261,6 +262,44 @@ export async function handleRrExistingSelect(interaction: StringSelectMenuIntera
         content: '🗑️ **Configuración de autorol eliminada de la base de datos con éxito.**',
         components: []
     });
+
+    return true;
+}
+
+// 7. Manejar el clic del usuario en el botón de Reaction Role (Dar/Quitar rol)
+export async function handleRrRoleAction(interaction: ButtonInteraction): Promise<boolean> {
+    if (!interaction.customId.startsWith('rr_action_role_')) return false;
+
+    const parts = interaction.customId.split('_');
+    const roleId = parts[3]; // Extraemos el roleId del customId dinámico
+
+    const guild = interaction.guild;
+    if (!guild) return true;
+
+    const member = await guild.members.fetch(interaction.user.id).catch(() => null);
+    if (!member) {
+        await interaction.reply({ content: '❌ No se pudo verificar tu usuario en el servidor.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    const role = guild.roles.cache.get(roleId);
+    if (!role) {
+        await interaction.reply({ content: '❌ El rol asociado ya no existe en este servidor.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    try {
+        if (member.roles.cache.has(roleId)) {
+            await member.roles.remove(role);
+            await interaction.reply({ content: `❌ Se te ha retirado el rol **${role.name}**.`, flags: [MessageFlags.Ephemeral] });
+        } else {
+            await member.roles.add(role);
+            await interaction.reply({ content: `✅ ¡Se te ha otorgado el rol **${role.name}**!`, flags: [MessageFlags.Ephemeral] });
+        }
+    } catch (error) {
+        console.error('❌ Error al gestionar el rol en reaction role:', error);
+        await interaction.reply({ content: '❌ Hubo un error al intentar modificar tus roles (comprueba que el bot tenga permisos superiores al rol).', flags: [MessageFlags.Ephemeral] });
+    }
 
     return true;
 }
