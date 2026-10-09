@@ -21,8 +21,8 @@ import * as dashCommand from './commands/dash';
 import * as dashStaffCommand from './commands/dashstaff';
 import * as dadoCommand from './commands/dado';
 import * as borrarCommand from './commands/borrar';
-import * as dashSheetsCommand from './dashsheet/dashsheet'; // ➔ Corregido a 'dashsheet/dashsheet' (singular)
-// (Añade aquí cualquier otro comando de barra individual que tengas en tu carpeta commands)
+import * as dashSheetsCommand from './dashsheet/dashsheet';
+import * as dashAdminCommand from './dashadmin/dashadmin'; // ➔ Importado el comando dashadmin
 
 /**
  * 📦 Conexión centralizada y segura a la colección de eventos de MongoDB
@@ -58,8 +58,8 @@ const client = new Client({
 // 🗂️ Inicializar la colección de comandos en el cliente
 client.commands = new Collection();
 
-// Registro de comandos en la colección
-const commandsList = [dashCommand, dashStaffCommand, dadoCommand, borrarCommand, dashSheetsCommand];
+// Registro de comandos en la colección (incluyendo dashAdminCommand)
+const commandsList = [dashCommand, dashStaffCommand, dadoCommand, borrarCommand, dashSheetsCommand, dashAdminCommand];
 for (const cmd of commandsList) {
     if ('data' in cmd && 'execute' in cmd) {
         client.commands.set((cmd.data as any).name, cmd);
