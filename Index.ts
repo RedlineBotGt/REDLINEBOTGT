@@ -3,7 +3,7 @@ import { MongoClient, Collection as MongoCollection } from 'mongodb';
 import { handleGlobalInteraction } from './generalinteraction';
 import { setupNicknameSystem } from './dashadmin/nickname/nicknamemanager';
 import { setupWelcomeSystem } from './dashadmin/welcome/welcomemanager'; // ➔ Sistema de bienvenidas y despedidas
-import { setupAvisosSystem } from './avisosmanager'; // ➔ Importado el sistema de avisos y logs
+import { setupAvisosSystem } from './dashadmin/avisos/avisosmanager'; // ➔ Importado el sistema de avisos y logs
 import express from 'express';
 
 // 🌐 Configuración del servidor Express para satisfacer el requisito de puertos de Render (Plan Gratuito)
