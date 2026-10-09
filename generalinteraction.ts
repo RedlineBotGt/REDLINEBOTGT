@@ -1,5 +1,5 @@
 import { Interaction, Client } from 'discord.js';
-import { handleDashAdminInteractions } from './dashadmin/interactionRouter'; // Router de los 12 submódulos de admin
+import { handleDashAdminInteractions } from './dashadmin/Interactiondashadmin'; // ➔ Corregido al nombre real del archivo
 import { handleSheetsInteraction } from './dashsheet/sheetsInteraction';   // ➔ Corregido a 'dashsheet' (singular)
 
 /**
