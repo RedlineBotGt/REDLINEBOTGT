@@ -9,7 +9,7 @@ import {
 } from 'discord.js';
 
 export const data = new SlashCommandBuilder()
-    .setName('dash')
+    .setName('dashadmin')
     .setDescription('Panel de Configuración y Administración')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
