@@ -1,5 +1,5 @@
 import { Interaction, Client } from 'discord.js';
-import { handleDashAdminInteractions } from './dashadmin/Interactiondashadmin'; // ➔ Corregido al nombre real del archivo
+import { handleDashAdminInteractions } from './dashadmin/interactiondashadmin'; // ➔ Corregido a minúscula exacta
 import { handleSheetsInteraction } from './dashsheet/sheetsInteraction';   // ➔ Corregido a 'dashsheet' (singular)
 
 /**
