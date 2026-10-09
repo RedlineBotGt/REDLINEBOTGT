@@ -2,6 +2,7 @@ import { Client, GatewayIntentBits, Collection, Interaction } from 'discord.js';
 import { MongoClient, Collection as MongoCollection } from 'mongodb';
 import { handleGlobalInteraction } from './generalinteraction';
 import { setupNicknameSystem } from './dashadmin/nickname/nicknamemanager';
+import { setupWelcomeSystem } from './dashadmin/welcome/welcomemanager'; // ➔ Importado el sistema de bienvenidas y despedidas
 import express from 'express';
 
 // 🌐 Configuración del servidor Express para satisfacer el requisito de puertos de Render (Plan Gratuito)
@@ -74,6 +75,9 @@ client.once('ready', () => {
 
     // Inicializar el sistema de apodos automáticos (evento guildMemberUpdate)
     setupNicknameSystem(client);
+
+    // ➔ Inicializar el sistema de Bienvenidas y Despedidas
+    setupWelcomeSystem(client);
 });
 
 /**
