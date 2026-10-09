@@ -2,7 +2,7 @@ import { Interaction, Client } from 'discord.js';
 import { handleDashAdminInteractions } from './dashadmin/interactiondashadmin'; // ➔ Panel de Admin
 import { handleSheetsInteraction } from './dashsheet/sheetsInteraction';   // ➔ Panel de Google Sheets
 import { handleDadoModalSubmit } from './commands/dado'; // ➔ Comando del dado
-import { handleAvisosInteractions } from './interactionavisos'; // ➔ Enrutador de Avisos y Logs
+import { handleAvisosInteractions } from './dashadmin/avisos/interactionavisos'; // ➔ Ruta corregida
 
 /**
  * Enrutador Maestro Global de Interacciones
