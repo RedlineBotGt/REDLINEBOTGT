@@ -80,7 +80,7 @@ export async function handleScheduledInteractions(interaction: any): Promise<boo
 
                     embed.addFields({
                         name: `🆔 Trabajo #${index + 1} [${statusEmoji}]`,
-                        value: `📢 Canal: <#${job.channelId}>\n📅 Fecha: **${job.date \vert{}\vert{} 'N/A'} a las${job.time || 'N/A'}**\n💬 Texto: *${previewText}*\n🔄 Repite: ${job.repeats ? 'Sí' : 'No'}`,
+                        value: `📢 Canal: <#${job.channelId}>\n📅 Fecha: **${job.date || 'N/A'} a las ${job.time || 'N/A'}**\n💬 Texto: *${previewText}*\n🔄 Repite: ${job.repeats ? 'Sí' : 'No'}`,
                         inline: false
                     });
                 });
@@ -89,7 +89,7 @@ export async function handleScheduledInteractions(interaction: any): Promise<boo
                     .setCustomId('sched_delete_job_select')
                     .setPlaceholder('🗑️ Selecciona un registro para borrarlo...')
                     .addOptions(allJobs.map((job: any, index: number) => ({
-                        label: `Borrar #${index + 1} (${job.date \vert{}\vert{} 'S/F'} -${job.status || 'pend.'})`,
+                        label: `Borrar #${index + 1} (${job.date || 'S/F'} - ${job.status || 'pend.'})`,
                         description: (job.text ? job.text.substring(0, 75) : 'Sin texto'),
                         value: job._id.toString()
                     })));
