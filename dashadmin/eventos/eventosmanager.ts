@@ -1,3 +1,4 @@
+import { ObjectId } from 'mongodb';
 import { 
     ButtonInteraction, 
     ModalBuilder, 
@@ -13,7 +14,8 @@ import {
     ButtonBuilder,
     TextChannel,
     EmbedBuilder,
-    Client
+    Client,
+    StringSelectMenuBuilder
 } from 'discord.js';
 import { getEventsCollection } from './eventosstorage';
 
@@ -231,7 +233,6 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
 
     return true;
 }
-
 // --- Publicar Inmediatamente ---
 export async function handleEventPublishNowButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_publish_now') return false;
@@ -299,6 +300,7 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
 
     return true;
 }
+
 // --- Modal para Programación y Repetición ---
 export async function handleEventConfigRepeatButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_config_repeat') return false;
@@ -369,6 +371,91 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
     return true;
 }
 
+// --- GESTIÓN DE BD EVENTOS (Listar eventos activos) ---
+export async function handleBdEventosButton(interaction: ButtonInteraction): Promise<boolean> {
+    if (interaction.customId !== 'dash_btn_bd_eventos') return false;
+
+    const col = await getEventsCollection();
+    const events = await col.find({ status: { $in: ['pending', 'sent'] } }).toArray();
+
+    if (events.length === 0) {
+        await interaction.reply({
+            content: '📭 No hay eventos activos o programados en la base de datos.',
+            flags: [MessageFlags.Ephemeral]
+        });
+        return true;
+    }
+
+    const selectMenu = new StringSelectMenuBuilder()
+        .setCustomId('bd_event_select_action')
+        .setPlaceholder('Selecciona un evento para gestionar...')
+        .addOptions(
+            events.slice(0, 25).map(ev => ({
+                label: ev.title.substring(0, 100),
+                description: `Fecha: ${ev.date} a las ${ev.time} (${ev.status})`,
+                value: ev._id.toString()
+            }))
+        );
+
+    const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
+
+    await interaction.reply({
+        content: '🗂️ **Gestión de Base de Datos de Eventos:** Selecciona el evento que deseas administrar:',
+        components: [row],
+        flags: [MessageFlags.Ephemeral]
+    });
+
+    return true;
+}
+
+// --- MOSTRAR OPCIONES DE GESTIÓN DEL EVENTO SELECCIONADO ---
+export async function handleBdEventosSelect(interaction: any): Promise<boolean> {
+    if (interaction.customId !== 'bd_event_select_action') return false;
+
+    const eventId = interaction.values[0];
+    const col = await getEventsCollection();
+    const ev = await col.findOne({ _id: new ObjectId(eventId) });
+
+    if (!ev) {
+        await interaction.update({ content: '❌ El evento seleccionado ya no existe en la base de datos.', components: [] });
+        return true;
+    }
+
+    const rowActions = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+            .setCustomId(`bd_event_cancel_${ev._id}`)
+            .setLabel('Cancelar Evento')
+            .setStyle(ButtonStyle.Danger)
+            .setEmoji('✖️')
+    );
+
+    await interaction.update({
+        content: `⚙️ **Administrando Evento:**\n> **Título:** ${ev.title}\n> **Fecha:** ${ev.date} a las${ev.time}\n> **Estado actual:** \`${ev.status}\``,
+        components: [rowActions]
+    });
+
+    return true;
+}
+
+// --- EJECUTAR CANCELACIÓN DESDE LA BD ---
+export async function handleBdEventosCancelAction(interaction: ButtonInteraction): Promise<boolean> {
+    if (!interaction.customId.startsWith('bd_event_cancel_')) return false;
+
+    const eventId = interaction.customId.replace('bd_event_cancel_', '');
+    const col = await getEventsCollection();
+    
+    await col.updateOne(
+        { _id: new ObjectId(eventId) },
+        { $set: { status: 'cancelled' } }
+    );
+
+    await interaction.update({
+        content: '✅ **El evento ha sido cancelado con éxito** en la base de datos. El worker dejará de procesarlo y enviar avisos.',
+        components: []
+    });
+
+    return true;
+}
 // --- GESTIÓN DE RSVP Y LÍMITE DE 16 PLAZAS ---
 export async function handleEventRsvpButton(interaction: ButtonInteraction): Promise<boolean> {
     const customId = interaction.customId;
