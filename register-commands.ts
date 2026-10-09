@@ -1,7 +1,7 @@
 import { REST, Routes } from 'discord.js';
 import { data as dashCommand } from './commands/dash';
 import { data as dashstaffCommand } from './commands/dashstaff';
-import { data as dashadminCommand } from './commands/dashadmin'; // ➔ Comando dashadmin integrado
+import { data as dashadminCommand } from './dashadmin/dashadmin'; // ➔ Ruta corregida a su carpeta
 import { data as msnCommand } from './commands/msn';
 import { data as borrarCommand } from './commands/borrar';
 import { data as dashsheetsCommand } from './dashsheet/dashsheet';
@@ -11,7 +11,7 @@ import { data as dadoCommand } from './commands/dado';
 const commandList = [
     { name: 'dash', data: dashCommand },
     { name: 'dashstaff', data: dashstaffCommand },
-    { name: 'dashadmin', data: dashadminCommand }, // ➔ Añadido a la lista de registro
+    { name: 'dashadmin', data: dashadminCommand },
     { name: 'msn', data: msnCommand },
     { name: 'borrar', data: borrarCommand },
     { name: 'dashsheets', data: dashsheetsCommand },
