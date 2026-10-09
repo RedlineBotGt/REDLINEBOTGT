@@ -3,7 +3,7 @@ import { handleReporteInteractions } from './reporte/interactionreporte';
 import { handleDefensaInteractions } from './defensa/interactiondefensa';
 import { handleVeredictoInteractions } from './veredicto/interactionveredicto';
 import { handleScheduledInteractions } from './scheduled/interactionscheduled';
-import { handleFormInteractions } from './form/interactionform';
+import { handleFormInteractions } from './forms/interactionform'; // ➔ Corregido a 'forms' (plural)
 import { handleReactionRoleInteractions } from './reactionrol/interactionreactionrole';
 import { handleSorteoInteractions } from './sorteo/interactionsorteo';
 import { handleBotonesInteractions } from './botones/interactionbotones';
