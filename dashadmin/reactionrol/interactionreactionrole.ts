@@ -5,9 +5,9 @@ import {
     handleRrChannelSelect, 
     handleRrRoleSelect, 
     handleRrContentSubmit, 
-    handleRrExistingSelect 
+    handleRrExistingSelect,
+    handleRrRoleAction // ➔ Importado desde reactionmanager
 } from './reactionmanager';
-import { handleRrButtonClick } from './reactionactions';
 
 /**
  * Enrutador local del submódulo de Reaction Roles.
@@ -20,7 +20,7 @@ export async function handleReactionRoleInteractions(interaction: any): Promise<
             if (await handleDashRrButton(interaction)) return true;
             if (await handleRrStartCreate(interaction)) return true;
             if (await handleRrManage(interaction)) return true;
-            if (await handleRrButtonClick(interaction)) return true;
+            if (await handleRrRoleAction(interaction)) return true; // ➔ Captura y gestiona la entrega/retirada de roles
         }
 
         // --- 2. STRING SELECT MENUS ---
