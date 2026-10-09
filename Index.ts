@@ -2,6 +2,19 @@ import { Client, GatewayIntentBits, Collection, Interaction } from 'discord.js';
 import { MongoClient, Collection as MongoCollection } from 'mongodb';
 import { handleGlobalInteraction } from './generalinteraction';
 import { setupNicknameSystem } from './dashadmin/nickname/nicknamemanager';
+import express from 'express';
+
+// 🌐 Configuración del servidor Express para satisfacer el requisito de puertos de Render (Plan Gratuito)
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+    res.send('🚗 REDLINE GT Bot está en línea y funcionando perfectamente.');
+});
+
+app.listen(PORT, () => {
+    console.log(`🌐 Servidor web HTTP activo en el puerto ${PORT}`);
+});
 
 // 📌 Importación de comandos Slash principales
 import * as dashCommand from './commands/dash';
