@@ -7,7 +7,8 @@ import {
     handleEventPublishNowButton, 
     handleEventConfigRepeatButton, 
     handleEventRepeatModalSubmit, 
-    handleEventRsvpButton 
+    handleEventRsvpButton,
+    handleBdEventosButton // ➔ Añadimos la importación del gestor de la base de datos
 } from './eventosmanager';
 
 /**
@@ -19,8 +20,10 @@ export async function handleEventInteractions(interaction: any): Promise<boolean
         // --- 1. BOTONES ---
         if (interaction.isButton()) {
             if (await handleDashEventButton(interaction)) return true;
+            if (await handleBdEventosButton(interaction)) return true; // ➔ Captura el clic del nuevo botón verde
             if (await handleEventProceedToModal(interaction)) return true;
             if (await handleEventPublishNowButton(interaction)) return true;
+            if (await handleEventConfigRepeatButton(interaction)) return true;
             if (await handleEventConfigRepeatButton(interaction)) return true;
             if (await handleEventRsvpButton(interaction)) return true;
         }
