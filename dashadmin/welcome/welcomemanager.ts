@@ -18,17 +18,21 @@ import {
 } from 'discord.js';
 import { MongoClient as MongoDriver } from 'mongodb';
 
-const uri = process.env.MONGODB_URI || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
-const clientMongo = new MongoDriver(uri);
-
+const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
+let clientMongo: MongoDriver | null = null;
 let welcomeCollection: any = null;
+
 export const welcomeSessions = new Map<string, { type?: 'welcome' | 'goodbye'; channelId?: string }>();
 
 async function getWelcomeCollection() {
-    if (!welcomeCollection) {
+    if (welcomeCollection) return welcomeCollection;
+    
+    if (!clientMongo) {
+        clientMongo = new MongoDriver(uri);
         await clientMongo.connect();
-        welcomeCollection = clientMongo.db('redline_bot').collection('welcomes');
     }
+    
+    welcomeCollection = clientMongo.db().collection('welcomes');
     return welcomeCollection;
 }
 
@@ -142,8 +146,9 @@ export async function handleWelcomeChannelSelect(interaction: ChannelSelectMenuI
     if (interaction.customId !== 'welcome_select_welcome_channel') return false;
 
     const channelId = interaction.values[0];
-    const session = welcomeSessions.get(interaction.user.id) || { type: 'welcome' };
+    const session = welcomeSessions.get(interaction.user.id) || {};
     session.channelId = channelId;
+    session.type = 'welcome';
     welcomeSessions.set(interaction.user.id, session);
 
     const modal = new ModalBuilder()
@@ -167,8 +172,9 @@ export async function handleGoodbyeChannelSelect(interaction: ChannelSelectMenuI
     if (interaction.customId !== 'welcome_select_goodbye_channel') return false;
 
     const channelId = interaction.values[0];
-    const session = welcomeSessions.get(interaction.user.id) || { type: 'goodbye' };
+    const session = welcomeSessions.get(interaction.user.id) || {};
     session.channelId = channelId;
+    session.type = 'goodbye';
     welcomeSessions.set(interaction.user.id, session);
 
     const modal = new ModalBuilder()
