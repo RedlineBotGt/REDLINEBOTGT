@@ -65,11 +65,14 @@ export async function handleEncuestaStart(interaction: ButtonInteraction): Promi
     return true;
 }
 
-// 2. Maneja las selecciones de los menús previos
+// 2. Maneja las selecciones de los menús previos (Corregido con deferUpdate para evitar error 10062)
 export async function handleEncuestaPreSelections(interaction: any): Promise<boolean> {
     if (!['encuesta_pre_publish_channel', 'encuesta_pre_log_channel', 'encuesta_pre_aviso_channel', 'encuesta_pre_duration'].includes(interaction.customId)) {
         return false;
     }
+
+    // ⚡ Evita que Discord invalide la interacción si MongoDB tarda unos milisegundos
+    await interaction.deferUpdate({ ephemeral: true }).catch(() => {});
 
     const { pendingPollsCol } = await getCollections();
     const updateData: any = {};
@@ -90,7 +93,7 @@ export async function handleEncuestaPreSelections(interaction: any): Promise<boo
         { upsert: true }
     );
 
-    await interaction.update({ content: '✅ Selección guardada correctamente. Continúa con los demás menús o pulsa el botón.' });
+    await interaction.editReply({ content: '✅ Selección guardada correctamente. Continúa con los demás menús o pulsa el botón.' });
     return true;
 }
 
