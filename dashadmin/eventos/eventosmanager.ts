@@ -262,15 +262,15 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
         if (session.image) embed.setImage(session.image);
 
         embed.addFields(
-            { name: '✔️ Asistiré (0/16)', value: 'Ninguno', inline: false },
+            { name: '✅ Asistiré (0/16)', value: 'Ninguno', inline: false },
             { name: '❔ Duda (0)', value: 'Ninguno', inline: false },
-            { name: '❌ No puedo (0)', value: 'Ninguno', inline: false }
+            { name: '✖️ No puedo (0)', value: 'Ninguno', inline: false }
         );
 
         const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✅'),
             new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓'),
-            new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('❌')
+            new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
         );
 
         const sentMessage = await channel.send({ 
@@ -345,7 +345,6 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
 
     const intervalDays = parseInt(interaction.fields.getTextInputValue('event_interval_days').trim(), 10) || 7;
     const totalTimes = parseInt(interaction.fields.getTextInputValue('event_repeat_times').trim(), 10) || 1;
-
     const intervalMs = intervalDays * 24 * 3600 * 1000;
 
     await col.updateOne(
@@ -454,7 +453,7 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
     const formatVerticalList = (ids: string[]) => ids.length > 0 ? ids.map(id => `<@${id}>`).join('\n') : 'Ninguno';
 
     embed.addFields(
-        { name: `✔️ Asistiré (${eventDoc.rsvps.yes.length}/16)`, value: formatVerticalList(eventDoc.rsvps.yes), inline: false },
+        { name: `✅ Asistiré (${eventDoc.rsvps.yes.length}/16)`, value: formatVerticalList(eventDoc.rsvps.yes), inline: false },
         { name: `❔ Duda (${eventDoc.rsvps.maybe.length})`, value: formatVerticalList(eventDoc.rsvps.maybe), inline: false },
         { name: `✖️ No puedo (${eventDoc.rsvps.no.length})`, value: formatVerticalList(eventDoc.rsvps.no), inline: false }
     );
@@ -462,7 +461,7 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
     const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✅'),
         new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓'),
-        new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('❌')
+        new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
     );
 
     await interaction.message.edit({ embeds: [embed], components: [rowRsvp] }).catch(() => {});
@@ -474,6 +473,7 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
 
     return true;
 }
+
 // --- WORKER EN SEGUNDO PLANO (Con control de cancelados e intervalos semanales correctos) ---
 export function setupEventWorker(client: Client) {
     console.log('📅 [Worker] Sistema de eventos y campeonatos activo en segundo plano.');
@@ -551,15 +551,15 @@ export function setupEventWorker(client: Client) {
                     }
 
                     embed.addFields(
-                        { name: '✔️ Asistiré (0/16)', value: 'Ninguno', inline: false },
+                        { name: '✅ Asistiré (0/16)', value: 'Ninguno', inline: false },
                         { name: '❔ Duda (0)', value: 'Ninguno', inline: false },
-                        { name: '❌ No puedo (0)', value: 'Ninguno', inline: false }
+                        { name: '✖️ No puedo (0)', value: 'Ninguno', inline: false }
                     );
 
                     const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
                         new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✅'),
                         new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓'),
-                        new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('❌')
+                        new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
                     );
 
                     let contentToSend: string | undefined = undefined;
@@ -595,7 +595,7 @@ export function setupEventWorker(client: Client) {
                     // Lógica de repetición semanal / por intervalo correcto
                     if (ev.repeats && ev.remainingTimes > 1) {
                         const nextScheduledAt = new Date(new Date(ev.scheduledAt).getTime() + ev.intervalMs);
-                        
+
                         await col.updateOne(
                             { _id: ev._id },
                             { 
