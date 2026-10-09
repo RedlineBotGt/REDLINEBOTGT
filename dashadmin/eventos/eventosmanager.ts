@@ -640,7 +640,7 @@ export function setupEventWorker(client: Client) {
                     embed.addFields(
                         { name: '✅ Asistiré (0/16)', value: 'Ninguno', inline: false },
                         { name: '❔ Duda (0)', value: 'Ninguno', inline: false },
-                        { name: '✖️ No puedo (0)', value: 'Ninguno', inline: false }
+                        { name: '❌ No puedo (0)', value: 'Ninguno', inline: false }
                     );
 
                     const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
