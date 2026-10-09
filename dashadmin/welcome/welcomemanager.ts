@@ -36,9 +36,9 @@ async function getWelcomeCollection() {
     return welcomeCollection;
 }
 
-// 1. Inicializador del sistema que escucha las entradas y salidas
+// 1. Inicializador del sistema que escucha las entradas, salidas y cambios de roles
 export function setupWelcomeSystem(client: Client) {
-    console.log('👋 [System] Sistema de Bienvenidas y Despedidas activo.');
+    console.log('👋 [System] Sistema de Bienvenidas, Despedidas y Avisos activo.');
 
     client.on('guildMemberAdd', async (member: GuildMember) => {
         try {
@@ -97,6 +97,49 @@ export function setupWelcomeSystem(client: Client) {
             await channel.send({ embeds: [embed] });
         } catch (error) {
             console.error('❌ Error en el evento guildMemberRemove:', error);
+        }
+    });
+
+    // Nuevo: Escucha universal de cambios de roles (Reaction Roles, manuales, eventos, etc.)
+    client.on('guildMemberUpdate', async (oldMember: GuildMember, newMember: GuildMember) => {
+        try {
+            if (newMember.user.bot) return;
+
+            const addedRoles = newMember.roles.cache.filter(role => !oldMember.roles.cache.has(role.id));
+            const removedRoles = oldMember.roles.cache.filter(role => !newMember.roles.cache.has(role.id));
+
+            if (addedRoles.size === 0 && removedRoles.size === 0) return;
+
+            const col = await getWelcomeCollection();
+            // Busca la configuración de 'avisos', y si no existe usa 'welcome' como respaldo
+            let config = await col.findOne({ guildId: newMember.guild.id, type: 'avisos' });
+            if (!config) {
+                config = await col.findOne({ guildId: newMember.guild.id, type: 'welcome' });
+            }
+            if (!config || !config.channelId) return;
+
+            const channel = await newMember.guild.channels.fetch(config.channelId) as TextChannel;
+            if (!channel) return;
+
+            for (const [_, role] of addedRoles) {
+                const embed = new EmbedBuilder()
+                    .setColor(0x00FF99)
+                    .setTitle('🛡️ Rol Asignado')
+                    .setDescription(`El piloto <@${newMember.id}> ha recibido el rol **${role.name}**.`)
+                    .setTimestamp();
+                await channel.send({ embeds: [embed] });
+            }
+
+            for (const [_, role] of removedRoles) {
+                const embed = new EmbedBuilder()
+                    .setColor(0xFF5555)
+                    .setTitle('🛡️ Rol Retirado')
+                    .setDescription(`Al piloto <@${newMember.id}> se le ha retirado el rol **${role.name}**.`)
+                    .setTimestamp();
+                await channel.send({ embeds: [embed] });
+            }
+        } catch (error) {
+            console.error('❌ Error en el evento guildMemberUpdate:', error);
         }
     });
 }
