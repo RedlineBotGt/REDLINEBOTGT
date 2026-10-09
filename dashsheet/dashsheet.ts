@@ -8,7 +8,7 @@ import {
 } from 'discord.js';
 
 export const data = new SlashCommandBuilder()
-    .setName('dashsheets')
+    .setName('dashsheet')
     .setDescription('Panel interactivo de consulta y publicación de datos desde Google Sheets');
 
 export async function execute(interaction: ChatInputCommandInteraction) {
