@@ -37,12 +37,22 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         .setColor(0x2b2d31)
         .setDescription('### ⚡ Panel Operativo\nSelecciona una acción disponible para el staff:');
 
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    // Fila 1: Eventos (Crear evento y BD Eventos)
+    const row1 = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
             .setCustomId('dash_btn_event_create')
             .setLabel('Crear evento')
             .setStyle(ButtonStyle.Primary)
             .setEmoji('📅'),
+        new ButtonBuilder()
+            .setCustomId('dash_btn_bd_eventos')
+            .setLabel('BD Eventos')
+            .setStyle(ButtonStyle.Success)
+            .setEmoji('🗂️')
+    );
+
+    // Fila 2: Resto de herramientas operativas
+    const row2 = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
             .setCustomId('dash_btn_colocar_form')
             .setLabel('Formulario')
@@ -67,7 +77,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     await interaction.reply({
         embeds: [embed],
-        components: [row],
+        components: [row1, row2],
         ephemeral: true
     });
 }
