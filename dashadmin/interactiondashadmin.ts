@@ -11,7 +11,8 @@ import { handleAvisosInteractions } from './avisos/interactionavisos';
 import { handleWelcomeInteractions } from './welcome/interactionwelcome';
 import { handleEventInteractions } from './eventos/interactioneventos';
 import { handleEncuestaInteractions } from './encuestas/interactionencuesta';
-import { handleMsnInteractions } from './msn/msnmanager'; // ➔ Nuevo submódulo de Mensajes Oficiales
+import { handleMsnInteractions } from './msn/msnmanager';
+import { handleDraftInteractions } from './draft/interactiondraft'; // ➔ Nuevo submódulo de Draft
 
 /**
  * Enrutador principal del Panel de Administración (DashAdmin).
@@ -71,6 +72,10 @@ export async function handleDashAdminInteractions(interaction: Interaction): Pro
         // 13. Delegar interacciones al submódulo de Mensajes Oficiales (MSN)
         const handledMsn = await handleMsnInteractions(interaction);
         if (handledMsn) return true;
+
+        // 14. Delegar interacciones al submódulo de Draft
+        const handledDraft = await handleDraftInteractions(interaction);
+        if (handledDraft) return true;
 
         return false; // La interacción no pertenece a ningún submódulo administrado por el dash
     } catch (error) {
