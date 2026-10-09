@@ -8,7 +8,9 @@ import {
     handleEventConfigRepeatButton, 
     handleEventRepeatModalSubmit, 
     handleEventRsvpButton,
-    handleBdEventosButton // ➔ Añadimos la importación del gestor de la base de datos
+    handleBdEventosButton,
+    handleBdEventosSelect,
+    handleBdEventosCancelAction
 } from './eventosmanager';
 
 /**
@@ -20,10 +22,10 @@ export async function handleEventInteractions(interaction: any): Promise<boolean
         // --- 1. BOTONES ---
         if (interaction.isButton()) {
             if (await handleDashEventButton(interaction)) return true;
-            if (await handleBdEventosButton(interaction)) return true; // ➔ Captura el clic del nuevo botón verde
+            if (await handleBdEventosButton(interaction)) return true;
+            if (await handleBdEventosCancelAction(interaction)) return true; // ➔ Captura el botón de cancelar evento desde la BD
             if (await handleEventProceedToModal(interaction)) return true;
             if (await handleEventPublishNowButton(interaction)) return true;
-            if (await handleEventConfigRepeatButton(interaction)) return true;
             if (await handleEventConfigRepeatButton(interaction)) return true;
             if (await handleEventRsvpButton(interaction)) return true;
         }
@@ -42,6 +44,11 @@ export async function handleEventInteractions(interaction: any): Promise<boolean
         // --- 4. ROLE SELECT MENUS ---
         if (interaction.isRoleSelectMenu()) {
             if (await handleEventRoleSelect(interaction)) return true;
+        }
+
+        // --- 5. STRING SELECT MENUS (Para el selector de la BD de eventos) ---
+        if (interaction.isStringSelectMenu()) {
+            if (await handleBdEventosSelect(interaction)) return true;
         }
 
         return false;
