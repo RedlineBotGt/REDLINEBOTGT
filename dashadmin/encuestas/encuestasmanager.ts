@@ -5,7 +5,14 @@ import {
     ChannelSelectMenuBuilder, 
     StringSelectMenuBuilder,
     ChannelType, 
-    ButtonInteraction
+    ButtonInteraction,
+    ModalBuilder, 
+    TextInputBuilder, 
+    TextInputStyle, 
+    ModalSubmitInteraction, 
+    TextChannel, 
+    EmbedBuilder,
+    Client
 } from 'discord.js';
 import { getCollections } from './encuestastorage';
 
@@ -60,7 +67,7 @@ export async function handleEncuestaStart(interaction: ButtonInteraction): Promi
 
 // 2. Maneja las selecciones de los menús previos
 export async function handleEncuestaPreSelections(interaction: any): Promise<boolean> {
-    if (!['encuesta_pre_publish_channel', 'encuesta_pre_role', 'encuesta_pre_log_channel', 'encuesta_pre_aviso_channel', 'encuesta_pre_duration'].includes(interaction.customId)) {
+    if (!['encuesta_pre_publish_channel', 'encuesta_pre_log_channel', 'encuesta_pre_aviso_channel', 'encuesta_pre_duration'].includes(interaction.customId)) {
         return false;
     }
 
@@ -69,8 +76,6 @@ export async function handleEncuestaPreSelections(interaction: any): Promise<boo
 
     if (interaction.customId === 'encuesta_pre_publish_channel') {
         updateData.publishChannelId = interaction.values[0];
-    } else if (interaction.customId === 'encuesta_pre_role') {
-        updateData.roleId = interaction.values[0];
     } else if (interaction.customId === 'encuesta_pre_log_channel') {
         updateData.logChannelId = interaction.values[0];
     } else if (interaction.customId === 'encuesta_pre_aviso_channel') {
@@ -88,16 +93,6 @@ export async function handleEncuestaPreSelections(interaction: any): Promise<boo
     await interaction.update({ content: '✅ Selección guardada correctamente. Continúa con los demás menús o pulsa el botón.' });
     return true;
 }
-import { 
-    ModalBuilder, 
-    TextInputBuilder, 
-    TextInputStyle, 
-    ActionRowBuilder, 
-    ModalSubmitInteraction, 
-    TextChannel, 
-    EmbedBuilder,
-    ButtonInteraction 
-} from 'discord.js';
 
 // 3. Abre el formulario modal para el contenido de la encuesta
 export async function handleEncuestaOpenModalButton(interaction: ButtonInteraction): Promise<boolean> {
@@ -108,7 +103,7 @@ export async function handleEncuestaOpenModalButton(interaction: ButtonInteracti
 
     if (!pollData || !pollData.publishChannelId || !pollData.logChannelId || !pollData.avisoChannelId || !pollData.durationDays) {
         await interaction.reply({
-            content: '❌ Debes configurar obligatoriamente todos los campos en los menús desplegables (Canal de publicación, Canal de respuestas, Canal de avisos y Duración) antes de abrir el formulario.',
+            content: '❌ Debes configurar obligatoriamente todos los campos en los menús desplegables antes de abrir el formulario.',
             ephemeral: true
         });
         return true;
@@ -208,9 +203,7 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
             .setFooter({ text: `Encuesta creada por ${interaction.guild?.name}` })
             .setTimestamp();
 
-        let messageContent = pollData.roleId ? `<@&${pollData.roleId}>\n\n` : undefined;
         const pollMessage = await publishChannel.send({
-            content: messageContent,
             embeds: [embed]
         });
 
@@ -221,6 +214,7 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
                 console.error(`No se pudo añadir la reacción ${o.emoji}:`, err);
             }
         }
+
         await activePollsCol.insertOne({
             guildId: interaction.guildId,
             messageId: pollMessage.id,
@@ -249,7 +243,6 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
 
     return true;
 }
-import { Client } from 'discord.js';
 
 // 5. Maneja las reacciones de los usuarios y envía aviso al canal de avisos seleccionado
 export async function handleEncuestaReactionAdd(reaction: any, user: any) {
@@ -337,7 +330,6 @@ export function setupPollSystem(client: Client) {
                                 results.push({ ...opt, votes: voteCount });
                             }
 
-                            // Calcular porcentajes
                             const resultsWithPercentage = results.map(o => {
                                 const percentage = totalVotes > 0 ? ((o.votes / totalVotes) * 100).toFixed(1) : '0.0';
                                 return { ...o, percentage };
@@ -345,7 +337,6 @@ export function setupPollSystem(client: Client) {
 
                             resultsWithPercentage.sort((a, b) => b.votes - a.votes);
 
-                            // Detectar ganadores y empates
                             const maxVotes = Math.max(...resultsWithPercentage.map(o => o.votes));
                             const winners = resultsWithPercentage.filter(o => o.votes === maxVotes);
 
@@ -364,7 +355,7 @@ export function setupPollSystem(client: Client) {
                                 .setDescription(
                                     `La votación ha finalizado.\n\n` +
                                     `📊 **Total de votos:** ${totalVotes}\n\n` +
-                                    `✨ **Opción Ganadora:**\n${winnerTexts || winnerText}\n\n` +
+                                    `✨ **Opción Ganadora:**\n${winnerText}\n\n` +
                                     `📋 **Desglose completo:**\n` +
                                     resultsWithPercentage.map(o => `${o.emoji} ➔ ${o.text}: **${o.votes}** votos (**${o.percentage}%**)`.trim()).join('\n')
                                 )
@@ -400,4 +391,3 @@ export function setupPollSystem(client: Client) {
 
     console.log('📊 [PollSystem] Sistema de encuestas y worker iniciados correctamente.');
 }
-
