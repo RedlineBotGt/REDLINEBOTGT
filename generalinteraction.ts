@@ -1,6 +1,7 @@
 import { Interaction, Client } from 'discord.js';
 import { handleDashAdminInteractions } from './dashadmin/interactiondashadmin'; // ➔ Corregido a minúscula exacta
 import { handleSheetsInteraction } from './dashsheet/sheetsInteraction';   // ➔ Corregido a 'dashsheet' (singular)
+import { handleDadoModalSubmit } from './commands/dado'; // ➔ Importado el manejador del dado
 
 /**
  * Enrutador Maestro Global de Interacciones
@@ -22,6 +23,12 @@ export async function handleGlobalInteraction(interaction: Interaction, client: 
 
             await command.execute(interaction);
             return;
+        }
+
+        // 1.5. Manejo del Modal del Dado (modal_dado_lanza)
+        if (interaction.isModalSubmit() && interaction.customId === 'modal_dado_lanza') {
+            const handledDado = await handleDadoModalSubmit(interaction);
+            if (handledDado) return;
         }
 
         // 2. Manejo de Interacciones del Panel Admin (`dashadmin` / 12 submódulos: reportes, eventos, formularios, etc.)
