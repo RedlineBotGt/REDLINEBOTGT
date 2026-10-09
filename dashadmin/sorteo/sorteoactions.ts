@@ -26,52 +26,59 @@ export async function handleSorteoLaunchButton(interaction: ButtonInteraction): 
         components: []
     });
 
-    await guild.members.fetch();
-    const eligibleMembers = guild.members.cache.filter(
-        member => member.roles.cache.has(roleId) && !member.user.bot
-    );
+    try {
+        // ⚡ Solución definitiva: Traer directamente los miembros asociados a ese rol desde la API
+        const fetchedMembers = await guild.members.fetch({ role: roleId });
+        const eligibleMembers = fetchedMembers.filter(member => !member.user.bot);
 
-    if (eligibleMembers.size === 0) {
+        if (eligibleMembers.size === 0) {
+            await interaction.editReply({
+                content: '❌ No hay ningún usuario con ese rol en el servidor para realizar el sorteo.'
+            });
+            return true;
+        }
+
+        const membersArray = Array.from(eligibleMembers.values());
+
+        // Efecto de suspense de 5 segundos
+        const suspenseSteps = [
+            '🎲 Barajando participantes y preparando la tómbola... (1s)',
+            '🎟 Analizando tickets y perfiles... (2s)',
+            '⚡ ¡La tensión aumenta en el paddock!... (3s)',
+            '🔥 Quedan pocos candidatos finales... (4s)',
+            '🎯 ¡Seleccionando al campeón absoluto!... (5s)'
+        ];
+
+        for (const stepText of suspenseSteps) {
+            await interaction.editReply({ content: stepText });
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        // Ganador aleatorio
+        const winner = membersArray[Math.floor(Math.random() * membersArray.length)];
+
+        const originalEmbed = interaction.message.embeds[0];
+
+        const winningEmbed = EmbedBuilder.from(originalEmbed)
+            .setColor(0x00FF00)
+            .addFields({ 
+                name: '🏆 ¡CAMPEÓN DEL SORTEO!', 
+                value: `¡Felicidades <@${winner.id}> (${winner.user.username})! 🥳`, 
+                inline: false 
+            });
+
         await interaction.editReply({
-            content: '❌ No hay ningún usuario con ese rol en el servidor para realizar el sorteo.'
-        });
-        return true;
-    }
-
-    const membersArray = Array.from(eligibleMembers.values());
-
-    // Efecto de suspense de 5 segundos
-    const suspenseSteps = [
-        '🎲 Barajando participantes y preparando la tómbola... (1s)',
-        '🎟 Analizando tickets y perfiles... (2s)',
-        '⚡ ¡La tensión aumenta en el paddock!... (3s)',
-        '🔥 Quedan pocos candidatos finales... (4s)',
-        '🎯 ¡Seleccionando al campeón absoluto!... (5s)'
-    ];
-
-    for (const stepText of suspenseSteps) {
-        await interaction.editReply({ content: stepText });
-        await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-
-    // Ganador aleatorio
-    const winner = membersArray[Math.floor(Math.random() * membersArray.length)];
-
-    const originalEmbed = interaction.message.embeds[0];
-
-    const winningEmbed = EmbedBuilder.from(originalEmbed)
-        .setColor(0x00FF00)
-        .addFields({ 
-            name: '🏆 ¡CAMPEÓN DEL SORTEO!', 
-            value: `¡Felicidades <@${winner.id}> (${winner.user.username})! 🥳`, 
-            inline: false 
+            content: `✨ **¡Sorteo finalizado con éxito!** ✨\n\n¡Felicidades <@${winner.id}>! 🥳`,
+            embeds: [winningEmbed],
+            components: []
         });
 
-    await interaction.editReply({
-        content: `✨ **¡Sorteo finalizado con éxito!** ✨\n\n¡Felicidades <@${winner.id}>! 🥳`,
-        embeds: [winningEmbed],
-        components: []
-    });
+    } catch (error) {
+        console.error('❌ Error al realizar el sorteo:', error);
+        await interaction.editReply({
+            content: '❌ Hubo un error al obtener los miembros. Recuerda activar el "Server Members Intent" en el portal de desarrolladores de Discord.'
+        });
+    }
 
     return true;
 }
