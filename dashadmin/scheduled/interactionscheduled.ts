@@ -52,7 +52,7 @@ export async function handleScheduledInteractions(interaction: any): Promise<boo
                 return true;
             }
 
-                        if (customId === 'sched_btn_list') {
+            if (customId === 'sched_btn_list') {
                 if (!interaction.guildId) return true;
 
                 const { jobs } = await getSchedCollections();
