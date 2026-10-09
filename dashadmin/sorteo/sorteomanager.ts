@@ -20,9 +20,9 @@ import {
 const activeSorteoConfigs = new Map<string, { message: string; prize: string }>();
 const activeSorteoChannels = new Map<string, string>(); // userId -> channelId
 
-// 1. Abre el Modal al pulsar "Crear Sorteo" en el /dash
+// 1. Abre cái Modal al pulsar "Crear Sorteo" en el /dash
 export async function handleDashSorteoButton(interaction: ButtonInteraction): Promise<boolean> {
-    if (interaction.customId !== 'sorteo_btn_create') return false;
+    if (interaction.customId !== 'dash_btn_sorteo_create') return false; // ➔ Corregido para coincidir con el panel
 
     const modal = new ModalBuilder()
         .setCustomId('modal_sorteo_config')
