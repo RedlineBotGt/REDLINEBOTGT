@@ -1,7 +1,8 @@
 import { Interaction, Client } from 'discord.js';
-import { handleDashAdminInteractions } from './dashadmin/interactiondashadmin'; // ➔ Corregido a minúscula exacta
-import { handleSheetsInteraction } from './dashsheet/sheetsInteraction';   // ➔ Corregido a 'dashsheet' (singular)
-import { handleDadoModalSubmit } from './commands/dado'; // ➔ Importado el manejador del dado
+import { handleDashAdminInteractions } from './dashadmin/interactiondashadmin'; // ➔ Panel de Admin
+import { handleSheetsInteraction } from './dashsheet/sheetsInteraction';   // ➔ Panel de Google Sheets
+import { handleDadoModalSubmit } from './commands/dado'; // ➔ Comando del dado
+import { handleAvisosInteractions } from './interactionavisos'; // ➔ Enrutador de Avisos y Logs
 
 /**
  * Enrutador Maestro Global de Interacciones
@@ -31,7 +32,7 @@ export async function handleGlobalInteraction(interaction: Interaction, client: 
             if (handledDado) return;
         }
 
-        // 2. Manejo de Interacciones del Panel Admin (`dashadmin` / 12 submódulos: reportes, eventos, formularios, etc.)
+        // 2. Manejo de Interacciones del Panel Admin (`dashadmin` / submódulos)
         const handledByAdmin = await handleDashAdminInteractions(interaction);
         if (handledByAdmin) return;
 
@@ -39,7 +40,11 @@ export async function handleGlobalInteraction(interaction: Interaction, client: 
         const handledBySheets = await handleSheetsInteraction(interaction);
         if (handledBySheets) return;
 
-        // 4. Si la interacción es un componente (botón/modal/select) pero ningún router la reclamó
+        // 4. Manejo de Interacciones de Avisos y Logs (`interactionavisos`)
+        const handledByAvisos = await handleAvisosInteractions(interaction);
+        if (handledByAvisos) return;
+
+        // 5. Si la interacción es un componente (botón/modal/select) pero ningún router la reclamó
         if (interaction.isButton() || interaction.isModalSubmit() || interaction.isAnySelectMenu()) {
             console.warn(`⚠ Interacción no reclamada [CustomId: ${interaction.customId}]`);
         }
