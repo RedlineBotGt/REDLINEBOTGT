@@ -3,7 +3,7 @@ import { handleReporteInteractions } from './reporte/interactionreporte';
 import { handleDefensaInteractions } from './defensa/interactiondefensa';
 import { handleVeredictoInteractions } from './veredicto/interactionveredicto';
 import { handleScheduledInteractions } from './scheduled/interactionscheduled';
-import { handleFormInteractions } from './forms/interactionform'; // ➔ Corregido a 'forms' (plural)
+import { handleFormInteractions } from './forms/interactionform'; 
 import { handleReactionRoleInteractions } from './reactionrol/interactionreactionrole';
 import { handleSorteoInteractions } from './sorteo/interactionsorteo';
 import { handleBotonesInteractions } from './botones/interactionbotones';
@@ -11,11 +11,12 @@ import { handleAvisosInteractions } from './avisos/interactionavisos';
 import { handleWelcomeInteractions } from './welcome/interactionwelcome';
 import { handleEventInteractions } from './eventos/interactioneventos';
 import { handleEncuestaInteractions } from './encuestas/interactionencuesta';
+import { handleMsnInteractions } from './msn/msnmanager'; // ➔ Nuevo submódulo de Mensajes Oficiales
 
 /**
  * Enrutador principal del Panel de Administración (DashAdmin).
  * Se encarga de filtrar las interacciones del panel (botones, menús, modales)
- * y delegarlas al submódulo correspondiente.
+ * y delegarlas al submódulo correspondiente del sistema nuevo.
  */
 export async function handleDashAdminInteractions(interaction: Interaction): Promise<boolean> {
     try {
@@ -66,6 +67,10 @@ export async function handleDashAdminInteractions(interaction: Interaction): Pro
         // 12. Delegar interacciones al submódulo de Encuestas
         const handledEncuesta = await handleEncuestaInteractions(interaction);
         if (handledEncuesta) return true;
+
+        // 13. Delegar interacciones al submódulo de Mensajes Oficiales (MSN)
+        const handledMsn = await handleMsnInteractions(interaction);
+        if (handledMsn) return true;
 
         return false; // La interacción no pertenece a ningún submódulo administrado por el dash
     } catch (error) {
