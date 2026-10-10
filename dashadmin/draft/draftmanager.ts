@@ -1,4 +1,3 @@
-// Dashadmin/draft/draftmanager.ts
 import { google } from 'googleapis';
 import { Buffer } from 'buffer';
 
@@ -11,6 +10,15 @@ export interface DraftState {
     currentPilot: string | null;                   // Piloto al que le toca elegir en este turno
     availableModels: string[];                     // Modelos libres
     isCompleted: boolean;                          // True si todos han elegido
+}
+
+/**
+ * Función auxiliar para extraer solo el ID numérico de Discord
+ */
+function extractUserId(mentionOrId: string | null): string | null {
+    if (!mentionOrId) return null;
+    const match = mentionOrId.match(/\d+/);
+    return match ? match[0] : mentionOrId;
 }
 
 // Función auxiliar para obtener el cliente autenticado de Google Sheets
@@ -58,10 +66,6 @@ export async function getDraftState(): Promise<DraftState> {
         const sheets = getAuthenticatedSheets();
         const spreadsheetId = DEFAULT_SPREADSHEET_ID;
 
-        // Rangos exactos de 4 columnas:
-        // B2:B ➔ IDs/Menciones de Pilotos
-        // C2:C ➔ Modelos de Coches disponibles
-        // D2:E ➔ Elecciones ya realizadas (D: ID Piloto, E: Coche Elegido)
         const response = await sheets.spreadsheets.values.batchGet({
             spreadsheetId,
             ranges: ['Draft!B2:B', 'Draft!C2:C', 'Draft!D2:E'],
@@ -80,16 +84,20 @@ export async function getDraftState(): Promise<DraftState> {
             .filter((row: any[]) => row[0] && row[1])
             .map((row: any[]) => ({ pilot: row[0], model: row[1] }));
 
-        // Conjuntos para filtrado rápido
-        const chosenModelsSet = new Set(choices.map(c => c.model));
-        const chosenPilotsSet = new Set(choices.map(c => c.pilot));
+        // Conjuntos para filtrado rápido normalizados por ID limpio
+        const chosenModelsSet = new Set(choices.map(c => c.model.toLowerCase().trim()));
+        const chosenPilotsCleanSet = new Set(choices.map(c => extractUserId(c.pilot)));
 
-        // Modelos disponibles (en C pero no elegidos en E)
-        const availableModels = allModels.filter(model => !chosenModelsSet.has(model));
+        // Modelos disponibles
+        const availableModels = allModels.filter(model => !chosenModelsSet.has(model.toLowerCase().trim()));
 
         // El primer piloto de la lista B que todavía no aparece en las elecciones D
-        const currentPilot = pilots.find(pilot => !chosenPilotsSet.has(pilot)) || null;
+        const currentPilot = pilots.find(pilot => {
+            const cleanId = extractUserId(pilot);
+            return cleanId ? !chosenPilotsCleanSet.has(cleanId) : false;
+        }) || null;
 
+        // Comprobación exacta: Es completado si no queda piloto pendiente o si las elecciones alcanzan/superan la lista de pilotos
         const isCompleted = currentPilot === null || pilots.length === 0 || choices.length >= pilots.length;
 
         return {
@@ -114,16 +122,14 @@ export async function recordDraftChoice(pilot: string, model: string): Promise<v
         const sheets = getAuthenticatedSheets();
         const spreadsheetId = DEFAULT_SPREADSHEET_ID;
 
-        // Consultar la siguiente fila disponible consultando únicamente D:E
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId,
             range: 'Draft!D2:E',
         });
 
         const rows = response.data.values || [];
-        const nextRowIndex = rows.length + 2; // +2 porque se empieza desde la fila 2 (D2:E2)
+        const nextRowIndex = rows.length + 2;
 
-        // Escribir la ID del piloto en D y el coche en E
         await sheets.spreadsheets.values.update({
             spreadsheetId,
             range: `Draft!D${nextRowIndex}:E${nextRowIndex}`,
