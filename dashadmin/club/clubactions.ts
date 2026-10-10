@@ -98,7 +98,7 @@ export function buildGeneralStandingsEmbed(session: ClubSession): EmbedBuilder {
 }
 
 /**
- * Muestra el panel principal de control cuando ya existen desafíos
+ * Muestra el panel principal de control cuando ejecutas /club o tras gestionar desafíos
  */
 export async function showClubControlPanel(interaction: any): Promise<void> {
     const session = await ensureClubSessionLoaded(interaction.guildId!);
@@ -106,7 +106,7 @@ export async function showClubControlPanel(interaction: any): Promise<void> {
     const embed = new EmbedBuilder()
         .setColor(0x3498DB)
         .setTitle('⚙️ GT CLUB - PANEL DE CONTROL')
-        .setDescription(`Estado: **${session.active ? '🟢 Activo' : '🟠 En configuración'}**\nDesafíos registrados: **${session.challenges.length}**\n\nElige una opción para gestionar la sesión:`)
+        .setDescription(`Estado: **${session.active ? '🟢 Activo en Canal' : '🟠 En configuración (Borrador)'}**\nDesafíos registrados: **${session.challenges.length}**\n\nElige una opción para gestionar la sesión:`)
         .setFooter({ text: 'REDLINE GT' });
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -118,6 +118,11 @@ export async function showClubControlPanel(interaction: any): Promise<void> {
             .setCustomId('club_btn_panel_edit_select')
             .setLabel('✏️ Editar / Borrar Desafío')
             .setStyle(ButtonStyle.Primary)
+            .setDisabled(session.challenges.length === 0),
+        new ButtonBuilder()
+            .setCustomId('club_btn_panel_publish')
+            .setLabel('🚀 Publicar / Ver Estado')
+            .setStyle(ButtonStyle.Secondary)
             .setDisabled(session.challenges.length === 0),
         new ButtonBuilder()
             .setCustomId('club_btn_panel_reset')
@@ -249,24 +254,28 @@ export async function sendChallengeManageOptions(interaction: any, challengeId: 
 }
 
 /**
- * Muestra el menú de confirmación tras añadir un desafío ("¿Añadir otro?")
+ * Muestra el menú tras añadir un desafío ("¿Añadir otro o publicar?")
  */
 async function sendAddMorePrompt(interaction: any, challengeCount: number): Promise<void> {
     const embed = new EmbedBuilder()
         .setColor(0x00FF00)
-        .setTitle('✅ Desafío Registrado')
-        .setDescription(`Se ha añadido el **Desafío #${challengeCount}** correctamente.\n\n¿Deseas añadir otro desafío a esta sesión?`)
+        .setTitle('✅ Desafío Registrado y Guardado')
+        .setDescription(`Se ha añadido el **Desafío #${challengeCount}** correctamente a la base de datos.\n\n¿Qué deseas hacer ahora?`)
         .setFooter({ text: 'REDLINE GT' });
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
             .setCustomId('club_btn_add_another')
-            .setLabel('➕ Añadir otro desafío')
+            .setLabel('➕ Añadir otro')
             .setStyle(ButtonStyle.Primary),
         new ButtonBuilder()
             .setCustomId('club_btn_finish_setup')
             .setLabel('🚀 Publicar Desafíos')
-            .setStyle(ButtonStyle.Success)
+            .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+            .setCustomId('club_btn_back_panel')
+            .setLabel('⚙️ Ir al Panel')
+            .setStyle(ButtonStyle.Secondary)
     );
 
     if (interaction.replied || interaction.deferred) {
@@ -284,8 +293,8 @@ async function sendChannelSelectMenu(interaction: any): Promise<void> {
 
     const embed = new EmbedBuilder()
         .setColor(0xFFD700)
-        .setTitle('📍 Selecciona el Canal')
-        .setDescription(`Has configurado **${session.challenges.length} desafío(s)**.\nSelecciona el canal donde el bot publicará los Embeds independientes.`)
+        .setTitle('📍 Selecciona el Canal de Publicación')
+        .setDescription(`Tienes **${session.challenges.length} desafío(s)** guardados.\nSelecciona el canal donde el bot publicará los Embeds independientes.`)
         .setFooter({ text: 'REDLINE GT' });
 
     const channelSelect = new ChannelSelectMenuBuilder()
@@ -305,14 +314,9 @@ export async function handleClubInteractions(interaction: Interaction): Promise<
         const guildId = interaction.guildId;
         if (!guildId) return false;
 
-        // 1. Ejecución del comando Slash /club
+        // 1. Ejecución del comando Slash /club ➔ SIEMPRE abre el Panel de Control
         if (interaction.isChatInputCommand() && interaction.commandName === 'club') {
-            const session = await ensureClubSessionLoaded(guildId);
-            if (session.challenges.length > 0) {
-                await showClubControlPanel(interaction);
-            } else {
-                await showChallengeModal(interaction, 1);
-            }
+            await showClubControlPanel(interaction);
             return true;
         }
 
@@ -327,6 +331,19 @@ export async function handleClubInteractions(interaction: Interaction): Promise<
         // 3. Botón: Abrir menú de selección de edición/borrado
         if (interaction.isButton() && interaction.customId === 'club_btn_panel_edit_select') {
             await sendEditChallengeSelect(interaction);
+            return true;
+        }
+
+        // 3.1. Botón: Volver al Panel de Control
+        if (interaction.isButton() && interaction.customId === 'club_btn_back_panel') {
+            await interaction.deferUpdate();
+            await showClubControlPanel(interaction);
+            return true;
+        }
+
+        // 3.2. Botón: Publicar desde el Panel de Control
+        if (interaction.isButton() && interaction.customId === 'club_btn_panel_publish') {
+            await sendChannelSelectMenu(interaction);
             return true;
         }
 
@@ -369,7 +386,7 @@ export async function handleClubInteractions(interaction: Interaction): Promise<
                     }
                 }
 
-                // Re-publicar / actualizar todos los Embeds restantes para reflejar la re-indexación (#1, #2...)
+                // Re-publicar / actualizar todos los Embeds restantes
                 if (session.active && session.channelId) {
                     const channel = await interaction.guild?.channels.fetch(session.channelId) as TextChannel;
                     if (channel) {
@@ -400,24 +417,25 @@ export async function handleClubInteractions(interaction: Interaction): Promise<
             return true;
         }
 
-        // 8. Recepción de Modales de creación
+        // 8. Recepción de Modales de creación (¡Guardado persistente inmediato!)
         if (interaction.isModalSubmit() && interaction.customId.startsWith('club_modal_create_')) {
             const title = interaction.fields.getTextInputValue('club_title').trim();
             const subtitle = interaction.fields.getTextInputValue('club_subtitle').trim();
 
-            const challenge = addChallengeToSession(guildId, title, subtitle);
+            const challenge = await addChallengeToSession(guildId, title, subtitle);
             const session = await ensureClubSessionLoaded(guildId);
 
-            // Si la sesión ya estaba activa, publicar inmediatamente el nuevo desafío en el canal
+            // Si la sesión ya estaba activa en un canal, publicar el nuevo desafío al vuelo
             if (session.active && session.channelId) {
                 const channel = await interaction.guild?.channels.fetch(session.channelId) as TextChannel;
                 if (channel) {
                     const embed = buildChallengeEmbed(challenge);
                     const sentMsg = await channel.send({ embeds: [embed] });
                     challenge.messageId = sentMsg.id;
+                    await editChallengeInSession(guildId, challenge.id, challenge.title, challenge.subtitle);
                 }
                 await interaction.reply({
-                    content: `✅ **Desafío #${challenge.id}** creado y publicado directamente en <#${session.channelId}>.`,
+                    content: `✅ **Desafío #${challenge.id}** creado, guardado y publicado directamente en <#${session.channelId}>.`,
                     ephemeral: true
                 });
             } else {
@@ -448,7 +466,7 @@ export async function handleClubInteractions(interaction: Interaction): Promise<
             }
 
             await interaction.reply({
-                content: `✅ **Desafío #${challengeId} actualizado correctamente.**`,
+                content: `✅ **Desafío #${challengeId} actualizado y guardado correctamente.**`,
                 ephemeral: true
             });
             return true;
@@ -468,7 +486,7 @@ export async function handleClubInteractions(interaction: Interaction): Promise<
             return true;
         }
 
-        // 12. Selección de canal y publicación final
+        // 12. Selección de canal y publicación final de todos los desafíos acumulados
         if (interaction.isChannelSelectMenu() && interaction.customId === 'club_channel_select') {
             await interaction.deferUpdate();
 
@@ -484,12 +502,17 @@ export async function handleClubInteractions(interaction: Interaction): Promise<
             session.channelId = channel.id;
             session.active = true;
 
-            // Publicar Embeds independientes por cada desafío
+            // Publicar Embeds independientes por cada desafío guardado
             for (const challenge of session.challenges) {
-                const embed = buildChallengeEmbed(challenge);
-                const sentMessage = await channel.send({ embeds: [embed] });
-                challenge.messageId = sentMessage.id;
+                if (!challenge.messageId) {
+                    const embed = buildChallengeEmbed(challenge);
+                    const sentMessage = await channel.send({ embeds: [embed] });
+                    challenge.messageId = sentMessage.id;
+                }
             }
+
+            const { saveSessionToDB } = require('./clubmanager');
+            await saveSessionToDB(session);
 
             await interaction.editReply({
                 content: `✅ **¡GT Club activado!** Se han publicado ${session.challenges.length} desafío(s) en <#${selectedChannelId}>.`,
