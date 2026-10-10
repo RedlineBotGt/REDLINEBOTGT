@@ -163,7 +163,7 @@ export async function handleDraftOpenModalButton(interaction: ButtonInteraction)
 }
 
 /**
- * 3. Procesa la selección del coche enviada mediante el modal
+ * 3. Procesa la selección del coche enviada mediante el modal y publica los resultados finales al terminar.
  */
 export async function handleDraftModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     try {
@@ -203,17 +203,3 @@ export async function handleDraftModalSubmit(interaction: ModalSubmitInteraction
                 .setStyle(ButtonStyle.Primary)
                 .setDisabled(updatedState.isCompleted)
         );
-
-        if (interaction.message) {
-            await interaction.message.edit({ embeds: [updatedEmbed], components: [row] });
-        }
-
-        await interaction.editReply({ content: `✅ ¡Has seleccionado con éxito el **${selectedModel}**!` });
-        return true;
-
-    } catch (error) {
-        console.error('❌ Error en handleDraftModalSubmit:', error);
-        await interaction.editReply({ content: '❌ Ocurrió un error al registrar tu elección.' });
-        return true;
-    }
-}
