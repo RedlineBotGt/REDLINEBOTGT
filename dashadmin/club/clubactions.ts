@@ -17,7 +17,8 @@ import {
     resetClubSession, 
     addChallengeToSession, 
     recordUserTime,
-    ClubChallenge 
+    ClubChallenge,
+    ClubSession
 } from './clubmanager';
 
 /**
@@ -40,7 +41,8 @@ export function buildChallengeEmbed(challenge: ClubChallenge): EmbedBuilder {
     } else {
         const rankingText = challenge.times.map((entry, idx) => {
             const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '⏱️';
-            return `${medal} **#${idx + 1}** <@${entry.userId}> ➔ **\`${entry.timeStr}\`**`;
+            const ptsText = entry.points ? ` *(${entry.points} pts)*` : '';
+            return `${medal} **#${idx + 1}** <@${entry.userId}> ➔ **\`${entry.timeStr}\`**${ptsText}`;
         }).join('\n');
 
         embed.addFields({
@@ -48,6 +50,44 @@ export function buildChallengeEmbed(challenge: ClubChallenge): EmbedBuilder {
             value: rankingText,
             inline: false
         });
+    }
+
+    return embed;
+}
+
+/**
+ * Construye el Embed con el formato limpio de la Clasificación General
+ */
+export function buildGeneralStandingsEmbed(session: ClubSession): EmbedBuilder {
+    const standingsMap = new Map<string, number>();
+
+    // Acumular puntos de todos los desafíos de la sesión
+    for (const challenge of session.challenges) {
+        for (const entry of challenge.times) {
+            const currentPoints = standingsMap.get(entry.userId) || 0;
+            standingsMap.set(entry.userId, currentPoints + (entry.points || 0));
+        }
+    }
+
+    // Ordenar de mayor a menor puntuación
+    const sortedStandings = Array.from(standingsMap.entries())
+        .sort((a, b) => b[1] - a[1]);
+
+    const embed = new EmbedBuilder()
+        .setColor(0xFFD700)
+        .setTitle('🏆 CLASIFICACIÓN GENERAL - GT CLUB')
+        .setTimestamp()
+        .setFooter({ text: 'REDLINE GT' });
+
+    if (sortedStandings.length === 0) {
+        embed.setDescription('*Aún no hay puntos acumulados en ningún desafío.*');
+    } else {
+        const rankingText = sortedStandings.map(([userId, points], idx) => {
+            const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '4️⃣';
+            return `${medal} <@${userId}> ➔ **${points} pts**`;
+        }).join('\n');
+
+        embed.setDescription(rankingText);
     }
 
     return embed;
@@ -214,22 +254,18 @@ export async function handleClubInteractions(interaction: Interaction): Promise<
  * Escuchador de mensajes para registrar tiempos de los usuarios
  */
 export async function handleClubMessage(message: Message): Promise<void> {
-    // Ignorar mensajes enviados por bots o fuera de un servidor
     if (message.author.bot || !message.guild) return;
 
     const guildId = message.guild.id;
     const session = getClubSession(guildId);
 
-    // Solo actuar si hay una sesión activa y el mensaje está en el canal configurado
     if (!session.active || session.channelId !== message.channel.id) return;
 
     const content = message.content.trim();
-
-    // Regex para detectar patrón: #1 01:23:456 o 1 01:23:456
     const regex = /^#?(\d+)\s+(\d{1,2}:[0-5]\d:\d{3})$/;
     const match = content.match(regex);
 
-    if (!match) return; // Si no coincide con el formato de tiempo, no hace nada
+    if (!match) return;
 
     const challengeId = parseInt(match[1], 10);
     const timeStr = match[2];
@@ -238,14 +274,12 @@ export async function handleClubMessage(message: Message): Promise<void> {
     if (!challenge || !challenge.messageId) return;
 
     const userName = message.member?.displayName || message.author.username;
-    const result = recordUserTime(guildId, challengeId, message.author.id, userName, timeStr);
+    const result = await recordUserTime(guildId, challengeId, message.author.id, userName, timeStr);
 
     if (!result.success) return;
 
-    // Reaccionar al mensaje del usuario para confirmar la lectura (el mensaje PERMANECE en el chat)
     await message.react('⏱️').catch(() => {});
 
-    // Actualizar el Embed independiente del desafío correspondiente
     try {
         const channel = message.channel as TextChannel;
         const targetMessage = await channel.messages.fetch(challenge.messageId);
