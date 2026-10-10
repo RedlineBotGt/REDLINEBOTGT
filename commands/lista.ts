@@ -2,7 +2,7 @@ import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, 
 
 export const data = new SlashCommandBuilder()
     .setName('lista')
-    .setDescription('Muestra los usuarios con un rol específico separados por tabulador para pegar en Sheets.')
+    .setDescription('Muestra los usuarios con un rol específico listos para copiar a Sheets.')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addRoleOption(option => 
         option.setName('rol')
@@ -31,13 +31,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             return;
         }
 
-        // Usamos \t (Tabulador) para separar la Columna 1 de la Columna 2
+        // Construcción de filas: Nombre + Tabulador (\t) + <@ID>
         const listLines = membersWithRole.map(m => {
             const displayName = m.displayName || m.user.username;
             return `${displayName}\t<@${m.user.id}>`;
         }).join('\n');
 
-        const responseText = `📋 **Lista para Google Sheets del rol @${role.name} (${membersWithRole.size}):**\n\n\`\`\`text\n${listLines}\n\`\`\``;
+        // ➔ TEXTO CAMBIADO AQUÍ SEGÚN LA CAPTURA:
+        const responseText = `📋 **LISTA EN ORDEN DE ELECCIÓN (${membersWithRole.size}):**\n\n\`\`\`tsv\n${listLines}\n\`\`\``;
 
         await interaction.editReply({ content: responseText });
 
