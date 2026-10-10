@@ -1,5 +1,4 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from 'discord.js';
-import { translate } from '@vitalets/google-translate-api';
 
 export const data = new SlashCommandBuilder()
     .setName('trans')
@@ -26,8 +25,18 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const idiomaDestino = interaction.options.getString('idioma', true);
         const textoOriginal = interaction.options.getString('texto', true);
 
-        // Traducción usando la API
-        const res = await translate(textoOriginal, { to: idiomaDestino });
+        // Petición directa al endpoint público para evitar bloqueo de IP por la librería
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${idiomaDestino}&dt=t&q=${encodeURIComponent(textoOriginal)}`;
+        
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // Extraer y unir los fragmentos traducidos
+        const textoTraducido = data[0].map((item: any) => item[0]).join('');
 
         const nombreIdioma = idiomaDestino === 'en' ? 'Inglés' : 'Castellano';
         const bandera = idiomaDestino === 'en' ? '🇬🇧' : '🇪🇸';
@@ -37,7 +46,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             .setTitle(`${bandera} Traducción a ${nombreIdioma}`)
             .addFields(
                 { name: '📥 Texto Original', value: textoOriginal },
-                { name: '📤 Traducción', value: res.text }
+                { name: '📤 Traducción', value: textoTraducido }
             )
             .setTimestamp();
 
