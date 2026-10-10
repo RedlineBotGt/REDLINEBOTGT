@@ -1,8 +1,11 @@
+import { MongoClient, Collection } from 'mongodb';
+
 export interface ClubTimeEntry {
     userId: string;
     userName: string;
     timeStr: string;   // Formato original "mm:ss:xxx"
     ms: number;        // Tiempo en milisegundos para ordenación exacta
+    points: number;    // Puntos obtenidos en este desafío
     timestamp: number;
 }
 
@@ -19,6 +22,25 @@ export interface ClubSession {
     channelId?: string;
     challenges: ClubChallenge[];
     active: boolean;
+}
+
+/**
+ * Conexión centralizada a MongoDB para GT Club
+ */
+let cachedClubCollection: Collection | null = null;
+
+async function getClubCollection(): Promise<Collection> {
+    if (cachedClubCollection) return cachedClubCollection;
+
+    const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL || process.env.MONGO_URL;
+    if (!uri) {
+        throw new Error('❌ No se encontró ninguna variable de entorno para MongoDB.');
+    }
+
+    const client = new MongoClient(uri);
+    await client.connect();
+    cachedClubCollection = client.db().collection('gt_club_sessions');
+    return cachedClubCollection;
 }
 
 // Almacenamiento temporal en memoria por servidor (Guild)
@@ -68,11 +90,62 @@ export function addChallengeToSession(guildId: string, title: string, subtitle: 
 }
 
 /**
+ * Edita un desafío existente (título y subtítulo)
+ */
+export async function editChallengeInSession(
+    guildId: string,
+    challengeId: number,
+    newTitle: string,
+    newSubtitle: string
+): Promise<ClubChallenge | null> {
+    const session = getClubSession(guildId);
+    const challenge = session.challenges.find(c => c.id === challengeId);
+
+    if (!challenge) return null;
+
+    challenge.title = newTitle;
+    challenge.subtitle = newSubtitle;
+
+    if (session.active) {
+        await saveSessionToDB(session);
+    }
+
+    return challenge;
+}
+
+/**
+ * Elimina un desafío de la sesión y reordena los IDs restantes
+ */
+export async function deleteChallengeFromSession(
+    guildId: string,
+    challengeId: number
+): Promise<{ success: boolean; deletedMessageId?: string }> {
+    const session = getClubSession(guildId);
+    const index = session.challenges.findIndex(c => c.id === challengeId);
+
+    if (index === -1) return { success: false };
+
+    const deletedMessageId = session.challenges[index].messageId;
+
+    // Eliminar desafío
+    session.challenges.splice(index, 1);
+
+    // Reordenar IDs secuencialmente (#1, #2, #3...)
+    session.challenges.forEach((ch, idx) => {
+        ch.id = idx + 1;
+    });
+
+    if (session.active) {
+        await saveSessionToDB(session);
+    }
+
+    return { success: true, deletedMessageId };
+}
+
+/**
  * Convierte una cadena mm:ss:xxx o m:ss:xxx a milisegundos totales
- * Ejemplo: "01:23:456" -> 83456 ms
  */
 export function parseTimeToMs(timeStr: string): number | null {
-    // Regex flexible para m:ss:xxx o mm:ss:xxx
     const regex = /^(\d{1,2}):([0-5]\d):(\d{3})$/;
     const match = timeStr.trim().match(regex);
     if (!match) return null;
@@ -85,16 +158,32 @@ export function parseTimeToMs(timeStr: string): number | null {
 }
 
 /**
- * Registra o actualiza el tiempo de un usuario en un desafío específico.
- * Si el usuario ya tenía tiempo, solo se actualiza si el nuevo es mejor (menor ms).
+ * Recalcula los puntos de cada participante según su posición (5 - 3 - 2 - 1)
  */
-export function recordUserTime(
+function recalculateChallengePoints(challenge: ClubChallenge) {
+    challenge.times.forEach((entry, index) => {
+        if (index === 0) {
+            entry.points = 5; // 1º puesto
+        } else if (index === 1) {
+            entry.points = 3; // 2º puesto
+        } else if (index === 2) {
+            entry.points = 2; // 3º puesto
+        } else {
+            entry.points = 1; // 4º puesto en adelante
+        }
+    });
+}
+
+/**
+ * Registra o actualiza el tiempo de un usuario y guarda en MongoDB
+ */
+export async function recordUserTime(
     guildId: string,
     challengeId: number,
     userId: string,
     userName: string,
     timeStr: string
-): { success: boolean; isImprovement: boolean; challenge?: ClubChallenge } {
+): Promise<{ success: boolean; isImprovement: boolean; challenge?: ClubChallenge }> {
     const session = getClubSession(guildId);
     const challenge = session.challenges.find(c => c.id === challengeId);
 
@@ -108,36 +197,83 @@ export function recordUserTime(
     }
 
     const existingIndex = challenge.times.findIndex(t => t.userId === userId);
+    let isImprovement = false;
 
     if (existingIndex !== -1) {
         const previousMs = challenge.times[existingIndex].ms;
         if (ms < previousMs) {
-            // Mejoró su tiempo anterior
             challenge.times[existingIndex] = {
                 userId,
                 userName,
                 timeStr,
                 ms,
+                points: 0,
                 timestamp: Date.now()
             };
-            // Reordenar tiempos de menor a mayor
-            challenge.times.sort((a, b) => a.ms - b.ms);
-            return { success: true, isImprovement: true, challenge };
-        } else {
-            // El tiempo registrado no supera a su marca previa
-            return { success: true, isImprovement: false, challenge };
+            isImprovement = true;
         }
     } else {
-        // Nuevo registro de participante
         challenge.times.push({
             userId,
             userName,
             timeStr,
             ms,
+            points: 0,
             timestamp: Date.now()
         });
-        // Reordenar tiempos de menor a mayor
-        challenge.times.sort((a, b) => a.ms - b.ms);
-        return { success: true, isImprovement: true, challenge };
+        isImprovement = true;
     }
+
+    if (isImprovement) {
+        // Ordenar tiempos de menor a mayor (más rápido primero)
+        challenge.times.sort((a, b) => a.ms - b.ms);
+        // Recalcular puntos con el nuevo ranking
+        recalculateChallengePoints(challenge);
+
+        // Guardar sesión actualizada en MongoDB
+        if (session.active) {
+            await saveSessionToDB(session);
+        }
+    }
+
+    return { success: true, isImprovement, challenge };
+}
+
+/**
+ * Guarda o actualiza la sesión activa en MongoDB
+ */
+export async function saveSessionToDB(session: ClubSession): Promise<void> {
+    try {
+        const collection = await getClubCollection();
+        await collection.updateOne(
+            { guildId: session.guildId, active: true },
+            { $set: session },
+            { upsert: true }
+        );
+    } catch (err) {
+        console.error('❌ Error guardando sesión de GT Club en MongoDB:', err);
+    }
+}
+
+/**
+ * Carga la sesión activa desde MongoDB para memoria
+ */
+export async function loadActiveSessionFromDB(guildId: string): Promise<ClubSession | null> {
+    try {
+        const collection = await getClubCollection();
+        const doc = await collection.findOne({ guildId, active: true });
+        if (doc) {
+            const session: ClubSession = {
+                guildId: doc.guildId,
+                channelId: doc.channelId,
+                challenges: doc.challenges,
+                active: doc.active
+            };
+            clubSessions.set(guildId, session);
+            return session;
+        }
+    } catch (err) {
+        console.error('❌ Error cargando sesión de GT Club desde MongoDB:', err);
+    }
+    return null;
 }
