@@ -2,6 +2,8 @@
 import { google } from 'googleapis';
 import { Buffer } from 'buffer';
 
+const DEFAULT_SPREADSHEET_ID = '1E-dMxBrK7gZLAGR2Ge7OuGEt-IvzVK8BWOTtxZojsXs';
+
 export interface DraftState {
     pilots: string[];                              // Todos los pilotos ordenados por PreQualy (Columna A)
     allModels: string[];                           // Todos los modelos de coches (Columna B)
@@ -51,9 +53,10 @@ function getAuthenticatedSheets() {
 /**
  * Lee el estado actual del Draft desde la hoja de cálculo en la pestaña "Draft".
  */
-export async function getDraftState(sheetsParam: any, spreadsheetId: string): Promise<DraftState> {
+export async function getDraftState(sheetsParam?: any, spreadsheetIdParam?: string): Promise<DraftState> {
     try {
         const sheets = getAuthenticatedSheets();
+        const spreadsheetId = spreadsheetIdParam || DEFAULT_SPREADSHEET_ID;
 
         // Obtenemos los rangos: A2:A (Pilotos), B2:B (Modelos), C2:D (Elecciones C: Piloto, D: Modelo)
         const response = await sheets.spreadsheets.values.batchGet({
@@ -103,9 +106,10 @@ export async function getDraftState(sheetsParam: any, spreadsheetId: string): Pr
 /**
  * Registra la elección de un piloto escribiéndola en la siguiente fila vacía de las columnas C y D.
  */
-export async function recordDraftChoice(sheetsParam: any, spreadsheetId: string, pilot: string, model: string): Promise<void> {
+export async function recordDraftChoice(sheetsParam: any, spreadsheetIdParam: string, pilot: string, model: string): Promise<void> {
     try {
         const sheets = getAuthenticatedSheets();
+        const spreadsheetId = spreadsheetIdParam || DEFAULT_SPREADSHEET_ID;
 
         // Encontrar la siguiente fila disponible consultando las columnas C:D
         const response = await sheets.spreadsheets.values.get({
