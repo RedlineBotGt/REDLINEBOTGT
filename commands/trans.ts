@@ -2,14 +2,15 @@ import { SlashCommandBuilder, ChatInputCommandInteraction, AllowedMentionsTypes 
 
 export const data = new SlashCommandBuilder()
     .setName('trans')
-    .setDescription('Traduce un texto al inglés o al castellano')
+    .setDescription('Traduce un texto al inglés, castellano o portugués')
     .addStringOption(option =>
         option.setName('idioma')
             .setDescription('Idioma al que deseas traducir')
             .setRequired(true)
             .addChoices(
                 { name: '🇬🇧 Inglés', value: 'en' },
-                { name: '🇪🇸 Castellano', value: 'es' }
+                { name: '🇪🇸 Castellano', value: 'es' },
+                { name: '🇵🇹 Portugués', value: 'pt' }
             )
     )
     .addStringOption(option =>
@@ -74,7 +75,7 @@ async function obtenerTraduccion(texto: string, idiomaDestino: string) {
         throw new Error('No se pudo obtener la traducción.');
     }
 
-    // 3. Restaurar las menciones originales reemplazando los marcadores (tolerando espacios que Google pueda añadir)
+    // 3. Restaurar las menciones originales reemplazando los marcadores
     mentions.forEach((mention, index) => {
         textoTraducido = textoTraducido.replace(new RegExp(`\\s*__TAG${index}__\\s*`, 'gi'), ` ${mention} `);
     });
@@ -98,8 +99,16 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
         const { textoTraducido, idiomaDetectado } = await obtenerTraduccion(textoOriginal, idiomaDestino);
 
-        const banderaOrigen = idiomaDetectado.toLowerCase().startsWith('en') ? '🇬🇧' : '🇪🇸';
-        const banderaDestino = idiomaDestino === 'en' ? '🇬🇧' : '🇪🇸';
+        // Función para asignar la bandera correcta según el código de idioma
+        const obtenerBandera = (lang: string) => {
+            const l = lang.toLowerCase();
+            if (l.startsWith('en')) return '🇬🇧';
+            if (l.startsWith('pt')) return '🇵🇹';
+            return '🇪🇸';
+        };
+
+        const banderaOrigen = obtenerBandera(idiomaDetectado);
+        const banderaDestino = obtenerBandera(idiomaDestino);
 
         const mensajeFinal = `${banderaOrigen} **Original:** ${textoOriginal}\n${banderaDestino} **Traducción:** ${textoTraducido}`;
 
