@@ -30,6 +30,7 @@ import * as draftCommand from './commands/draft'; // ➔ Comando draft
 import * as listaCommand from './commands/lista'; // ➔ Comando Lista
 import * as clubCommand from './commands/club'; // ➔ Comando Club
 import * as clubclasCommand from './commands/clubclas'; // ➔ Comando Club Clasificación General
+import * as transCommand from './commands/trans'; // ➔ Comando Traducción
 import * as dashSheetsCommand from './dashsheet/dashsheet';
 import * as dashAdminCommand from './dashadmin/dashadmin'; // ➔ Comando dashadmin
 
@@ -41,92 +42,4 @@ let cachedCollection: MongoCollection | null = null;
 export async function getEventsCollection(): Promise<MongoCollection> {
     if (cachedCollection) return cachedCollection;
 
-    const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL || process.env.MONGO_URL;
-
-    if (!uri) {
-        throw new Error('❌ No se encontró ninguna variable de entorno para MongoDB (revisa Render).');
-    }
-
-    const mongoClient = new MongoClient(uri);
-    await mongoClient.connect();
-    cachedCollection = mongoClient.db().collection('events');
-    return cachedCollection;
-}
-
-// 🤖 Inicialización del Cliente de Discord con los Intents necesarios
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMessageReactions
-    ]
-}) as Client & { commands: Collection<string, any> };
-
-// 🗂️ Inicializar la colección de comandos en el cliente
-client.commands = new Collection();
-
-// Registro de comandos en la colección
-const commandsList = [
-    dashCommand, 
-    dashStaffCommand, 
-    dadoCommand, 
-    borrarCommand, 
-    msnCommand, 
-    draftCommand,
-    listaCommand,
-    clubCommand,
-    clubclasCommand,
-    dashSheetsCommand, 
-    dashAdminCommand
-];
-
-for (const cmd of commandsList) {
-    if ('data' in cmd && 'execute' in cmd) {
-        client.commands.set((cmd.data as any).name, cmd);
-    }
-}
-
-/**
- * 🚀 Evento de Arranque (Ready)
- */
-client.once('ready', () => {
-    console.log(`🤖 [REDLINE GT] Bot conectado exitosamente como ${client.user?.tag}`);
-
-    // Inicializar el sistema de apodos automáticos
-    setupNicknameSystem(client);
-
-    // Inicializar el sistema de Bienvenidas y Despedidas
-    setupWelcomeSystem(client);
-
-    // Inicializar el sistema de Avisos y Logs
-    setupAvisosSystem(client);
-
-    // ➔ Inicializar el sistema de Encuestas (Worker de cierre automático)
-    setupPollSystem(client);
-});
-
-/**
- * ⚡ Enrutador Maestro de Interacciones (Conectado a generalinteraction.ts)
- */
-client.on('interactionCreate', async (interaction: Interaction) => {
-    await handleGlobalInteraction(interaction, client);
-});
-
-/**
- * 🗳️ Listener de Reacciones para las Encuestas
- */
-client.on('messageReactionAdd', async (reaction, user) => {
-    await handleEncuestaReactionAdd(reaction, user);
-});
-
-/**
- * 🏎️ Listener de Mensajes para GT Club (Tiempos de Desafíos Offline)
- */
-client.on('messageCreate', async (message: Message) => {
-    await handleClubMessage(message);
-});
-
-// 🔐 Inicio de sesión del bot con el token de entorno
-client.login(process.env.DISCORD_TOKEN);
+    const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.
