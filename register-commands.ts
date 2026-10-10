@@ -5,6 +5,7 @@ import { data as msnCommand } from './commands/msn';
 import { data as borrarCommand } from './commands/borrar';
 import { data as dashsheetsCommand } from './dashsheet/dashsheet';
 import { data as dadoCommand } from './commands/dado';
+import { data as draftCommand } from './dashadmin/draft/draft'; // 👈 1. Importar el comando draft
 
 // Mapeamos los comandos activos que se registrarán en Discord
 const commandList = [
@@ -14,6 +15,7 @@ const commandList = [
     { name: 'borrar', data: borrarCommand },
     { name: 'dashsheets', data: dashsheetsCommand },
     { name: 'dado', data: dadoCommand },
+    { name: 'draft', data: draftCommand }, // 👈 2. Añadirlo a la lista
 ];
 
 const commands = commandList.map(cmd => {
