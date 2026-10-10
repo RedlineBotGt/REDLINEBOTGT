@@ -18,11 +18,10 @@ export const data = new SlashCommandBuilder()
             .setRequired(true)
     );
 
-// Función auxiliar para consultar la API de traducción probando endpoint primario y secundario
 async function obtenerTraduccion(texto: string, idiomaDestino: string) {
     const encodedText = encodeURIComponent(texto);
     
-    // Lista de endpoints públicos alternativos de Google Translate
+    // Endpoints optimizados para evitar bloqueos y textos incompletos
     const urls = [
         `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${idiomaDestino}&dt=t&q=${encodedText}`,
         `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=auto&tl=${idiomaDestino}&q=${encodedText}`
@@ -34,24 +33,30 @@ async function obtenerTraduccion(texto: string, idiomaDestino: string) {
             if (res.ok) {
                 const data = await res.json();
                 
-                // Formato de respuesta para endpoint 1 (gtx)
-                if (Array.isArray(data[0])) {
-                    const textoTraducido = data[0].map((item: any) => item[0]).join('');
-                    const idiomaDetectado = data[2] || 'es';
-                    return { textoTraducido, idiomaDetectado };
+                // Procesar respuesta del Endpoint 1 (Unir todos los bloques de texto para evitar mensajes cortados)
+                if (Array.isArray(data) && Array.isArray(data[0])) {
+                    const textoTraducido = data[0]
+                        .filter((item: any) => Array.isArray(item) && typeof item[0] === 'string')
+                        .map((item: any) => item[0])
+                        .join('');
+                    
+                    const idiomaDetectado = (typeof data[2] === 'string') ? data[2] : 'es';
+                    
+                    if (textoTraducido.trim().length > 0) {
+                        return { textoTraducido, idiomaDetectado };
+                    }
                 } 
-                // Formato de respuesta para endpoint 2 (dict-chrome-ex)
+                // Procesar respuesta del Endpoint 2
                 else if (Array.isArray(data) && typeof data[0] === 'string') {
                     return { textoTraducido: data[0], idiomaDetectado: 'es' };
                 }
             }
         } catch (e) {
-            // Si falla una URL, continúa con la siguiente
             continue;
         }
     }
 
-    throw new Error('No se pudo obtener la traducción de ningún servidor.');
+    throw new Error('No se pudo obtener la traducción completa.');
 }
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -63,19 +68,20 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
         const { textoTraducido, idiomaDetectado } = await obtenerTraduccion(textoOriginal, idiomaDestino);
 
-        // Banderas dinámicas
-        const banderaOrigen = idiomaDetectado.startsWith('en') ? '🇬🇧' : '🇪🇸';
+        // Selección de banderas según el idioma detectado y de destino
+        const banderaOrigen = idiomaDetectado.toLowerCase().startsWith('en') ? '🇬🇧' : '🇪🇸';
         const banderaDestino = idiomaDestino === 'en' ? '🇬🇧' : '🇪🇸';
 
+        // Formato final en texto plano
         const mensajeFinal = `${banderaOrigen} **Original:** ${textoOriginal}\n${banderaDestino} **Traducción:** ${textoTraducido}`;
 
         await interaction.editReply({ content: mensajeFinal });
     } catch (error) {
         console.error('❌ Error al traducir el texto:', error);
         if (interaction.deferred || interaction.replied) {
-            await interaction.editReply({ content: '❌ Ocurrió un error al intentar traducir el texto (Límite de peticiones alcanzado).' });
+            await interaction.editReply({ content: '❌ Ocurrió un error al procesar la traducción completa.' });
         } else {
-            await interaction.reply({ content: '❌ Ocurrió un error al intentar traducir el texto.', ephemeral: true });
+            await interaction.reply({ content: '❌ Ocurrió un error al procesar la traducción completa.', ephemeral: true });
         }
     }
 }
