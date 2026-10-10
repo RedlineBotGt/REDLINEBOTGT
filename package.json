@@ -8,6 +8,7 @@
     "register": "npx tsx register-commands.ts"
   },
   "dependencies": {
+    "@vitalets/google-translate-api": "^9.1.0",
     "discord.js": "^14.14.1",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
