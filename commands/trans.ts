@@ -20,11 +20,10 @@ export const data = new SlashCommandBuilder()
     );
 
 async function obtenerTraduccion(texto: string, idiomaDestino: string) {
-    // 1. Detectar menciones de usuarios, roles o canales de Discord: <@ID>, <@!ID>, <@&ID>, <#ID>
     const mentionRegex = /<@[!&]?\d+>|<#\d+>/g;
     const mentions: string[] = [];
     
-    // 2. Ocultar las menciones con marcadores seguros que Google Translate no rompa
+    // Proteger menciones solo si existen
     const textoProtegido = texto.replace(mentionRegex, (match) => {
         mentions.push(match);
         return `__TAG${mentions.length - 1}__`;
@@ -47,23 +46,23 @@ async function obtenerTraduccion(texto: string, idiomaDestino: string) {
             if (res.ok) {
                 const data = await res.json();
                 
-                if (Array.isArray(data) && Array.isArray(data[0])) {
-                    textoTraducido = data[0]
-                        .filter((item: any) => Array.isArray(item) && typeof item[0] === 'string')
-                        .map((item: any) => item[0])
-                        .join('');
-                    
-                    idiomaDetectado = (typeof data[2] === 'string') ? data[2] : 'es';
-                    
-                    if (textoTraducido.trim().length > 0) {
+                if (Array.isArray(data)) {
+                    if (Array.isArray(data[0])) {
+                        const partes = data[0]
+                            .filter((item: any) => Array.isArray(item) && typeof item[0] === 'string')
+                            .map((item: any) => item[0]);
+
+                        if (partes.length > 0) {
+                            textoTraducido = partes.join('');
+                            idiomaDetectado = (typeof data[2] === 'string') ? data[2] : 'es';
+                            success = true;
+                            break;
+                        }
+                    } else if (typeof data[0] === 'string') {
+                        textoTraducido = data[0];
                         success = true;
                         break;
                     }
-                } 
-                else if (Array.isArray(data) && typeof data[0] === 'string') {
-                    textoTraducido = data[0];
-                    success = true;
-                    break;
                 }
             }
         } catch (e) {
@@ -75,15 +74,14 @@ async function obtenerTraduccion(texto: string, idiomaDestino: string) {
         throw new Error('No se pudo obtener la traducción.');
     }
 
-    // 3. Restaurar las menciones originales reemplazando los marcadores
-    mentions.forEach((mention, index) => {
-        textoTraducido = textoTraducido.replace(new RegExp(`\\s*__TAG${index}__\\s*`, 'gi'), ` ${mention} `);
-    });
+    // Restaurar menciones únicamente si se detectó alguna originalmente
+    if (mentions.length > 0) {
+        mentions.forEach((mention, index) => {
+            textoTraducido = textoTraducido.replace(new RegExp(`__TAG${index}__`, 'gi'), mention);
+        });
+    }
 
-    // Limpiar espacios dobles sobrantes
-    textoTraducido = textoTraducido.replace(/\s+/g, ' ').trim();
-
-    return { textoTraducido, idiomaDetectado };
+    return { textoTraducido: textoTraducido.trim(), idiomaDetectado };
 }
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -99,7 +97,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
         const { textoTraducido, idiomaDetectado } = await obtenerTraduccion(textoOriginal, idiomaDestino);
 
-        // Función para asignar la bandera correcta según el código de idioma
         const obtenerBandera = (lang: string) => {
             const l = lang.toLowerCase();
             if (l.startsWith('en')) return '🇬🇧';
