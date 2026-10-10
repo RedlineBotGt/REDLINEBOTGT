@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 
 export const data = new SlashCommandBuilder()
     .setName('trans')
@@ -25,7 +25,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const idiomaDestino = interaction.options.getString('idioma', true);
         const textoOriginal = interaction.options.getString('texto', true);
 
-        // Petición directa al endpoint público para evitar bloqueo de IP por la librería
+        // Petición directa al endpoint libre de Google Translate para evitar límites de IP en Render
         const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${idiomaDestino}&dt=t&q=${encodeURIComponent(textoOriginal)}`;
         
         const response = await fetch(url);
@@ -35,22 +35,15 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
         const data = await response.json();
         
-        // Extraer y unir los fragmentos traducidos
+        // Extraer y unir las partes traducidas
         const textoTraducido = data[0].map((item: any) => item[0]).join('');
 
-        const nombreIdioma = idiomaDestino === 'en' ? 'Inglés' : 'Castellano';
         const bandera = idiomaDestino === 'en' ? '🇬🇧' : '🇪🇸';
 
-        const embed = new EmbedBuilder()
-            .setColor(0x3498DB)
-            .setTitle(`${bandera} Traducción a ${nombreIdioma}`)
-            .addFields(
-                { name: '📥 Texto Original', value: textoOriginal },
-                { name: '📤 Traducción', value: textoTraducido }
-            )
-            .setTimestamp();
+        // Mensaje de texto plano sin Embed para permitir pings y menciones reales
+        const mensajeFinal = `${bandera} **Original:** ${textoOriginal}\n**Traducción:** ${textoTraducido}`;
 
-        await interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ content: mensajeFinal });
     } catch (error) {
         console.error('❌ Error al traducir el texto:', error);
         if (interaction.deferred || interaction.replied) {
