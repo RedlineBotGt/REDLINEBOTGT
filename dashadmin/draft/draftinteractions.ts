@@ -1,4 +1,4 @@
-// Dashadmin/draft/interactiondraft.ts
+// Dashadmin/draft/draftinteractions.ts
 import { Interaction } from 'discord.js';
 import { 
     handleDraftChannelSelect, 
