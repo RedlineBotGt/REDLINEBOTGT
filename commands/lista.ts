@@ -2,7 +2,7 @@ import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, 
 
 export const data = new SlashCommandBuilder()
     .setName('lista')
-    .setDescription('Muestra los usuarios con un rol específico indicando su nombre e ID para el Draft.')
+    .setDescription('Muestra los usuarios con un rol específico separados por tabulador para pegar en Sheets.')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addRoleOption(option => 
         option.setName('rol')
@@ -22,10 +22,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
     try {
-        // Cargar todos los miembros del servidor para asegurar que no falte ninguno
         await guild.members.fetch();
 
-        // Filtrar los miembros con el rol seleccionado
         const membersWithRole = guild.members.cache.filter(member => member.roles.cache.has(role.id));
 
         if (membersWithRole.size === 0) {
@@ -33,14 +31,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             return;
         }
 
-        // Formatear cada línea con Nombre de usuario / Nickname e ID en formato mención <@ID>
+        // Usamos \t (Tabulador) para separar la Columna 1 de la Columna 2
         const listLines = membersWithRole.map(m => {
             const displayName = m.displayName || m.user.username;
-            return `${displayName} ➔ <@${m.user.id}>`;
+            return `${displayName}\t<@${m.user.id}>`;
         }).join('\n');
 
-        // Formato limpio listo para copiar y pegar
-        const responseText = `📋 **Lista de miembros con el rol @${role.name} (${membersWithRole.size}):**\n\n\`\`\`text\n${listLines}\n\`\`\``;
+        const responseText = `📋 **Lista para Google Sheets del rol @${role.name} (${membersWithRole.size}):**\n\n\`\`\`text\n${listLines}\n\`\`\``;
 
         await interaction.editReply({ content: responseText });
 
