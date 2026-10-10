@@ -9,12 +9,14 @@ import {
     ChannelSelectMenuBuilder, 
     ChannelType, 
     EmbedBuilder, 
-    TextChannel 
+    TextChannel,
+    Message
 } from 'discord.js';
 import { 
     getClubSession, 
     resetClubSession, 
     addChallengeToSession, 
+    recordUserTime,
     ClubChallenge 
 } from './clubmanager';
 
@@ -205,5 +207,54 @@ export async function handleClubInteractions(interaction: Interaction): Promise<
     } catch (error) {
         console.error('❌ Error en handleClubInteractions:', error);
         return false;
+    }
+}
+
+/**
+ * Escuchador de mensajes para registrar tiempos de los usuarios
+ */
+export async function handleClubMessage(message: Message): Promise<void> {
+    // Ignorar mensajes enviados por bots o fuera de un servidor
+    if (message.author.bot || !message.guild) return;
+
+    const guildId = message.guild.id;
+    const session = getClubSession(guildId);
+
+    // Solo actuar si hay una sesión activa y el mensaje está en el canal configurado
+    if (!session.active || session.channelId !== message.channel.id) return;
+
+    const content = message.content.trim();
+
+    // Regex para detectar patrón: #1 01:23:456 o 1 01:23:456
+    const regex = /^#?(\d+)\s+(\d{1,2}:[0-5]\d:\d{3})$/;
+    const match = content.match(regex);
+
+    if (!match) return; // Si no coincide con el formato de tiempo, no hace nada
+
+    const challengeId = parseInt(match[1], 10);
+    const timeStr = match[2];
+
+    const challenge = session.challenges.find(c => c.id === challengeId);
+    if (!challenge || !challenge.messageId) return;
+
+    const userName = message.member?.displayName || message.author.username;
+    const result = recordUserTime(guildId, challengeId, message.author.id, userName, timeStr);
+
+    if (!result.success) return;
+
+    // Reaccionar al mensaje del usuario para confirmar la lectura (el mensaje PERMANECE en el chat)
+    await message.react('⏱️').catch(() => {});
+
+    // Actualizar el Embed independiente del desafío correspondiente
+    try {
+        const channel = message.channel as TextChannel;
+        const targetMessage = await channel.messages.fetch(challenge.messageId);
+
+        if (targetMessage) {
+            const updatedEmbed = buildChallengeEmbed(challenge);
+            await targetMessage.edit({ embeds: [updatedEmbed] });
+        }
+    } catch (err) {
+        console.error('❌ Error actualizando el Embed del desafío:', err);
     }
 }
