@@ -18,6 +18,42 @@ export const data = new SlashCommandBuilder()
             .setRequired(true)
     );
 
+// Función auxiliar para consultar la API de traducción probando endpoint primario y secundario
+async function obtenerTraduccion(texto: string, idiomaDestino: string) {
+    const encodedText = encodeURIComponent(texto);
+    
+    // Lista de endpoints públicos alternativos de Google Translate
+    const urls = [
+        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${idiomaDestino}&dt=t&q=${encodedText}`,
+        `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=auto&tl=${idiomaDestino}&q=${encodedText}`
+    ];
+
+    for (const url of urls) {
+        try {
+            const res = await fetch(url);
+            if (res.ok) {
+                const data = await res.json();
+                
+                // Formato de respuesta para endpoint 1 (gtx)
+                if (Array.isArray(data[0])) {
+                    const textoTraducido = data[0].map((item: any) => item[0]).join('');
+                    const idiomaDetectado = data[2] || 'es';
+                    return { textoTraducido, idiomaDetectado };
+                } 
+                // Formato de respuesta para endpoint 2 (dict-chrome-ex)
+                else if (Array.isArray(data) && typeof data[0] === 'string') {
+                    return { textoTraducido: data[0], idiomaDetectado: 'es' };
+                }
+            }
+        } catch (e) {
+            // Si falla una URL, continúa con la siguiente
+            continue;
+        }
+    }
+
+    throw new Error('No se pudo obtener la traducción de ningún servidor.');
+}
+
 export async function execute(interaction: ChatInputCommandInteraction) {
     try {
         await interaction.deferReply();
@@ -25,33 +61,19 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const idiomaDestino = interaction.options.getString('idioma', true);
         const textoOriginal = interaction.options.getString('texto', true);
 
-        // Petición directa al endpoint libre de Google Translate
-        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${idiomaDestino}&dt=t&q=${encodeURIComponent(textoOriginal)}`;
-        
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`HTTP Error: ${response.status}`);
-        }
+        const { textoTraducido, idiomaDetectado } = await obtenerTraduccion(textoOriginal, idiomaDestino);
 
-        const data = await response.json();
-        
-        // Extraer el texto traducido y el idioma detectado por Google
-        const textoTraducido = data[0].map((item: any) => item[0]).join('');
-        const idiomaDetectado = data[2] || 'es'; // Idioma origen detectado
-
-        // Asignar la bandera correcta al origen según lo detectado
+        // Banderas dinámicas
         const banderaOrigen = idiomaDetectado.startsWith('en') ? '🇬🇧' : '🇪🇸';
-        // Asignar la bandera correcta al destino elegido
         const banderaDestino = idiomaDestino === 'en' ? '🇬🇧' : '🇪🇸';
 
-        // Mensaje limpio con su respectiva bandera en cada línea
         const mensajeFinal = `${banderaOrigen} **Original:** ${textoOriginal}\n${banderaDestino} **Traducción:** ${textoTraducido}`;
 
         await interaction.editReply({ content: mensajeFinal });
     } catch (error) {
         console.error('❌ Error al traducir el texto:', error);
         if (interaction.deferred || interaction.replied) {
-            await interaction.editReply({ content: '❌ Ocurrió un error al intentar traducir el texto.' });
+            await interaction.editReply({ content: '❌ Ocurrió un error al intentar traducir el texto (Límite de peticiones alcanzado).' });
         } else {
             await interaction.reply({ content: '❌ Ocurrió un error al intentar traducir el texto.', ephemeral: true });
         }
