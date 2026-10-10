@@ -12,7 +12,7 @@ import { handleWelcomeInteractions } from './welcome/interactionwelcome';
 import { handleEventInteractions } from './eventos/interactioneventos';
 import { handleEncuestaInteractions } from './encuestas/interactionencuesta';
 import { handleMsnInteractions } from './msn/msnmanager';
-import { handleDraftInteractions } from './draft/interactiondraft'; // ➔ Nuevo submódulo de Draft
+import { handleDraftInteractions } from './draft/draftinteractions'; // ➔ Nuevo submódulo de Draft
 
 /**
  * Enrutador principal del Panel de Administración (DashAdmin).
