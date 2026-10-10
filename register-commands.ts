@@ -5,7 +5,7 @@ import { data as msnCommand } from './commands/msn';
 import { data as borrarCommand } from './commands/borrar';
 import { data as dashsheetsCommand } from './dashsheet/dashsheet';
 import { data as dadoCommand } from './commands/dado';
-import { data as draftCommand } from './dashadmin/draft/draft'; // 👈 1. Importar el comando draft
+import { data as draftCommand } from './commands/draft'; // 👈 1. Importar el comando draft
 
 // Mapeamos los comandos activos que se registrarán en Discord
 const commandList = [
