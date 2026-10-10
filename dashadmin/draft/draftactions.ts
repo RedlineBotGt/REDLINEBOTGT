@@ -203,3 +203,41 @@ export async function handleDraftModalSubmit(interaction: ModalSubmitInteraction
                 .setStyle(ButtonStyle.Primary)
                 .setDisabled(updatedState.isCompleted)
         );
+
+        if (interaction.message) {
+            await interaction.message.edit({ embeds: [updatedEmbed], components: [row] });
+        }
+
+        // 🏆 Publicación del mensaje final post-draft con los resultados completos
+        if (updatedState.isCompleted && interaction.channel) {
+            const resultsMap = new Map<string, string>();
+            for (const c of updatedState.choices) {
+                const cleanId = extractUserId(c.pilot) || c.pilot;
+                resultsMap.set(cleanId, c.model);
+            }
+
+            const resultsText = updatedState.pilotList.map((p: any) => {
+                const cleanId = extractUserId(p.id) || p.id;
+                const model = resultsMap.get(cleanId) || 'Sin elección';
+                return `• **${p.name}** (<@${cleanId}>) ➔ **${model}**`;
+            }).join('\n');
+
+            const finalEmbed = new EmbedBuilder()
+                .setColor(0x00FF00)
+                .setTitle('🏆 RESULTADOS FINALES DEL DRAFT')
+                .setDescription('**¡El Draft ha finalizado oficialmente! Aquí tienes las asignaciones de vehículos:**\n\n' + resultsText)
+                .setTimestamp()
+                .setFooter({ text: 'REDLINE GT' });
+
+            await interaction.channel.send({ embeds: [finalEmbed] });
+        }
+
+        await interaction.editReply({ content: `✅ ¡Has seleccionado con éxito el **${selectedModel}**!` });
+        return true;
+
+    } catch (error) {
+        console.error('❌ Error en handleDraftModalSubmit:', error);
+        await interaction.editReply({ content: '❌ Ocurrió un error al registrar tu elección.' });
+        return true;
+    }
+}
