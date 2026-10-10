@@ -103,10 +103,10 @@ export async function resetClubSession(guildId: string): Promise<ClubSession> {
 }
 
 /**
- * Añade un nuevo desafío a la sesión actual
+ * Añade un nuevo desafío a la sesión actual y lo guarda inmediatamente en MongoDB
  */
-export function addChallengeToSession(guildId: string, title: string, subtitle: string): ClubChallenge {
-    const session = getClubSession(guildId);
+export async function addChallengeToSession(guildId: string, title: string, subtitle: string): Promise<ClubChallenge> {
+    const session = await ensureClubSessionLoaded(guildId);
     const newId = session.challenges.length + 1;
     const challenge: ClubChallenge = {
         id: newId,
@@ -115,6 +115,10 @@ export function addChallengeToSession(guildId: string, title: string, subtitle: 
         times: []
     };
     session.challenges.push(challenge);
+    
+    // Guardado inmediato en MongoDB para persistencia de borradores
+    await saveSessionToDB(session);
+
     return challenge;
 }
 
@@ -135,9 +139,7 @@ export async function editChallengeInSession(
     challenge.title = newTitle;
     challenge.subtitle = newSubtitle;
 
-    if (session.active) {
-        await saveSessionToDB(session);
-    }
+    await saveSessionToDB(session);
 
     return challenge;
 }
@@ -164,9 +166,7 @@ export async function deleteChallengeFromSession(
         ch.id = idx + 1;
     });
 
-    if (session.active) {
-        await saveSessionToDB(session);
-    }
+    await saveSessionToDB(session);
 
     return { success: true, deletedMessageId };
 }
@@ -269,13 +269,13 @@ export async function recordUserTime(
 }
 
 /**
- * Guarda o actualiza la sesión activa en MongoDB
+ * Guarda o actualiza la sesión en MongoDB (activa o en borrador)
  */
 export async function saveSessionToDB(session: ClubSession): Promise<void> {
     try {
         const collection = await getClubCollection();
         await collection.updateOne(
-            { guildId: session.guildId, active: true },
+            { guildId: session.guildId, active: session.active },
             { $set: session },
             { upsert: true }
         );
@@ -285,12 +285,12 @@ export async function saveSessionToDB(session: ClubSession): Promise<void> {
 }
 
 /**
- * Carga la sesión activa desde MongoDB para memoria
+ * Carga la sesión desde MongoDB para memoria
  */
 export async function loadActiveSessionFromDB(guildId: string): Promise<ClubSession | null> {
     try {
         const collection = await getClubCollection();
-        const doc = await collection.findOne({ guildId, active: true });
+        const doc = await collection.findOne({ guildId, active: true }) || await collection.findOne({ guildId });
         if (doc) {
             const session: ClubSession = {
                 guildId: doc.guildId,
