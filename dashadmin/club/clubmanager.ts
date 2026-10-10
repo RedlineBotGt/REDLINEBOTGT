@@ -47,7 +47,7 @@ async function getClubCollection(): Promise<Collection> {
 const clubSessions = new Map<string, ClubSession>();
 
 /**
- * Obtiene o crea una sesión activa de GT Club para el servidor
+ * Obtiene o crea una sesión activa de GT Club para el servidor (Memoria síncrona)
  */
 export function getClubSession(guildId: string): ClubSession {
     if (!clubSessions.has(guildId)) {
@@ -61,9 +61,38 @@ export function getClubSession(guildId: string): ClubSession {
 }
 
 /**
+ * Carga o inicializa la sesión asegurando sincronización con MongoDB
+ */
+export async function ensureClubSessionLoaded(guildId: string): Promise<ClubSession> {
+    if (!clubSessions.has(guildId) || !clubSessions.get(guildId)?.active) {
+        const loaded = await loadActiveSessionFromDB(guildId);
+        if (!loaded && !clubSessions.has(guildId)) {
+            const newSession: ClubSession = {
+                guildId,
+                challenges: [],
+                active: false
+            };
+            clubSessions.set(guildId, newSession);
+        }
+    }
+    return clubSessions.get(guildId)!;
+}
+
+/**
  * Reinicia la sesión para empezar a configurar nuevos desafíos desde cero
  */
-export function resetClubSession(guildId: string): ClubSession {
+export async function resetClubSession(guildId: string): Promise<ClubSession> {
+    // Desactivar sesión previa en MongoDB si existía
+    try {
+        const collection = await getClubCollection();
+        await collection.updateMany(
+            { guildId, active: true },
+            { $set: { active: false } }
+        );
+    } catch (err) {
+        console.error('❌ Error desactivando sesiones anteriores en MongoDB:', err);
+    }
+
     const newSession: ClubSession = {
         guildId,
         challenges: [],
@@ -98,7 +127,7 @@ export async function editChallengeInSession(
     newTitle: string,
     newSubtitle: string
 ): Promise<ClubChallenge | null> {
-    const session = getClubSession(guildId);
+    const session = await ensureClubSessionLoaded(guildId);
     const challenge = session.challenges.find(c => c.id === challengeId);
 
     if (!challenge) return null;
@@ -120,7 +149,7 @@ export async function deleteChallengeFromSession(
     guildId: string,
     challengeId: number
 ): Promise<{ success: boolean; deletedMessageId?: string }> {
-    const session = getClubSession(guildId);
+    const session = await ensureClubSessionLoaded(guildId);
     const index = session.challenges.findIndex(c => c.id === challengeId);
 
     if (index === -1) return { success: false };
@@ -184,7 +213,7 @@ export async function recordUserTime(
     userName: string,
     timeStr: string
 ): Promise<{ success: boolean; isImprovement: boolean; challenge?: ClubChallenge }> {
-    const session = getClubSession(guildId);
+    const session = await ensureClubSessionLoaded(guildId);
     const challenge = session.challenges.find(c => c.id === challengeId);
 
     if (!challenge) {
