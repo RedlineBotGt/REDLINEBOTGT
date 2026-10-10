@@ -25,7 +25,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const idiomaDestino = interaction.options.getString('idioma', true);
         const textoOriginal = interaction.options.getString('texto', true);
 
-        // Petición directa al endpoint libre de Google Translate para evitar límites de IP en Render
+        // Petición directa al endpoint libre de Google Translate
         const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${idiomaDestino}&dt=t&q=${encodeURIComponent(textoOriginal)}`;
         
         const response = await fetch(url);
@@ -35,13 +35,17 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
         const data = await response.json();
         
-        // Extraer y unir las partes traducidas
+        // Extraer el texto traducido y el idioma detectado por Google
         const textoTraducido = data[0].map((item: any) => item[0]).join('');
+        const idiomaDetectado = data[2] || 'es'; // Idioma origen detectado
 
-        const bandera = idiomaDestino === 'en' ? '🇬🇧' : '🇪🇸';
+        // Asignar la bandera correcta al origen según lo detectado
+        const banderaOrigen = idiomaDetectado.startsWith('en') ? '🇬🇧' : '🇪🇸';
+        // Asignar la bandera correcta al destino elegido
+        const banderaDestino = idiomaDestino === 'en' ? '🇬🇧' : '🇪🇸';
 
-        // Mensaje de texto plano sin Embed para permitir pings y menciones reales
-        const mensajeFinal = `${bandera} **Original:** ${textoOriginal}\n**Traducción:** ${textoTraducido}`;
+        // Mensaje limpio con su respectiva bandera en cada línea
+        const mensajeFinal = `${banderaOrigen} **Original:** ${textoOriginal}\n${banderaDestino} **Traducción:** ${textoTraducido}`;
 
         await interaction.editReply({ content: mensajeFinal });
     } catch (error) {
