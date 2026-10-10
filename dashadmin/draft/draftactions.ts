@@ -66,7 +66,18 @@ function buildDraftEmbed(state: any): EmbedBuilder {
         );
     }
 
-    // 2. Modelos Disponibles (Numerados 1, 2, 3...)
+    // 2. Selecciones Realizadas (Historial activo dentro del embed)
+    if (state.choices && state.choices.length > 0) {
+        const historyText = state.choices
+            .map((c: any) => `• ${c.pilot} ➔ **${c.model}**`)
+            .join('\n');
+
+        embed.addFields(
+            { name: '📋 Selecciones Realizadas', value: historyText, inline: false }
+        );
+    }
+
+    // 3. Modelos Disponibles (Numerados 1, 2, 3...)
     const availableList = state.availableModels
         .map((model: string, idx: number) => `\`${idx + 1}.\` ${model}`)
         .join('\n') || 'No quedan modelos disponibles.';
@@ -138,127 +149,4 @@ export async function handleDraftOpenModalButton(interaction: ButtonInteraction)
 
         if (state.isCompleted) {
             await interaction.reply({ content: '🎉 El Draft ya ha finalizado.', ephemeral: true });
-            return true;
-        }
-
-        const currentPilotId = extractUserId(state.currentPilot);
-        if (interaction.user.id !== currentPilotId) {
-            await interaction.reply({ 
-                content: `❌ No es tu turno. Le toca a <@${currentPilotId}>.`, 
-                ephemeral: true 
-            });
-            return true;
-        }
-
-        const modal = new ModalBuilder()
-            .setCustomId('draft_modal_submit')
-            .setTitle('Selecciona tu Coche');
-
-        const carIndexInput = new TextInputBuilder()
-            .setCustomId('car_number')
-            .setLabel('Número del Coche deseado')
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder('Ejemplo: 1')
-            .setRequired(true);
-
-        const row = new ActionRowBuilder<TextInputBuilder>().addComponents(carIndexInput);
-        modal.addComponents(row);
-
-        await interaction.showModal(modal);
-        return true;
-    } catch (error) {
-        console.error('❌ Error en handleDraftOpenModalButton:', error);
-        await interaction.reply({ content: '❌ Error al abrir el menú de selección.', ephemeral: true }).catch(() => {});
-        return true;
-    }
-}
-
-/**
- * 3. Procesa la selección del coche enviada mediante el modal, menciona al siguiente piloto y publica los resultados finales al terminar.
- */
-export async function handleDraftModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
-    try {
-        await interaction.deferReply({ ephemeral: true });
-
-        const state = await getDraftState();
-
-        const currentPilotId = extractUserId(state.currentPilot);
-        if (interaction.user.id !== currentPilotId) {
-            await interaction.editReply({ content: '❌ Lo sentimos, tu turno ya ha pasado o no era tu turno.' });
-            return true;
-        }
-
-        const rawIndex = interaction.fields.getTextInputValue('car_number').trim();
-        const carIndex = parseInt(rawIndex, 10) - 1;
-
-        if (isNaN(carIndex) || carIndex < 0 || carIndex >= state.availableModels.length) {
-            await interaction.editReply({ 
-                content: `❌ Número inválido. Debes introducir un número entre 1 y ${state.availableModels.length}.` 
-            });
-            return true;
-        }
-
-        const selectedModel = state.availableModels[carIndex];
-
-        // Guardar en Google Sheets (Cols D y E)
-        await recordDraftChoice(`<@${interaction.user.id}>`, selectedModel);
-
-        // Obtener estado actualizado para refrescar el Embed público
-        const updatedState = await getDraftState();
-        const updatedEmbed = buildDraftEmbed(updatedState);
-
-        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder()
-                .setCustomId('draft_open_modal')
-                .setLabel('🏎️ Elegir Coche')
-                .setStyle(ButtonStyle.Primary)
-                .setDisabled(updatedState.isCompleted)
-        );
-
-        if (interaction.message) {
-            await interaction.message.edit({ embeds: [updatedEmbed], components: [row] });
-        }
-
-        // 📢 Notificación de turno para el siguiente piloto
-        if (!updatedState.isCompleted && updatedState.currentPilot && interaction.channel) {
-            const nextPilotId = extractUserId(updatedState.currentPilot);
-            if (nextPilotId) {
-                await interaction.channel.send({
-                    content: `📢 <@${nextPilotId}>, ¡es tu turno para elegir coche!`
-                });
-            }
-        }
-
-        // 🏆 Publicación del mensaje final post-draft con los resultados completos
-        if (updatedState.isCompleted && interaction.channel) {
-            const resultsMap = new Map<string, string>();
-            for (const c of updatedState.choices) {
-                const cleanId = extractUserId(c.pilot) || c.pilot;
-                resultsMap.set(cleanId, c.model);
-            }
-
-            const resultsText = updatedState.pilotList.map((p: any) => {
-                const cleanId = extractUserId(p.id) || p.id;
-                const model = resultsMap.get(cleanId) || 'Sin elección';
-                return `• **${p.name}** (<@${cleanId}>) ➔ **${model}**`;
-            }).join('\n');
-
-            const finalEmbed = new EmbedBuilder()
-                .setColor(0x00FF00)
-                .setTitle('🏆 RESULTADOS FINALES DEL DRAFT')
-                .setDescription('**¡El Draft ha finalizado oficialmente! Aquí tienes las asignaciones de vehículos:**\n\n' + resultsText)
-                .setTimestamp()
-                .setFooter({ text: 'REDLINE GT' });
-
-            await interaction.channel.send({ embeds: [finalEmbed] });
-        }
-
-        await interaction.editReply({ content: `✅ ¡Has seleccionado con éxito el **${selectedModel}**!` });
-        return true;
-
-    } catch (error) {
-        console.error('❌ Error en handleDraftModalSubmit:', error);
-        await interaction.editReply({ content: '❌ Ocurrió un error al registrar tu elección.' });
-        return true;
-    }
-}
+            return
