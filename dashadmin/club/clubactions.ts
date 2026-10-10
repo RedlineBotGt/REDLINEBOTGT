@@ -7,6 +7,7 @@ import {
     ButtonBuilder, 
     ButtonStyle, 
     ChannelSelectMenuBuilder, 
+    StringSelectMenuBuilder,
     ChannelType, 
     EmbedBuilder, 
     TextChannel,
@@ -16,6 +17,8 @@ import {
     getClubSession, 
     resetClubSession, 
     addChallengeToSession, 
+    editChallengeInSession,
+    deleteChallengeFromSession,
     recordUserTime,
     ClubChallenge,
     ClubSession
@@ -94,6 +97,41 @@ export function buildGeneralStandingsEmbed(session: ClubSession): EmbedBuilder {
 }
 
 /**
+ * Muestra el panel principal de control cuando ya existen desafíos
+ */
+export async function showClubControlPanel(interaction: any): Promise<void> {
+    const session = getClubSession(interaction.guildId!);
+
+    const embed = new EmbedBuilder()
+        .setColor(0x3498DB)
+        .setTitle('⚙️ GT CLUB - PANEL DE CONTROL')
+        .setDescription(`Estado: **${session.active ? '🟢 Activo' : '🟠 En configuración'}**\nDesafíos registrados: **${session.challenges.length}**\n\nElige una opción para gestionar la sesión:`)
+        .setFooter({ text: 'REDLINE GT' });
+
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+            .setCustomId('club_btn_panel_add')
+            .setLabel('➕ Añadir Desafío')
+            .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+            .setCustomId('club_btn_panel_edit_select')
+            .setLabel('✏️ Editar / Borrar Desafío')
+            .setStyle(ButtonStyle.Primary)
+            .setDisabled(session.challenges.length === 0),
+        new ButtonBuilder()
+            .setCustomId('club_btn_panel_reset')
+            .setLabel('🔄 Reiniciar Sesión')
+            .setStyle(ButtonStyle.Danger)
+    );
+
+    if (interaction.replied || interaction.deferred) {
+        await interaction.followUp({ embeds: [embed], components: [row], ephemeral: true });
+    } else {
+        await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+    }
+}
+
+/**
  * Abre el Modal para crear un nuevo desafío (Título + Subtítulo)
  */
 export async function showChallengeModal(interaction: any, challengeNum: number): Promise<void> {
@@ -120,6 +158,93 @@ export async function showChallengeModal(interaction: any, challengeNum: number)
 
     modal.addComponents(row1, row2);
     await interaction.showModal(modal);
+}
+
+/**
+ * Modal para editar un desafío existente
+ */
+export async function showEditChallengeModal(interaction: any, challenge: ClubChallenge): Promise<void> {
+    const modal = new ModalBuilder()
+        .setCustomId(`club_modal_edit_${challenge.id}`)
+        .setTitle(`Editar Desafío #${challenge.id}`);
+
+    const titleInput = new TextInputBuilder()
+        .setCustomId('club_title')
+        .setLabel('Título del Desafío')
+        .setStyle(TextInputStyle.Short)
+        .setValue(challenge.title)
+        .setRequired(true);
+
+    const subtitleInput = new TextInputBuilder()
+        .setCustomId('club_subtitle')
+        .setLabel('Subtítulo / Consigna')
+        .setStyle(TextInputStyle.Paragraph)
+        .setValue(challenge.subtitle)
+        .setRequired(true);
+
+    modal.addComponents(
+        new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(subtitleInput)
+    );
+
+    await interaction.showModal(modal);
+}
+
+/**
+ * Muestra el desplegable para seleccionar qué desafío editar o borrar
+ */
+export async function sendEditChallengeSelect(interaction: any): Promise<void> {
+    const session = getClubSession(interaction.guildId!);
+
+    const embed = new EmbedBuilder()
+        .setColor(0xF39C12)
+        .setTitle('✏️ Selecciona un Desafío')
+        .setDescription('Elige de la lista el desafío que deseas modificar o eliminar:')
+        .setFooter({ text: 'REDLINE GT' });
+
+    const selectMenu = new StringSelectMenuBuilder()
+        .setCustomId('club_select_edit_target')
+        .setPlaceholder('Selecciona un desafío...')
+        .addOptions(
+            session.challenges.map(ch => ({
+                label: `Desafío #${ch.id}: ${ch.title.substring(0, 50)}`,
+                description: ch.subtitle.substring(0, 80),
+                value: ch.id.toString()
+            }))
+        );
+
+    const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
+
+    await interaction.update({ embeds: [embed], components: [row] });
+}
+
+/**
+ * Muestra las opciones de gestión (Editar / Borrar) para un desafío específico
+ */
+export async function sendChallengeManageOptions(interaction: any, challengeId: number): Promise<void> {
+    const session = getClubSession(interaction.guildId!);
+    const challenge = session.challenges.find(c => c.id === challengeId);
+
+    if (!challenge) return;
+
+    const embed = new EmbedBuilder()
+        .setColor(0x3498DB)
+        .setTitle(`🛠️ Gestionar Desafío #${challenge.id}`)
+        .setDescription(`**Título:** ${challenge.title}\n**Consigna:** ${challenge.subtitle}\n**Tiempos registrados:** ${challenge.times.length}`)
+        .setFooter({ text: 'REDLINE GT' });
+
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+            .setCustomId(`club_btn_do_edit_${challenge.id}`)
+            .setLabel('✏️ Editar Textos')
+            .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+            .setCustomId(`club_btn_do_delete_${challenge.id}`)
+            .setLabel('🗑️ Borrar Desafío')
+            .setStyle(ButtonStyle.Danger)
+    );
+
+    await interaction.update({ embeds: [embed], components: [row] });
 }
 
 /**
@@ -171,7 +296,6 @@ async function sendChannelSelectMenu(interaction: any): Promise<void> {
 
     await interaction.update({ embeds: [embed], components: [row] });
 }
-
 /**
  * Manejador principal de interacciones para el módulo GT Club
  */
@@ -182,22 +306,155 @@ export async function handleClubInteractions(interaction: Interaction): Promise<
 
         // 1. Ejecución del comando Slash /club
         if (interaction.isChatInputCommand() && interaction.commandName === 'club') {
+            const session = getClubSession(guildId);
+            if (session.challenges.length > 0) {
+                await showClubControlPanel(interaction);
+            } else {
+                resetClubSession(guildId);
+                await showChallengeModal(interaction, 1);
+            }
+            return true;
+        }
+
+        // 2. Botón: Abrir panel de Añadir
+        if (interaction.isButton() && interaction.customId === 'club_btn_panel_add') {
+            const session = getClubSession(guildId);
+            const nextNum = session.challenges.length + 1;
+            await showChallengeModal(interaction, nextNum);
+            return true;
+        }
+
+        // 3. Botón: Abrir menú de selección de edición/borrado
+        if (interaction.isButton() && interaction.customId === 'club_btn_panel_edit_select') {
+            await sendEditChallengeSelect(interaction);
+            return true;
+        }
+
+        // 4. Seleccionar desafío a editar/borrar
+        if (interaction.isStringSelectMenu() && interaction.customId === 'club_select_edit_target') {
+            const challengeId = parseInt(interaction.values[0], 10);
+            await sendChallengeManageOptions(interaction, challengeId);
+            return true;
+        }
+
+        // 5. Botón: Confirmar Edición de textos
+        if (interaction.isButton() && interaction.customId.startsWith('club_btn_do_edit_')) {
+            const challengeId = parseInt(interaction.customId.replace('club_btn_do_edit_', ''), 10);
+            const session = getClubSession(guildId);
+            const challenge = session.challenges.find(c => c.id === challengeId);
+            if (challenge) {
+                await showEditChallengeModal(interaction, challenge);
+            }
+            return true;
+        }
+
+        // 6. Botón: Confirmar Borrado de desafío
+        if (interaction.isButton() && interaction.customId.startsWith('club_btn_do_delete_')) {
+            const challengeId = parseInt(interaction.customId.replace('club_btn_do_delete_', ''), 10);
+            const result = await deleteChallengeFromSession(guildId, challengeId);
+
+            if (result.success) {
+                const session = getClubSession(guildId);
+
+                // Borrar mensaje en el canal de Discord si existía
+                if (session.channelId && result.deletedMessageId) {
+                    try {
+                        const channel = await interaction.guild?.channels.fetch(session.channelId) as TextChannel;
+                        if (channel) {
+                            const msg = await channel.messages.fetch(result.deletedMessageId);
+                            await msg.delete();
+                        }
+                    } catch (err) {
+                        console.error('❌ No se pudo eliminar el mensaje del desafío en Discord:', err);
+                    }
+                }
+
+                // Re-publicar / actualizar todos los Embeds restantes para reflejar la re-indexación (#1, #2...)
+                if (session.active && session.channelId) {
+                    const channel = await interaction.guild?.channels.fetch(session.channelId) as TextChannel;
+                    if (channel) {
+                        for (const ch of session.challenges) {
+                            if (ch.messageId) {
+                                try {
+                                    const msg = await channel.messages.fetch(ch.messageId);
+                                    await msg.edit({ embeds: [buildChallengeEmbed(ch)] });
+                                } catch (e) {}
+                            }
+                        }
+                    }
+                }
+
+                await interaction.update({
+                    content: `✅ **Desafío #${challengeId} eliminado.** Los desafíos restantes han sido reordenados automáticamente.`,
+                    embeds: [],
+                    components: []
+                });
+            }
+            return true;
+        }
+
+        // 7. Botón: Reiniciar Sesión
+        if (interaction.isButton() && interaction.customId === 'club_btn_panel_reset') {
             resetClubSession(guildId);
             await showChallengeModal(interaction, 1);
             return true;
         }
 
-        // 2. Recepción de Modales de creación
+        // 8. Recepción de Modales de creación
         if (interaction.isModalSubmit() && interaction.customId.startsWith('club_modal_create_')) {
             const title = interaction.fields.getTextInputValue('club_title').trim();
             const subtitle = interaction.fields.getTextInputValue('club_subtitle').trim();
 
             const challenge = addChallengeToSession(guildId, title, subtitle);
-            await sendAddMorePrompt(interaction, challenge.id);
+            const session = getClubSession(guildId);
+
+            // Si la sesión ya estaba activa, publicar inmediatamente el nuevo desafío en el canal
+            if (session.active && session.channelId) {
+                const channel = await interaction.guild?.channels.fetch(session.channelId) as TextChannel;
+                if (channel) {
+                    const embed = buildChallengeEmbed(challenge);
+                    const sentMsg = await channel.send({ embeds: [embed] });
+                    challenge.messageId = sentMsg.id;
+                }
+                await interaction.reply({
+                    content: `✅ **Desafío #${challenge.id}** creado y publicado directamente en <#${session.channelId}>.`,
+                    ephemeral: true
+                });
+            } else {
+                await sendAddMorePrompt(interaction, challenge.id);
+            }
             return true;
         }
 
-        // 3. Botón: "Añadir otro desafío"
+        // 9. Recepción de Modal: Editar Desafío
+        if (interaction.isModalSubmit() && interaction.customId.startsWith('club_modal_edit_')) {
+            const challengeId = parseInt(interaction.customId.replace('club_modal_edit_', ''), 10);
+            const title = interaction.fields.getTextInputValue('club_title').trim();
+            const subtitle = interaction.fields.getTextInputValue('club_subtitle').trim();
+
+            const updatedChallenge = await editChallengeInSession(guildId, challengeId, title, subtitle);
+            const session = getClubSession(guildId);
+
+            if (updatedChallenge && session.active && session.channelId && updatedChallenge.messageId) {
+                try {
+                    const channel = await interaction.guild?.channels.fetch(session.channelId) as TextChannel;
+                    if (channel) {
+                        const targetMsg = await channel.messages.fetch(updatedChallenge.messageId);
+                        await targetMsg.edit({ embeds: [buildChallengeEmbed(updatedChallenge)] });
+                    }
+                } catch (err) {
+                    console.error('❌ Error actualizando el Embed editado:', err);
+                }
+            }
+
+            await interaction.reply({
+                content: `✅ **Desafío #${challengeId} actualizado correctamente.**`,
+                ephemeral: true
+            });
+            return true;
+        }
+
+        // 10. Botón: "Añadir otro desafío"
         if (interaction.isButton() && interaction.customId === 'club_btn_add_another') {
             const session = getClubSession(guildId);
             const nextNum = session.challenges.length + 1;
@@ -205,13 +462,13 @@ export async function handleClubInteractions(interaction: Interaction): Promise<
             return true;
         }
 
-        // 4. Botón: "Publicar Desafíos"
+        // 11. Botón: "Publicar Desafíos"
         if (interaction.isButton() && interaction.customId === 'club_btn_finish_setup') {
             await sendChannelSelectMenu(interaction);
             return true;
         }
 
-        // 5. Selección de canal y publicación final
+        // 12. Selección de canal y publicación final
         if (interaction.isChannelSelectMenu() && interaction.customId === 'club_channel_select') {
             await interaction.deferUpdate();
 
