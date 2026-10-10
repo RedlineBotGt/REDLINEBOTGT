@@ -83,14 +83,14 @@ function buildDraftEmbed(state: any): EmbedBuilder {
         );
     }
 
-    // 3. Modelos Disponibles (MANTIENE LA NUMERACIÓN FIJA ORIGINAL)
+    // 3. Modelos Disponibles (MANTIENE LA NUMERACIÓN FIJA ORIGINAL Y MUESTRA SOLO LA X SIN MENCIONES)
     if (state.allModels && state.allModels.length > 0) {
         const modelsListText = state.allModels.map((model: string, idx: number) => {
             const numLabel = `\`${idx + 1}.\``;
-            const takenBy = takenModelsMap.get(model.toLowerCase().trim());
+            const isTaken = takenModelsMap.has(model.toLowerCase().trim());
 
-            if (takenBy) {
-                return `${numLabel} ~~${model}~~ ❌ *(Elegido por ${takenBy})*`;
+            if (isTaken) {
+                return `${numLabel} ~~${model}~~ ❌`;
             } else {
                 return `${numLabel} **${model}**`;
             }
