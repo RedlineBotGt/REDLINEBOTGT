@@ -39,25 +39,31 @@ function buildDraftEmbed(state: any): EmbedBuilder {
         embed.setDescription(`📢 Turno actual para: ${currentMention}\n\nPulsa el botón de abajo e introduce el número del coche que deseas elegir.`);
     }
 
-    // 1. Lista de Asistentes / Pilotos con el título ajustado
-    if (state.pilotList && state.pilotList.length > 0) {
-        const choicesMap = new Map<string, string>();
+    // Mapa para cruzar elecciones realizadas (Normalizando IDs para comparación exacta)
+    const choicesMap = new Map<string, string>();
+    const takenModelsMap = new Map<string, string>(); // Modelo -> Mención del piloto
+
+    if (state.choices) {
         for (const c of state.choices) {
             const cleanId = extractUserId(c.pilot) || c.pilot;
             choicesMap.set(cleanId, c.model);
+            takenModelsMap.set(c.model.toLowerCase().trim(), c.pilot);
         }
+    }
 
-        const pilotsListText = state.pilotList.map((p: any) => {
-            const cleanId = extractUserId(p.id) || p.id;
+    // 1. Lista de Asistentes / Pilotos y su estado
+    if (state.pilots && state.pilots.length > 0) {
+        const pilotsListText = state.pilots.map((pilotStr: string) => {
+            const cleanId = extractUserId(pilotStr) || pilotStr;
             const chosenModel = choicesMap.get(cleanId);
             const isCurrent = (cleanId === extractUserId(state.currentPilot));
 
             if (chosenModel) {
-                return `• ${p.name} ➔ **${chosenModel}** ✅`;
+                return `• <@${cleanId}> ➔ **${chosenModel}** ✅`;
             } else if (isCurrent && !state.isCompleted) {
-                return `• **${p.name}** ➔ ⏳ *Turno actual*`;
+                return `• **<@${cleanId}>** ➔ ⏳ *Turno actual*`;
             } else {
-                return `• ${p.name} ➔ ⏱️ Pendiente`;
+                return `• <@${cleanId}> ➔ ⏱️ Pendiente`;
             }
         }).join('\n');
 
@@ -66,7 +72,7 @@ function buildDraftEmbed(state: any): EmbedBuilder {
         );
     }
 
-    // 2. Selecciones Realizadas (Historial activo dentro del embed)
+    // 2. Historial de Selecciones Realizadas
     if (state.choices && state.choices.length > 0) {
         const historyText = state.choices
             .map((c: any) => `• ${c.pilot} ➔ **${c.model}**`)
@@ -77,14 +83,23 @@ function buildDraftEmbed(state: any): EmbedBuilder {
         );
     }
 
-    // 3. Modelos Disponibles (Numerados 1, 2, 3...)
-    const availableList = state.availableModels
-        .map((model: string, idx: number) => `\`${idx + 1}.\` ${model}`)
-        .join('\n') || 'No quedan modelos disponibles.';
+    // 3. Modelos Disponibles (MANTIENE LA NUMERACIÓN FIJA ORIGINAL)
+    if (state.allModels && state.allModels.length > 0) {
+        const modelsListText = state.allModels.map((model: string, idx: number) => {
+            const numLabel = `\`${idx + 1}.\``;
+            const takenBy = takenModelsMap.get(model.toLowerCase().trim());
 
-    embed.addFields(
-        { name: '🏎️ Modelos Disponibles', value: availableList, inline: false }
-    );
+            if (takenBy) {
+                return `${numLabel} ~~${model}~~ ❌ *(Elegido por ${takenBy})*`;
+            } else {
+                return `${numLabel} **${model}**`;
+            }
+        }).join('\n');
+
+        embed.addFields(
+            { name: '🏎️ Modelos Disponibles', value: modelsListText, inline: false }
+        );
+    }
 
     return embed;
 }
@@ -169,7 +184,7 @@ export async function handleDraftOpenModalButton(interaction: ButtonInteraction)
             .setCustomId('car_number')
             .setLabel('Número del Coche deseado')
             .setStyle(TextInputStyle.Short)
-            .setPlaceholder('Ejemplo: 1')
+            .setPlaceholder('Ejemplo: 12')
             .setRequired(true);
 
         const row = new ActionRowBuilder<TextInputBuilder>().addComponents(carIndexInput);
@@ -185,7 +200,7 @@ export async function handleDraftOpenModalButton(interaction: ButtonInteraction)
 }
 
 /**
- * 3. Procesa la selección del coche enviada mediante el modal, menciona al siguiente piloto y publica los resultados finales al terminar.
+ * 3. Procesa la selección del coche enviada mediante el modal
  */
 export async function handleDraftModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     try {
@@ -202,19 +217,31 @@ export async function handleDraftModalSubmit(interaction: ModalSubmitInteraction
         const rawIndex = interaction.fields.getTextInputValue('car_number').trim();
         const carIndex = parseInt(rawIndex, 10) - 1;
 
-        if (isNaN(carIndex) || carIndex < 0 || carIndex >= state.availableModels.length) {
+        if (isNaN(carIndex) || carIndex < 0 || carIndex >= state.allModels.length) {
             await interaction.editReply({ 
-                content: `❌ Número inválido. Debes introducir un número entre 1 y ${state.availableModels.length}.` 
+                content: `❌ Número inválido. Debes introducir un número entre 1 y ${state.allModels.length}.` 
             });
             return true;
         }
 
-        const selectedModel = state.availableModels[carIndex];
+        const selectedModel = state.allModels[carIndex];
 
-        // Guardar en Google Sheets (Cols D y E)
+        // Verificar si el coche ya fue cogido previamente
+        const isAlreadyTaken = state.choices.some(
+            (c: any) => c.model.toLowerCase().trim() === selectedModel.toLowerCase().trim()
+        );
+
+        if (isAlreadyTaken) {
+            await interaction.editReply({ 
+                content: `❌ El coche **${selectedModel}** ya ha sido seleccionado por otro piloto. Por favor, elige un coche disponible.` 
+            });
+            return true;
+        }
+
+        // Guardar la elección en Google Sheets (Cols D y E)
         await recordDraftChoice(`<@${interaction.user.id}>`, selectedModel);
 
-        // Obtener estado actualizado para refrescar el Embed público
+        // Obtener el estado actualizado tras la elección
         const updatedState = await getDraftState();
         const updatedEmbed = buildDraftEmbed(updatedState);
 
@@ -240,18 +267,10 @@ export async function handleDraftModalSubmit(interaction: ModalSubmitInteraction
             }
         }
 
-        // 🏆 Publicación del mensaje final post-draft con los resultados completos
+        // 🏆 PUBLICACIÓN DEL MENSAJE FINAL CUANDO EL ÚLTIMO PILOTO REALIZA SU ELECCIÓN
         if (updatedState.isCompleted && interaction.channel) {
-            const resultsMap = new Map<string, string>();
-            for (const c of updatedState.choices) {
-                const cleanId = extractUserId(c.pilot) || c.pilot;
-                resultsMap.set(cleanId, c.model);
-            }
-
-            const resultsText = updatedState.pilotList.map((p: any) => {
-                const cleanId = extractUserId(p.id) || p.id;
-                const model = resultsMap.get(cleanId) || 'Sin elección';
-                return `• **${p.name}** (<@${cleanId}>) ➔ **${model}**`;
+            const resultsText = updatedState.choices.map((c: any) => {
+                return `• ${c.pilot} ➔ **${c.model}**`;
             }).join('\n');
 
             const finalEmbed = new EmbedBuilder()
