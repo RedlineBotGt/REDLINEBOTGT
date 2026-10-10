@@ -5,7 +5,7 @@ import { setupNicknameSystem } from './dashadmin/nickname/nicknamemanager';
 import { setupWelcomeSystem } from './dashadmin/welcome/welcomemanager'; // ➔ Sistema de bienvenidas y despedidas
 import { setupAvisosSystem } from './dashadmin/avisos/avisosmanager'; // ➔ Sistema de avisos y logs
 import { setupPollSystem, handleEncuestaReactionAdd } from './dashadmin/encuestas/encuestasmanager'; // ➔ Sistema de Encuestas
-import { handleClubMessage } from './dashadmin/club/clubactions'; // 👈 1. Importación del escuchador de mensajes GT Club
+import { handleClubMessage } from './dashadmin/club/clubactions'; // ➔ Importación del escuchador de mensajes GT Club
 import express from 'express';
 
 // 🌐 Configuración del servidor Express para satisfacer el requisito de puertos de Render (Plan Gratuito)
@@ -29,6 +29,7 @@ import * as msnCommand from './commands/msn'; // ➔ Comando msn
 import * as draftCommand from './commands/draft'; // ➔ Comando draft
 import * as listaCommand from './commands/lista'; // ➔ Comando Lista
 import * as clubCommand from './commands/club'; // ➔ Comando Club
+import * as clubclasCommand from './commands/clubclas'; // ➔ Comando Club Clasificación General
 import * as dashSheetsCommand from './dashsheet/dashsheet';
 import * as dashAdminCommand from './dashadmin/dashadmin'; // ➔ Comando dashadmin
 
@@ -76,6 +77,7 @@ const commandsList = [
     draftCommand,
     listaCommand,
     clubCommand,
+    clubclasCommand,
     dashSheetsCommand, 
     dashAdminCommand
 ];
@@ -123,7 +125,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
  * 🏎️ Listener de Mensajes para GT Club (Tiempos de Desafíos Offline)
  */
 client.on('messageCreate', async (message: Message) => {
-    await handleClubMessage(message); // 👈 2. Conexión del escuchador de tiempos
+    await handleClubMessage(message);
 });
 
 // 🔐 Inicio de sesión del bot con el token de entorno
