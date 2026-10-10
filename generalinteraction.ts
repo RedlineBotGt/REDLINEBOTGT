@@ -3,6 +3,7 @@ import { handleDashAdminInteractions } from './dashadmin/interactiondashadmin'; 
 import { handleSheetsInteraction } from './dashsheet/sheetsInteraction';   // ➔ Panel de Google Sheets
 import { handleDadoModalSubmit } from './commands/dado'; // ➔ Comando del dado
 import { handleAvisosInteractions } from './dashadmin/avisos/interactionavisos'; // ➔ Ruta corregida
+import { handleClubInteractions } from './dashadmin/club/clubactions'; // 👈 1. Importación del manejador de GT Club
 
 /**
  * Enrutador Maestro Global de Interacciones
@@ -10,7 +11,7 @@ import { handleAvisosInteractions } from './dashadmin/avisos/interactionavisos';
  */
 export async function handleGlobalInteraction(interaction: Interaction, client: Client & { commands?: Map<string, any> }) {
     try {
-        // 1. Manejo de Comandos Slash (ej: /dash, /dashstaff, /dashsheets, /borrar, /dado)
+        // 1. Manejo de Comandos Slash (ej: /dash, /dashstaff, /dashsheets, /borrar, /dado, /club)
         if (interaction.isChatInputCommand()) {
             const command = client.commands?.get(interaction.commandName);
 
@@ -32,19 +33,23 @@ export async function handleGlobalInteraction(interaction: Interaction, client: 
             if (handledDado) return;
         }
 
-        // 2. Manejo de Interacciones del Panel Admin (`dashadmin` / submódulos)
+        // 2. Manejo de Interacciones de GT Club (Comando /club, Modales y Selects)
+        const handledByClub = await handleClubInteractions(interaction); // 👈 2. Ruta para GT Club
+        if (handledByClub) return;
+
+        // 3. Manejo de Interacciones del Panel Admin (`dashadmin` / submódulos)
         const handledByAdmin = await handleDashAdminInteractions(interaction);
         if (handledByAdmin) return;
 
-        // 3. Manejo de Interacciones del Panel de Google Sheets (`dashsheet`)
+        // 4. Manejo de Interacciones del Panel de Google Sheets (`dashsheet`)
         const handledBySheets = await handleSheetsInteraction(interaction);
         if (handledBySheets) return;
 
-        // 4. Manejo de Interacciones de Avisos y Logs (`interactionavisos`)
+        // 5. Manejo de Interacciones de Avisos y Logs (`interactionavisos`)
         const handledByAvisos = await handleAvisosInteractions(interaction);
         if (handledByAvisos) return;
 
-        // 5. Si la interacción es un componente (botón/modal/select) pero ningún router la reclamó
+        // 6. Si la interacción es un componente (botón/modal/select) pero ningún router la reclamó
         if (interaction.isButton() || interaction.isModalSubmit() || interaction.isAnySelectMenu()) {
             console.warn(`⚠ Interacción no reclamada [CustomId: ${interaction.customId}]`);
         }
