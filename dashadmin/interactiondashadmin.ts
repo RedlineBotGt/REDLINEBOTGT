@@ -13,7 +13,7 @@ import { handleEventInteractions } from './eventos/interactioneventos';
 import { handleEncuestaInteractions } from './encuestas/interactionencuesta';
 import { handleMsnInteractions } from './msn/msnmanager';
 import { handleDraftInteractions } from './draft/draftinteractions'; // ➔ Submódulo de Draft
-import { handleClubInteractions } from './club/clubactions'; // 👈 1. Importación de GT Club
+import { handleClubInteractions } from './club/clubactions'; // ➔ Submódulo de GT Club
 
 /**
  * Enrutador principal del Panel de Administración (DashAdmin).
@@ -59,4 +59,32 @@ export async function handleDashAdminInteractions(interaction: Interaction): Pro
         if (handledAvisos) return true;
 
         // 10. Delegar interacciones al submódulo de Bienvenidas y Despedidas
-        const handled
+        const handledWelcome = await handleWelcomeInteractions(interaction);
+        if (handledWelcome) return true;
+
+        // 11. Delegar interacciones al submódulo de Eventos y Campeonatos
+        const handledEvent = await handleEventInteractions(interaction);
+        if (handledEvent) return true;
+
+        // 12. Delegar interacciones al submódulo de Encuestas
+        const handledEncuesta = await handleEncuestaInteractions(interaction);
+        if (handledEncuesta) return true;
+
+        // 13. Delegar interacciones al submódulo de Mensajes Oficiales (MSN)
+        const handledMsn = await handleMsnInteractions(interaction);
+        if (handledMsn) return true;
+
+        // 14. Delegar interacciones al submódulo de Draft
+        const handledDraft = await handleDraftInteractions(interaction);
+        if (handledDraft) return true;
+
+        // 15. Delegar interacciones al submódulo de GT Club
+        const handledClub = await handleClubInteractions(interaction);
+        if (handledClub) return true;
+
+        return false; // La interacción no pertenece a ningún submódulo administrado por el dash
+    } catch (error) {
+        console.error('❌ Error en el enrutador general de DashAdmin:', error);
+        return false;
+    }
+}
