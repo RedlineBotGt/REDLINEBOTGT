@@ -15,6 +15,7 @@ import {
 } from 'discord.js';
 import { 
     getClubSession, 
+    ensureClubSessionLoaded,
     resetClubSession, 
     addChallengeToSession, 
     editChallengeInSession,
@@ -100,7 +101,7 @@ export function buildGeneralStandingsEmbed(session: ClubSession): EmbedBuilder {
  * Muestra el panel principal de control cuando ya existen desafíos
  */
 export async function showClubControlPanel(interaction: any): Promise<void> {
-    const session = getClubSession(interaction.guildId!);
+    const session = await ensureClubSessionLoaded(interaction.guildId!);
 
     const embed = new EmbedBuilder()
         .setColor(0x3498DB)
@@ -194,7 +195,7 @@ export async function showEditChallengeModal(interaction: any, challenge: ClubCh
  * Muestra el desplegable para seleccionar qué desafío editar o borrar
  */
 export async function sendEditChallengeSelect(interaction: any): Promise<void> {
-    const session = getClubSession(interaction.guildId!);
+    const session = await ensureClubSessionLoaded(interaction.guildId!);
 
     const embed = new EmbedBuilder()
         .setColor(0xF39C12)
@@ -222,7 +223,7 @@ export async function sendEditChallengeSelect(interaction: any): Promise<void> {
  * Muestra las opciones de gestión (Editar / Borrar) para un desafío específico
  */
 export async function sendChallengeManageOptions(interaction: any, challengeId: number): Promise<void> {
-    const session = getClubSession(interaction.guildId!);
+    const session = await ensureClubSessionLoaded(interaction.guildId!);
     const challenge = session.challenges.find(c => c.id === challengeId);
 
     if (!challenge) return;
@@ -279,7 +280,7 @@ async function sendAddMorePrompt(interaction: any, challengeCount: number): Prom
  * Muestra el desplegable para seleccionar el canal donde publicar los Embeds
  */
 async function sendChannelSelectMenu(interaction: any): Promise<void> {
-    const session = getClubSession(interaction.guildId!);
+    const session = await ensureClubSessionLoaded(interaction.guildId!);
 
     const embed = new EmbedBuilder()
         .setColor(0xFFD700)
@@ -306,11 +307,10 @@ export async function handleClubInteractions(interaction: Interaction): Promise<
 
         // 1. Ejecución del comando Slash /club
         if (interaction.isChatInputCommand() && interaction.commandName === 'club') {
-            const session = getClubSession(guildId);
+            const session = await ensureClubSessionLoaded(guildId);
             if (session.challenges.length > 0) {
                 await showClubControlPanel(interaction);
             } else {
-                resetClubSession(guildId);
                 await showChallengeModal(interaction, 1);
             }
             return true;
@@ -318,7 +318,7 @@ export async function handleClubInteractions(interaction: Interaction): Promise<
 
         // 2. Botón: Abrir panel de Añadir
         if (interaction.isButton() && interaction.customId === 'club_btn_panel_add') {
-            const session = getClubSession(guildId);
+            const session = await ensureClubSessionLoaded(guildId);
             const nextNum = session.challenges.length + 1;
             await showChallengeModal(interaction, nextNum);
             return true;
@@ -340,7 +340,7 @@ export async function handleClubInteractions(interaction: Interaction): Promise<
         // 5. Botón: Confirmar Edición de textos
         if (interaction.isButton() && interaction.customId.startsWith('club_btn_do_edit_')) {
             const challengeId = parseInt(interaction.customId.replace('club_btn_do_edit_', ''), 10);
-            const session = getClubSession(guildId);
+            const session = await ensureClubSessionLoaded(guildId);
             const challenge = session.challenges.find(c => c.id === challengeId);
             if (challenge) {
                 await showEditChallengeModal(interaction, challenge);
@@ -354,7 +354,7 @@ export async function handleClubInteractions(interaction: Interaction): Promise<
             const result = await deleteChallengeFromSession(guildId, challengeId);
 
             if (result.success) {
-                const session = getClubSession(guildId);
+                const session = await ensureClubSessionLoaded(guildId);
 
                 // Borrar mensaje en el canal de Discord si existía
                 if (session.channelId && result.deletedMessageId) {
@@ -395,7 +395,7 @@ export async function handleClubInteractions(interaction: Interaction): Promise<
 
         // 7. Botón: Reiniciar Sesión
         if (interaction.isButton() && interaction.customId === 'club_btn_panel_reset') {
-            resetClubSession(guildId);
+            await resetClubSession(guildId);
             await showChallengeModal(interaction, 1);
             return true;
         }
@@ -406,7 +406,7 @@ export async function handleClubInteractions(interaction: Interaction): Promise<
             const subtitle = interaction.fields.getTextInputValue('club_subtitle').trim();
 
             const challenge = addChallengeToSession(guildId, title, subtitle);
-            const session = getClubSession(guildId);
+            const session = await ensureClubSessionLoaded(guildId);
 
             // Si la sesión ya estaba activa, publicar inmediatamente el nuevo desafío en el canal
             if (session.active && session.channelId) {
@@ -433,7 +433,7 @@ export async function handleClubInteractions(interaction: Interaction): Promise<
             const subtitle = interaction.fields.getTextInputValue('club_subtitle').trim();
 
             const updatedChallenge = await editChallengeInSession(guildId, challengeId, title, subtitle);
-            const session = getClubSession(guildId);
+            const session = await ensureClubSessionLoaded(guildId);
 
             if (updatedChallenge && session.active && session.channelId && updatedChallenge.messageId) {
                 try {
@@ -456,7 +456,7 @@ export async function handleClubInteractions(interaction: Interaction): Promise<
 
         // 10. Botón: "Añadir otro desafío"
         if (interaction.isButton() && interaction.customId === 'club_btn_add_another') {
-            const session = getClubSession(guildId);
+            const session = await ensureClubSessionLoaded(guildId);
             const nextNum = session.challenges.length + 1;
             await showChallengeModal(interaction, nextNum);
             return true;
@@ -480,7 +480,7 @@ export async function handleClubInteractions(interaction: Interaction): Promise<
                 return true;
             }
 
-            const session = getClubSession(guildId);
+            const session = await ensureClubSessionLoaded(guildId);
             session.channelId = channel.id;
             session.active = true;
 
@@ -514,7 +514,7 @@ export async function handleClubMessage(message: Message): Promise<void> {
     if (message.author.bot || !message.guild) return;
 
     const guildId = message.guild.id;
-    const session = getClubSession(guildId);
+    const session = await ensureClubSessionLoaded(guildId);
 
     if (!session.active || session.channelId !== message.channel.id) return;
 
