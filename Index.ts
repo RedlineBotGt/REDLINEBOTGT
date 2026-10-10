@@ -26,7 +26,8 @@ import * as dadoCommand from './commands/dado';
 import * as borrarCommand from './commands/borrar';
 import * as msnCommand from './commands/msn'; // ➔ Comando msn
 import * as draftCommand from './commands/draft'; // ➔ Comando draft
-import * as listaCommand from './commands/lista'; // 👈 1. Importación del comando Lista
+import * as listaCommand from './commands/lista'; // ➔ Comando Lista
+import * as clubCommand from './commands/club'; // 👈 1. Importación del comando Club
 import * as dashSheetsCommand from './dashsheet/dashsheet';
 import * as dashAdminCommand from './dashadmin/dashadmin'; // ➔ Comando dashadmin
 
@@ -64,7 +65,7 @@ const client = new Client({
 // 🗂️ Inicializar la colección de comandos en el cliente
 client.commands = new Collection();
 
-// Registro de comandos en la colección (Añadido listaCommand)
+// Registro de comandos en la colección
 const commandsList = [
     dashCommand, 
     dashStaffCommand, 
@@ -72,7 +73,8 @@ const commandsList = [
     borrarCommand, 
     msnCommand, 
     draftCommand,
-    listaCommand, // 👈 2. Registrado en la colección de comandos
+    listaCommand,
+    clubCommand, // 👈 2. Registrado en la colección de comandos
     dashSheetsCommand, 
     dashAdminCommand
 ];
