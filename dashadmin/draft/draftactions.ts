@@ -14,8 +14,8 @@ import {
 } from 'discord.js';
 import { getDraftState, recordDraftChoice } from './draftmanager';
 
-// Ajusta esta ruta según la ubicación exacta de tu cliente de Google Sheets en el proyecto
-import { sheets, SPREADSHEET_ID } from '../../config/sheets'; 
+// Ruta corregida apuntando a la carpeta dashsheet
+import { sheets, SPREADSHEET_ID } from '../../dashsheet/sheetsService'; 
 
 /**
  * 1. Recibe el canal seleccionado, lee el estado inicial y publica el Embed público del Draft.
