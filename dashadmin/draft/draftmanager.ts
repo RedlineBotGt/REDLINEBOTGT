@@ -5,12 +5,12 @@ import { Buffer } from 'buffer';
 const DEFAULT_SPREADSHEET_ID = '1E-dMxBrK7gZLAGR2Ge7OuGEt-IvzVK8BWOTtxZojsXs';
 
 export interface DraftState {
-    pilots: string[];                              // Todos los pilotos ordenados por PreQualy (Columna A)
-    allModels: string[];                           // Todos los modelos de coches (Columna B)
-    choices: { pilot: string; model: string }[];   // Elecciones ya realizadas (Cols C y D)
+    pilots: string[];                              // Pilotos / IDs por turno (Columna B)
+    allModels: string[];                           // Modelos de coches (Columna C)
+    choices: { pilot: string; model: string }[];   // Elecciones realizadas (Cols D y E)
     currentPilot: string | null;                   // Piloto al que le toca elegir en este turno
-    availableModels: string[];                     // Modelos que aún quedan libres
-    isCompleted: boolean;                          // True si todos los pilotos ya han elegido
+    availableModels: string[];                     // Modelos libres
+    isCompleted: boolean;                          // True si todos han elegido
 }
 
 // Función auxiliar para obtener el cliente autenticado de Google Sheets
@@ -51,17 +51,20 @@ function getAuthenticatedSheets() {
 }
 
 /**
- * Lee el estado actual del Draft desde la hoja de cálculo en la pestaña "Draft".
+ * Lee el estado actual del Draft desde la hoja de cálculo en la pestaña "Draft" (Usando B, C, D y E).
  */
 export async function getDraftState(): Promise<DraftState> {
     try {
         const sheets = getAuthenticatedSheets();
         const spreadsheetId = DEFAULT_SPREADSHEET_ID;
 
-        // Obtenemos los rangos: A2:A (Pilotos), B2:B (Modelos), C2:D (Elecciones C: Piloto, D: Modelo)
+        // Rangos exactos de 4 columnas:
+        // B2:B ➔ IDs/Menciones de Pilotos
+        // C2:C ➔ Modelos de Coches disponibles
+        // D2:E ➔ Elecciones ya realizadas (D: ID Piloto, E: Coche Elegido)
         const response = await sheets.spreadsheets.values.batchGet({
             spreadsheetId,
-            ranges: ['Draft!A2:A', 'Draft!B2:B', 'Draft!C2:D'],
+            ranges: ['Draft!B2:B', 'Draft!C2:C', 'Draft!D2:E'],
         });
 
         const valueRanges = response.data.valueRanges || [];
@@ -81,10 +84,10 @@ export async function getDraftState(): Promise<DraftState> {
         const chosenModelsSet = new Set(choices.map(c => c.model));
         const chosenPilotsSet = new Set(choices.map(c => c.pilot));
 
-        // Modelos disponibles (en B pero no elegidos en D)
+        // Modelos disponibles (en C pero no elegidos en E)
         const availableModels = allModels.filter(model => !chosenModelsSet.has(model));
 
-        // El primer piloto de la lista A que todavía no aparece en las elecciones C
+        // El primer piloto de la lista B que todavía no aparece en las elecciones D
         const currentPilot = pilots.find(pilot => !chosenPilotsSet.has(pilot)) || null;
 
         const isCompleted = currentPilot === null || pilots.length === 0 || choices.length >= pilots.length;
@@ -104,33 +107,33 @@ export async function getDraftState(): Promise<DraftState> {
 }
 
 /**
- * Registra la elección de un piloto escribiéndola en la siguiente fila vacía de las columnas C y D.
+ * Registra la elección de un piloto escribiéndola en la siguiente fila vacía de las columnas D y E.
  */
 export async function recordDraftChoice(pilot: string, model: string): Promise<void> {
     try {
         const sheets = getAuthenticatedSheets();
         const spreadsheetId = DEFAULT_SPREADSHEET_ID;
 
-        // Encontrar la siguiente fila disponible consultando las columnas C:D
+        // Consultar la siguiente fila disponible consultando únicamente D:E
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId,
-            range: 'Draft!C2:D',
+            range: 'Draft!D2:E',
         });
 
         const rows = response.data.values || [];
-        const nextRowIndex = rows.length + 2; // +2 porque empezamos a contar desde la fila 2 (A2/C2)
+        const nextRowIndex = rows.length + 2; // +2 porque se empieza desde la fila 2 (D2:E2)
 
-        // Escribir el piloto en la columna C y el modelo en la columna D de la siguiente fila libre
+        // Escribir la ID del piloto en D y el coche en E
         await sheets.spreadsheets.values.update({
             spreadsheetId,
-            range: `Draft!C${nextRowIndex}:D${nextRowIndex}`,
+            range: `Draft!D${nextRowIndex}:E${nextRowIndex}`,
             valueInputOption: 'USER_ENTERED',
             requestBody: {
                 values: [[pilot, model]],
             },
         });
 
-        console.log(`✅ Draft actualizado: ${pilot} ha elegido "${model}" en la fila ${nextRowIndex}`);
+        console.log(`✅ Draft actualizado: ${pilot} ha elegido "${model}" en la fila ${nextRowIndex} (Cols D y E)`);
     } catch (error) {
         console.error('❌ Error al registrar la elección en el Draft:', error);
         throw error;
