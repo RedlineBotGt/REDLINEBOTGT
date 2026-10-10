@@ -23,58 +23,35 @@ async function obtenerTraduccion(texto: string, idiomaDestino: string) {
     const mentionRegex = /<@[!&]?\d+>|<#\d+>/g;
     const mentions: string[] = [];
     
-    // Proteger menciones solo si existen
+    // Proteger menciones
     const textoProtegido = texto.replace(mentionRegex, (match) => {
         mentions.push(match);
         return `__TAG${mentions.length - 1}__`;
     });
 
-    const encodedText = encodeURIComponent(textoProtegido);
-    
-    const urls = [
-        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${idiomaDestino}&dt=t&q=${encodedText}`,
-        `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=auto&tl=${idiomaDestino}&q=${encodedText}`
-    ];
+    // Endpoint MyMemory (Autodetect -> idiomaDestino)
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(textoProtegido)}&langpair=autodetect|${idiomaDestino}`;
 
-    let textoTraducido = '';
-    let idiomaDetectado = 'es';
-    let success = false;
-
-    for (const url of urls) {
-        try {
-            const res = await fetch(url);
-            if (res.ok) {
-                const data = await res.json();
-                
-                if (Array.isArray(data)) {
-                    if (Array.isArray(data[0])) {
-                        const partes = data[0]
-                            .filter((item: any) => Array.isArray(item) && typeof item[0] === 'string')
-                            .map((item: any) => item[0]);
-
-                        if (partes.length > 0) {
-                            textoTraducido = partes.join('');
-                            idiomaDetectado = (typeof data[2] === 'string') ? data[2] : 'es';
-                            success = true;
-                            break;
-                        }
-                    } else if (typeof data[0] === 'string') {
-                        textoTraducido = data[0];
-                        success = true;
-                        break;
-                    }
-                }
-            }
-        } catch (e) {
-            continue;
-        }
+    const res = await fetch(url);
+    if (!res.ok) {
+        throw new Error(`HTTP Error: ${res.status}`);
     }
 
-    if (!success) {
+    const data = await res.json();
+
+    if (!data.responseData || !data.responseData.translatedText) {
         throw new Error('No se pudo obtener la traducción.');
     }
 
-    // Restaurar menciones únicamente si se detectó alguna originalmente
+    let textoTraducido = data.responseData.translatedText;
+    
+    // Detectar idioma desde los datos de MyMemory o defecto
+    let idiomaDetectado = 'es';
+    if (data.matches && data.matches.length > 0 && data.matches[0].created_by) {
+        idiomaDetectado = data.responseData.detectedLanguage || 'es';
+    }
+
+    // Restaurar menciones
     if (mentions.length > 0) {
         mentions.forEach((mention, index) => {
             textoTraducido = textoTraducido.replace(new RegExp(`__TAG${index}__`, 'gi'), mention);
