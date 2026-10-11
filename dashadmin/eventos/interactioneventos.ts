@@ -10,7 +10,9 @@ import {
     handleEventRsvpButton,
     handleBdEventosButton,
     handleBdEventosSelect,
-    handleBdEventosCancelAction
+    handleBdEventosCancelAction,
+    handleEventAdminManageButton,
+    handleEventAdminModalSubmit
 } from './eventosmanager';
 
 /**
@@ -24,6 +26,7 @@ export async function handleEventInteractions(interaction: any): Promise<boolean
             if (await handleDashEventButton(interaction)) return true;
             if (await handleBdEventosButton(interaction)) return true;
             if (await handleBdEventosCancelAction(interaction)) return true; // ➔ Captura el botón de cancelar evento desde la BD
+            if (await handleEventAdminManageButton(interaction)) return true; // ➔ Captura el botón de gestión admin del evento
             if (await handleEventProceedToModal(interaction)) return true;
             if (await handleEventPublishNowButton(interaction)) return true;
             if (await handleEventConfigRepeatButton(interaction)) return true;
@@ -34,6 +37,7 @@ export async function handleEventInteractions(interaction: any): Promise<boolean
         if (interaction.isModalSubmit()) {
             if (await handleEventModalSubmit(interaction)) return true;
             if (await handleEventRepeatModalSubmit(interaction)) return true;
+            if (await handleEventAdminModalSubmit(interaction)) return true; // ➔ Captura el envío del modal de admin
         }
 
         // --- 3. CHANNEL SELECT MENUS ---
