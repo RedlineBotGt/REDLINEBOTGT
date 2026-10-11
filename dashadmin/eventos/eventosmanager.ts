@@ -347,7 +347,6 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
         await interaction.reply({ content: '❌ Sesión caducada.', flags: [MessageFlags.Ephemeral] });
         return true;
     }
-
     const intervalDays = parseInt(interaction.fields.getTextInputValue('event_interval_days').trim(), 10) || 7;
     const totalTimes = parseInt(interaction.fields.getTextInputValue('event_repeat_times').trim(), 10) || 1;
     const intervalMs = intervalDays * 24 * 3600 * 1000;
@@ -746,7 +745,7 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
 
     const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✅'),
-        newButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓'),
+        new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓'), // <-- Corregido aquí
         new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
     );
 
