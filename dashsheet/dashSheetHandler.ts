@@ -79,7 +79,8 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
         try {
             if (customId === 'sheets_clasificacion') {
                 titleHeader = '🏆 Clasificación General';
-                const rawData = (await getSheetData('Tabla!B8:N25')) || [];
+                // Rango abierto: desde la fila 8 hasta el final de la hoja
+                const rawData = (await getSheetData('Tabla!B8:N')) || [];
 
                 const filteredData = rawData
                     .filter(row => row && row[0] !== undefined && String(row[0]).trim() !== '' && row[0] !== 'POS' && row[1] && String(row[1]).trim() !== '')
@@ -107,7 +108,8 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
             } 
             else if (customId === 'sheets_asistencia') {
                 titleHeader = '📋 Control de Asistencia';
-                const rawData = (await getSheetData('Ingreso!AE4:AF20')) || [];
+                // Rango abierto: desde la fila 4 hasta el final de la hoja
+                const rawData = (await getSheetData('Ingreso!AE4:AF')) || [];
 
                 const filteredData = rawData
                     .filter(row => row && row[0] !== undefined && String(row[0]).trim() !== '' && row[0] !== 'PILOTO' && row[1] !== undefined && String(row[1]).trim() !== '')
@@ -129,7 +131,8 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
             } 
             else if (customId === 'sheets_vr') {
                 titleHeader = '⚡ Vueltas Rápidas (VR)';
-                const rawData = (await getSheetData('Tabla!B9:L25')) || [];
+                // Rango abierto: desde la fila 9 hasta el final de la hoja
+                const rawData = (await getSheetData('Tabla!B9:L')) || [];
 
                 const filteredData = rawData
                     .filter(row => row && row[0] !== undefined && String(row[0]).trim() !== '' && row[1] && String(row[1]).trim() !== '')
@@ -154,7 +157,8 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
             } 
             else if (customId === 'sheets_pp') {
                 titleHeader = '🎯 Pole Positions (PP)';
-                const rawData = (await getSheetData('Tabla!B9:K25')) || [];
+                // Rango abierto: desde la fila 9 hasta el final de la hoja
+                const rawData = (await getSheetData('Tabla!B9:K')) || [];
 
                 const filteredData = rawData
                     .filter(row => row && row[0] !== undefined && String(row[0]).trim() !== '' && row[1] && String(row[1]).trim() !== '')
