@@ -16,11 +16,9 @@ import {
     MessageFlags
 } from 'discord.js';
 
-// Mapas temporales para almacenar las configuraciones mientras el admin completa los pasos
 const activeSorteoConfigs = new Map<string, { message: string; prize: string }>();
-const activeSorteoChannels = new Map<string, string>(); // userId -> channelId
+const activeSorteoChannels = new Map<string, string>();
 
-// 1. Abre el Modal al pulsar "Crear Sorteo" en el /dash
 export async function handleDashSorteoButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_sorteo_create') return false;
 
@@ -51,7 +49,6 @@ export async function handleDashSorteoButton(interaction: ButtonInteraction): Pr
     return true;
 }
 
-// 2. Recibe el Modal y pide el Canal público
 export async function handleSorteoModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_sorteo_config') return false;
 
@@ -75,7 +72,6 @@ export async function handleSorteoModalSubmit(interaction: ModalSubmitInteractio
     return true;
 }
 
-// 3. Recibe el canal y pide el rol participante
 export async function handleSorteoChannelSelect(interaction: ChannelSelectMenuInteraction): Promise<boolean> {
     if (interaction.customId !== 'sorteo_select_channel') return false;
 
@@ -100,7 +96,6 @@ export async function handleSorteoChannelSelect(interaction: ChannelSelectMenuIn
     return true;
 }
 
-// 4. Recibe el rol, genera el mensaje público y el botón de participación
 export async function handleSorteoRoleSelect(interaction: RoleSelectMenuInteraction): Promise<boolean> {
     if (interaction.customId !== 'sorteo_select_role') return false;
 
@@ -125,12 +120,10 @@ export async function handleSorteoRoleSelect(interaction: RoleSelectMenuInteract
         return true;
     }
 
-    // Reemplazo inteligente de tags personalizados ({server} y {member})
     let formattedMessage = config.message
         .replace(/{server}/gi, guild.name)
         .replace(/{member}/gi, `<@&${role.id}>`);
 
-    // Detección automática: convierte cualquier texto con formato @NombreDeRol en una mención real de Discord
     guild.roles.cache.forEach(r => {
         const regex = new RegExp(`@${r.name}`, 'gi');
         formattedMessage = formattedMessage.replace(regex, `<@&${r.id}>`);
@@ -141,7 +134,7 @@ export async function handleSorteoRoleSelect(interaction: RoleSelectMenuInteract
         .setTitle('🎉 ¡NUEVO SORTEO ACTIVADO! 🎉')
         .setDescription(formattedMessage)
         .addFields(
-            { name: '🛡 Rol Participante', value: `<@&${role.id}>`, inline: false }, // <-- Aquí forzamos la mención real del rol con su ID
+            { name: '🛡 Rol Participante', value: `<@&${role.id}>`, inline: false },
             { name: 'PREMIO', value: config.prize.startsWith('http') ? '\u200b' : config.prize, inline: false }
         )
         .setFooter({ 
@@ -161,7 +154,9 @@ export async function handleSorteoRoleSelect(interaction: RoleSelectMenuInteract
             .setStyle(ButtonStyle.Success)
     );
 
+    // Mención real enviada en el 'content' fuera del embed para notificar al rol
     await channel.send({
+        content: `📢 Sorteo para <@&${role.id}>`,
         embeds: [embed],
         components: [row]
     });
