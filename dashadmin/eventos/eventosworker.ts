@@ -136,7 +136,7 @@ export function setupEventWorker(client: Client) {
             }
 
             // -------------------------------------------------------------
-            // TAREA 2: Llegada de la hora exacta del evento -> Anuncio + Limpieza
+            // TAREA 2: Llegada de la hora exacta del evento -> Anuncio + Limpieza + Recurrencia
             // -------------------------------------------------------------
             const dueEvents = await col.find({
                 status: { $in: ['pending', 'sent'] },
@@ -171,21 +171,24 @@ export function setupEventWorker(client: Client) {
                         }
                     }
 
+                    // Diferenciación exacta entre evento con repeticiones pendientes o finalizado
                     if (ev.repeats && ev.remainingTimes > 1) {
                         const nextScheduledAt = new Date(new Date(ev.scheduledAt).getTime() + ev.intervalMs);
+                        const nextPublishAt = ev.publishAt ? new Date(new Date(ev.publishAt).getTime() + ev.intervalMs) : nextScheduledAt;
 
                         await col.updateOne(
                             { _id: ev._id },
                             { 
-                                $set: {                                      scheduledAt: nextScheduledAt,                                      messageId: undefined,                                      reminderSent: false,                                      rsvps: { yes: [], maybe: [], no: [] }                                  },$inc: { remainingTimes: -1 } 
+                                $set: {                                      scheduledAt: nextScheduledAt,                                     publishAt: nextPublishAt,                                     status: 'pending_publish',                                     messageId: undefined,                                      reminderSent: false,                                      rsvps: { yes: [], maybe: [], no: [] }                                  },$inc: { remainingTimes: -1 } 
                             }
                         );
+                        console.log(`🔄 [Worker] Evento recurrente "${ev.title}" reprogramado. Siguiente envío programado.`);
                     } else {
                         await col.updateOne(
                             { _id: ev._id },
                             { $set: { status: 'completed', completedAt: new Date() } }
                         );
-                        console.log(`✅ [Worker] Evento "${ev.title}" completado y archivado.`);
+                        console.log(`✅ [Worker] Evento único o finalizado "${ev.title}" archivado.`);
                     }
 
                 } catch (err) {
