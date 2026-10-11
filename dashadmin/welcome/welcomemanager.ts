@@ -27,13 +27,19 @@ export const welcomeSessions = new Map<string, { type?: 'welcome' | 'goodbye'; c
 async function getWelcomeCollection() {
     if (welcomeCollection) return welcomeCollection;
     
-    if (!clientMongo) {
-        clientMongo = new MongoDriver(uri);
-        await clientMongo.connect();
+    try {
+        if (!clientMongo) {
+            clientMongo = new MongoDriver(uri, { serverSelectionTimeoutMS: 5000 });
+            await clientMongo.connect();
+        }
+        welcomeCollection = clientMongo.db().collection('welcomes');
+        return welcomeCollection;
+    } catch (error) {
+        console.error('❌ Error crítico al conectar con MongoDB en bienvenidas:', error);
+        clientMongo = null; // Resetear para forzar reconexión en el siguiente intento
+        welcomeCollection = null;
+        throw error;
     }
-    
-    welcomeCollection = clientMongo.db().collection('welcomes');
-    return welcomeCollection;
 }
 
 // 1. Inicializador del sistema que escucha las entradas, salidas y cambios de roles
@@ -100,7 +106,6 @@ export function setupWelcomeSystem(client: Client) {
         }
     });
 
-    // Nuevo: Escucha universal de cambios de roles (Reaction Roles, manuales, eventos, etc.)
     client.on('guildMemberUpdate', async (oldMember: GuildMember, newMember: GuildMember) => {
         try {
             if (newMember.user.bot) return;
@@ -111,7 +116,6 @@ export function setupWelcomeSystem(client: Client) {
             if (addedRoles.size === 0 && removedRoles.size === 0) return;
 
             const col = await getWelcomeCollection();
-            // Busca la configuración de 'avisos', y si no existe usa 'welcome' como respaldo
             let config = await col.findOne({ guildId: newMember.guild.id, type: 'avisos' });
             if (!config) {
                 config = await col.findOne({ guildId: newMember.guild.id, type: 'welcome' });
@@ -273,7 +277,7 @@ export async function handleGoodbyeModalSubmit(interaction: ModalSubmitInteracti
     const session = welcomeSessions.get(interaction.user.id);
 
     if (!session || !session.channelId || !interaction.guild) {
-        await interaction.reply({ content: '❌ Sesión caducada.', flags: [MessageFlags.Ephemeral] });
+        await interaction.reply({ content: '❌ Sesión갑 caducada (trad: caducada).', flags: [MessageFlags.Ephemeral] });
         return true;
     }
 
