@@ -14,7 +14,6 @@ import {
     ButtonBuilder,
     TextChannel,
     EmbedBuilder,
-    Client,
     StringSelectMenuBuilder,
     UserSelectMenuBuilder
 } from 'discord.js';
@@ -23,19 +22,16 @@ import { getEventsCollection } from './eventosstorage';
 export const eventSessions = new Map<string, any>();
 export const adminAdminSessions = new Map<string, { targetUserId?: string; status?: string; eventMessageId: string }>();
 
-// --- PARSER DE FECHAS MADRID ---
+// --- PARSER DE FECHAS MADRID (Con cálculo exacto de offset CET/CEST) ---
 function parseMadridDateTime(dateStr: string, timeStr: string): Date | null {
     try {
         const [day, month, year] = dateStr.split('/').map(Number);
         const [hour, minute] = timeStr.split(':').map(Number);
         if (!day || !month || !year || isNaN(hour) || isNaN(minute)) return null;
 
-        const targetString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00Z`;
-        const tempDate = new Date(targetString);
-        if (isNaN(tempDate.getTime())) return null;
-
-        const madridOffsetMinutes = getMadridOffsetMinutes(tempDate);
-        const finalTimestamp = tempDate.getTime() - (madridOffsetMinutes * 60 * 1000);
+        const tempUtc = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+        const madridOffsetMinutes = getMadridOffsetMinutes(tempUtc);
+        const finalTimestamp = tempUtc.getTime() - (madridOffsetMinutes * 60 * 1000);
 
         const targetDate = new Date(finalTimestamp);
         return isNaN(targetDate.getTime()) ? null : targetDate;
@@ -463,7 +459,7 @@ export async function handleBdEventosCancelAction(interaction: ButtonInteraction
 
     return true;
 }
-// --- 1. ABRIR PANEL ADMIN (Desplegable de Usuarios + Desplegable de Estado + Botón) ---
+// --- 1. ABRIR PANEL ADMIN ---
 export async function handleEventAdminManageButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_admin_manage') return false;
 
@@ -578,7 +574,6 @@ export async function handleEventAdminConfirmButton(interaction: ButtonInteracti
 
     if (!eventDoc.rsvps) eventDoc.rsvps = { yes: [], maybe: [], no: [] };
 
-    // Limpiar al usuario de todas las listas previas
     eventDoc.rsvps.yes = eventDoc.rsvps.yes.filter((id: string) => id !== targetUserId);
     eventDoc.rsvps.maybe = eventDoc.rsvps.maybe.filter((id: string) => id !== targetUserId);
     eventDoc.rsvps.no = eventDoc.rsvps.no.filter((id: string) => id !== targetUserId);
@@ -618,7 +613,6 @@ export async function handleEventAdminConfirmButton(interaction: ButtonInteracti
 
     await col.updateOne({ messageId }, { $set: { rsvps: eventDoc.rsvps } });
 
-    // Actualizar mensaje del evento en el canal
     const channel = await guild.channels.fetch(eventDoc.channelId).catch(() => null) as TextChannel;
     if (channel) {
         const message = await channel.messages.fetch(messageId).catch(() => null);
@@ -635,7 +629,7 @@ export async function handleEventAdminConfirmButton(interaction: ButtonInteracti
 
             embed.addFields(
                 { name: `✅ Asistiré (${eventDoc.rsvps.yes.length}/16)`, value: formatVerticalList(eventDoc.rsvps.yes), inline: false },
-                { name: `护 Duda (${eventDoc.rsvps.maybe.length})`, value: formatVerticalList(eventDoc.rsvps.maybe), inline: false },
+                { name: `❔ Duda (${eventDoc.rsvps.maybe.length})`, value: formatVerticalList(eventDoc.rsvps.maybe), inline: false },
                 { name: `❌ No puedo (${eventDoc.rsvps.no.length})`, value: formatVerticalList(eventDoc.rsvps.no), inline: false }
             );
 
@@ -660,6 +654,7 @@ export async function handleEventAdminConfirmButton(interaction: ButtonInteracti
 
     return true;
 }
+
 // --- GESTIÓN DE RSVP Y LÍMITE DE 16 PLAZAS ---
 export async function handleEventRsvpButton(interaction: ButtonInteraction): Promise<boolean> {
     const customId = interaction.customId;
@@ -751,7 +746,7 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
 
     const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✅'),
-        new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓'),
+        newButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓'),
         new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
     );
 
@@ -767,108 +762,4 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
     });
 
     return true;
-}
-
-// --- WORKER EN SEGUNDO PLANO ---
-export function setupEventWorker(client: Client) {
-    console.log('📅 [Worker] Sistema de eventos y campeonatos activo en segundo plano.');
-
-    setInterval(async () => {
-        try {
-            const col = await getEventsCollection();
-            const now = new Date();
-
-            // 1. Recordatorio 30 minutos antes (para eventos pending y sent)
-            const thirtyMinsLater = new Date(now.getTime() + 30 * 60 * 1000);
-            const upcomingEvents = await col.find({
-                status: { $in: ['pending', 'sent'] },
-                reminderSent: { $ne: true },
-                scheduledAt: { $lte: thirtyMinsLater,$gt: now }
-            }).toArray();
-
-            for (const ev of upcomingEvents) {
-                try {
-                    if (ev.status === 'cancelled') continue;
-
-                    const guild = await client.guilds.fetch(ev.guildId).catch(() => null);
-                    if (!guild) continue;
-
-                    const channel = await guild.channels.fetch(ev.channelId).catch(() => null) as TextChannel;
-                    if (!channel || !channel.isTextBased()) continue;
-
-                    const asistenteRole = guild.roles.cache.find(r => r.name.toLowerCase() === 'asistente');
-                    const roleMention = asistenteRole ? `<@&${asistenteRole.id}>` : '@asistente';
-
-                    await channel.send({
-                        content: `⏰ **¡Atención!** El evento **"${ev.title}"** comienza en **30 minutos**. ${roleMention}`
-                    });
-
-                    await col.updateOne({ _id: ev._id }, { $set: { reminderSent: true } });
-                    console.log(`⏰ [Worker] Recordatorio de 30 min enviado para: "${ev.title}"`);
-                } catch (remErr) {
-                    console.error('❌ Error enviando recordatorio de evento:', remErr);
-                }
-            }
-
-            // 2. Llegada de la hora del evento -> Anuncio de inicio + Despojo de rol asistente
-            const dueEvents = await col.find({
-                status: { $in: ['pending', 'sent'] },
-                scheduledAt: { $lte: now }
-            }).toArray();
-
-            for (const ev of dueEvents) {
-                try {
-                    if (ev.status === 'cancelled') continue;
-
-                    const guild = await client.guilds.fetch(ev.guildId).catch(() => null);
-                    if (guild) {
-                        const channel = await guild.channels.fetch(ev.channelId).catch(() => null) as TextChannel;
-                        const asistenteRole = guild.roles.cache.find(r => r.name.toLowerCase() === 'asistente');
-                        const roleMention = asistenteRole ? `<@&${asistenteRole.id}>` : '@asistente';
-
-                        // Publicar mensaje de inicio del evento en el canal
-                        if (channel && channel.isTextBased()) {
-                            await channel.send({
-                                content: `🏁 **¡El evento "${ev.title}" COMIENZA AHORA!** ${roleMention}`
-                            }).catch(() => {});
-                        }
-
-                        // Retirar el rol de asistente a todos los miembros
-                        if (asistenteRole) {
-                            await guild.members.fetch();
-                            for (const [, member] of guild.members.cache) {
-                                if (member.roles.cache.has(asistenteRole.id)) {
-                                    await member.roles.remove(asistenteRole).catch(() => {});
-                                }
-                            }
-                            console.log(`🧹 [Worker] Rol asistente retirado tras el inicio de: "${ev.title}"`);
-                        }
-                    }
-
-                    if (ev.repeats && ev.remainingTimes > 1) {
-                        const nextScheduledAt = new Date(new Date(ev.scheduledAt).getTime() + ev.intervalMs);
-
-                        await col.updateOne(
-                            { _id: ev._id },
-                            { 
-                                $set: {                                      scheduledAt: nextScheduledAt,                                      messageId: undefined,                                      reminderSent: false,                                      rsvps: { yes: [], maybe: [], no: [] }                                  },$inc: { remainingTimes: -1 } 
-                            }
-                        );
-                    } else {
-                        await col.updateOne(
-                            { _id: ev._id },
-                            { $set: { status: 'completed', completedAt: new Date() } }
-                        );
-                        console.log(`✅ [Worker] Evento "${ev.title}" completado y archivado.`);
-                    }
-
-                } catch (err) {
-                    console.error(`❌ [Worker] Error finalizando evento ID ${ev._id}:`, err);
-                }
-            }
-
-        } catch (error) {
-            console.error('❌ [Worker] Error general en el worker de eventos:', error);
-        }
-    }, 60000);
 }
