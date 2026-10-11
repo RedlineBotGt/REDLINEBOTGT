@@ -293,7 +293,8 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
                     messageId: sentMessage.id,
                     status: 'sent',
                     rsvps: { yes: [], maybe: [], no: [] },
-                    createdAt: new Date()
+                    createdAt: new Date(),
+                    scheduledAt: session.scheduledAt
                 } 
             }
         );
@@ -479,7 +480,7 @@ export async function handleEventAdminManageButton(interaction: ButtonInteractio
         .addOptions(
             { label: '✅ Asistiré', value: 'yes', description: 'Añadir a la parrilla titular' },
             { label: '❔ Duda', value: 'maybe', description: 'Añadir a lista de espera / duda' },
-            { label: '✖️ No puedo', value: 'no', description: 'Marcar como ausente' }
+            { label: '❌ No puedo', value: 'no', description: 'Marcar como ausente' }
         );
 
     const confirmButton = new ButtonBuilder()
@@ -635,7 +636,7 @@ export async function handleEventAdminConfirmButton(interaction: ButtonInteracti
             embed.addFields(
                 { name: `✅ Asistiré (${eventDoc.rsvps.yes.length}/16)`, value: formatVerticalList(eventDoc.rsvps.yes), inline: false },
                 { name: `❔ Duda (${eventDoc.rsvps.maybe.length})`, value: formatVerticalList(eventDoc.rsvps.maybe), inline: false },
-                { name: `✖️ No puedo (${eventDoc.rsvps.no.length})`, value: formatVerticalList(eventDoc.rsvps.no), inline: false }
+                { name: `❌ No puedo (${eventDoc.rsvps.no.length})`, value: formatVerticalList(eventDoc.rsvps.no), inline: false }
             );
 
             const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -745,7 +746,7 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
     embed.addFields(
         { name: `✅ Asistiré (${eventDoc.rsvps.yes.length}/16)`, value: formatVerticalList(eventDoc.rsvps.yes), inline: false },
         { name: `❔ Duda (${eventDoc.rsvps.maybe.length})`, value: formatVerticalList(eventDoc.rsvps.maybe), inline: false },
-        { name: `✖️ No puedo (${eventDoc.rsvps.no.length})`, value: formatVerticalList(eventDoc.rsvps.no), inline: false }
+        { name: `❌ No puedo (${eventDoc.rsvps.no.length})`, value: formatVerticalList(eventDoc.rsvps.no), inline: false }
     );
 
     const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -777,9 +778,10 @@ export function setupEventWorker(client: Client) {
             const col = await getEventsCollection();
             const now = new Date();
 
+            // 1. Recordatorio de 30 minutos antes (para pending y sent)
             const thirtyMinsLater = new Date(now.getTime() + 30 * 60 * 1000);
             const upcomingEvents = await col.find({
-                status: 'pending',
+                status: { $in: ['pending', 'sent'] },
                 reminderSent: { $ne: true },
                 scheduledAt: { $lte: thirtyMinsLater,$gt: now }
             }).toArray();
@@ -802,88 +804,35 @@ export function setupEventWorker(client: Client) {
                     });
 
                     await col.updateOne({ _id: ev._id }, { $set: { reminderSent: true } });
+                    console.log(`⏰ [Worker] Recordatorio de 30 min enviado para el evento: "${ev.title}"`);
                 } catch (remErr) {
                     console.error('❌ Error enviando recordatorio de evento:', remErr);
                 }
             }
 
-            const pendingEvents = await col.find({
-                status: 'pending',
+            // 2. Llegada de la hora exacta del evento -> Quitar rol Asistente a todos
+            const dueEvents = await col.find({
+                status: { $in: ['pending', 'sent'] },
                 scheduledAt: { $lte: now }
             }).toArray();
 
-            if (pendingEvents.length === 0) return;
-
-            for (const ev of pendingEvents) {
+            for (const ev of dueEvents) {
                 try {
-                    const currentCheck = await col.findOne({ _id: ev._id });
-                    if (!currentCheck || currentCheck.status === 'cancelled') continue;
+                    if (ev.status === 'cancelled') continue;
 
                     const guild = await client.guilds.fetch(ev.guildId).catch(() => null);
-                    if (!guild) {
-                        await col.updateOne({ _id: ev._id }, { $set: { status: 'guild_not_found' } });
-                        continue;
-                    }
-
-                    const channel = await guild.channels.fetch(ev.channelId).catch(() => null) as TextChannel;
-                    if (!channel || !channel.isTextBased()) {
-                        await col.updateOne({ _id: ev._id }, { $set: { status: 'channel_not_found' } });
-                        continue;
-                    }
-
-                    const embed = new EmbedBuilder()
-                        .setColor(0x0055FF)
-                        .setTitle(`🏁 ${ev.title}`)
-                        .setDescription(`📅 **Fecha:** ${ev.date} a las ${ev.time} CET\n\n${ev.description}`)
-                        .setTimestamp();
-
-                    if (ev.image && typeof ev.image === 'string' && ev.image.startsWith('http')) {
-                        embed.setImage(ev.image);
-                    }
-
-                    embed.addFields(
-                        { name: '✅ Asistiré (0/16)', value: 'Ninguno', inline: false },
-                        { name: '❔ Duda (0)', value: 'Ninguno', inline: false },
-                        { name: '❌ No puedo (0)', value: 'Ninguno', inline: false }
-                    );
-
-                    const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✅'),
-                        new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓'),
-                        new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
-                    );
-
-                    const rowAdmin = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                        new ButtonBuilder().setCustomId('event_admin_manage').setLabel('Gestión Admin').setStyle(ButtonStyle.Secondary).setEmoji('⚙️')
-                    );
-
-                    let contentToSend: string | undefined = undefined;
-                    if (ev.roleId && typeof ev.roleId === 'string' && ev.roleId !== 'null' && /^\d+$/.test(ev.roleId)) {
-                        contentToSend = `<@&${ev.roleId}>`;
-                    }
-
-                    const sentMessage = await channel.send({
-                        content: contentToSend,
-                        embeds: [embed],
-                        components: [rowRsvp, rowAdmin]
-                    });
-
-                    const asistenteRole = guild.roles.cache.find(r => r.name.toLowerCase() === 'asistente');
-                    if (asistenteRole) {
-                        try {
+                    if (guild) {
+                        const asistenteRole = guild.roles.cache.find(r => r.name.toLowerCase() === 'asistente');
+                        if (asistenteRole) {
                             await guild.members.fetch();
                             for (const [, member] of guild.members.cache) {
                                 if (member.roles.cache.has(asistenteRole.id)) {
                                     await member.roles.remove(asistenteRole).catch(() => {});
                                 }
                             }
-                        } catch (roleCleanErr) {
-                            console.error('❌ Error barriendo rol asistente:', roleCleanErr);
+                            console.log(`🧹 [Worker] Rol asistente retirado a todos los usuarios para el evento: "${ev.title}"`);
                         }
                     }
-
-                    const postCheck = await col.findOne({ _id: ev._id });
-                    if (!postCheck || postCheck.status === 'cancelled') continue;
 
                     if (ev.repeats && ev.remainingTimes > 1) {
                         const nextScheduledAt = new Date(new Date(ev.scheduledAt).getTime() + ev.intervalMs);
@@ -894,17 +843,17 @@ export function setupEventWorker(client: Client) {
                                 $set: {                                      scheduledAt: nextScheduledAt,                                      messageId: undefined,                                      reminderSent: false,                                      rsvps: { yes: [], maybe: [], no: [] }                                  },$inc: { remainingTimes: -1 } 
                             }
                         );
-                        console.log(`🔄 [Worker] Evento recurrente reprogramado correctamente para: ${nextScheduledAt}. Quedan ${ev.remainingTimes - 1} envíos.`);
+                        console.log(`🔄 [Worker] Evento recurrente reprogramado para: ${nextScheduledAt}.`);
                     } else {
                         await col.updateOne(
                             { _id: ev._id },
-                            { $set: { status: 'sent', sentAt: new Date() } }
+                            { $set: { status: 'completed', completedAt: new Date() } }
                         );
-                        console.log(`✅ [Worker] Evento "${ev.title}" finalizado por completo.`);
+                        console.log(`✅ [Worker] Evento "${ev.title}" completado y archivado.`);
                     }
 
                 } catch (err) {
-                    console.error(`❌ [Worker] Error enviando evento ID ${ev._id}:`, err);
+                    console.error(`❌ [Worker] Error finalizando evento ID ${ev._id}:`, err);
                 }
             }
 
