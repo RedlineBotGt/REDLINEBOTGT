@@ -11,6 +11,8 @@ import {
     handleBdEventosButton,
     handleBdEventosSelect,
     handleBdEventosCancelAction,
+    handleBdEventosEditButton,
+    handleBdEventosEditModalSubmit,
     handleEventAdminManageButton,
     handleEventAdminConfirmButton,
     handleEventAdminUserSelect,
@@ -28,6 +30,7 @@ export async function handleEventInteractions(interaction: any): Promise<boolean
             if (await handleDashEventButton(interaction)) return true;
             if (await handleBdEventosButton(interaction)) return true;
             if (await handleBdEventosCancelAction(interaction)) return true;
+            if (await handleBdEventosEditButton(interaction)) return true; // ➔ Abre el modal de edición completa
             if (await handleEventAdminManageButton(interaction)) return true; // ➔ Abre el panel de administración efímero
             if (await handleEventAdminConfirmButton(interaction)) return true; // ➔ Confirma los cambios de asistencia del admin
             if (await handleEventProceedToModal(interaction)) return true;
@@ -40,6 +43,7 @@ export async function handleEventInteractions(interaction: any): Promise<boolean
         if (interaction.isModalSubmit()) {
             if (await handleEventModalSubmit(interaction)) return true;
             if (await handleEventRepeatModalSubmit(interaction)) return true;
+            if (await handleBdEventosEditModalSubmit(interaction)) return true; // ➔ Guarda los cambios del modal de edición
         }
 
         // --- 3. CHANNEL SELECT MENUS ---
