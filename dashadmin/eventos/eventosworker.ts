@@ -1,5 +1,31 @@
-import { Client, TextChannel } from 'discord.js';
+import { Client, TextChannel, Role } from 'discord.js';
 import { getEventsCollection } from './eventosstorage';
+
+/**
+ * Obtiene o crea el rol 'asistente' asegurándose de que esté disponible y sea mencionable.
+ */
+async function getOrCreateAsistenteRole(guild: any): Promise<Role | null> {
+    try {
+        await guild.roles.fetch();
+        let role = guild.roles.cache.find((r: Role) => r.name.toLowerCase() === 'asistente');
+
+        if (!role) {
+            role = await guild.roles.create({
+                name: 'asistente',
+                color: 0x00FF00,
+                mentionable: true,
+                reason: 'Rol automático creado para gestión de asistencias a eventos.'
+            });
+        } else if (!role.mentionable) {
+            await role.setMentionable(true).catch(() => {});
+        }
+
+        return role;
+    } catch (err) {
+        console.error('❌ Error gestionando rol asistente en el worker:', err);
+        return null;
+    }
+}
 
 export function setupEventWorker(client: Client) {
     console.log('📅 [Worker] Sistema de eventos y campeonatos activo en segundo plano.');
@@ -29,11 +55,12 @@ export function setupEventWorker(client: Client) {
                     const channel = await guild.channels.fetch(ev.channelId).catch(() => null) as TextChannel;
                     if (!channel || !channel.isTextBased()) continue;
 
-                    const asistenteRole = guild.roles.cache.find(r => r.name.toLowerCase() === 'asistente');
+                    const asistenteRole = await getOrCreateAsistenteRole(guild);
                     const roleMention = asistenteRole ? `<@&${asistenteRole.id}>` : '@asistente';
 
                     await channel.send({
-                        content: `⏰ **¡Atención!** El evento **"${ev.title}"** comienza en **30 minutos**. ${roleMention}`
+                        content: `⏰ **¡Atención!** El evento **"${ev.title}"** comienza en **30 minutos**. ${roleMention}`,
+                        allowedMentions: { roles: asistenteRole ? [asistenteRole.id] : [] }
                     });
 
                     await col.updateOne({ _id: ev._id }, { $set: { reminderSent: true } });
@@ -56,15 +83,18 @@ export function setupEventWorker(client: Client) {
                     const guild = await client.guilds.fetch(ev.guildId).catch(() => null);
                     if (guild) {
                         const channel = await guild.channels.fetch(ev.channelId).catch(() => null) as TextChannel;
-                        const asistenteRole = guild.roles.cache.find(r => r.name.toLowerCase() === 'asistente');
+                        const asistenteRole = await getOrCreateAsistenteRole(guild);
                         const roleMention = asistenteRole ? `<@&${asistenteRole.id}>` : '@asistente';
 
+                        // ➔ PRIMERO: Enviar el mensaje de inicio mencionando correctamente al rol
                         if (channel && channel.isTextBased()) {
                             await channel.send({
-                                content: `🏁 **¡El evento "${ev.title}" COMIENZA AHORA!** ${roleMention}`
+                                content: `🏁 **¡El evento "${ev.title}" COMIENZA AHORA!** ${roleMention}`,
+                                allowedMentions: { roles: asistenteRole ? [asistenteRole.id] : [] }
                             }).catch(() => {});
                         }
 
+                        // ➔ SEGUNDO: Una vez enviado el mensaje, retirar el rol a todos los usuarios
                         if (asistenteRole) {
                             await guild.members.fetch();
                             for (const [, member] of guild.members.cache) {
