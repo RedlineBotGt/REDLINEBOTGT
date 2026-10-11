@@ -50,20 +50,22 @@ export async function handleSorteoLaunchButton(interaction: ButtonInteraction): 
             const midMember = (i === delais.length - 1) ? winningMember : getRandomMember();
             const botMember = getRandomMember();
 
+            const statusText = i > delais.length - 3 ? '⏳ *Frenando la ruleta...*' : '🌀 *Girando a máxima velocidad...*';
+
             const embedRuleta = new EmbedBuilder()
                 .setColor(i > delais.length - 3 ? 0xFFAA00 : 0x0055FF)
-                .setTitle(`🎰 Girando la Ruleta REDLINE GT`)
+                .setTitle('🎰 Girando la Ruleta REDLINE GT')
                 .setDescription(
                     '```text\n' +
                     '┌───────────────────────────┐\n' +
-                    `│   ░░░  @${topMember.user.username.slice(0, 10).padEnd(10)}  ░░░   │\n` +
-                    '│ ⚙️ ─────────────── ⚙️ │\n` +
-                    `│ ►  @${midMember.user.username.slice(0, 10).padEnd(10)}  ◄ │ ◀─── [GIRANDO]\n` +
-                    '│ ⚙️ ─────────────── ⚙️ │\n` +
-                    `│   ░░░  @${botMember.user.username.slice(0, 10).padEnd(10)}  ░░░   │\n` +
+                    '│   ░░░  @' + topMember.user.username.slice(0, 10).padEnd(10) + '  ░░░   │\n' +
+                    '│ ⚙️ ─────────────── ⚙️ │\n' +
+                    '│ ►  @' + midMember.user.username.slice(0, 10).padEnd(10) + '  ◄ │ ◀─── [GIRANDO]\n' +
+                    '│ ⚙️ ─────────────── ⚙️ │\n' +
+                    '│   ░░░  @' + botMember.user.username.slice(0, 10).padEnd(10) + '  ░░░   │\n' +
                     '└───────────────────────────┘\n' +
                     '```\n' +
-                    (i > delais.length - 3 ? '⏳ *Frenando la ruleta...*' : '🌀 *Girando a máxima velocidad...*')
+                    statusText
                 )
                 .setFooter({ text: 'REDLINE GT • Sorteos en directo' });
 
