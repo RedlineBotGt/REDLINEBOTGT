@@ -635,7 +635,7 @@ export async function handleEventAdminConfirmButton(interaction: ButtonInteracti
 
             embed.addFields(
                 { name: `✅ Asistiré (${eventDoc.rsvps.yes.length}/16)`, value: formatVerticalList(eventDoc.rsvps.yes), inline: false },
-                { name: `❔ Duda (${eventDoc.rsvps.maybe.length})`, value: formatVerticalList(eventDoc.rsvps.maybe), inline: false },
+                { name: `护 Duda (${eventDoc.rsvps.maybe.length})`, value: formatVerticalList(eventDoc.rsvps.maybe), inline: false },
                 { name: `❌ No puedo (${eventDoc.rsvps.no.length})`, value: formatVerticalList(eventDoc.rsvps.no), inline: false }
             );
 
@@ -778,7 +778,7 @@ export function setupEventWorker(client: Client) {
             const col = await getEventsCollection();
             const now = new Date();
 
-            // 1. Recordatorio de 30 minutos antes (para pending y sent)
+            // 1. Recordatorio 30 minutos antes (para eventos pending y sent)
             const thirtyMinsLater = new Date(now.getTime() + 30 * 60 * 1000);
             const upcomingEvents = await col.find({
                 status: { $in: ['pending', 'sent'] },
@@ -804,13 +804,13 @@ export function setupEventWorker(client: Client) {
                     });
 
                     await col.updateOne({ _id: ev._id }, { $set: { reminderSent: true } });
-                    console.log(`⏰ [Worker] Recordatorio de 30 min enviado para el evento: "${ev.title}"`);
+                    console.log(`⏰ [Worker] Recordatorio de 30 min enviado para: "${ev.title}"`);
                 } catch (remErr) {
                     console.error('❌ Error enviando recordatorio de evento:', remErr);
                 }
             }
 
-            // 2. Llegada de la hora exacta del evento -> Quitar rol Asistente a todos
+            // 2. Llegada de la hora del evento -> Anuncio de inicio + Despojo de rol asistente
             const dueEvents = await col.find({
                 status: { $in: ['pending', 'sent'] },
                 scheduledAt: { $lte: now }
@@ -822,7 +822,18 @@ export function setupEventWorker(client: Client) {
 
                     const guild = await client.guilds.fetch(ev.guildId).catch(() => null);
                     if (guild) {
+                        const channel = await guild.channels.fetch(ev.channelId).catch(() => null) as TextChannel;
                         const asistenteRole = guild.roles.cache.find(r => r.name.toLowerCase() === 'asistente');
+                        const roleMention = asistenteRole ? `<@&${asistenteRole.id}>` : '@asistente';
+
+                        // Publicar mensaje de inicio del evento en el canal
+                        if (channel && channel.isTextBased()) {
+                            await channel.send({
+                                content: `🏁 **¡El evento "${ev.title}" COMIENZA AHORA!** ${roleMention}`
+                            }).catch(() => {});
+                        }
+
+                        // Retirar el rol de asistente a todos los miembros
                         if (asistenteRole) {
                             await guild.members.fetch();
                             for (const [, member] of guild.members.cache) {
@@ -830,7 +841,7 @@ export function setupEventWorker(client: Client) {
                                     await member.roles.remove(asistenteRole).catch(() => {});
                                 }
                             }
-                            console.log(`🧹 [Worker] Rol asistente retirado a todos los usuarios para el evento: "${ev.title}"`);
+                            console.log(`🧹 [Worker] Rol asistente retirado tras el inicio de: "${ev.title}"`);
                         }
                     }
 
@@ -843,7 +854,6 @@ export function setupEventWorker(client: Client) {
                                 $set: {                                      scheduledAt: nextScheduledAt,                                      messageId: undefined,                                      reminderSent: false,                                      rsvps: { yes: [], maybe: [], no: [] }                                  },$inc: { remainingTimes: -1 } 
                             }
                         );
-                        console.log(`🔄 [Worker] Evento recurrente reprogramado para: ${nextScheduledAt}.`);
                     } else {
                         await col.updateOne(
                             { _id: ev._id },
