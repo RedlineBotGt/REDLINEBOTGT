@@ -28,12 +28,13 @@ export async function handleSorteoLaunchButton(interaction: ButtonInteraction): 
     });
 
     try {
-        const fetchedMembers = await guild.members.fetch({ role: roleId });
-        const eligibleMembers = fetchedMembers.filter(member => !member.user.bot);
+        // Carga estricta de todos los miembros y filtrado por ID de rol
+        const allMembers = await guild.members.fetch();
+        const eligibleMembers = allMembers.filter(member => !member.user.bot && member.roles.cache.has(roleId));
 
         if (eligibleMembers.size === 0) {
             await interaction.editReply({
-                content: '❌ No hay ningún usuario con ese rol en el servidor para realizar el sorteo.'
+                content: `❌ No hay ningún usuario con el rol <@&${roleId}> en el servidor para realizar el sorteo.`
             });
             return true;
         }
@@ -41,7 +42,6 @@ export async function handleSorteoLaunchButton(interaction: ButtonInteraction): 
         const membersArray = Array.from(eligibleMembers.values());
         const winningMember = membersArray[Math.floor(Math.random() * membersArray.length)];
 
-        // Tiempos de animación progresivos (simulando inercia y frenado)
         const delais = [250, 250, 300, 350, 450, 600, 850, 1200];
         const getRandomMember = () => membersArray[Math.floor(Math.random() * membersArray.length)];
 
@@ -73,7 +73,6 @@ export async function handleSorteoLaunchButton(interaction: ButtonInteraction): 
             await delay(delais[i]);
         }
 
-        // Ganador final
         const originalEmbed = interaction.message.embeds[0];
         const winningEmbed = EmbedBuilder.from(originalEmbed)
             .setColor(0x00FF00)
@@ -92,7 +91,7 @@ export async function handleSorteoLaunchButton(interaction: ButtonInteraction): 
     } catch (error) {
         console.error('❌ Error al realizar el sorteo:', error);
         await interaction.editReply({
-            content: '❌ Hubo un error al obtener los miembros. Recuerda activar el "Server Members Intent" en el portal de desarrolladores de Discord.'
+            content: '❌ Hubo un error al obtener los miembros. Comprueba los permisos de lectura de miembros del bot.'
         });
     }
 
