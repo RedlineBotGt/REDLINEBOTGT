@@ -15,11 +15,13 @@ import {
     TextChannel,
     EmbedBuilder,
     Client,
-    StringSelectMenuBuilder
+    StringSelectMenuBuilder,
+    UserSelectMenuBuilder
 } from 'discord.js';
 import { getEventsCollection } from './eventosstorage';
 
 export const eventSessions = new Map<string, any>();
+export const adminAdminSessions = new Map<string, { targetUserId?: string; status?: string; eventMessageId: string }>();
 
 // --- PARSER DE FECHAS MADRID ---
 function parseMadridDateTime(dateStr: string, timeStr: string): Date | null {
@@ -460,54 +462,107 @@ export async function handleBdEventosCancelAction(interaction: ButtonInteraction
 
     return true;
 }
-
-// --- GESTIÓN DE BOTÓN ADMIN (Abrir Modal de Gestión) ---
+// --- 1. ABRIR PANEL ADMIN (Desplegable de Usuarios + Desplegable de Estado + Botón) ---
 export async function handleEventAdminManageButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_admin_manage') return false;
 
-    const modal = new ModalBuilder()
-        .setCustomId(`modal_event_admin_rsvp_${interaction.message.id}`)
-        .setTitle('⚙️ Gestión Admin de Asistencia');
+    const sessionId = `${interaction.user.id}_${interaction.message.id}`;
+    adminAdminSessions.set(sessionId, { eventMessageId: interaction.message.id });
 
-    const userIdInput = new TextInputBuilder()
-        .setCustomId('admin_target_user_id')
-        .setLabel('ID del Usuario de Discord')
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: 123456789012345678')
-        .setRequired(true);
+    const userSelect = new UserSelectMenuBuilder()
+        .setCustomId(`admin_user_select_${sessionId}`)
+        .setPlaceholder('👤 Selecciona al piloto...');
 
-    const statusInput = new TextInputBuilder()
-        .setCustomId('admin_target_status')
-        .setLabel('Estado (yes / maybe / no)')
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('yes, maybe o no')
-        .setRequired(true);
+    const statusSelect = new StringSelectMenuBuilder()
+        .setCustomId(`admin_status_select_${sessionId}`)
+        .setPlaceholder('📊 Selecciona el estado...')
+        .addOptions(
+            { label: '✅ Asistiré', value: 'yes', description: 'Añadir a la parrilla titular' },
+            { label: '❔ Duda', value: 'maybe', description: 'Añadir a lista de espera / duda' },
+            { label: '✖️ No puedo', value: 'no', description: 'Marcar como ausente' }
+        );
 
-    modal.addComponents(
-        new ActionRowBuilder<TextInputBuilder>().addComponents(userIdInput),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(statusInput)
-    );
+    const confirmButton = new ButtonBuilder()
+        .setCustomId(`admin_confirm_${sessionId}`)
+        .setLabel('Confirmar Cambios')
+        .setStyle(ButtonStyle.Success)
+        .setEmoji('💾');
 
-    await interaction.showModal(modal);
+    const rowUser = new ActionRowBuilder<UserSelectMenuBuilder>().addComponents(userSelect);
+    const rowStatus = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(statusSelect);
+    const rowBtn = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmButton);
+
+    await interaction.reply({
+        content: '⚙️ **Gestión Admin de Asistencia:** Selecciona el usuario y el estado deseado en los menús desplegables y pulsa **Confirmar**:',
+        components: [rowUser, rowStatus, rowBtn],
+        flags: [MessageFlags.Ephemeral]
+    });
+
     return true;
 }
 
-// --- PROCESAR MODAL DE GESTIÓN ADMIN ---
-export async function handleEventAdminModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
-    if (!interaction.customId.startsWith('modal_event_admin_rsvp_')) return false;
+// --- 2. CAPTURAR SELECCIÓN DE USUARIO ---
+export async function handleEventAdminUserSelect(interaction: any): Promise<boolean> {
+    if (!interaction.customId.startsWith('admin_user_select_')) return false;
 
-    const messageId = interaction.customId.replace('modal_event_admin_rsvp_', '');
-    const targetUserId = interaction.fields.getTextInputValue('admin_target_user_id').trim();
-    const rawStatus = interaction.fields.getTextInputValue('admin_target_status').trim().toLowerCase();
+    const sessionId = interaction.customId.replace('admin_user_select_', '');
+    const session = adminAdminSessions.get(sessionId);
 
-    let targetStatus = '';
-    if (['yes', 'asistire', 'si', 's'].includes(rawStatus)) targetStatus = 'yes';
-    else if (['maybe', 'duda', 'd'].includes(rawStatus)) targetStatus = 'maybe';
-    else if (['no', 'nopuedo', 'n'].includes(rawStatus)) targetStatus = 'no';
-    else {
-        await interaction.reply({ content: '❌ Estado inválido. Usa: `yes`, `maybe` o `no`.', flags: [MessageFlags.Ephemeral] });
+    if (!session) {
+        await interaction.reply({ content: '❌ Sesión caducada. Vuelve a abrir el panel de gestión.', flags: [MessageFlags.Ephemeral] });
         return true;
     }
+
+    session.targetUserId = interaction.values[0];
+    adminAdminSessions.set(sessionId, session);
+
+    await interaction.update({
+        content: `⚙️ **Gestión Admin:** Usuario seleccionado (<@${session.targetUserId}>). Ahora selecciona el estado y pulsa Confirmar.`
+    });
+
+    return true;
+}
+
+// --- 3. CAPTURAR SELECCIÓN DE ESTADO ---
+export async function handleEventAdminStatusSelect(interaction: any): Promise<boolean> {
+    if (!interaction.customId.startsWith('admin_status_select_')) return false;
+
+    const sessionId = interaction.customId.replace('admin_status_select_', '');
+    const session = adminAdminSessions.get(sessionId);
+
+    if (!session) {
+        await interaction.reply({ content: '❌ Sesión caducada. Vuelve a abrir el panel de gestión.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    session.status = interaction.values[0];
+    adminAdminSessions.set(sessionId, session);
+
+    const statusNames: Record<string, string> = { yes: 'Asistiré', maybe: 'Duda', no: 'No puedo' };
+    await interaction.update({
+        content: `⚙️ **Gestión Admin:** Estado seleccionado (**${statusNames[session.status]}**). Asegúrate de haber elegido usuario y pulsa Confirmar.`
+    });
+
+    return true;
+}
+
+// --- 4. CONFIRMAR Y APLICAR CAMBIOS EN LA BD Y EL MENSAJE PRINCIPAL ---
+export async function handleEventAdminConfirmButton(interaction: ButtonInteraction): Promise<boolean> {
+    if (!interaction.customId.startsWith('admin_confirm_')) return false;
+
+    const sessionId = interaction.customId.replace('admin_confirm_', '');
+    const session = adminAdminSessions.get(sessionId);
+
+    if (!session || !session.targetUserId || !session.status) {
+        await interaction.reply({ content: '❌ Debes seleccionar tanto un **usuario** como un **estado** antes de confirmar.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    const targetUserId = session.targetUserId;
+    const targetStatus = session.status;
+    const messageId = session.eventMessageId;
+
+    adminAdminSessions.delete(sessionId);
 
     const guild = interaction.guild;
     if (!guild) return true;
@@ -516,7 +571,7 @@ export async function handleEventAdminModalSubmit(interaction: ModalSubmitIntera
     const eventDoc = await col.findOne({ messageId });
 
     if (!eventDoc) {
-        await interaction.reply({ content: '❌ Este evento ya no está activo en la base de datos.', flags: [MessageFlags.Ephemeral] });
+        await interaction.update({ content: '❌ Este evento ya no está activo en la base de datos.', components: [] });
         return true;
     }
 
@@ -579,7 +634,7 @@ export async function handleEventAdminModalSubmit(interaction: ModalSubmitIntera
 
             embed.addFields(
                 { name: `✅ Asistiré (${eventDoc.rsvps.yes.length}/16)`, value: formatVerticalList(eventDoc.rsvps.yes), inline: false },
-                { name: `护 Duda (${eventDoc.rsvps.maybe.length})`, value: formatVerticalList(eventDoc.rsvps.maybe), inline: false },
+                { name: `❔ Duda (${eventDoc.rsvps.maybe.length})`, value: formatVerticalList(eventDoc.rsvps.maybe), inline: false },
                 { name: `✖️ No puedo (${eventDoc.rsvps.no.length})`, value: formatVerticalList(eventDoc.rsvps.no), inline: false }
             );
 
@@ -597,9 +652,9 @@ export async function handleEventAdminModalSubmit(interaction: ModalSubmitIntera
         }
     }
 
-    await interaction.reply({
+    await interaction.update({
         content: `✅ Asistencia actualizada correctamente para el usuario <@${targetUserId}> como **${targetStatus}**.`,
-        flags: [MessageFlags.Ephemeral]
+        components: []
     });
 
     return true;
@@ -854,7 +909,7 @@ export function setupEventWorker(client: Client) {
             }
 
         } catch (error) {
-            console.error('❌ Error general en el worker de eventos:', error);
+            console.error('❌ [Worker] Error general en el worker de eventos:', error);
         }
     }, 60000);
 }
