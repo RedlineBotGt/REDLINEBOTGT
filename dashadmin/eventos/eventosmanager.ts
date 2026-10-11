@@ -335,7 +335,7 @@ export async function handleEventConfigRepeatButton(interaction: ButtonInteracti
 
     const timesInput = new TextInputBuilder()
         .setCustomId('event_repeat_times')
-        .setLabel('Nº total de repeticiones (Opcional)')
+        .setLabel('Nº total de envíos (Opcional)')
         .setStyle(TextInputStyle.Short)
         .setPlaceholder('Ej: 4')
         .setRequired(false);
@@ -500,6 +500,7 @@ export async function handleBdEventosCancelAction(interaction: ButtonInteraction
 
     return true;
 }
+
 // --- ABRIR MODAL DE EDICIÓN COMPLETA DEL EVENTO ---
 export async function handleBdEventosEditButton(interaction: ButtonInteraction): Promise<boolean> {
     if (!interaction.customId.startsWith('bd_event_edit_')) return false;
@@ -587,7 +588,6 @@ export async function handleBdEventosEditModalSubmit(interaction: ModalSubmitInt
     const intervalRaw = interaction.fields.getTextInputValue('edit_interval')?.trim() || '';
     const timesRaw = interaction.fields.getTextInputValue('edit_times')?.trim() || '';
 
-    // Parsear fecha y hora del evento (separadas por espacio)
     const [eventDateStr, eventTimeStr] = eventDtRaw.split(' ');
     const scheduledAt = parseMadridDateTime(eventDateStr, eventTimeStr);
     if (!scheduledAt) {
@@ -595,7 +595,6 @@ export async function handleBdEventosEditModalSubmit(interaction: ModalSubmitInt
         return true;
     }
 
-    // Parsear fecha y hora de publicación
     const [pubDateStr, pubTimeStr] = pubDtRaw.split(' ');
     const publishAt = parseMadridDateTime(pubDateStr, pubTimeStr);
     if (!publishAt) {
@@ -608,7 +607,6 @@ export async function handleBdEventosEditModalSubmit(interaction: ModalSubmitInt
     const repeats = intervalDays > 0 && totalTimes > 1;
     const intervalMs = intervalDays * 24 * 3600 * 1000;
 
-    // Actualizar en Base de Datos
     await col.updateOne(
         { _id: new ObjectId(eventId) },
         { 
@@ -627,7 +625,6 @@ export async function handleBdEventosEditModalSubmit(interaction: ModalSubmitInt
         }
     );
 
-    // Si el evento ya estaba publicado en Discord, actualizar el mensaje en vivo
     if (ev.status === 'sent' && ev.channelId && ev.messageId) {
         const guild = interaction.guild;
         if (guild) {
@@ -675,7 +672,6 @@ export async function handleBdEventosEditModalSubmit(interaction: ModalSubmitInt
 
     return true;
 }
-
 // --- 1. ABRIR PANEL ADMIN ---
 export async function handleEventAdminManageButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_admin_manage') return false;
@@ -847,377 +843,6 @@ export async function handleEventAdminConfirmButton(interaction: ButtonInteracti
             embed.addFields(
                 { name: `✅ Asistiré (${eventDoc.rsvps.yes.length}/16)`, value: formatVerticalList(eventDoc.rsvps.yes), inline: false },
                 { name: `❔ Duda (${eventDoc.rsvps.maybe.length})`, value: formatVerticalList(eventDoc.rsvps.maybe), inline: false },
-                { name: `❌ No puedo (${eventDoc.rsvps.no.length})`, value: formatVerticalList(eventDoc.rsvps.no), inline: false }
-            );
-
-            const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✅'),
-                new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓'),
-                new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
-            );
-
-            const rowAdmin = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                new ButtonBuilder().setCustomId('event_admin_manage').setLabel('Gestión Admin').setStyle(ButtonStyle.Secondary).setEmoji('⚙️')
-            );
-
-            await message.edit({ embeds: [embed], components: [rowRsvp, rowAdmin] }).catch(() => {});
-        }
-    }
-
-    await interaction.update({
-        content: `✅ Asistencia actualizada correctamente para el usuario <@${targetUserId}> como **${targetStatus}**.`,
-        components: []
-    });
-
-    return true;
-}
-
-// --- ABRIR MODAL DE EDICIÓN COMPLETA DEL EVENTO ---
-export async function handleBdEventosEditButton(interaction: ButtonInteraction): Promise<boolean> {
-    if (!interaction.customId.startsWith('bd_event_edit_')) return false;
-
-    const eventId = interaction.customId.replace('bd_event_edit_', '');
-    const col = await getEventsCollection();
-    const ev = await col.findOne({ _id: new ObjectId(eventId) });
-
-    if (!ev) {
-        await interaction.reply({ content: '❌ El evento ya no existe en la base de datos.', flags: [MessageFlags.Ephemeral] });
-        return true;
-    }
-
-    const existingPub = ev.publishAt ? new Date(ev.publishAt) : new Date();
-    const pubDateStr = existingPub.toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid', day: '2-digit', month: '2-digit', year: 'numeric' });
-    const pubTimeStr = existingPub.toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false });
-
-    const modal = new ModalBuilder()
-        .setCustomId(`modal_event_edit_${eventId}`)
-        .setTitle('✏️ Edición Completa del Evento');
-
-    const titleInput = new TextInputBuilder()
-        .setCustomId('edit_title')
-        .setLabel('Título del Evento')
-        .setStyle(TextInputStyle.Short)
-        .setValue(ev.title || '')
-        .setRequired(true);
-
-    const eventDtInput = new TextInputBuilder()
-        .setCustomId('edit_event_dt')
-        .setLabel('Fecha y Hora del Evento (DD/MM/YYYY HH:MM)')
-        .setStyle(TextInputStyle.Short)
-        .setValue(`${ev.date || ''} ${ev.time || ''}`.trim())
-        .setRequired(true);
-
-    const pubDtInput = new TextInputBuilder()
-        .setCustomId('edit_pub_dt')
-        .setLabel('Publicar Tarjeta (DD/MM/YYYY HH:MM)')
-        .setStyle(TextInputStyle.Short)
-        .setValue(`${pubDateStr} ${pubTimeStr}`)
-        .setRequired(true);
-
-    const intervalInput = new TextInputBuilder()
-        .setCustomId('edit_interval')
-        .setLabel('Repetir cada X días (Opcional)')
-        .setStyle(TextInputStyle.Short)
-        .setValue(ev.intervalMs ? String(ev.intervalMs / (24 * 3600 * 1000)) : '')
-        .setRequired(false);
-
-    const timesInput = new TextInputBuilder()
-        .setCustomId('edit_times')
-        .setLabel('Nº total de envíos (Opcional)')
-        .setStyle(TextInputStyle.Short)
-        .setValue(ev.remainingTimes ? String(ev.remainingTimes) : '')
-        .setRequired(false);
-
-    modal.addComponents(
-        new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(eventDtInput),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(pubDtInput),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(intervalInput),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(timesInput)
-    );
-
-    await interaction.showModal(modal);
-    return true;
-}
-
-// --- GUARDAR CAMBIOS DE EDICIÓN COMPLETA Y ACTUALIZAR MENSAJE ---
-export async function handleBdEventosEditModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
-    if (!interaction.customId.startsWith('modal_event_edit_')) return false;
-
-    const eventId = interaction.customId.replace('modal_event_edit_', '');
-    const col = await getEventsCollection();
-    const ev = await col.findOne({ _id: new ObjectId(eventId) });
-
-    if (!ev) {
-        await interaction.reply({ content: '❌ El evento ya no existe en la base de datos.', flags: [MessageFlags.Ephemeral] });
-        return true;
-    }
-
-    const title = interaction.fields.getTextInputValue('edit_title').trim();
-    const eventDtRaw = interaction.fields.getTextInputValue('edit_event_dt').trim();
-    const pubDtRaw = interaction.fields.getTextInputValue('edit_pub_dt').trim();
-    const intervalRaw = interaction.fields.getTextInputValue('edit_interval')?.trim() || '';
-    const timesRaw = interaction.fields.getTextInputValue('edit_times')?.trim() || '';
-
-    // Parsear fecha y hora del evento (separadas por espacio)
-    const [eventDateStr, eventTimeStr] = eventDtRaw.split(' ');
-    const scheduledAt = parseMadridDateTime(eventDateStr, eventTimeStr);
-    if (!scheduledAt) {
-        await interaction.reply({ content: '❌ Formato de fecha u hora del evento inválido (Usa DD/MM/YYYY HH:MM).', flags: [MessageFlags.Ephemeral] });
-        return true;
-    }
-
-    // Parsear fecha y hora de publicación
-    const [pubDateStr, pubTimeStr] = pubDtRaw.split(' ');
-    const publishAt = parseMadridDateTime(pubDateStr, pubTimeStr);
-    if (!publishAt) {
-        await interaction.reply({ content: '❌ Formato de fecha u hora de publicación inválido (Usa DD/MM/YYYY HH:MM).', flags: [MessageFlags.Ephemeral] });
-        return true;
-    }
-
-    const intervalDays = intervalRaw ? parseInt(intervalRaw, 10) : 0;
-    const totalTimes = timesRaw ? parseInt(timesRaw, 10) : 1;
-    const repeats = intervalDays > 0 && totalTimes > 1;
-    const intervalMs = intervalDays * 24 * 3600 * 1000;
-
-    // Actualizar en Base de Datos
-    await col.updateOne(
-        { _id: new ObjectId(eventId) },
-        { 
-            $set: { 
-                title,
-                date: eventDateStr,
-                time: eventTimeStr,
-                scheduledAt,
-                publishAt,
-                repeats,
-                intervalMs,
-                remainingTimes: repeats ? totalTimes : 1,
-                reminderSent: false,
-                updatedAt: new Date() 
-            } 
-        }
-    );
-
-    // Si el evento ya estaba publicado en Discord, actualizar el mensaje en vivo
-    if (ev.status === 'sent' && ev.channelId && ev.messageId) {
-        const guild = interaction.guild;
-        if (guild) {
-            const channel = await guild.channels.fetch(ev.channelId).catch(() => null) as TextChannel;
-            if (channel && channel.isTextBased()) {
-                const message = await channel.messages.fetch(ev.messageId).catch(() => null);
-                if (message) {
-                    const embed = new EmbedBuilder()
-                        .setColor(0x0055FF)
-                        .setTitle(`🏁 ${title}`)
-                        .setDescription(`📅 **Fecha:** ${eventDateStr} a las ${eventTimeStr} CET\n\n${ev.description}`)
-                        .setTimestamp();
-
-                    if (ev.image) embed.setImage(ev.image);
-
-                    const rsvps = ev.rsvps || { yes: [], maybe: [], no: [] };
-                    const formatVerticalList = (ids: string[]) => ids.length > 0 ? ids.map(id => `<@${id}>`).join('\n') : 'Ninguno';
-
-                    embed.addFields(
-                        { name: `✅ Asistiré (${rsvps.yes.length}/16)`, value: formatVerticalList(rsvps.yes), inline: false },
-                        { name: `❔ Duda (${rsvps.maybe.length})`, value: formatVerticalList(rsvps.maybe), inline: false },
-                        { name: `❌ No puedo (${rsvps.no.length})`, value: formatVerticalList(rsvps.no), inline: false }
-                    );
-
-                    const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✅'),
-                        new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓'),
-                        new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
-                    );
-
-                    const rowAdmin = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                        new ButtonBuilder().setCustomId('event_admin_manage').setLabel('Gestión Admin').setStyle(ButtonStyle.Secondary).setEmoji('⚙️')
-                    );
-
-                    await message.edit({ embeds: [embed], components: [rowRsvp, rowAdmin] }).catch(() => {});
-                }
-            }
-        }
-    }
-
-    await interaction.reply({
-        content: `✅ **¡Evento y programación actualizados con éxito de principio a fin!**`,
-        flags: [MessageFlags.Ephemeral]
-    });
-
-    return true;
-}
-
-// --- 1. ABRIR PANEL ADMIN ---
-export async function handleEventAdminManageButton(interaction: ButtonInteraction): Promise<boolean> {
-    if (interaction.customId !== 'event_admin_manage') return false;
-
-    const sessionId = `${interaction.user.id}_${interaction.message.id}`;
-    adminAdminSessions.set(sessionId, { eventMessageId: interaction.message.id });
-
-    const userSelect = new UserSelectMenuBuilder()
-        .setCustomId(`admin_user_select_${sessionId}`)
-        .setPlaceholder('👤 Selecciona al piloto...');
-
-    const statusSelect = new StringSelectMenuBuilder()
-        .setCustomId(`admin_status_select_${sessionId}`)
-        .setPlaceholder('📊 Selecciona el estado...')
-        .addOptions(
-            { label: '✅ Asistiré', value: 'yes', description: 'Añadir a la parrilla titular' },
-            { label: '❔ Duda', value: 'maybe', description: 'Añadir a lista de espera / duda' },
-            { label: '❌ No puedo', value: 'no', description: 'Marcar como ausente' }
-        );
-
-    const confirmButton = new ButtonBuilder()
-        .setCustomId(`admin_confirm_${sessionId}`)
-        .setLabel('Confirmar Cambios')
-        .setStyle(ButtonStyle.Success)
-        .setEmoji('💾');
-
-    const rowUser = new ActionRowBuilder<UserSelectMenuBuilder>().addComponents(userSelect);
-    const rowStatus = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(statusSelect);
-    const rowBtn = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmButton);
-
-    await interaction.reply({
-        content: '⚙️ **Gestión Admin de Asistencia:** Selecciona el usuario y el estado deseado en los menús desplegables y pulsa **Confirmar**:',
-        components: [rowUser, rowStatus, rowBtn],
-        flags: [MessageFlags.Ephemeral]
-    });
-
-    return true;
-}
-// --- 2. CAPTURAR SELECCIÓN DE USUARIO ---
-export async function handleEventAdminUserSelect(interaction: any): Promise<boolean> {
-    if (!interaction.customId.startsWith('admin_user_select_')) return false;
-
-    const sessionId = interaction.customId.replace('admin_user_select_', '');
-    const session = adminAdminSessions.get(sessionId);
-
-    if (!session) {
-        await interaction.reply({ content: '❌ Sesión caducada. Vuelve a abrir el panel de gestión.', flags: [MessageFlags.Ephemeral] });
-        return true;
-    }
-
-    session.targetUserId = interaction.values[0];
-    adminAdminSessions.set(sessionId, session);
-
-    await interaction.update({
-        content: `⚙️ **Gestión Admin:** Usuario seleccionado (<@${session.targetUserId}>). Ahora selecciona el estado y pulsa Confirmar.`
-    });
-
-    return true;
-}
-
-// --- 3. CAPTURAR SELECCIÓN DE ESTADO ---
-export async function handleEventAdminStatusSelect(interaction: any): Promise<boolean> {
-    if (!interaction.customId.startsWith('admin_status_select_')) return false;
-
-    const sessionId = interaction.customId.replace('admin_status_select_', '');
-    const session = adminAdminSessions.get(sessionId);
-
-    if (!session) {
-        await interaction.reply({ content: '❌ Sesión caducada. Vuelve a abrir el panel de gestión.', flags: [MessageFlags.Ephemeral] });
-        return true;
-    }
-
-    session.status = interaction.values[0];
-    adminAdminSessions.set(sessionId, session);
-
-    const statusNames: Record<string, string> = { yes: 'Asistiré', maybe: 'Duda', no: 'No puedo' };
-    await interaction.update({
-        content: `⚙️ **Gestión Admin:** Estado seleccionado (**${statusNames[session.status]}**). Asegúrate de haber elegido usuario y pulsa Confirmar.`
-    });
-
-    return true;
-}
-
-// --- 4. CONFIRMAR Y APLICAR CAMBIOS EN LA BD Y EL MENSAJE PRINCIPAL ---
-export async function handleEventAdminConfirmButton(interaction: ButtonInteraction): Promise<boolean> {
-    if (!interaction.customId.startsWith('admin_confirm_')) return false;
-
-    const sessionId = interaction.customId.replace('admin_confirm_', '');
-    const session = adminAdminSessions.get(sessionId);
-
-    if (!session || !session.targetUserId || !session.status) {
-        await interaction.reply({ content: '❌ Debes seleccionar tanto un **usuario** como un **estado** antes de confirmar.', flags: [MessageFlags.Ephemeral] });
-        return true;
-    }
-
-    const targetUserId = session.targetUserId;
-    const targetStatus = session.status;
-    const messageId = session.eventMessageId;
-
-    adminAdminSessions.delete(sessionId);
-
-    const guild = interaction.guild;
-    if (!guild) return true;
-
-    const col = await getEventsCollection();
-    const eventDoc = await col.findOne({ messageId });
-
-    if (!eventDoc) {
-        await interaction.update({ content: '❌ Este evento ya no está activo en la base de datos.', components: [] });
-        return true;
-    }
-
-    if (!eventDoc.rsvps) eventDoc.rsvps = { yes: [], maybe: [], no: [] };
-
-    eventDoc.rsvps.yes = eventDoc.rsvps.yes.filter((id: string) => id !== targetUserId);
-    eventDoc.rsvps.maybe = eventDoc.rsvps.maybe.filter((id: string) => id !== targetUserId);
-    eventDoc.rsvps.no = eventDoc.rsvps.no.filter((id: string) => id !== targetUserId);
-
-    let asistenteRole = guild.roles.cache.find(r => r.name.toLowerCase() === 'asistente');
-    if (!asistenteRole) {
-        try {
-            asistenteRole = await guild.roles.create({
-                name: 'asistente',
-                color: 0x00FF00,
-                reason: 'Rol automático creado para gestión de asistencias.'
-            });
-        } catch (e) {
-            console.error('❌ Error creando rol asistente:', e);
-        }
-    }
-
-    const member = await guild.members.fetch(targetUserId).catch(() => null);
-
-    if (targetStatus === 'yes') {
-        if (eventDoc.rsvps.yes.length < 16) {
-            eventDoc.rsvps.yes.push(targetUserId);
-            if (asistenteRole && member) await member.roles.add(asistenteRole).catch(() => {});
-        } else {
-            eventDoc.rsvps.maybe.push(targetUserId);
-            if (asistenteRole && member) await member.roles.add(asistenteRole).catch(() => {});
-        }
-    } else if (targetStatus === 'maybe') {
-        eventDoc.rsvps.maybe.push(targetUserId);
-        if (asistenteRole && member) await member.roles.add(asistenteRole).catch(() => {});
-    } else if (targetStatus === 'no') {
-        eventDoc.rsvps.no.push(targetUserId);
-        if (asistenteRole && member && member.roles.cache.has(asistenteRole.id)) {
-            await member.roles.remove(asistenteRole).catch(() => {});
-        }
-    }
-
-    await col.updateOne({ messageId }, { $set: { rsvps: eventDoc.rsvps } });
-
-    const channel = await guild.channels.fetch(eventDoc.channelId).catch(() => null) as TextChannel;
-    if (channel) {
-        const message = await channel.messages.fetch(messageId).catch(() => null);
-        if (message) {
-            const embed = new EmbedBuilder()
-                .setColor(0x0055FF)
-                .setTitle(`🏁 ${eventDoc.title}`)
-                .setDescription(`📅 **Fecha:** ${eventDoc.date} a las ${eventDoc.time} CET\n\n${eventDoc.description}`)
-                .setTimestamp();
-
-            if (eventDoc.image) embed.setImage(eventDoc.image);
-
-            const formatVerticalList = (ids: string[]) => ids.length > 0 ? ids.map(id => `<@${id}>`).join('\n') : 'Ninguno';
-
-            embed.addFields(
-                { name: `✅ Asistiré (${eventDoc.rsvps.yes.length}/16)`, value: formatVerticalList(eventDoc.rsvps.yes), inline: false },
-                { name: `护 Duda (${eventDoc.rsvps.maybe.length})`, value: formatVerticalList(eventDoc.rsvps.maybe), inline: false },
                 { name: `❌ No puedo (${eventDoc.rsvps.no.length})`, value: formatVerticalList(eventDoc.rsvps.no), inline: false }
             );
 
