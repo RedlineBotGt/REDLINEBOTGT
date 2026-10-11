@@ -219,12 +219,12 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
             .setStyle(ButtonStyle.Success),
         new ButtonBuilder()
             .setCustomId('event_config_repeat')
-            .setLabel('⚙️ Programar / Repetición Semanal')
+            .setLabel('⚙️ Programar Publicación')
             .setStyle(ButtonStyle.Secondary)
     );
 
     await interaction.reply({
-        content: `📋 **Datos guardados.** ¿Cómo deseas proceder?\n• **Publicar Ya:** Se lanza al instante.\n• **Programar:** Permite fijar fecha/hora y repeticiones periódicas.`,
+        content: `📋 **Datos guardados.** ¿Cómo deseas proceder?\n• **Publicar Ya:** Se lanza al instante.\n• **Programar Publicación:** Permite fijar fecha/hora de envío y repeticiones opcionales.`,
         components: [rowFork],
         flags: [MessageFlags.Ephemeral]
     });
@@ -304,31 +304,45 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
     return true;
 }
 
-// --- Modal para Programación y Repetición ---
+// --- Modal para Programación de Publicación y Repetición ---
 export async function handleEventConfigRepeatButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_config_repeat') return false;
 
     const modal = new ModalBuilder()
         .setCustomId('modal_event_repeat')
-        .setTitle('⚙️ Configuración de Repetición');
+        .setTitle('⚙️ Programar Publicación');
+
+    const publishDateInput = new TextInputBuilder()
+        .setCustomId('event_publish_date')
+        .setLabel('Día de publicación (DD/MM/YYYY)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Ej: 25/06/2026')
+        .setRequired(true);
+
+    const publishTimeInput = new TextInputBuilder()
+        .setCustomId('event_publish_time')
+        .setLabel('Hora de publicación CET (HH:MM)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Ej: 10:00')
+        .setRequired(true);
 
     const intervalInput = new TextInputBuilder()
         .setCustomId('event_interval_days')
-        .setLabel('Intervalo en Días (Ej: 7 para semanal)')
+        .setLabel('Repetir cada X días (Opcional)')
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder('7')
-        .setValue('7')
-        .setRequired(true);
+        .setPlaceholder('Ej: 7')
+        .setRequired(false);
 
     const timesInput = new TextInputBuilder()
         .setCustomId('event_repeat_times')
-        .setLabel('Nº total de repeticiones (ej: 4)')
+        .setLabel('Repetir tantas veces (Opcional)')
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder('4')
-        .setValue('4')
-        .setRequired(true);
+        .setPlaceholder('Ej: 4')
+        .setRequired(false);
 
     modal.addComponents(
+        new ActionRowBuilder<TextInputBuilder>().addComponents(publishDateInput),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(publishTimeInput),
         new ActionRowBuilder<TextInputBuilder>().addComponents(intervalInput),
         new ActionRowBuilder<TextInputBuilder>().addComponents(timesInput)
     );
@@ -347,26 +361,48 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
         await interaction.reply({ content: '❌ Sesión caducada.', flags: [MessageFlags.Ephemeral] });
         return true;
     }
-    const intervalDays = parseInt(interaction.fields.getTextInputValue('event_interval_days').trim(), 10) || 7;
-    const totalTimes = parseInt(interaction.fields.getTextInputValue('event_repeat_times').trim(), 10) || 1;
+
+    const pubDate = interaction.fields.getTextInputValue('event_publish_date').trim();
+    const pubTime = interaction.fields.getTextInputValue('event_publish_time').trim();
+    const intervalRaw = interaction.fields.getTextInputValue('event_interval_days')?.trim() || '';
+    const timesRaw = interaction.fields.getTextInputValue('event_repeat_times')?.trim() || '';
+
+    const publishAt = parseMadridDateTime(pubDate, pubTime);
+    if (!publishAt) {
+        await interaction.reply({ 
+            content: '❌ Formato de fecha u hora de publicación inválido (Usa DD/MM/YYYY y HH:MM).', 
+            flags: [MessageFlags.Ephemeral] 
+        });
+        return true;
+    }
+
+    const intervalDays = intervalRaw ? parseInt(intervalRaw, 10) : 0;
+    const totalTimes = timesRaw ? parseInt(timesRaw, 10) : 1;
+    const repeats = intervalDays > 0 && totalTimes > 1;
     const intervalMs = intervalDays * 24 * 3600 * 1000;
 
     await col.updateOne(
         { _id: session._id },
         {
             $set: {
-                repeats: true,
+                publishAt,
+                repeats,
                 intervalMs,
-                remainingTimes: totalTimes,
-                status: 'pending',
+                remainingTimes: repeats ? totalTimes : 1,
+                status: 'pending_publish',
                 rsvps: { yes: [], maybe: [], no: [] },
                 createdAt: new Date()
             }
         }
     );
 
+    let responseText = `✅ **¡Publicación programada con éxito!** El mensaje del evento se publicará automáticamente el **${pubDate}** a las **${pubTime} CET**.`;
+    if (repeats) {
+        responseText += `\n🔄 Se repetirá cada **${intervalDays} días** (**${totalTimes} veces** en total).`;
+    }
+
     await interaction.reply({
-        content: `✅ **¡Evento programado con éxito!** Se lanzará automáticamente el **${session.date}** a las **${session.time}** y se repetirá cada ${intervalDays} días (${totalTimes} veces en total).`,
+        content: responseText,
         flags: [MessageFlags.Ephemeral]
     });
 
@@ -378,7 +414,7 @@ export async function handleBdEventosButton(interaction: ButtonInteraction): Pro
     if (interaction.customId !== 'dash_btn_bd_eventos') return false;
 
     const col = await getEventsCollection();
-    const events = await col.find({ status: { $in: ['pending', 'sent'] } }).toArray();
+    const events = await col.find({ status: { $in: ['pending', 'sent', 'pending_publish'] } }).toArray();
 
     if (events.length === 0) {
         await interaction.reply({
@@ -432,7 +468,7 @@ export async function handleBdEventosSelect(interaction: any): Promise<boolean> 
     );
 
     await interaction.update({
-        content: `⚙️ **Administrando Evento:**\n> **Título:** ${ev.title}\n> **Fecha:** ${ev.date} a las${ev.time}\n> **Estado actual:** \`${ev.status}\``,
+        content: `⚙️ **Administrando Evento:**\n> **Título:** ${ev.title}\n> **Fecha del evento:** ${ev.date} a las${ev.time}\n> **Estado actual:** \`${ev.status}\``,
         components: [rowActions]
     });
 
@@ -745,7 +781,7 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
 
     const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✅'),
-        new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓'), // <-- Corregido aquí
+        new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓'),
         new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
     );
 
