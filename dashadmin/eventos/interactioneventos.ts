@@ -12,7 +12,9 @@ import {
     handleBdEventosSelect,
     handleBdEventosCancelAction,
     handleEventAdminManageButton,
-    handleEventAdminModalSubmit
+    handleEventAdminConfirmButton,
+    handleEventAdminUserSelect,
+    handleEventAdminStatusSelect
 } from './eventosmanager';
 
 /**
@@ -25,8 +27,9 @@ export async function handleEventInteractions(interaction: any): Promise<boolean
         if (interaction.isButton()) {
             if (await handleDashEventButton(interaction)) return true;
             if (await handleBdEventosButton(interaction)) return true;
-            if (await handleBdEventosCancelAction(interaction)) return true; // ➔ Captura el botón de cancelar evento desde la BD
-            if (await handleEventAdminManageButton(interaction)) return true; // ➔ Captura el botón de gestión admin del evento
+            if (await handleBdEventosCancelAction(interaction)) return true;
+            if (await handleEventAdminManageButton(interaction)) return true; // ➔ Abre el panel de administración efímero
+            if (await handleEventAdminConfirmButton(interaction)) return true; // ➔ Confirma los cambios de asistencia del admin
             if (await handleEventProceedToModal(interaction)) return true;
             if (await handleEventPublishNowButton(interaction)) return true;
             if (await handleEventConfigRepeatButton(interaction)) return true;
@@ -37,7 +40,6 @@ export async function handleEventInteractions(interaction: any): Promise<boolean
         if (interaction.isModalSubmit()) {
             if (await handleEventModalSubmit(interaction)) return true;
             if (await handleEventRepeatModalSubmit(interaction)) return true;
-            if (await handleEventAdminModalSubmit(interaction)) return true; // ➔ Captura el envío del modal de admin
         }
 
         // --- 3. CHANNEL SELECT MENUS ---
@@ -50,9 +52,15 @@ export async function handleEventInteractions(interaction: any): Promise<boolean
             if (await handleEventRoleSelect(interaction)) return true;
         }
 
-        // --- 5. STRING SELECT MENUS (Para el selector de la BD de eventos) ---
+        // --- 5. USER SELECT MENUS (Para seleccionar al piloto desde el servidor) ---
+        if (interaction.isUserSelectMenu()) {
+            if (await handleEventAdminUserSelect(interaction)) return true;
+        }
+
+        // --- 6. STRING SELECT MENUS (BD de eventos y selección de estado) ---
         if (interaction.isStringSelectMenu()) {
             if (await handleBdEventosSelect(interaction)) return true;
+            if (await handleEventAdminStatusSelect(interaction)) return true;
         }
 
         return false;
