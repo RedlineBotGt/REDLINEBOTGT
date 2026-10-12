@@ -116,10 +116,8 @@ export function setupWelcomeSystem(client: Client) {
             if (addedRoles.size === 0 && removedRoles.size === 0) return;
 
             const col = await getWelcomeCollection();
-            let config = await col.findOne({ guildId: newMember.guild.id, type: 'avisos' });
-            if (!config) {
-                config = await col.findOne({ guildId: newMember.guild.id, type: 'welcome' });
-            }
+            // 🛑 CORREGIDO: Buscamos EXCLUSIVAMENTE 'avisos'. Si no está configurado, no hace nada y no toca 'welcome'.
+            const config = await col.findOne({ guildId: newMember.guild.id, type: 'avisos' });
             if (!config || !config.channelId) return;
 
             const channel = await newMember.guild.channels.fetch(config.channelId) as TextChannel;
@@ -277,7 +275,7 @@ export async function handleGoodbyeModalSubmit(interaction: ModalSubmitInteracti
     const session = welcomeSessions.get(interaction.user.id);
 
     if (!session || !session.channelId || !interaction.guild) {
-        await interaction.reply({ content: '❌ Sesión갑 caducada (trad: caducada).', flags: [MessageFlags.Ephemeral] });
+        await interaction.reply({ content: '❌ Sesión caducada.', flags: [MessageFlags.Ephemeral] });
         return true;
     }
 
