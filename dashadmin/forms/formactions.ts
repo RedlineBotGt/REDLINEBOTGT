@@ -16,6 +16,7 @@ import {
     MessageFlags 
 } from 'discord.js';
 import { obtenerFormularios, obtenerFormularioPorTitulo, guardarFormulario } from './formsstorage';
+import { appendSheetData } from './sheetsService';
 
 // Mapa temporal para recordar qué formulario y canal de publicación se están configurando durante el flujo de colocación
 export const colocationContext = new Map<string, { titulo: string; canalPublicacionId: string }>();
@@ -219,7 +220,7 @@ export async function handleFormButtonClick(interaction: ButtonInteraction): Pro
     return true;
 }
 
-// 6. Envío de respuestas del usuario final al canal configurado
+// 6. Envío de respuestas del usuario final al canal configurado y a Google Sheets si es el formulario de inscripción
 export async function handleFormSubmitModal(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (!interaction.customId.startsWith('submit_form_')) return false;
 
@@ -245,11 +246,32 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
     const serverName = interaction.guild?.name || 'Servidor';
     resumen += `— *${serverName}*`;
 
+    // 📊 Si el formulario es exclusivamente "inscripcióncup", sincronizamos los datos con la pestaña "Inscripción"
+    if (tituloFormulario.trim().toLowerCase() === 'inscripcióncup' || tituloFormulario.trim().toLowerCase() === 'inscripcioncup') {
+        try {
+            const idPsn = interaction.fields.getTextInputValue('p_0') || '';
+            const apodoGt7 = interaction.fields.getTextInputValue('p_1') || '';
+            const numero = interaction.fields.getTextInputValue('p_2') || '';
+
+            const rowData = [
+                interaction.user.username,          // Columna A: piloto discord
+                `<@${interaction.user.id}>`,        // Columna B: ID usuario (<@ID>)
+                idPsn,                              // Columna C: id PSN
+                apodoGt7,                           // Columna D: apodo Gt7
+                numero                              // Columna E: número
+            ];
+
+            await appendSheetData('Inscripción!A:E', [rowData]);
+        } catch (sheetError) {
+            console.error('❌ Error al guardar la inscripción en Google Sheets:', sheetError);
+        }
+    }
+
     try {
         const canalRespuestas = await interaction.guild?.channels.fetch(formulario.canalRespuestas) as TextChannel;
         if (canalRespuestas) {
             await canalRespuestas.send({ content: resumen });
-            await interaction.reply({ content: '✅ ¡Tus respuestas se han enviado correctamente al staff!', flags: [MessageFlags.Ephemeral] });
+            await interaction.reply({ content: '✅ ¡Tus respuestas se han enviado correctamente!', flags: [MessageFlags.Ephemeral] });
         } else {
             await interaction.reply({ content: '❌ No se encontró el canal de respuestas.', flags: [MessageFlags.Ephemeral] });
         }
