@@ -246,8 +246,14 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
     const serverName = interaction.guild?.name || 'Servidor';
     resumen += `— *${serverName}*`;
 
-    // 📊 Si el formulario es exclusivamente "inscripcióncup", sincronizamos los datos con la pestaña "Inscripción"
-    if (tituloFormulario.trim().toLowerCase() === 'inscripcióncup' || tituloFormulario.trim().toLowerCase() === 'inscripcioncup') {
+    // 📊 Validación estricta pero flexible a mayúsculas/acentos para "InscripciónCup" (ignora tildes y mayúsculas, pero rechaza otros como inscripciónliga)
+    const tituloNormalizado = tituloFormulario
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    if (tituloNormalizado === 'inscripcioncup') {
         try {
             const idPsn = interaction.fields.getTextInputValue('p_0') || '';
             const apodoGt7 = interaction.fields.getTextInputValue('p_1') || '';
@@ -262,6 +268,7 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
             ];
 
             await appendSheetData('Inscripción!A:E', [rowData]);
+            console.log('✅ [Google Sheets] Inscripción añadida correctamente a la pestaña "Inscripción".');
         } catch (sheetError) {
             console.error('❌ Error al guardar la inscripción en Google Sheets:', sheetError);
         }
