@@ -16,7 +16,7 @@ import {
     MessageFlags 
 } from 'discord.js';
 import { obtenerFormularios, obtenerFormularioPorTitulo, guardarFormulario } from './formsstorage';
-import { appendSheetData } from '../dashsheet/sheetsService.js';
+import { appendSheetData } from '../dashsheet/sheetsService';
 
 // Mapa temporal para recordar qué formulario y canal de publicación se están configurando durante el flujo de colocación
 export const colocationContext = new Map<string, { titulo: string; canalPublicacionId: string }>();
