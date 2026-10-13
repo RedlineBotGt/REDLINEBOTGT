@@ -83,3 +83,29 @@ export async function getSheetData(range: string): Promise<any[][] | undefined> 
     throw error;
   }
 }
+
+/**
+ * 📊 Inserta una o varias filas de datos al final de un rango especificado en la hoja de Google Sheets.
+ * @param range El rango o pestaña de destino (ej: "Inscripción!A:E")
+ * @param values Array bidimensional con los valores a insertar (ej: [[val1, val2, ...]])
+ */
+export async function appendSheetData(range: string, values: any[][]): Promise<void> {
+  try {
+    const auth = getAuthClient();
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range,
+      valueInputOption: 'USER_ENTERED', // Permite que Google interprete formatos (como menciones, números, etc.)
+      requestBody: {
+        values,
+      },
+    });
+
+    console.log(`✅ [Google Sheets] Datos añadidos correctamente en el rango ${range}`);
+  } catch (error: any) {
+    console.error(`❌ Error al escribir en Google Sheets en el rango ${range}:`, error.message);
+    throw error;
+  }
+}
