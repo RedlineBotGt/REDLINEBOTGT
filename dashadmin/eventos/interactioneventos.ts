@@ -1,75 +1,92 @@
+import { Interaction } from 'discord.js';
+
+// --- IMPORTACIÓN DE MÓDULOS ESPECIALIZADOS ---
 import { 
-    handleDashEventButton, 
-    handleEventChannelSelect, 
-    handleEventRoleSelect, 
-    handleEventProceedToModal, 
-    handleEventModalSubmit, 
-    handleEventPublishNowButton, 
-    handleEventConfigRepeatButton, 
-    handleEventRepeatModalSubmit, 
-    handleEventRsvpButton,
+    handleDashEventButton,
+    handleEventChannelSelect,
+    handleEventRoleSelect,
+    handleEventProceedToModal,
+    handleEventModalSubmit,
+    handleEventPublishNowButton,
+    handleEventConfigRepeatButton,
+    handleEventRepeatModalSubmit
+} from './eventoscreate';
+
+import { 
     handleBdEventosButton,
     handleBdEventosSelect,
     handleBdEventosCancelAction,
     handleBdEventosEditButton,
-    handleBdEventosEditModalSubmit,
+    handleBdEventosEditModalSubmit
+} from './eventosdb';
+
+import { 
     handleEventAdminManageButton,
-    handleEventAdminConfirmButton,
     handleEventAdminUserSelect,
-    handleEventAdminStatusSelect
-} from './eventosmanager';
+    handleEventAdminStatusSelect,
+    handleEventAdminConfirmButton,
+    handleEventRsvpButton
+} from './eventosrsvp';
 
 /**
- * Enrutador local del submódulo de Eventos y Campeonatos.
- * Filtra la interacción y la delega al manejador correspondiente.
+ * Enrutador principal de interacciones para el sistema de eventos.
+ * Redirige cada botón, modal o menú desplegable a su módulo especializado.
  */
-export async function handleEventInteractions(interaction: any): Promise<boolean> {
+export async function handleEventInteractions(interaction: Interaction): Promise<boolean> {
     try {
-        // --- 1. BOTONES ---
+        // -------------------------------------------------------------
+        // 1. MANEJO DE BOTONES (ButtonInteraction)
+        // -------------------------------------------------------------
         if (interaction.isButton()) {
+            // Módulo de Creación
             if (await handleDashEventButton(interaction)) return true;
-            if (await handleBdEventosButton(interaction)) return true;
-            if (await handleBdEventosCancelAction(interaction)) return true;
-            if (await handleBdEventosEditButton(interaction)) return true; // ➔ Abre el modal de edición completa
-            if (await handleEventAdminManageButton(interaction)) return true; // ➔ Abre el panel de administración efímero
-            if (await handleEventAdminConfirmButton(interaction)) return true; // ➔ Confirma los cambios de asistencia del admin
             if (await handleEventProceedToModal(interaction)) return true;
             if (await handleEventPublishNowButton(interaction)) return true;
             if (await handleEventConfigRepeatButton(interaction)) return true;
+
+            // Módulo de Base de Datos
+            if (await handleBdEventosButton(interaction)) return true;
+            if (await handleBdEventosCancelAction(interaction)) return true;
+            if (await handleBdEventosEditButton(interaction)) return true;
+
+            // Módulo de RSVP y Gestión Admin de Pilotos
+            if (await handleEventAdminManageButton(interaction)) return true;
+            if (await handleEventAdminConfirmButton(interaction)) return true;
             if (await handleEventRsvpButton(interaction)) return true;
         }
 
-        // --- 2. MODAL SUBMITS ---
-        if (interaction.isModalSubmit()) {
-            if (await handleEventModalSubmit(interaction)) return true;
-            if (await handleEventRepeatModalSubmit(interaction)) return true;
-            if (await handleBdEventosEditModalSubmit(interaction)) return true; // ➔ Guarda los cambios del modal de edición
-        }
-
-        // --- 3. CHANNEL SELECT MENUS ---
+        // -------------------------------------------------------------
+        // 2. MANEJO DE MENÚS DESPLEGABLES (SelectMenuInteraction)
+        // -------------------------------------------------------------
         if (interaction.isChannelSelectMenu()) {
             if (await handleEventChannelSelect(interaction)) return true;
         }
 
-        // --- 4. ROLE SELECT MENUS ---
         if (interaction.isRoleSelectMenu()) {
             if (await handleEventRoleSelect(interaction)) return true;
         }
 
-        // --- 5. USER SELECT MENUS (Para seleccionar al piloto desde el servidor) ---
         if (interaction.isUserSelectMenu()) {
             if (await handleEventAdminUserSelect(interaction)) return true;
         }
 
-        // --- 6. STRING SELECT MENUS (BD de eventos y selección de estado) ---
         if (interaction.isStringSelectMenu()) {
             if (await handleBdEventosSelect(interaction)) return true;
             if (await handleEventAdminStatusSelect(interaction)) return true;
         }
 
-        return false;
+        // -------------------------------------------------------------
+        // 3. MANEJO DE MODALES (ModalSubmitInteraction)
+        // -------------------------------------------------------------
+        if (interaction.isModalSubmit()) {
+            if (await handleEventModalSubmit(interaction)) return true;
+            if (await handleEventRepeatModalSubmit(interaction)) return true;
+            if (await handleBdEventosEditModalSubmit(interaction)) return true;
+        }
+
     } catch (error) {
-        console.error('❌ Error en el enrutador de Eventos (interactioneventos):', error);
-        return false;
+        console.error('❌ Error en el enrutador interactioneventos:', error);
     }
+
+    return false;
 }
