@@ -215,7 +215,7 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
     }
 }
 
-// 🛡️ Manejador seguro para la selección de la jornada (J1 a J6)
+// 🛡️ Manejador para la selección de la jornada (J1 a J6) con rangos exactos
 export async function handleSheetsJornadaSelect(interaction: StringSelectMenuInteraction) {
     if (!interaction.guild) return;
 
@@ -231,12 +231,17 @@ export async function handleSheetsJornadaSelect(interaction: StringSelectMenuInt
     const userId = interaction.user.id;
     const numJornada = parseInt(interaction.values[0], 10);
 
-    // Cálculo dinámico de celdas por Jornada en Tabla2 (P:Q)
-    // J1: P22:Q40 | J2: P64:Q82 | J3: P106:Q124 | J4: P148:Q166 | J5: P190:Q208 | J6: P232:Q250
-    const startRow = 22 + (numJornada - 1) * 42;
-    const endRow = startRow + 18;
-    const range = `Tabla2!P${startRow}:Q${endRow}`;
+    // Rangos exactos especificados para cada jornada en Tabla2 (P:Q)
+    const jornadaRanges: Record<number, string> = {
+        1: 'Tabla2!P22:Q40',
+        2: 'Tabla2!P42:Q80',
+        3: 'Tabla2!P82:Q120',
+        4: 'Tabla2!P122:Q160',
+        5: 'Tabla2!P162:Q200',
+        6: 'Tabla2!P202:Q240'
+    };
 
+    const range = jornadaRanges[numJornada] || 'Tabla2!P22:Q40';
     let titleHeader = `🏎️ Puntuación — Jornada ${numJornada} (T2)`;
     let formattedText = '';
 
@@ -244,7 +249,10 @@ export async function handleSheetsJornadaSelect(interaction: StringSelectMenuInt
         const rawData = (await getSheetData(range)) || [];
 
         const filteredData = rawData
-            .filter(row => row && row[0] !== undefined && String(row[0]).trim() !== '' && row[1] !== undefined && String(row[1]).trim() !== '')
+            .filter(row => {
+                const piloto = row[0] !== undefined && row[0] !== null ? String(row[0]).trim() : '';
+                return piloto !== '' && piloto !== 'PILOTO' && piloto !== 'Piloto' && piloto !== 'Puntos Ronda' && piloto !== 'Puntos en orden';
+            })
             .map(row => [
                 String(row[0] || '').trim(), // Piloto (Columna P)
                 String(row[1] || '0').trim()  // Puntos (Columna Q)
