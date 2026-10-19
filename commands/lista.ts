@@ -19,7 +19,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         return;
     }
 
-    await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+    // Defer público (sin la flag Ephemeral)
+    await interaction.deferReply();
 
     try {
         // Cargar todos los miembros del servidor
@@ -36,7 +37,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         // Formatear únicamente con las menciones
         const listMentions = membersWithRole.map(m => `<@${m.user.id}>`).join('\n');
 
-        // Texto plano sin bloques de código ni embeds
+        // Texto plano sin bloques de código ni embeds, visible para todos
         const responseText = `📋 **LISTA DE MENCIONES (${membersWithRole.size}):**\n\n${listMentions}`;
 
         await interaction.editReply({ content: responseText });
