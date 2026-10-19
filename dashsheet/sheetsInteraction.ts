@@ -1,6 +1,7 @@
 import { Interaction } from 'discord.js';
 import { 
     handleDashSheetsButton, 
+    handleSheetsJornadaSelect,
     handleSheetsChannelSelect, 
     handleSheetsRoleSelect 
 } from './dashSheetHandler';
@@ -15,6 +16,14 @@ export async function handleSheetsInteraction(interaction: Interaction): Promise
             const customId = interaction.customId;
             if (customId.startsWith('sheets_') || customId === 'pub_yes' || customId === 'pub_no') {
                 await handleDashSheetsButton(interaction);
+                return true;
+            }
+        }
+
+        // Manejo de menús desplegables de texto (Selección de Jornada)
+        if (interaction.isStringSelectMenu()) {
+            if (interaction.customId === 'sheets_select_jornada') {
+                await handleSheetsJornadaSelect(interaction);
                 return true;
             }
         }
