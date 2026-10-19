@@ -215,7 +215,7 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
     }
 }
 
-// 🛡️ Manejador para la selección de la jornada (J1 a J6) buscando en Ingreso2
+// 🛡️ Manejador para la selección de la jornada (J1 a J6) con los rangos exactos corregidos en Ingreso2
 export async function handleSheetsJornadaSelect(interaction: StringSelectMenuInteraction) {
     if (!interaction.guild) return;
 
@@ -231,14 +231,14 @@ export async function handleSheetsJornadaSelect(interaction: StringSelectMenuInt
     const userId = interaction.user.id;
     const numJornada = parseInt(interaction.values[0], 10);
 
-    // Rangos exactos especificados para cada jornada en Ingreso2 (P:Q)
+    // Rangos exactos corregidos para cada jornada en Ingreso2 (P:Q)
     const jornadaRanges: Record<number, string> = {
         1: 'Ingreso2!P22:Q40',
-        2: 'Ingreso2!P42:Q80',
-        3: 'Ingreso2!P82:Q120',
-        4: 'Ingreso2!P122:Q160',
-        5: 'Ingreso2!P162:Q200',
-        6: 'Ingreso2!P202:Q240'
+        2: 'Ingreso2!P62:Q80',
+        3: 'Ingreso2!P102:Q120',
+        4: 'Ingreso2!P142:Q160',
+        5: 'Ingreso2!P182:Q200',
+        6: 'Ingreso2!P222:Q240'
     };
 
     const range = jornadaRanges[numJornada] || 'Ingreso2!P22:Q40';
