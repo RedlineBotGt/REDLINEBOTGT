@@ -215,7 +215,7 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
     }
 }
 
-// 🛡️ Manejador para la selección de la jornada (J1 a J6) con los rangos exactos corregidos en Ingreso2
+// 🛡️ Manejador para la selección de la jornada (J1 a J6) con el 1º en verde brillante (ANSI)
 export async function handleSheetsJornadaSelect(interaction: StringSelectMenuInteraction) {
     if (!interaction.guild) return;
 
@@ -265,9 +265,15 @@ export async function handleSheetsJornadaSelect(interaction: StringSelectMenuInt
                 const pos = String(idx + 1).padStart(2, ' ');
                 const piloto = r[0].padEnd(maxPiloto, ' ');
                 const pts = r[1].padStart(3, ' ');
-                return `${pos} | ${piloto} | ${pts} pts`;
+
+                if (idx === 0) {
+                    // Primer puesto en verde brillante
+                    return `\u001b[1;32m${pos} | ${piloto} | ${pts} pts\u001b[0m`;
+                } else {
+                    return `${pos} | ${piloto} | ${pts} pts`;
+                }
             });
-            formattedText = '```text\n' + lines.join('\n') + '\n```';
+            formattedText = '```ansi\n' + lines.join('\n') + '\n```';
         }
     } catch (error) {
         console.error(`❌ Error al leer la Jornada ${numJornada}:`, error);
