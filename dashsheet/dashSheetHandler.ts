@@ -1,11 +1,13 @@
 import { 
     ButtonInteraction, 
+    StringSelectMenuInteraction,
     ChannelSelectMenuInteraction, 
     RoleSelectMenuInteraction, 
     ActionRowBuilder, 
     ButtonBuilder, 
     ButtonStyle, 
     EmbedBuilder, 
+    StringSelectMenuBuilder,
     ChannelSelectMenuBuilder, 
     RoleSelectMenuBuilder, 
     ChannelType,
@@ -71,7 +73,30 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
         return interaction.editReply({ content: '❌ Consulta cerrada.', embeds: [], components: [] });
     }
 
-    // 3. Manejo de los botones del panel de Google Sheets
+    // 3. Manejo especial del botón Jornada (despliega menú de selección J1 - J6)
+    if (customId === 'sheets_jornada') {
+        const selectJornada = new StringSelectMenuBuilder()
+            .setCustomId('sheets_select_jornada')
+            .setPlaceholder('🏁 Selecciona la Jornada que deseas consultar...');
+
+        for (let i = 1; i <= 6; i++) {
+            selectJornada.addOptions({
+                label: `Jornada ${i}`,
+                value: `${i}`,
+                description: `Puntuaciones y resultados de la Jornada ${i}`
+            });
+        }
+
+        const rowSelect = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectJornada);
+
+        await interaction.editReply({
+            content: '🏎️ **Selecciona la Jornada que deseas consultar:**',
+            components: [rowSelect]
+        });
+        return;
+    }
+
+    // 4. Manejo de los botones del panel de Google Sheets (Clasificación, Asistencia, VR, PP)
     if (customId.startsWith('sheets_')) {
         let titleHeader = '';
         let formattedText = '';
@@ -105,34 +130,15 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
                     formattedText = '```text\n' + lines.join('\n') + '\n```';
                 }
             } 
-            else if (customId === 'sheets_jornada') {
-                titleHeader = '🏎️ Puntuación por Jornada (T2)';
-                const rawData = (await getSheetData('Tabla2!B8:J')) || [];
-
-                if (rawData.length > 0) {
-                    const rows = rawData.slice(1).filter(r => r && r[0] && String(r[0]).trim() !== '' && r[1]);
-                    const maxPiloto = Math.max(...rows.map(r => String(r[1] || '').trim().length), 10);
-
-                    const lines = rows.map(r => {
-                        const pos = String(r[0] || '').trim().padStart(2, ' ');
-                        const piloto = String(r[1] || '').trim().padEnd(maxPiloto, ' ');
-                        const jPts = r.slice(3).map(val => String(val || '-').padStart(3, ' ')).join(' | ');
-                        return `${pos} | ${piloto} | ${jPts}`;
-                    });
-
-                    formattedText = '```text\n' + lines.join('\n') + '\n```';
-                }
-            }
             else if (customId === 'sheets_asistencia') {
                 titleHeader = '📋 Control de Asistencia (T2)';
-                // Rango actualizado a AG2:AH en la pestaña Ingreso2
                 const rawData = (await getSheetData('Ingreso2!AG2:AH')) || [];
 
                 const filteredData = rawData
                     .filter(row => row && row[0] !== undefined && String(row[0]).trim() !== '' && row[0] !== 'PILOTO' && row[1] !== undefined && String(row[1]).trim() !== '')
                     .map(row => [
-                        String(row[0] || '').trim(), // Piloto (Columna AG)
-                        String(row[1] || '').trim()  // Asistencias (Columna AH)
+                        String(row[0] || '').trim(), // Piloto
+                        String(row[1] || '').trim()  // Asistencias
                     ]);
 
                 if (filteredData.length > 0) {
@@ -205,56 +211,119 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
             formattedText = '```text\nNo se encontraron datos en el rango especificado.\n```';
         }
 
-        // Mantener el estado previo del usuario (canal y rol seleccionados)
-        const currentState = userSheetState.get(userId) || { content: '', title: '' };
-        userSheetState.set(userId, { 
-            content: formattedText, 
-            title: titleHeader, 
-            channelId: currentState.channelId, 
-            roleId: currentState.roleId 
-        });
+        actualizarPanelRespuesta(interaction, userId, titleHeader, formattedText);
+    }
+}
 
-        const resultEmbed = new EmbedBuilder()
-            .setAuthor({ name: interaction.guild.name, iconURL: interaction.guild.iconURL({ dynamic: true }) || undefined })
-            .setTitle(titleHeader)
-            .setDescription(formattedText)
-            .setColor(0x2b2b2b)
-            .setFooter({ text: 'REDLINE GT', iconURL: interaction.guild.iconURL({ dynamic: true }) || undefined });
+// 🛡️ Manejador seguro para la selección de la jornada (J1 a J6)
+export async function handleSheetsJornadaSelect(interaction: StringSelectMenuInteraction) {
+    if (!interaction.guild) return;
 
-        const rowButtons = new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder().setCustomId('sheets_clasificacion').setLabel('Clasificación').setStyle(ButtonStyle.Primary).setEmoji('🏆'),
-            new ButtonBuilder().setCustomId('sheets_jornada').setLabel('Jornada').setStyle(ButtonStyle.Primary).setEmoji('🏎️'),
-            new ButtonBuilder().setCustomId('sheets_asistencia').setLabel('Asistencia').setStyle(ButtonStyle.Secondary).setEmoji('📋'),
-            new ButtonBuilder().setCustomId('sheets_vr').setLabel('VR').setStyle(ButtonStyle.Success).setEmoji('⚡'),
-            new ButtonBuilder().setCustomId('sheets_pp').setLabel('PP').setStyle(ButtonStyle.Danger).setEmoji('🎯')
-        );
-
-        const publishButtons = new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder().setCustomId('pub_yes').setLabel('Publicar: SÍ').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId('pub_no').setLabel('Publicar: NO').setStyle(ButtonStyle.Secondary)
-        );
-
-        const channelSelect = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(
-            new ChannelSelectMenuBuilder()
-                .setCustomId('sheets_select_channel')
-                .setPlaceholder('📁 ¿Dónde quieres publicar?')
-                .addChannelTypes(ChannelType.GuildText)
-        );
-
-        const roleSelect = new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(
-            new RoleSelectMenuBuilder()
-                .setCustomId('sheets_select_role')
-                .setPlaceholder('🔔 ¿Quieres mencionar algún rol?')
-        );
-
+    if (!interaction.deferred && !interaction.replied) {
         try {
-            await interaction.editReply({
-                embeds: [resultEmbed],
-                components: [rowButtons, publishButtons, channelSelect, roleSelect]
-            });
+            await interaction.deferUpdate();
         } catch (err) {
-            console.error('❌ Error al editar la respuesta del panel Sheets:', err);
+            console.error('❌ Error al diferir selección de jornada:', err);
+            return;
         }
+    }
+
+    const userId = interaction.user.id;
+    const numJornada = parseInt(interaction.values[0], 10);
+
+    // Cálculo dinámico de celdas por Jornada en Tabla2 (P:Q)
+    // J1: P22:Q40 | J2: P64:Q82 | J3: P106:Q124 | J4: P148:Q166 | J5: P190:Q208 | J6: P232:Q250
+    const startRow = 22 + (numJornada - 1) * 42;
+    const endRow = startRow + 18;
+    const range = `Tabla2!P${startRow}:Q${endRow}`;
+
+    let titleHeader = `🏎️ Puntuación — Jornada ${numJornada} (T2)`;
+    let formattedText = '';
+
+    try {
+        const rawData = (await getSheetData(range)) || [];
+
+        const filteredData = rawData
+            .filter(row => row && row[0] !== undefined && String(row[0]).trim() !== '' && row[1] !== undefined && String(row[1]).trim() !== '')
+            .map(row => [
+                String(row[0] || '').trim(), // Piloto (Columna P)
+                String(row[1] || '0').trim()  // Puntos (Columna Q)
+            ]);
+
+        if (filteredData.length > 0) {
+            const maxPiloto = Math.max(...filteredData.map(r => r[0].length), 10);
+
+            const lines = filteredData.map((r, idx) => {
+                const pos = String(idx + 1).padStart(2, ' ');
+                const piloto = r[0].padEnd(maxPiloto, ' ');
+                const pts = r[1].padStart(3, ' ');
+                return `${pos} | ${piloto} | ${pts} pts`;
+            });
+            formattedText = '```text\n' + lines.join('\n') + '\n```';
+        }
+    } catch (error) {
+        console.error(`❌ Error al leer la Jornada ${numJornada}:`, error);
+        formattedText = '```text\nError al cargar los datos de la jornada.\n```';
+    }
+
+    if (!formattedText) {
+        formattedText = '```text\nNo hay datos registrados para esta jornada.\n```';
+    }
+
+    actualizarPanelRespuesta(interaction, userId, titleHeader, formattedText);
+}
+
+// Función auxiliar para renderizar el embed con botones, canales y roles
+async function actualizarPanelRespuesta(interaction: any, userId: string, titleHeader: string, formattedText: string) {
+    const currentState = userSheetState.get(userId) || { content: '', title: '' };
+    userSheetState.set(userId, { 
+        content: formattedText, 
+        title: titleHeader, 
+        channelId: currentState.channelId, 
+        roleId: currentState.roleId 
+    });
+
+    const resultEmbed = new EmbedBuilder()
+        .setAuthor({ name: interaction.guild.name, iconURL: interaction.guild.iconURL({ dynamic: true }) || undefined })
+        .setTitle(titleHeader)
+        .setDescription(formattedText)
+        .setColor(0x2b2b2b)
+        .setFooter({ text: 'REDLINE GT', iconURL: interaction.guild.iconURL({ dynamic: true }) || undefined });
+
+    const rowButtons = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId('sheets_clasificacion').setLabel('Clasificación').setStyle(ButtonStyle.Primary).setEmoji('🏆'),
+        new ButtonBuilder().setCustomId('sheets_jornada').setLabel('Jornada').setStyle(ButtonStyle.Primary).setEmoji('🏎️'),
+        new ButtonBuilder().setCustomId('sheets_asistencia').setLabel('Asistencia').setStyle(ButtonStyle.Secondary).setEmoji('📋'),
+        new ButtonBuilder().setCustomId('sheets_vr').setLabel('VR').setStyle(ButtonStyle.Success).setEmoji('⚡'),
+        new ButtonBuilder().setCustomId('sheets_pp').setLabel('PP').setStyle(ButtonStyle.Danger).setEmoji('🎯')
+    );
+
+    const publishButtons = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId('pub_yes').setLabel('Publicar: SÍ').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('pub_no').setLabel('Publicar: NO').setStyle(ButtonStyle.Secondary)
+    );
+
+    const channelSelect = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(
+        new ChannelSelectMenuBuilder()
+            .setCustomId('sheets_select_channel')
+            .setPlaceholder('📁 ¿Dónde quieres publicar?')
+            .addChannelTypes(ChannelType.GuildText)
+    );
+
+    const roleSelect = new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(
+        new RoleSelectMenuBuilder()
+            .setCustomId('sheets_select_role')
+            .setPlaceholder('🔔 ¿Quieres mencionar algún rol?')
+    );
+
+    try {
+        await interaction.editReply({
+            content: null,
+            embeds: [resultEmbed],
+            components: [rowButtons, publishButtons, channelSelect, roleSelect]
+        });
+    } catch (err) {
+        console.error('❌ Error al editar la respuesta del panel Sheets:', err);
     }
 }
 
