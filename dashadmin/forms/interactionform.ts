@@ -10,6 +10,8 @@ import {
     handleEditarFormModalSubmit, 
     handleEditChangeTitleButton, 
     handleEditarNuevoTituloModalSubmit, 
+    handleEditChangeChannelButton,
+    handleEditChangeChannelSelect,
     handleEditFinishButton 
 } from './formmanager';
 
@@ -38,6 +40,7 @@ export async function handleFormInteractions(interaction: any): Promise<boolean>
             if (await handleEditDeleteButton(interaction)) return true;
             if (await handleEditContinueButton(interaction)) return true;
             if (await handleEditChangeTitleButton(interaction)) return true;
+            if (await handleEditChangeChannelButton(interaction)) return true;
             if (await handleEditFinishButton(interaction)) return true;
         }
 
@@ -51,6 +54,7 @@ export async function handleFormInteractions(interaction: any): Promise<boolean>
         if (interaction.isChannelSelectMenu()) {
             if (await handleDashColocarPubliChannelSelect(interaction)) return true;
             if (await handleDashColocarRespuestasChannelSelect(interaction)) return true;
+            if (await handleEditChangeChannelSelect(interaction)) return true;
         }
 
         // --- 4. MODAL SUBMITS ---
