@@ -79,8 +79,7 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
         try {
             if (customId === 'sheets_clasificacion') {
                 titleHeader = '🏆 Clasificación General (T2)';
-                // Rango abierto: desde la fila 8 hasta el final de la hoja
-                const rawData = (await getSheetData('Tabla!B8:N')) || [];
+                const rawData = (await getSheetData('Tabla2!B8:N')) || [];
 
                 const filteredData = rawData
                     .filter(row => row && row[0] !== undefined && String(row[0]).trim() !== '' && row[0] !== 'POS' && row[1] && String(row[1]).trim() !== '')
@@ -108,20 +107,15 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
             } 
             else if (customId === 'sheets_jornada') {
                 titleHeader = '🏎️ Puntuación por Jornada (T2)';
-                // Lectura de la tabla de jornadas (B8:J aprox según columnas J1, J2, J3...)
-                const rawData = (await getSheetData('Tabla!B8:J')) || [];
+                const rawData = (await getSheetData('Tabla2!B8:J')) || [];
 
                 if (rawData.length > 0) {
-                    // Cabecera (POS, PILOTO, J1, J2, ...)
-                    const headers = rawData[0].map(h => String(h || '').trim());
                     const rows = rawData.slice(1).filter(r => r && r[0] && String(r[0]).trim() !== '' && r[1]);
-
                     const maxPiloto = Math.max(...rows.map(r => String(r[1] || '').trim().length), 10);
 
                     const lines = rows.map(r => {
                         const pos = String(r[0] || '').trim().padStart(2, ' ');
                         const piloto = String(r[1] || '').trim().padEnd(maxPiloto, ' ');
-                        // Puntuaciones de jornadas
                         const jPts = r.slice(3).map(val => String(val || '-').padStart(3, ' ')).join(' | ');
                         return `${pos} | ${piloto} | ${jPts}`;
                     });
@@ -130,15 +124,15 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
                 }
             }
             else if (customId === 'sheets_asistencia') {
-                titleHeader = '📋 Control de Asistencia';
-                // Rango abierto: desde la fila 4 hasta el final de la hoja
-                const rawData = (await getSheetData('Ingreso!AE4:AF')) || [];
+                titleHeader = '📋 Control de Asistencia (T2)';
+                // Rango actualizado a AG2:AH en la pestaña Ingreso2
+                const rawData = (await getSheetData('Ingreso2!AG2:AH')) || [];
 
                 const filteredData = rawData
                     .filter(row => row && row[0] !== undefined && String(row[0]).trim() !== '' && row[0] !== 'PILOTO' && row[1] !== undefined && String(row[1]).trim() !== '')
                     .map(row => [
-                        String(row[0] || '').trim(), // Piloto
-                        String(row[1] || '').trim()  // Asistencias
+                        String(row[0] || '').trim(), // Piloto (Columna AG)
+                        String(row[1] || '').trim()  // Asistencias (Columna AH)
                     ]);
 
                 if (filteredData.length > 0) {
@@ -153,9 +147,8 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
                 }
             } 
             else if (customId === 'sheets_vr') {
-                titleHeader = '⚡ Vueltas Rápidas (VR)';
-                // Rango abierto: desde la fila 9 hasta el final de la hoja
-                const rawData = (await getSheetData('Tabla!B9:L')) || [];
+                titleHeader = '⚡ Vueltas Rápidas (VR) (T2)';
+                const rawData = (await getSheetData('Tabla2!B9:L')) || [];
 
                 const filteredData = rawData
                     .filter(row => row && row[0] !== undefined && String(row[0]).trim() !== '' && row[1] && String(row[1]).trim() !== '')
@@ -179,9 +172,8 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
                 }
             } 
             else if (customId === 'sheets_pp') {
-                titleHeader = '🎯 Pole Positions (PP)';
-                // Rango abierto: desde la fila 9 hasta el final de la hoja
-                const rawData = (await getSheetData('Tabla!B9:K')) || [];
+                titleHeader = '🎯 Pole Positions (PP) (T2)';
+                const rawData = (await getSheetData('Tabla2!B9:K')) || [];
 
                 const filteredData = rawData
                     .filter(row => row && row[0] !== undefined && String(row[0]).trim() !== '' && row[1] && String(row[1]).trim() !== '')
