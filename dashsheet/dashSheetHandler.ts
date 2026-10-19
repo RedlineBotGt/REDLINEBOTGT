@@ -78,7 +78,7 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
 
         try {
             if (customId === 'sheets_clasificacion') {
-                titleHeader = '🏆 Clasificación General';
+                titleHeader = '🏆 Clasificación General (T2)';
                 // Rango abierto: desde la fila 8 hasta el final de la hoja
                 const rawData = (await getSheetData('Tabla!B8:N')) || [];
 
@@ -88,7 +88,7 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
                         String(row[0] || '').trim(), // Pos
                         String(row[1] || '').trim(), // Piloto
                         String(row[2] || '').trim(), // Coche/Num
-                        String(row[12] || '0').trim() // Puntos (Columna N)
+                        String(row[12] || '0').trim() // Puntos totales (Columna N)
                     ]);
 
                 if (filteredData.length > 0) {
@@ -106,6 +106,29 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
                     formattedText = '```text\n' + lines.join('\n') + '\n```';
                 }
             } 
+            else if (customId === 'sheets_jornada') {
+                titleHeader = '🏎️ Puntuación por Jornada (T2)';
+                // Lectura de la tabla de jornadas (B8:J aprox según columnas J1, J2, J3...)
+                const rawData = (await getSheetData('Tabla!B8:J')) || [];
+
+                if (rawData.length > 0) {
+                    // Cabecera (POS, PILOTO, J1, J2, ...)
+                    const headers = rawData[0].map(h => String(h || '').trim());
+                    const rows = rawData.slice(1).filter(r => r && r[0] && String(r[0]).trim() !== '' && r[1]);
+
+                    const maxPiloto = Math.max(...rows.map(r => String(r[1] || '').trim().length), 10);
+
+                    const lines = rows.map(r => {
+                        const pos = String(r[0] || '').trim().padStart(2, ' ');
+                        const piloto = String(r[1] || '').trim().padEnd(maxPiloto, ' ');
+                        // Puntuaciones de jornadas
+                        const jPts = r.slice(3).map(val => String(val || '-').padStart(3, ' ')).join(' | ');
+                        return `${pos} | ${piloto} | ${jPts}`;
+                    });
+
+                    formattedText = '```text\n' + lines.join('\n') + '\n```';
+                }
+            }
             else if (customId === 'sheets_asistencia') {
                 titleHeader = '📋 Control de Asistencia';
                 // Rango abierto: desde la fila 4 hasta el final de la hoja
@@ -208,6 +231,7 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
 
         const rowButtons = new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder().setCustomId('sheets_clasificacion').setLabel('Clasificación').setStyle(ButtonStyle.Primary).setEmoji('🏆'),
+            new ButtonBuilder().setCustomId('sheets_jornada').setLabel('Jornada').setStyle(ButtonStyle.Primary).setEmoji('🏎️'),
             new ButtonBuilder().setCustomId('sheets_asistencia').setLabel('Asistencia').setStyle(ButtonStyle.Secondary).setEmoji('📋'),
             new ButtonBuilder().setCustomId('sheets_vr').setLabel('VR').setStyle(ButtonStyle.Success).setEmoji('⚡'),
             new ButtonBuilder().setCustomId('sheets_pp').setLabel('PP').setStyle(ButtonStyle.Danger).setEmoji('🎯')
