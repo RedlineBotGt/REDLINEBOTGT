@@ -2,7 +2,7 @@ import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, 
 
 export const data = new SlashCommandBuilder()
     .setName('lista')
-    .setDescription('Muestra los usuarios con un rol específico indicando su nombre e ID para el Draft.')
+    .setDescription('Muestra la lista de menciones de los usuarios con un rol específico.')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addRoleOption(option => 
         option.setName('rol')
@@ -22,7 +22,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
     try {
-        // Cargar todos los miembros del servidor para asegurar que no falte ninguno
+        // Cargar todos los miembros del servidor
         await guild.members.fetch();
 
         // Filtrar los miembros con el rol seleccionado
@@ -33,14 +33,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             return;
         }
 
-        // Formatear cada línea con Nombre de usuario / Nickname, un Tabulador (\t) y la ID en formato <@ID>
-        const listLines = membersWithRole.map(m => {
-            const displayName = m.displayName || m.user.username;
-            return `${displayName}\t<@${m.user.id}>`;
-        }).join('\n');
+        // Formatear únicamente con las menciones
+        const listMentions = membersWithRole.map(m => `<@${m.user.id}>`).join('\n');
 
-        // Formato limpio listo para copiar y pegar en Google Sheets
-        const responseText = `📋 **LISTA EN ORDEN DE ELECCIÓN (${membersWithRole.size}):**\n\n\`\`\`text\n${listLines}\n\`\`\``;
+        // Texto plano sin bloques de código ni embeds
+        const responseText = `📋 **LISTA DE MENCIONES (${membersWithRole.size}):**\n\n${listMentions}`;
 
         await interaction.editReply({ content: responseText });
 
