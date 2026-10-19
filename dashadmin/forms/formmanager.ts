@@ -1,14 +1,17 @@
 import { 
     ButtonInteraction,
     StringSelectMenuInteraction, 
+    ChannelSelectMenuInteraction,
     ModalSubmitInteraction,
     StringSelectMenuBuilder,
+    ChannelSelectMenuBuilder,
     ModalBuilder,
     TextInputBuilder,
     TextInputStyle,
     ActionRowBuilder, 
     ButtonBuilder, 
     ButtonStyle, 
+    ChannelType,
     MessageFlags 
 } from 'discord.js';
 import { obtenerFormularios, obtenerFormularioPorTitulo, guardarFormulario, eliminarFormulario } from './formsstorage';
@@ -216,7 +219,7 @@ export async function handleEditContinueButton(interaction: ButtonInteraction): 
     return true;
 }
 
-// 9. Envío del modal de edición de preguntas
+// 9. Envío del modal de edición de preguntas (Siguiente paso: preguntar si desea cambiar título o canal de respuestas)
 export async function handleEditarFormModalSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_editar_formulario_preguntas') return false;
 
@@ -238,11 +241,16 @@ export async function handleEditarFormModalSubmit(interaction: ModalSubmitIntera
     await guardarFormulario(guildId, tituloFormulario, formulario.canalRespuestas || null, nuevasPreguntas);
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('edit_btn_titulo_si').setLabel('Sí, cambiar').setStyle(ButtonStyle.Success).setEmoji('✏️'),
+        new ButtonBuilder().setCustomId('edit_btn_titulo_si').setLabel('Cambiar título').setStyle(ButtonStyle.Primary).setEmoji('✏️'),
+        new ButtonBuilder().setCustomId('edit_btn_canal_si').setLabel('Cambiar canal respuestas').setStyle(ButtonStyle.Success).setEmoji('📢'),
         new ButtonBuilder().setCustomId('edit_btn_titulo_no').setLabel('Finalizar').setStyle(ButtonStyle.Secondary).setEmoji('✔️')
     );
 
-    await interaction.reply({ content: `✅ ¡Preguntas actualizadas!\n\n¿Quieres cambiar el título?`, components: [row], flags: [MessageFlags.Ephemeral] });
+    await interaction.reply({ 
+        content: `✅ ¡Preguntas actualizadas!\n\n¿Qué deseas hacer a continuación?`, 
+        components: [row], 
+        flags: [MessageFlags.Ephemeral] 
+    });
     return true;
 }
 
@@ -277,7 +285,54 @@ export async function handleEditarNuevoTituloModalSubmit(interaction: ModalSubmi
     return true;
 }
 
-// 12. Finalizar edición sin cambiar título
+// 12. Botón para desplegar el selector de nuevo canal de respuestas
+export async function handleEditChangeChannelButton(interaction: ButtonInteraction): Promise<boolean> {
+    if (interaction.customId !== 'edit_btn_canal_si') return false;
+
+    const channelSelect = new ChannelSelectMenuBuilder()
+        .setCustomId('edit_select_nuevo_canal_respuestas')
+        .setChannelTypes(ChannelType.GuildText)
+        .setPlaceholder('📥 Selecciona el nuevo canal de respuestas...');
+
+    const row = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(channelSelect);
+
+    await interaction.update({
+        content: '📢 **Selecciona el nuevo canal donde llegarán las respuestas:**',
+        components: [row]
+    });
+
+    return true;
+}
+
+// 13. Selector del nuevo canal de respuestas
+export async function handleEditChangeChannelSelect(interaction: ChannelSelectMenuInteraction): Promise<boolean> {
+    if (interaction.customId !== 'edit_select_nuevo_canal_respuestas') return false;
+
+    const guildId = interaction.guildId;
+    const tituloFormulario = activeEditingForms.get(interaction.user.id);
+    if (!guildId || !tituloFormulario) return true;
+
+    const nuevoCanalId = interaction.channels.first()?.id;
+    if (!nuevoCanalId) {
+        await interaction.update({ content: '❌ No se seleccionó un canal válido.', components: [] });
+        return true;
+    }
+
+    const formulario = await obtenerFormularioPorTitulo(guildId, tituloFormulario);
+    if (!formulario) return true;
+
+    await guardarFormulario(guildId, tituloFormulario, nuevoCanalId, formulario.preguntas);
+    activeEditingForms.delete(interaction.user.id);
+
+    await interaction.update({
+        content: `✅ ¡Canal de respuestas actualizado a <#${nuevoCanalId}>!\nEl botón publicado mantendrá su funcionamiento intacto enviando los datos aquí.`,
+        components: []
+    });
+
+    return true;
+}
+
+// 14. Finalizar edición sin más cambios
 export async function handleEditFinishButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'edit_btn_titulo_no') return false;
 
