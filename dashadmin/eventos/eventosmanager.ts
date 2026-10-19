@@ -863,8 +863,6 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
 
     if (!eventDoc.rsvps) eventDoc.rsvps = { yes: [], maybe: [], no: [] };
 
-    const wasInYes = eventDoc.rsvps.yes.includes(userId);
-
     // Limpieza previa garantizada de todas las listas
     eventDoc.rsvps.yes = eventDoc.rsvps.yes.filter((id: string) => id !== userId);
     eventDoc.rsvps.maybe = eventDoc.rsvps.maybe.filter((id: string) => id !== userId);
@@ -906,13 +904,6 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
         if (asistenteRole && member && member.roles.cache.has(asistenteRole.id)) {
             await member.roles.remove(asistenteRole).catch(() => {});
         }
-    }
-
-    // Promoción automática si alguien liberó una plaza en "Asistiré"
-    const leftYes = wasInYes && !eventDoc.rsvps.yes.includes(userId);
-    if (leftYes && eventDoc.rsvps.yes.length < 16 && eventDoc.rsvps.maybe.length > 0) {
-        const promotedId = eventDoc.rsvps.maybe.shift()!;
-        eventDoc.rsvps.yes.push(promotedId);
     }
 
     await col.updateOne({ messageId }, { $set: { rsvps: eventDoc.rsvps } });
