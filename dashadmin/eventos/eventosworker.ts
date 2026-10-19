@@ -61,7 +61,7 @@ export function setupEventWorker(client: Client) {
 
                     embed.addFields(
                         { name: '✅ Asistiré (0/16)', value: 'Ninguno', inline: false },
-                        { name: '护 Duda (0)', value: 'Ninguno', inline: false },
+                        { name: '❔ Duda (0)', value: 'Ninguno', inline: false },
                         { name: '❌ No puedo (0)', value: 'Ninguno', inline: false }
                     );
 
@@ -136,7 +136,7 @@ export function setupEventWorker(client: Client) {
             }
 
             // -------------------------------------------------------------
-            // TAREA 2: Llegada de la hora exacta del evento -> Anuncio + Limpieza + Recurrencia
+            // TAREA 2: Llegada de la hora exacta -> Anuncio + Limpieza + Cierre de tarjeta + Recurrencia
             // -------------------------------------------------------------
             const dueEvents = await col.find({
                 status: { $in: ['pending', 'sent'] },
@@ -172,35 +172,13 @@ export function setupEventWorker(client: Client) {
                             }
                             console.log(`🧹 [Worker] Rol asistente retirado tras el inicio de: "${ev.title}"`);
                         }
-                    }
 
-                    // Diferenciación exacta entre evento con repeticiones pendientes o finalizado
-                    if (ev.repeats && ev.remainingTimes > 1) {
-                        const nextScheduledAt = new Date(new Date(ev.scheduledAt).getTime() + ev.intervalMs);
-                        const nextPublishAt = ev.publishAt ? new Date(new Date(ev.publishAt).getTime() + ev.intervalMs) : nextScheduledAt;
-
-                        await col.updateOne(
-                            { _id: ev._id },
-                            { 
-                                $set: { scheduledAt: nextScheduledAt, publishAt: nextPublishAt, status: 'pending_publish', messageId: undefined, reminderSent: false, rsvps: { yes: [], maybe: [], no: [] } },$inc: { remainingTimes: -1 } 
-                            }
-                        );
-                        console.log(`🔄 [Worker] Evento recurrente "${ev.title}" reprogramado. Siguiente envío programado.`);
-                    } else {
-                        await col.updateOne(
-                            { _id: ev._id },
-                            { $set: { status: 'completed', completedAt: new Date() } }
-                        );
-
-                        // 🔒 Bloquear botones y cerrar la tarjeta visual en Discord
-                        if (guild && ev.channelId && ev.messageId) {
-                            const channel = await guild.channels.fetch(ev.channelId).catch(() => null) as TextChannel;
-                            if (channel && channel.isTextBased()) {
-                                const message = await channel.messages.fetch(ev.messageId).catch(() => null);
+                        // 🔒 Bloquear botones y cerrar la tarjeta visual en Discord (aplica a todos, incluidos recurrentes)
+                        if (ev.channelId && ev.messageId) {
+                            const channelEdit = await guild.channels.fetch(ev.channelId).catch(() => null) as TextChannel;
+                            if (channelEdit && channelEdit.isTextBased()) {
+                                const message = await channelEdit.messages.fetch(ev.messageId).catch(() => null);
                                 if (message) {
-                                    const rsvps = ev.rsvps || { yes: [], maybe: [], no: [] };
-                                    const formatVerticalList = (ids: string[]) => ids.length > 0 ? ids.map(id => `<@${id}>`).join('\n') : 'Ninguno';
-
                                     const embedClosed = EmbedBuilder.from(message.embeds[0] || {})
                                         .setTitle(`🔒 [FINALIZADO] ${ev.title}`)
                                         .setColor(0x808080);
@@ -215,8 +193,26 @@ export function setupEventWorker(client: Client) {
                                 }
                             }
                         }
+                    }
 
-                        console.log(`✅ [Worker] Evento único o finalizado "${ev.title}" archivado y cerrado.`);
+                    // Diferenciación exacta entre evento con repeticiones pendientes o finalizado
+                    if (ev.repeats && ev.remainingTimes > 1) {
+                        const nextScheduledAt = new Date(new Date(ev.scheduledAt).getTime() + ev.intervalMs);
+                        const nextPublishAt = ev.publishAt ? new Date(new Date(ev.publishAt).getTime() + ev.intervalMs) : nextScheduledAt;
+
+                        await col.updateOne(
+                            { _id: ev._id },
+                            { 
+                                $set: { scheduledAt: nextScheduledAt, publishAt: nextPublishAt, status: 'pending_publish', messageId: undefined, reminderSent: false, rsvps: { yes: [], maybe: [], no: [] } },$inc: { remainingTimes: -1 } 
+                            }
+                        );
+                        console.log(`🔄 [Worker] Evento recurrente "${ev.title}" cerrado y reprogramado para su próximo envío.`);
+                    } else {
+                        await col.updateOne(
+                            { _id: ev._id },
+                            { $set: { status: 'completed', completedAt: new Date() } }
+                        );
+                        console.log(`✅ [Worker] Evento único "${ev.title}" archivado y cerrado.`);
                     }
 
                 } catch (err) {
