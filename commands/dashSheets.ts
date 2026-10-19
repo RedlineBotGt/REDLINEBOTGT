@@ -8,7 +8,7 @@ import {
 } from 'discord.js';
 
 export const data = new SlashCommandBuilder()
-    .setName('dashsheets')
+    .setName('dashsheet')
     .setDescription('Panel interactivo de consulta y publicación de datos desde Google Sheets');
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -22,18 +22,23 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     // 1. Embed del Panel Principal
     const mainEmbed = new EmbedBuilder()
         .setAuthor({ name: guildName, iconURL: guildIcon })
-        .setTitle('📊 REDLINE GT — Panel Google Sheets')
+        .setTitle('📊 REDLINE GT — Panel Google Sheets (Temporada 2)')
         .setDescription('Selecciona una opción para consultar los datos actualizados de la hoja de cálculo:')
         .setColor(0x1b1b1b) // Estética oscura racing
         .setFooter({ text: 'REDLINE GT', iconURL: guildIcon });
 
-    // 2. Botonera Principal (4 opciones) con los customId exactos que espera el router
+    // 2. Botonera Principal (5 opciones)
     const rowButtons = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
             .setCustomId('sheets_clasificacion')
             .setLabel('Clasificación')
             .setStyle(ButtonStyle.Primary)
             .setEmoji('🏆'),
+        new ButtonBuilder()
+            .setCustomId('sheets_jornada')
+            .setLabel('Jornada')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('🏎️'),
         new ButtonBuilder()
             .setCustomId('sheets_asistencia')
             .setLabel('Asistencia')
