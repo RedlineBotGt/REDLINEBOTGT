@@ -22,7 +22,41 @@ import { getEventsCollection } from './eventosstorage';
 export const eventSessions = new Map<string, any>();
 export const adminAdminSessions = new Map<string, { targetUserId?: string; status?: string; eventMessageId: string }>();
 
-// --- PARSER DE FECHAS MADRID (Con cálculo exacto de offset CET/CEST) ---
+// --- HELPER: CONSTRUCTOR ÚNICO DE EMBEDS Y COMPONENTES ---
+export function buildEventEmbedAndRows(ev: any) {
+    const rsvps = ev.rsvps || { yes: [], maybe: [], no: [] };
+    const formatVerticalList = (ids: string[]) => ids.length > 0 ? ids.map(id => `<@${id}>`).join('\n') : 'Ninguno';
+
+    const isClosed = ev.status === 'completed' || ev.status === 'cancelled';
+
+    const embed = new EmbedBuilder()
+        .setColor(isClosed ? 0x808080 : 0x0055FF)
+        .setTitle(isClosed ? `🔒 [FINALIZADO] ${ev.title}` : `🏁 ${ev.title}`)
+        .setDescription(`📅 **Fecha:** ${ev.date} a las ${ev.time} CET\n\n${ev.description}`)
+        .setTimestamp();
+
+    if (ev.image) embed.setImage(ev.image);
+
+    embed.addFields(
+        { name: `✅ Asistiré (${rsvps.yes.length}/16)`, value: formatVerticalList(rsvps.yes), inline: false },
+        { name: `❔ Duda (${rsvps.maybe.length})`, value: formatVerticalList(rsvps.maybe), inline: false },
+        { name: `❌ No puedo (${rsvps.no.length})`, value: formatVerticalList(rsvps.no), inline: false }
+    );
+
+    const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✅').setDisabled(isClosed),
+        new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓').setDisabled(isClosed),
+        new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️').setDisabled(isClosed)
+    );
+
+    const rowAdmin = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId('event_admin_manage').setLabel('Gestión Admin').setStyle(ButtonStyle.Secondary).setEmoji('⚙️').setDisabled(isClosed)
+    );
+
+    return { embed, components: isClosed ? [rowRsvp] : [rowRsvp, rowAdmin] };
+}
+
+// --- PARSER DE FECHAS MADRID ---
 function parseMadridDateTime(dateStr: string, timeStr: string): Date | null {
     try {
         const [day, month, year] = dateStr.split('/').map(Number);
@@ -118,7 +152,6 @@ export async function handleEventRoleSelect(interaction: any): Promise<boolean> 
     await interaction.deferUpdate();
     return true;
 }
-
 // --- PASO 3: Abrir Modal con Datos del Evento ---
 export async function handleEventProceedToModal(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_proceed_to_modal') return false;
@@ -231,6 +264,7 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
 
     return true;
 }
+
 // --- Publicar Inmediatamente ---
 export async function handleEventPublishNowButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_publish_now') return false;
@@ -252,34 +286,22 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
     }
 
     try {
-        const embed = new EmbedBuilder()
-            .setColor(0x0055FF)
-            .setTitle(`🏁 ${session.title}`)
-            .setDescription(`📅 **Fecha:** ${session.date} a las ${session.time} CET\n\n${session.description}`)
-            .setTimestamp();
+        const dummyEventDoc = {
+            title: session.title,
+            date: session.date,
+            time: session.time,
+            description: session.description,
+            image: session.image,
+            status: 'sent',
+            rsvps: { yes: [], maybe: [], no: [] }
+        };
 
-        if (session.image) embed.setImage(session.image);
-
-        embed.addFields(
-            { name: '✅ Asistiré (0/16)', value: 'Ninguno', inline: false },
-            { name: '❔ Duda (0)', value: 'Ninguno', inline: false },
-            { name: '❌ No puedo (0)', value: 'Ninguno', inline: false }
-        );
-
-        const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✅'),
-            new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓'),
-            new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
-        );
-
-        const rowAdmin = new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder().setCustomId('event_admin_manage').setLabel('Gestión Admin').setStyle(ButtonStyle.Secondary).setEmoji('⚙️')
-        );
+        const { embed, components } = buildEventEmbedAndRows(dummyEventDoc);
 
         const sentMessage = await channel.send({ 
             content: `<@&${session.roleId}>`, 
             embeds: [embed], 
-            components: [rowRsvp, rowAdmin] 
+            components: components 
         });
 
         await col.updateOne(
@@ -394,7 +416,6 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
             }
         }
     );
-
     let responseText = `✅ **¡Publicación programada con éxito!** El mensaje del evento se publicará automáticamente el **${pubDate}** a las **${pubTime} CET**.`;
     if (repeats) {
         responseText += `\n🔄 Se repetirá cada **${intervalDays} días** (**${totalTimes} envíos** en total).`;
@@ -407,7 +428,6 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
 
     return true;
 }
-
 // --- GESTIÓN DE BD EVENTOS (Listar eventos activos) ---
 export async function handleBdEventosButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_bd_eventos') return false;
@@ -632,34 +652,9 @@ export async function handleBdEventosEditModalSubmit(interaction: ModalSubmitInt
             if (channel && channel.isTextBased()) {
                 const message = await channel.messages.fetch(ev.messageId).catch(() => null);
                 if (message) {
-                    const embed = new EmbedBuilder()
-                        .setColor(0x0055FF)
-                        .setTitle(`🏁 ${title}`)
-                        .setDescription(`📅 **Fecha:** ${eventDateStr} a las ${eventTimeStr} CET\n\n${ev.description}`)
-                        .setTimestamp();
-
-                    if (ev.image) embed.setImage(ev.image);
-
-                    const rsvps = ev.rsvps || { yes: [], maybe: [], no: [] };
-                    const formatVerticalList = (ids: string[]) => ids.length > 0 ? ids.map(id => `<@${id}>`).join('\n') : 'Ninguno';
-
-                    embed.addFields(
-                        { name: `✅ Asistiré (${rsvps.yes.length}/16)`, value: formatVerticalList(rsvps.yes), inline: false },
-                        { name: `❔ Duda (${rsvps.maybe.length})`, value: formatVerticalList(rsvps.maybe), inline: false },
-                        { name: `❌ No puedo (${rsvps.no.length})`, value: formatVerticalList(rsvps.no), inline: false }
-                    );
-
-                    const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✅'),
-                        new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓'),
-                        new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
-                    );
-
-                    const rowAdmin = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                        new ButtonBuilder().setCustomId('event_admin_manage').setLabel('Gestión Admin').setStyle(ButtonStyle.Secondary).setEmoji('⚙️')
-                    );
-
-                    await message.edit({ embeds: [embed], components: [rowRsvp, rowAdmin] }).catch(() => {});
+                    const updatedEv = await col.findOne({ _id: new ObjectId(eventId) });
+                    const { embed, components } = buildEventEmbedAndRows(updatedEv);
+                    await message.edit({ embeds: [embed], components }).catch(() => {});
                 }
             }
         }
@@ -780,13 +775,14 @@ export async function handleEventAdminConfirmButton(interaction: ButtonInteracti
     const col = await getEventsCollection();
     const eventDoc = await col.findOne({ messageId });
 
-    if (!eventDoc) {
+    if (!eventDoc || eventDoc.status === 'completed' || eventDoc.status === 'cancelled') {
         await interaction.update({ content: '❌ Este evento ya no está activo en la base de datos.', components: [] });
         return true;
     }
 
     if (!eventDoc.rsvps) eventDoc.rsvps = { yes: [], maybe: [], no: [] };
 
+    // Limpieza estricta de todos los estados previos
     eventDoc.rsvps.yes = eventDoc.rsvps.yes.filter((id: string) => id !== targetUserId);
     eventDoc.rsvps.maybe = eventDoc.rsvps.maybe.filter((id: string) => id !== targetUserId);
     eventDoc.rsvps.no = eventDoc.rsvps.no.filter((id: string) => id !== targetUserId);
@@ -830,33 +826,8 @@ export async function handleEventAdminConfirmButton(interaction: ButtonInteracti
     if (channel) {
         const message = await channel.messages.fetch(messageId).catch(() => null);
         if (message) {
-            const embed = new EmbedBuilder()
-                .setColor(0x0055FF)
-                .setTitle(`🏁 ${eventDoc.title}`)
-                .setDescription(`📅 **Fecha:** ${eventDoc.date} a las ${eventDoc.time} CET\n\n${eventDoc.description}`)
-                .setTimestamp();
-
-            if (eventDoc.image) embed.setImage(eventDoc.image);
-
-            const formatVerticalList = (ids: string[]) => ids.length > 0 ? ids.map(id => `<@${id}>`).join('\n') : 'Ninguno';
-
-            embed.addFields(
-                { name: `✅ Asistiré (${eventDoc.rsvps.yes.length}/16)`, value: formatVerticalList(eventDoc.rsvps.yes), inline: false },
-                { name: `❔ Duda (${eventDoc.rsvps.maybe.length})`, value: formatVerticalList(eventDoc.rsvps.maybe), inline: false },
-                { name: `❌ No puedo (${eventDoc.rsvps.no.length})`, value: formatVerticalList(eventDoc.rsvps.no), inline: false }
-            );
-
-            const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✅'),
-                new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓'),
-                new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
-            );
-
-            const rowAdmin = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                new ButtonBuilder().setCustomId('event_admin_manage').setLabel('Gestión Admin').setStyle(ButtonStyle.Secondary).setEmoji('⚙️')
-            );
-
-            await message.edit({ embeds: [embed], components: [rowRsvp, rowAdmin] }).catch(() => {});
+            const { embed, components } = buildEventEmbedAndRows(eventDoc);
+            await message.edit({ embeds: [embed], components }).catch(() => {});
         }
     }
 
@@ -882,8 +853,11 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
     const col = await getEventsCollection();
     const eventDoc = await col.findOne({ messageId });
 
-    if (!eventDoc) {
-        await interaction.reply({ content: '❌ Este evento ya no está activo en la base de datos.', flags: [MessageFlags.Ephemeral] });
+    if (!eventDoc || eventDoc.status === 'completed' || eventDoc.status === 'cancelled') {
+        await interaction.reply({ 
+            content: '❌ Este evento ya ha finalizado o no está activo. No se aceptan más cambios de asistencia.', 
+            flags: [MessageFlags.Ephemeral] 
+        });
         return true;
     }
 
@@ -891,6 +865,7 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
 
     const wasInYes = eventDoc.rsvps.yes.includes(userId);
 
+    // Limpieza previa garantizada de todas las listas
     eventDoc.rsvps.yes = eventDoc.rsvps.yes.filter((id: string) => id !== userId);
     eventDoc.rsvps.maybe = eventDoc.rsvps.maybe.filter((id: string) => id !== userId);
     eventDoc.rsvps.no = eventDoc.rsvps.no.filter((id: string) => id !== userId);
@@ -933,6 +908,7 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
         }
     }
 
+    // Promoción automática si alguien liberó una plaza en "Asistiré"
     const leftYes = wasInYes && !eventDoc.rsvps.yes.includes(userId);
     if (leftYes && eventDoc.rsvps.yes.length < 16 && eventDoc.rsvps.maybe.length > 0) {
         const promotedId = eventDoc.rsvps.maybe.shift()!;
@@ -941,33 +917,8 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
 
     await col.updateOne({ messageId }, { $set: { rsvps: eventDoc.rsvps } });
 
-    const embed = new EmbedBuilder()
-        .setColor(0x0055FF)
-        .setTitle(`🏁 ${eventDoc.title}`)
-        .setDescription(`📅 **Fecha:** ${eventDoc.date} a las ${eventDoc.time} CET\n\n${eventDoc.description}`)
-        .setTimestamp();
-
-    if (eventDoc.image) embed.setImage(eventDoc.image);
-
-    const formatVerticalList = (ids: string[]) => ids.length > 0 ? ids.map(id => `<@${id}>`).join('\n') : 'Ninguno';
-
-    embed.addFields(
-        { name: `✅ Asistiré (${eventDoc.rsvps.yes.length}/16)`, value: formatVerticalList(eventDoc.rsvps.yes), inline: false },
-        { name: `❔ Duda (${eventDoc.rsvps.maybe.length})`, value: formatVerticalList(eventDoc.rsvps.maybe), inline: false },
-        { name: `❌ No puedo (${eventDoc.rsvps.no.length})`, value: formatVerticalList(eventDoc.rsvps.no), inline: false }
-    );
-
-    const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✅'),
-        new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓'),
-        new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
-    );
-
-    const rowAdmin = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('event_admin_manage').setLabel('Gestión Admin').setStyle(ButtonStyle.Secondary).setEmoji('⚙️')
-    );
-
-    await interaction.message.edit({ embeds: [embed], components: [rowRsvp, rowAdmin] }).catch(() => {});
+    const { embed, components } = buildEventEmbedAndRows(eventDoc);
+    await interaction.message.edit({ embeds: [embed], components }).catch(() => {});
 
     await interaction.reply({
         content: responseContent,
