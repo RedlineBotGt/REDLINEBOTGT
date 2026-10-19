@@ -215,7 +215,7 @@ export async function handleDashSheetsButton(interaction: ButtonInteraction) {
     }
 }
 
-// 🛡️ Manejador para la selección de la jornada (J1 a J6) con rangos exactos
+// 🛡️ Manejador para la selección de la jornada (J1 a J6) buscando en Ingreso2
 export async function handleSheetsJornadaSelect(interaction: StringSelectMenuInteraction) {
     if (!interaction.guild) return;
 
@@ -231,17 +231,17 @@ export async function handleSheetsJornadaSelect(interaction: StringSelectMenuInt
     const userId = interaction.user.id;
     const numJornada = parseInt(interaction.values[0], 10);
 
-    // Rangos exactos especificados para cada jornada en Tabla2 (P:Q)
+    // Rangos exactos especificados para cada jornada en Ingreso2 (P:Q)
     const jornadaRanges: Record<number, string> = {
-        1: 'Tabla2!P22:Q40',
-        2: 'Tabla2!P42:Q80',
-        3: 'Tabla2!P82:Q120',
-        4: 'Tabla2!P122:Q160',
-        5: 'Tabla2!P162:Q200',
-        6: 'Tabla2!P202:Q240'
+        1: 'Ingreso2!P22:Q40',
+        2: 'Ingreso2!P42:Q80',
+        3: 'Ingreso2!P82:Q120',
+        4: 'Ingreso2!P122:Q160',
+        5: 'Ingreso2!P162:Q200',
+        6: 'Ingreso2!P202:Q240'
     };
 
-    const range = jornadaRanges[numJornada] || 'Tabla2!P22:Q40';
+    const range = jornadaRanges[numJornada] || 'Ingreso2!P22:Q40';
     let titleHeader = `🏎️ Puntuación — Jornada ${numJornada} (T2)`;
     let formattedText = '';
 
