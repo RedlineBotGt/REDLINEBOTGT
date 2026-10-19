@@ -61,7 +61,7 @@ export function setupEventWorker(client: Client) {
 
                     embed.addFields(
                         { name: '✅ Asistiré (0/16)', value: 'Ninguno', inline: false },
-                        { name: '❔ Duda (0)', value: 'Ninguno', inline: false },
+                        { name: '护 Duda (0)', value: 'Ninguno', inline: false },
                         { name: '❌ No puedo (0)', value: 'Ninguno', inline: false }
                     );
 
@@ -160,11 +160,14 @@ export function setupEventWorker(client: Client) {
                             }).catch(() => {});
                         }
 
+                        // 🧹 Limpieza completa del rol asistente
                         if (asistenteRole) {
-                            await guild.members.fetch();
-                            for (const [, member] of guild.members.cache) {
-                                if (member.roles.cache.has(asistenteRole.id)) {
-                                    await member.roles.remove(asistenteRole).catch(() => {});
+                            const members = await guild.members.fetch().catch(() => null);
+                            if (members) {
+                                for (const [, member] of members) {
+                                    if (member.roles.cache.has(asistenteRole.id)) {
+                                        await member.roles.remove(asistenteRole).catch(() => {});
+                                    }
                                 }
                             }
                             console.log(`🧹 [Worker] Rol asistente retirado tras el inicio de: "${ev.title}"`);
@@ -179,7 +182,7 @@ export function setupEventWorker(client: Client) {
                         await col.updateOne(
                             { _id: ev._id },
                             { 
-                                $set: {                                      scheduledAt: nextScheduledAt,                                     publishAt: nextPublishAt,                                     status: 'pending_publish',                                     messageId: undefined,                                      reminderSent: false,                                      rsvps: { yes: [], maybe: [], no: [] }                                  },$inc: { remainingTimes: -1 } 
+                                $set: { scheduledAt: nextScheduledAt, publishAt: nextPublishAt, status: 'pending_publish', messageId: undefined, reminderSent: false, rsvps: { yes: [], maybe: [], no: [] } },$inc: { remainingTimes: -1 } 
                             }
                         );
                         console.log(`🔄 [Worker] Evento recurrente "${ev.title}" reprogramado. Siguiente envío programado.`);
@@ -188,7 +191,32 @@ export function setupEventWorker(client: Client) {
                             { _id: ev._id },
                             { $set: { status: 'completed', completedAt: new Date() } }
                         );
-                        console.log(`✅ [Worker] Evento único o finalizado "${ev.title}" archivado.`);
+
+                        // 🔒 Bloquear botones y cerrar la tarjeta visual en Discord
+                        if (guild && ev.channelId && ev.messageId) {
+                            const channel = await guild.channels.fetch(ev.channelId).catch(() => null) as TextChannel;
+                            if (channel && channel.isTextBased()) {
+                                const message = await channel.messages.fetch(ev.messageId).catch(() => null);
+                                if (message) {
+                                    const rsvps = ev.rsvps || { yes: [], maybe: [], no: [] };
+                                    const formatVerticalList = (ids: string[]) => ids.length > 0 ? ids.map(id => `<@${id}>`).join('\n') : 'Ninguno';
+
+                                    const embedClosed = EmbedBuilder.from(message.embeds[0] || {})
+                                        .setTitle(`🔒 [FINALIZADO] ${ev.title}`)
+                                        .setColor(0x808080);
+
+                                    const rowDisabledRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
+                                        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✅').setDisabled(true),
+                                        new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓').setDisabled(true),
+                                        new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️').setDisabled(true)
+                                    );
+
+                                    await message.edit({ embeds: [embedClosed], components: [rowDisabledRsvp] }).catch(() => {});
+                                }
+                            }
+                        }
+
+                        console.log(`✅ [Worker] Evento único o finalizado "${ev.title}" archivado y cerrado.`);
                     }
 
                 } catch (err) {
