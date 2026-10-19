@@ -14,13 +14,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const role = interaction.options.getRole('rol', true);
     const guild = interaction.guild;
 
-    if (!guild) {
+    if (!guild || !interaction.channel) {
         await interaction.reply({ content: '❌ Este comando solo puede usarse en un servidor.', flags: [MessageFlags.Ephemeral] });
         return;
     }
 
-    // Defer público (sin la flag Ephemeral)
-    await interaction.deferReply();
+    // Defer efímero para procesar sin mostrar banner público de comandos
+    await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
     try {
         // Cargar todos los miembros del servidor
@@ -37,10 +37,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         // Formatear únicamente con las menciones
         const listMentions = membersWithRole.map(m => `<@${m.user.id}>`).join('\n');
 
-        // Texto plano sin bloques de código ni embeds, visible para todos
-        const responseText = `📋 **LISTA DE MENCIONES (${membersWithRole.size}):**\n\n${listMentions}`;
+        // Título con el nombre del rol escogido
+        const responseText = `📋 **LISTADO DE ${role.name.toUpperCase()}**\n\n${listMentions}`;
 
-        await interaction.editReply({ content: responseText });
+        // Enviar el mensaje limpio directamente al canal (evita el aviso de "usuario ha usado /lista")
+        await interaction.channel.send({ content: responseText });
+
+        // Confirmar de forma privada al administrador que la lista fue enviada
+        await interaction.editReply({ content: `✅ El listado de **${role.name}** (${membersWithRole.size} usuarios) se ha publicado correctamente en el canal.` });
 
     } catch (error) {
         console.error('❌ Error al obtener la lista de usuarios por rol:', error);
