@@ -6,7 +6,7 @@ import {
 import { handleIngresoCommand } from '../dashsheet/ingreso/ingresohandler';
 
 // Reemplaza este valor con tu ID de usuario de Discord para restricción exclusiva
-const ADMIN_USER_ID = 'TU_DISCORD_USER_ID';
+const ADMIN_USER_ID = '709022842204979230';
 
 export const data = new SlashCommandBuilder()
     .setName('ingreso')
