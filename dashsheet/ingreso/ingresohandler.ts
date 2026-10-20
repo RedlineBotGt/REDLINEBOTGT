@@ -6,8 +6,7 @@ import {
     MessageFlags 
 } from 'discord.js';
 import { processImagesWithOCR } from './octservice';
-// Ajusta la ruta relativa hacia tu servicio de hojas según la estructura de tu proyecto
-import { getSheetData } from '../../sheetsService'; 
+import { getSheetData } from '../sheetsService'; 
 
 export async function handleIngresoCommand(interaction: ChatInputCommandInteraction) {
     const foto1 = interaction.options.getAttachment('foto1');
@@ -20,13 +19,11 @@ export async function handleIngresoCommand(interaction: ChatInputCommandInteract
         });
     }
 
-    // Deferir respuesta ya que el OCR y la lectura de Sheets pueden tomar unos segundos
     if (!interaction.deferred && !interaction.replied) {
         await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
     }
 
     try {
-        // 1. Cargar la base de datos oficial de pilotos (BD2!L2:L) para validar apodos
         let pilotosBD: string[] = [];
         try {
             const rawBD = await getSheetData('BD2!L2:L');
@@ -37,11 +34,9 @@ export async function handleIngresoCommand(interaction: ChatInputCommandInteract
             console.error('❌ Error al cargar pilotos de BD2!L2:L:', err);
         }
 
-        // 2. Recopilar URLs de las imágenes adjuntas
         const imageUrls = [foto1.url];
         if (foto2) imageUrls.push(foto2.url);
 
-        // 3. Procesar imágenes mediante el servicio OCR
         const parsedResults = await processImagesWithOCR(imageUrls, pilotosBD);
 
         if (!parsedResults || parsedResults.length === 0) {
@@ -50,7 +45,6 @@ export async function handleIngresoCommand(interaction: ChatInputCommandInteract
             });
         }
 
-        // 4. Crear el menú desplegable para seleccionar la Jornada (1 a 6)
         const selectJornada = new StringSelectMenuBuilder()
             .setCustomId(`ingreso_select_jornada_${sesion}`)
             .setPlaceholder('🏁 Selecciona la Jornada para volcar estos datos...');
@@ -59,7 +53,7 @@ export async function handleIngresoCommand(interaction: ChatInputCommandInteract
             const esCarrera = sesion.startsWith('C');
             const baseJornada = (i - 1) * 40;
             const filaInicio = esCarrera ? 22 + baseJornada : 2 + baseJornada;
-            const filaFin = filaInicio + 15; // Bloque de 16 filas por sesión
+            const filaFin = filaInicio + 15;
 
             selectJornada.addOptions({
                 label: `Jornada ${i} (${sesion} ➔ Ingreso2!${filaInicio}:${filaFin})`,
@@ -70,7 +64,6 @@ export async function handleIngresoCommand(interaction: ChatInputCommandInteract
 
         const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectJornada);
 
-        // 5. Generar vista previa en texto plano dentro del Embed
         const previewLines = parsedResults.map(r => 
             `Pos: ${r.position.padStart(2, ' ')} | Piloto: ${r.pilot.padEnd(14, ' ')} | Tiempo: ${r.totalTime} | VR: ${r.bestLap}`
         );
