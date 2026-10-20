@@ -1,4 +1,5 @@
-// Interfaz para la estructura de cada piloto detectado
+import { createWorker } from 'tesseract.js';
+
 export interface ParsedDriverResult {
     position: string;
     pilot: string;
@@ -10,59 +11,55 @@ export interface ParsedDriverResult {
 export const pendingIngresoCache = new Map<string, ParsedDriverResult[]>();
 
 /**
- * Procesa las URLs de las imágenes utilizando OCR y realiza el matching con los pilotos oficiales de BD2.
- * @param imageUrls Array con las URLs de las imágenes adjuntas en Discord.
- * @param validPilots Lista de apodos oficiales obtenidos de BD2!L2:L.
+ * Procesa las URLs de las imágenes utilizando Tesseract.js (OCR real) 
+ * y realiza el matching automático con los pilotos oficiales de BD2.
  */
 export async function processImagesWithOCR(imageUrls: string[], validPilots: string[]): Promise<ParsedDriverResult[]> {
     const results: ParsedDriverResult[] = [];
+    
+    // Inicializar el worker de Tesseract para inglés/español
+    const worker = await createWorker('eng');
 
     for (const url of imageUrls) {
         try {
-            // TODO: Aquí integrarás la lectura real con OCR (Tesseract.js / API de Visión)
-            const simulatedOCRData = [
-                { position: '1', pilot: 'dihondia', totalTime: '22:15.432', bestLap: '1:12.345' },
-                { position: '2', pilot: 'PilotoEjemplo', totalTime: '22:18.910', bestLap: '1:12.890' }
-            ];
+            // Reconocimiento óptico de caracteres desde la URL de la imagen de Discord
+            const { data: { text } } = await worker.recognize(url);
+            console.log('📜 Texto bruto extraído por OCR:\n', text);
 
-            for (const item of simulatedOCRData) {
-                // Aplicar el cruce (matching) con los pilotos válidos de BD2!L2:L
-                const matchedPilot = matchPilotName(item.pilot, validPilots);
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            
+            let detectedCount = 0;
+            for (const line of lines) {
+                // Buscar si la línea contiene algún piloto válido de la BD (BD2!L2:L)
+                const matchedPilot = validPilots.find(p => line.toLowerCase().includes(p.toLowerCase()));
+                
+                if (matchedPilot) {
+                    detectedCount++;
+                    // Extraer posición (primeros dígitos de la línea o contador)
+                    const positionMatch = line.match(/^\d+/);
+                    const position = positionMatch ? positionMatch[0] : `${detectedCount}`;
+                    
+                    // Extraer tiempos de vuelta o totales (formato M:SS.mmm o MM:SS.mmm)
+                    const timeMatches = line.match(/\d+:\d{2}\.\d{3}/g);
+                    const bestLap = timeMatches && timeMatches.length > 0 ? timeMatches[timeMatches.length - 1] : '';
+                    const totalTime = timeMatches && timeMatches.length > 1 ? timeMatches[0] : '';
 
-                results.push({
-                    position: item.position,
-                    pilot: matchedPilot,
-                    totalTime: item.totalTime,
-                    bestLap: item.bestLap
-                });
+                    // Evitar duplicados si el OCR lee la misma línea dos veces
+                    if (!results.some(r => r.pilot === matchedPilot)) {
+                        results.push({
+                            position,
+                            pilot: matchedPilot,
+                            totalTime: totalTime || '',
+                            bestLap: bestLap || ''
+                        });
+                    }
+                }
             }
         } catch (error) {
             console.error(`❌ Error al procesar la imagen ${url} con OCR:`, error);
         }
     }
 
+    await worker.terminate();
     return results;
-}
-
-/**
- * Compara el nombre detectado por OCR con la lista oficial de pilotos (BD2!L2:L)
- * para asegurar que el apodo sea exactamente el registrado.
- */
-function matchPilotName(detectedName: string, validPilots: string[]): string {
-    if (!validPilots || validPilots.length === 0) return detectedName;
-
-    const cleanDetected = detectedName.toLowerCase().trim();
-
-    // 1. Búsqueda de coincidencia exacta (ignorando mayúsculas/minúsculas)
-    const exactMatch = validPilots.find(p => p.toLowerCase().trim() === cleanDetected);
-    if (exactMatch) return exactMatch;
-
-    // 2. Búsqueda de coincidencia parcial
-    const partialMatch = validPilots.find(p => 
-        p.toLowerCase().includes(cleanDetected) || cleanDetected.includes(p.toLowerCase())
-    );
-    if (partialMatch) return partialMatch;
-
-    // Si no encuentra coincidencia cercana, devuelve el nombre detectado originalmente
-    return detectedName;
 }
