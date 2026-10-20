@@ -9,7 +9,8 @@ import { data as draftCommand } from './commands/draft';
 import { data as listaCommand } from './commands/lista';
 import { data as clubCommand } from './commands/club';
 import { data as clubclasCommand } from './commands/clubclas';
-import { data as transCommand } from './commands/trans'; // 👈 1. Importar el comando trans
+import { data as transCommand } from './commands/trans';
+import { data as ingresoCommand } from './commands/ingreso'; // 👈 1. Importar el comando ingreso
 
 // Mapeamos los comandos activos que se registrarán en Discord
 const commandList = [
@@ -23,12 +24,13 @@ const commandList = [
     { name: 'lista', data: listaCommand },
     { name: 'club', data: clubCommand },
     { name: 'clubclas', data: clubclasCommand },
-    { name: 'trans', data: transCommand }, // 👈 2. Añadirlo a la lista
+    { name: 'trans', data: transCommand },
+    { name: 'ingreso', data: ingresoCommand }, // 👈 2. Añadirlo a la lista
 ];
 
 const commands = commandList.map(cmd => {
     if (!cmd.data || typeof cmd.data.toJSON !== 'function') {
-        throw new Error(`❌ El comando no está exportando 'data' correctamente.`);
+        throw new Error(`❌ El comando '${cmd.name}' no está exportando 'data' correctamente.`);
     }
     return cmd.data.toJSON();
 });
