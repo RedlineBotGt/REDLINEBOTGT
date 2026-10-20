@@ -5,13 +5,13 @@ import {
     StringSelectMenuBuilder,
     MessageFlags 
 } from 'discord.js';
-import { processImagesWithOCR } from './octservice';
+import { processImagesWithOCR, pendingIngresoCache } from './octservice';
 import { getSheetData } from '../sheetsService'; 
 
 export async function handleIngresoCommand(interaction: ChatInputCommandInteraction) {
     const foto1 = interaction.options.getAttachment('foto1');
     const foto2 = interaction.options.getAttachment('foto2');
-    const sesion = interaction.options.getString('sesion', true).toUpperCase();
+    const sesion = interaction.options.getString('sesion', true).toUpperCase().trim();
 
     if (!foto1) {
         return interaction.editReply({
@@ -45,8 +45,12 @@ export async function handleIngresoCommand(interaction: ChatInputCommandInteract
             });
         }
 
+        // 🔑 Clave única en memoria usando el ID de usuario y la sesión
+        const cacheKey = `${interaction.user.id}_${sesion}`;
+        pendingIngresoCache.set(cacheKey, parsedResults);
+
         const selectJornada = new StringSelectMenuBuilder()
-            .setCustomId(`ingreso_select_jornada_${sesion}`)
+            .setCustomId(`ingreso_select_jornada:${sesion}`) // Usamos dos puntos para separar la acción de los datos
             .setPlaceholder('🏁 Selecciona la Jornada para volcar estos datos...');
 
         for (let i = 1; i <= 6; i++) {
