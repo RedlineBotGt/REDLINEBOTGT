@@ -1,5 +1,6 @@
 import { StringSelectMenuInteraction, MessageFlags } from 'discord.js';
 import { updateSheetData } from '../sheetsService'; 
+import { pendingIngresoCache } from './octservice';
 
 export async function handleIngresoJornadaSelect(interaction: StringSelectMenuInteraction) {
     if (!interaction.guild) return;
@@ -25,21 +26,45 @@ export async function handleIngresoJornadaSelect(interaction: StringSelectMenuIn
         });
     }
 
+    // 🔍 Recuperar los datos de la caché
+    const cacheKey = `${interaction.user.id}_${sesion}`;
+    const parsedResults = pendingIngresoCache.get(cacheKey);
+
+    if (!parsedResults || parsedResults.length === 0) {
+        return interaction.editReply({
+            content: '❌ Los datos de esta sesión han expirado o no se encuentran. Por favor, vuelve a ejecutar `/ingreso`.',
+            embeds: [],
+            components: []
+        });
+    }
+
     const esCarrera = sesion.startsWith('C');
     const baseJornada = (numJornada - 1) * 40;
     const filaInicio = esCarrera ? 22 + baseJornada : 2 + baseJornada;
-    const filaFin = filaInicio + 15;
+    const filaFin = filaInicio + parsedResults.length - 1; // Rango exacto según filas detectadas
 
     try {
-        const rangoSesion = `Ingreso2!A${filaInicio}:A${filaFin}`;
-        const rangoDatos = `Ingreso2!B${filaInicio}:E${filaFin}`;
+        const rangoSesion = `Ingreso2!A${filaInicio}:A${filaInicio + parsedResults.length - 1}`;
+        const rangoDatos = `Ingreso2!B${filaInicio}:E${filaInicio + parsedResults.length - 1}`;
 
-        // TODO: Inyectar aquí los valores extraídos por el OCR formateados en matrices bidimensionales.
-        // await updateSheetData(rangoSesion, [[sesion], [sesion], ...]);
-        // await updateSheetData(rangoDatos, [[pos, piloto, tiempo, vr], ...]);
+        // Formatear matrices bidimensionales para Google Sheets
+        const sesionesValues = parsedResults.map(() => [sesion]);
+        const datosValues = parsedResults.map(r => [
+            r.position, 
+            r.pilot, 
+            r.totalTime, 
+            r.bestLap
+        ]);
+
+        // 📝 Escritura real en Google Sheets
+        await updateSheetData(rangoSesion, sesionesValues);
+        await updateSheetData(rangoDatos, datosValues);
+
+        // Limpiar caché tras el éxito
+        pendingIngresoCache.delete(cacheKey);
 
         await interaction.editReply({
-            content: `✅ ¡Datos de la sesión **${sesion}** guardados correctamente en **Ingreso2!${filaInicio}:${filaFin}** (Jornada ${numJornada})!`,
+            content: `✅ ¡Datos de la sesión **${sesion}** guardados correctamente en **Ingreso2!A${filaInicio}:E${filaFin}** (Jornada ${numJornada})!`,
             embeds: [],
             components: []
         });
