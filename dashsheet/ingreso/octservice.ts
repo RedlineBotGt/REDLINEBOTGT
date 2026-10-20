@@ -7,12 +7,9 @@ export interface ParsedDriverResult {
     bestLap: string;
 }
 
-// 🗄️ Caché en memoria para guardar temporalmente los datos
+// 🗄️ Caché en memoria para guardar los resultados del OCR
 export const pendingIngresoCache = new Map<string, ParsedDriverResult[]>();
 
-/**
- * Autenticación con Google Cloud Vision utilizando las mismas credenciales de Sheets
- */
 function getVisionClient() {
     const auth = new google.auth.GoogleAuth({
         credentials: {
@@ -26,22 +23,16 @@ function getVisionClient() {
 }
 
 /**
- * Procesa las URLs de las imágenes con Google Cloud Vision API
- * y realiza el matching con los pilotos oficiales de BD2.
+ * Lee la imagen con Google Cloud Vision y extrae los datos tal cual aparecen.
+ * Sin depender ni filtrar por la lista de pilotos de BD2.
  */
-export async function processImagesWithOCR(imageUrls: string[], validPilots: string[]): Promise<ParsedDriverResult[]> {
+export async function processImagesWithOCR(imageUrls: string[], validPilots: string[] = []): Promise<ParsedDriverResult[]> {
     const results: ParsedDriverResult[] = [];
-
-    if (!validPilots || validPilots.length === 0) {
-        console.warn('⚠️ No se proporcionó lista de pilotos desde BD2!L2:L');
-        return results;
-    }
 
     try {
         const vision = getVisionClient();
 
         for (const url of imageUrls) {
-            // Solicitud a Google Vision API enviando la URL de Discord
             const response = await vision.images.annotate({
                 requestBody: {
                     requests: [
@@ -56,28 +47,29 @@ export async function processImagesWithOCR(imageUrls: string[], validPilots: str
             const textAnnotations = response.data.responses?.[0]?.textAnnotations;
             if (!textAnnotations || textAnnotations.length === 0) continue;
 
-            // El primer elemento contiene todo el texto completo extraído
             const fullText = textAnnotations[0].description || '';
-            console.log('📜 OCR Google Vision Raw:\n', fullText);
+            console.log('📜 OCR Raw Output:\n', fullText);
 
             const lines = fullText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
             for (const line of lines) {
-                // Coincidencia con pilotos oficiales de BD2!L2:L
-                const matchedPilot = validPilots.find(p => 
-                    line.toLowerCase().includes(p.toLowerCase().trim())
-                );
-
-                if (matchedPilot) {
-                    // Evitar duplicados
-                    if (results.some(r => r.pilot === matchedPilot)) continue;
-
-                    // Posición (número al inicio de línea)
-                    const posMatch = line.match(/^(\d+)/);
+                // Buscamos cualquier línea que contenga tiempos (formato M:SS.mmm o MM:SS.mmm) o estructura de fila
+                const timeMatches = line.match(/\d+:\d{2}\.\d{3}/g) || [];
+                
+                // Si la línea tiene tiempos o parece una fila de clasificación/carrera
+                const posMatch = line.match(/^(\d{1,2})\b/); // Detecta posición al inicio (1-99)
+                
+                if (posMatch || timeMatches.length > 0) {
                     const position = posMatch ? posMatch[1] : `${results.length + 1}`;
-
-                    // Tiempos (M:SS.mmm o MM:SS.mmm)
-                    const timeMatches = line.match(/\d+:\d{2}\.\d{3}/g) || [];
+                    
+                    // Limpiar la línea quitando la posición inicial y los tiempos para aislar el nombre del piloto
+                    let rawPilotName = line
+                        .replace(/^\d{1,2}\s*/, '') // Quitar número inicial
+                        .replace(/\d+:\d{2}\.\d{3}/g, '') // Quitar tiempos
+                        .replace(/\+\d+\.\d+/g, '') // Quitar diferencias (+00.181, etc.)
+                        .replace(/F-type Gr\.\d/gi, '') // Quitar modelos de coche habituales de la interfaz
+                        .replace(/[|]/g, '') // Quitar barras
+                        .trim();
 
                     let totalTime = '';
                     let bestLap = '';
@@ -89,17 +81,20 @@ export async function processImagesWithOCR(imageUrls: string[], validPilots: str
                         bestLap = timeMatches[0];
                     }
 
-                    results.push({
-                        position,
-                        pilot: matchedPilot,
-                        totalTime,
-                        bestLap
-                    });
+                    // Si hemos obtenido un nombre utilizable
+                    if (rawPilotName.length >= 2) {
+                        results.push({
+                            position,
+                            pilot: rawPilotName,
+                            totalTime,
+                            bestLap
+                        });
+                    }
                 }
             }
         }
     } catch (error) {
-        console.error('❌ Error al procesar imagen con Google Cloud Vision API:', error);
+        console.error('❌ Error al procesar la imagen con Google Cloud Vision:', error);
     }
 
     return results;
