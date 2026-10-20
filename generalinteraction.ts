@@ -35,7 +35,7 @@ export async function handleGlobalInteraction(interaction: Interaction, client: 
         }
 
         // 1.6. Manejo de Interacciones de /ingreso (Menú desplegable de selección de jornada)
-        if (interaction.isStringSelectMenu() && interaction.customId.startsWith('ingreso_select_jornada_')) {
+        if (interaction.isStringSelectMenu() && interaction.customId.startsWith('ingreso_select_jornada')) {
             await handleIngresoJornadaSelect(interaction);
             return;
         }
