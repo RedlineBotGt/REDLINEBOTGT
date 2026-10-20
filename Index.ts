@@ -32,6 +32,7 @@ import * as listaCommand from './commands/lista'; // ➔ Comando Lista
 import * as clubCommand from './commands/club'; // ➔ Comando Club
 import * as clubclasCommand from './commands/clubclas'; // ➔ Comando Club Clasificación General
 import * as transCommand from './commands/trans'; // ➔ Comando Traducción
+import * as ingresoCommand from './commands/ingreso'; // 👈 1. Importar el comando ingreso
 import * as dashSheetsCommand from './dashsheet/dashsheet';
 import * as dashAdminCommand from './dashadmin/dashadmin'; // ➔ Comando dashadmin
 
@@ -81,6 +82,7 @@ const commandsList = [
     clubCommand,
     clubclasCommand,
     transCommand,
+    ingresoCommand, // 👈 2. Añadir el comando ingreso a la lista
     dashSheetsCommand, 
     dashAdminCommand
 ];
