@@ -6,6 +6,9 @@ export interface ParsedDriverResult {
     bestLap: string;
 }
 
+// 🗄️ Caché en memoria para guardar temporalmente los datos del OCR por usuario/sesión
+export const pendingIngresoCache = new Map<string, ParsedDriverResult[]>();
+
 /**
  * Procesa las URLs de las imágenes utilizando OCR y realiza el matching con los pilotos oficiales de BD2.
  * @param imageUrls Array con las URLs de las imágenes adjuntas en Discord.
@@ -16,11 +19,7 @@ export async function processImagesWithOCR(imageUrls: string[], validPilots: str
 
     for (const url of imageUrls) {
         try {
-            // TODO: Aquí integrarás tu lógica de OCR real (ej: Tesseract.js, Google Cloud Vision, etc.)
-            // que descarga la imagen de la URL y extrae las líneas de texto de la clasificación/carrera.
-
-            // Simulación de datos extraídos para estructurar el flujo:
-            // Cada línea leída suele contener: Posición, Apodo/Piloto, Tiempo Total, Mejor Vuelta (VR)
+            // TODO: Aquí integrarás la lectura real con OCR (Tesseract.js / API de Visión)
             const simulatedOCRData = [
                 { position: '1', pilot: 'dihondia', totalTime: '22:15.432', bestLap: '1:12.345' },
                 { position: '2', pilot: 'PilotoEjemplo', totalTime: '22:18.910', bestLap: '1:12.890' }
@@ -58,7 +57,7 @@ function matchPilotName(detectedName: string, validPilots: string[]): string {
     const exactMatch = validPilots.find(p => p.toLowerCase().trim() === cleanDetected);
     if (exactMatch) return exactMatch;
 
-    // 2. Búsqueda de coincidencia parcial (si contiene parte del nombre)
+    // 2. Búsqueda de coincidencia parcial
     const partialMatch = validPilots.find(p => 
         p.toLowerCase().includes(cleanDetected) || cleanDetected.includes(p.toLowerCase())
     );
