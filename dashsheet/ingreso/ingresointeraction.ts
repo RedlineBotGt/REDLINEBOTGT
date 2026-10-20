@@ -14,9 +14,9 @@ export async function handleIngresoJornadaSelect(interaction: StringSelectMenuIn
         }
     }
 
+    // Extraer la sesión después de los dos puntos (ingreso_select_jornada:Q1)
     const customId = interaction.customId;
-    const parts = customId.split('_');
-    const sesion = parts[3] ? parts[3].toUpperCase() : 'Q1';
+    const sesion = customId.includes(':') ? customId.split(':')[1].toUpperCase().trim() : 'Q1';
     const numJornada = parseInt(interaction.values[0], 10);
 
     if (isNaN(numJornada)) {
@@ -26,7 +26,7 @@ export async function handleIngresoJornadaSelect(interaction: StringSelectMenuIn
         });
     }
 
-    // 🔍 Recuperar los datos de la caché
+    // 🔍 Buscar en la caché con la misma clave exacta
     const cacheKey = `${interaction.user.id}_${sesion}`;
     const parsedResults = pendingIngresoCache.get(cacheKey);
 
@@ -41,13 +41,12 @@ export async function handleIngresoJornadaSelect(interaction: StringSelectMenuIn
     const esCarrera = sesion.startsWith('C');
     const baseJornada = (numJornada - 1) * 40;
     const filaInicio = esCarrera ? 22 + baseJornada : 2 + baseJornada;
-    const filaFin = filaInicio + parsedResults.length - 1; // Rango exacto según filas detectadas
+    const filaFin = filaInicio + parsedResults.length - 1;
 
     try {
-        const rangoSesion = `Ingreso2!A${filaInicio}:A${filaInicio + parsedResults.length - 1}`;
-        const rangoDatos = `Ingreso2!B${filaInicio}:E${filaInicio + parsedResults.length - 1}`;
+        const rangoSesion = `Ingreso2!A${filaInicio}:A${filaFin}`;
+        const rangoDatos = `Ingreso2!B${filaInicio}:E${filaFin}`;
 
-        // Formatear matrices bidimensionales para Google Sheets
         const sesionesValues = parsedResults.map(() => [sesion]);
         const datosValues = parsedResults.map(r => [
             r.position, 
@@ -56,11 +55,10 @@ export async function handleIngresoJornadaSelect(interaction: StringSelectMenuIn
             r.bestLap
         ]);
 
-        // 📝 Escritura real en Google Sheets
         await updateSheetData(rangoSesion, sesionesValues);
         await updateSheetData(rangoDatos, datosValues);
 
-        // Limpiar caché tras el éxito
+        // Limpiar la clave usada tras guardar con éxito
         pendingIngresoCache.delete(cacheKey);
 
         await interaction.editReply({
