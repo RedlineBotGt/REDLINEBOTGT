@@ -3,7 +3,8 @@ import { handleDashAdminInteractions } from './dashadmin/interactiondashadmin'; 
 import { handleSheetsInteraction } from './dashsheet/sheetsInteraction';   // ➔ Panel de Google Sheets
 import { handleDadoModalSubmit } from './commands/dado'; // ➔ Comando del dado
 import { handleAvisosInteractions } from './dashadmin/avisos/interactionavisos'; // ➔ Ruta corregida
-import { handleClubInteractions } from './dashadmin/club/clubactions'; // 👈 1. Importación del manejador de GT Club
+import { handleClubInteractions } from './dashadmin/club/clubactions'; // ➔ Manejador de GT Club
+import { handleIngresoJornadaSelect } from './dashsheet/ingreso/ingresointeraction'; // 👈 1. Importar el manejador de /ingreso
 
 /**
  * Enrutador Maestro Global de Interacciones
@@ -11,7 +12,7 @@ import { handleClubInteractions } from './dashadmin/club/clubactions'; // 👈 1
  */
 export async function handleGlobalInteraction(interaction: Interaction, client: Client & { commands?: Map<string, any> }) {
     try {
-        // 1. Manejo de Comandos Slash (ej: /dash, /dashstaff, /dashsheets, /borrar, /dado, /club)
+        // 1. Manejo de Comandos Slash (ej: /dash, /dashstaff, /dashsheets, /borrar, /dado, /club, /ingreso)
         if (interaction.isChatInputCommand()) {
             const command = client.commands?.get(interaction.commandName);
 
@@ -33,8 +34,14 @@ export async function handleGlobalInteraction(interaction: Interaction, client: 
             if (handledDado) return;
         }
 
+        // 1.6. Manejo de Interacciones de /ingreso (Menú desplegable de selección de jornada)
+        if (interaction.isStringSelectMenu() && interaction.customId.startsWith('ingreso_select_jornada_')) {
+            await handleIngresoJornadaSelect(interaction);
+            return;
+        }
+
         // 2. Manejo de Interacciones de GT Club (Comando /club, Modales y Selects)
-        const handledByClub = await handleClubInteractions(interaction); // 👈 2. Ruta para GT Club
+        const handledByClub = await handleClubInteractions(interaction);
         if (handledByClub) return;
 
         // 3. Manejo de Interacciones del Panel Admin (`dashadmin` / submódulos)
