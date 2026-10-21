@@ -1,10 +1,11 @@
 import { CommandInteraction, MessageFlags } from 'discord.js';
 import { procesarAsignacionTitulares } from './titularesService';
+import { procesarAsignacionReservas } from './reservasService';
 
 export async function handlePQ2Interactions(interaction: CommandInteraction): Promise<boolean> {
     if (!interaction.isChatInputCommand()) return false;
 
-    if (interaction.commandName !== 'titulares') return false;
+    if (!['titulares', 'reservas'].includes(interaction.commandName)) return false;
 
     if (!interaction.guild) {
         await interaction.reply({ 
@@ -17,13 +18,20 @@ export async function handlePQ2Interactions(interaction: CommandInteraction): Pr
     await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
     try {
-        const result = await procesarAsignacionTitulares(interaction.guild);
+        let result;
+        if (interaction.commandName === 'titulares') {
+            result = await procesarAsignacionTitulares(interaction.guild);
+        } else if (interaction.commandName === 'reservas') {
+            result = await procesarAsignacionReservas(interaction.guild);
+        }
 
-        await interaction.editReply({
-            content: `✅ **Sincronización de TITULARES completada:**\n- 🟢 Roles asignados: **${result.success}**\n- ⚠️ No encontrados en el servidor: **${result.notFound}**\n- ❌ Errores: **${result.errors}**`
-        });
+        if (result) {
+            await interaction.editReply({
+                content: `✅ **Sincronización de ${interaction.commandName.toUpperCase()} completada:**\n- 🟢 Roles asignados: **${result.success}**\n- ⚠️ No encontrados en el servidor: **${result.notFound}**\n- ❌ Errores: **${result.errors}**`
+            });
+        }
     } catch (error: any) {
-        console.error('Error procesando /titulares:', error);
+        console.error(`Error procesando /${interaction.commandName}:`, error);
         await interaction.editReply({
             content: `❌ Ocurrió un error en la sincronización: ${error.message || error}`
         });
