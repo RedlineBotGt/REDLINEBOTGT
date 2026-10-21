@@ -5,35 +5,41 @@ import {
     EmbedBuilder 
 } from 'discord.js';
 
-// --- HELPER CENTRAL: CONSTRUCTOR ÚNICO DE EMBEDS Y COMPONENTES VISUALES ---
 export function buildEventEmbedAndRows(ev: any) {
-    const rsvps = ev.rsvps || { yes: [], reserve: [], maybe: [], no: [] };
-    if (!rsvps.reserve) rsvps.reserve = [];
+    const rsvps = ev.rsvps || {};
+    const yesList: string[] = Array.isArray(rsvps.yes) ? rsvps.yes : [];
+    const reserveList: string[] = Array.isArray(rsvps.reserve) ? rsvps.reserve : [];
+    const maybeList: string[] = Array.isArray(rsvps.maybe) ? rsvps.maybe : [];
+    const noList: string[] = Array.isArray(rsvps.no) ? rsvps.no : [];
 
-    const formatVerticalList = (ids: string[]) => ids.length > 0 ? ids.map(id => `<@${id}>`).join('\n') : 'Ninguno';
+    const formatVerticalList = (ids: string[]) => {
+        if (!ids || ids.length === 0) return 'Ninguno';
+        return ids.map(id => `<@${id}>`).join('\n');
+    };
 
     const isClosed = ev.status === 'completed' || ev.status === 'cancelled';
 
     const embed = new EmbedBuilder()
         .setColor(isClosed ? 0x808080 : 0x0055FF)
         .setTitle(isClosed ? `🔒 [FINALIZADO] ${ev.title}` : `🏁 ${ev.title}`)
-        .setDescription(`📅 **Fecha:** ${ev.date} a las ${ev.time} CET\n\n${ev.description}`)
+        .setDescription(`📅 **Fecha:** ${ev.date || 'Por determinar'} a las ${ev.time || '00:00'} CET\n\n${ev.description || 'Sin descripción'}`)
         .setTimestamp();
 
-    if (ev.image) embed.setImage(ev.image);
+    if (ev.image && typeof ev.image === 'string' && ev.image.startsWith('http')) {
+        embed.setImage(ev.image);
+    }
 
-    // 📋 Añadimos la categoría de reservas entre Asistiré y Duda
     embed.addFields(
-        { name: `✅ Asistiré (${rsvps.yes.length}/16)`, value: formatVerticalList(rsvps.yes), inline: false },
-        { name: `®️ Reserva (${rsvps.reserve.length})`, value: formatVerticalList(rsvps.reserve), inline: false },
-        { name: `❔ Duda (${rsvps.maybe.length})`, value: formatVerticalList(rsvps.maybe), inline: false },
-        { name: `❌ No puedo (${rsvps.no.length})`, value: formatVerticalList(rsvps.no), inline: false }
+        { name: `✅ Asistiré (${yesList.length}/16)`, value: formatVerticalList(yesList), inline: false },
+        { name: `🔃 Reserva (${reserveList.length})`, value: formatVerticalList(reserveList), inline: false },
+        { name: `❔ Duda (${maybeList.length})`, value: formatVerticalList(maybeList), inline: false },
+        { name: `❌ No puedo (${noList.length})`, value: formatVerticalList(noList), inline: false }
     );
 
-    // 🖲️ Fila de botones de asistencia incluyendo el botón de Reserva (®️)
+    // 🖲️ Botón con emoji '🔃' totalmente compatible con la API de Discord
     const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✅').setDisabled(isClosed),
-        new ButtonBuilder().setCustomId('event_rsvp_reserve').setLabel('Reserva').setStyle(ButtonStyle.Primary).setEmoji('®️').setDisabled(isClosed),
+        new ButtonBuilder().setCustomId('event_rsvp_reserve').setLabel('Reserva').setStyle(ButtonStyle.Primary).setEmoji('🔃').setDisabled(isClosed),
         new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓').setDisabled(isClosed),
         new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️').setDisabled(isClosed)
     );
