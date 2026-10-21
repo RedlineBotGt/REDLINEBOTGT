@@ -1,5 +1,6 @@
 import { Client, TextChannel, Role, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import { getEventsCollection } from './eventosstorage';
+import { buildEventEmbedAndRows } from './eventosmanager';
 
 /**
  * Obtiene o crea el rol 'asistente' asegurándose de que esté disponible y sea mencionable.
@@ -28,7 +29,7 @@ async function getOrCreateAsistenteRole(guild: any): Promise<Role | null> {
 }
 
 export function setupEventWorker(client: Client) {
-    console.log('📅 [Worker] Sistema de eventos y campeonatos activo en segundo plano.');
+    console.log('📅 [Worker] Sistema de eventos y campeonatos (Titulares y Reservas) activo en segundo plano.');
 
     setInterval(async () => {
         try {
@@ -36,7 +37,7 @@ export function setupEventWorker(client: Client) {
             const now = new Date();
 
             // -------------------------------------------------------------
-            // TAREA 0: Publicación Programada de Tarjetas de Evento
+            // TAREA 0: Publicación Programada de Tarjetas de Evento (Con 4 botones)
             // -------------------------------------------------------------
             const pendingPublishEvents = await col.find({
                 status: 'pending_publish',
@@ -51,34 +52,26 @@ export function setupEventWorker(client: Client) {
                     const channel = await guild.channels.fetch(ev.channelId).catch(() => null) as TextChannel;
                     if (!channel || !channel.isTextBased()) continue;
 
-                    const embed = new EmbedBuilder()
-                        .setColor(0x0055FF)
-                        .setTitle(`🏁 ${ev.title}`)
-                        .setDescription(`📅 **Fecha:** ${ev.date} a las ${ev.time} CET\n\n${ev.description}`)
-                        .setTimestamp();
+                    // Inicializamos rsvps asegurando la categoría reserve
+                    if (!ev.rsvps) ev.rsvps = { yes: [], reserve: [], maybe: [], no: [] };
+                    if (!ev.rsvps.reserve) ev.rsvps.reserve = [];
 
-                    if (ev.image) embed.setImage(ev.image);
+                    const dummyEventDoc = {
+                        title: ev.title,
+                        date: ev.date,
+                        time: ev.time,
+                        description: ev.description,
+                        image: ev.image,
+                        status: 'sent',
+                        rsvps: ev.rsvps
+                    };
 
-                    embed.addFields(
-                        { name: '✅ Asistiré (0/16)', value: 'Ninguno', inline: false },
-                        { name: '❔ Duda (0)', value: 'Ninguno', inline: false },
-                        { name: '❌ No puedo (0)', value: 'Ninguno', inline: false }
-                    );
-
-                    const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✅'),
-                        new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓'),
-                        new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️')
-                    );
-
-                    const rowAdmin = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                        new ButtonBuilder().setCustomId('event_admin_manage').setLabel('Gestión Admin').setStyle(ButtonStyle.Secondary).setEmoji('⚙️')
-                    );
+                    const { embed, components } = buildEventEmbedAndRows(dummyEventDoc);
 
                     const sentMessage = await channel.send({ 
                         content: `<@&${ev.roleId}>`, 
                         embeds: [embed], 
-                        components: [rowRsvp, rowAdmin] 
+                        components: components 
                     });
 
                     await col.updateOne(
@@ -87,19 +80,20 @@ export function setupEventWorker(client: Client) {
                             $set: { 
                                 messageId: sentMessage.id,
                                 status: 'sent',
+                                rsvps: ev.rsvps,
                                 updatedAt: new Date()
                             } 
                         }
                     );
 
-                    console.log(`🚀 [Worker] Evento "${ev.title}" publicado automáticamente en el canal.`);
+                    console.log(`🚀 [Worker] Evento "${ev.title}" publicado automáticamente con soporte de Reservas.`);
                 } catch (pubErr) {
                     console.error(`❌ [Worker] Error al publicar evento programado ID ${ev._id}:`, pubErr);
                 }
             }
 
             // -------------------------------------------------------------
-            // TAREA 1: Recordatorio 30 minutos antes (con buffer de seguridad)
+            // TAREA 1: Recordatorio T-30 min + Promoción Automática de Reservas
             // -------------------------------------------------------------
             const thirtyMinsLater = new Date(now.getTime() + 30 * 60 * 1000);
             const bufferTime = new Date(now.getTime() - 5 * 60 * 1000);
@@ -120,18 +114,51 @@ export function setupEventWorker(client: Client) {
                     const channel = await guild.channels.fetch(ev.channelId).catch(() => null) as TextChannel;
                     if (!channel || !channel.isTextBased()) continue;
 
+                    if (!ev.rsvps) ev.rsvps = { yes: [], reserve: [], maybe: [], no: [] };
+                    if (!ev.rsvps.reserve) ev.rsvps.reserve = [];
+
+                    // 🔄 AUTOMATIZACIÓN T-30: Promoción de reservas si hay huecos en Titulares (Ej: máximo 16 plazas)
+                    const MAX_TITULARES = 16;
+                    const huecosLibres = MAX_TITULARES - ev.rsvps.yes.length;
+                    let promovidosCount = 0;
+
+                    if (huecosLibres > 0 && ev.rsvps.reserve.length > 0) {
+                        const aPromover = ev.rsvps.reserve.splice(0, huecosLibres);
+                        ev.rsvps.yes.push(...aPromover);
+                        promovidosCount = aPromover.length;
+
+                        // Opcional: Notificar individualmente o en el canal a los promovidos
+                        console.log(`🔃 [Worker] T-30: Se han promovido ${promovidosCount} pilotos de reserva a titulares para "${ev.title}".`);
+                    }
+
+                    // Actualizar base de datos con los cambios de promoción
+                    await col.updateOne({ _id: ev._id }, { $set: { rsvps: ev.rsvps, reminderSent: true } });
+
+                    // Actualizar visualmente la tarjeta en Discord
+                    if (ev.messageId) {
+                        const message = await channel.messages.fetch(ev.messageId).catch(() => null);
+                        if (message) {
+                            const { embed, components } = buildEventEmbedAndRows(ev);
+                            await message.edit({ embeds: [embed], components }).catch(() => {});
+                        }
+                    }
+
                     const asistenteRole = await getOrCreateAsistenteRole(guild);
                     const roleMention = asistenteRole ? `<@&${asistenteRole.id}>` : '@asistente';
 
+                    let avisoTexto = `⏰ **¡Atención!** El evento **"${ev.title}"** comienza en **30 minutos**. ${roleMention}`;
+                    if (promovidosCount > 0) {
+                        avisoTexto += `\n🔃 *Se han promocionado automáticamente plazas libres de reservas a titulares.*`;
+                    }
+
                     await channel.send({
-                        content: `⏰ **¡Atención!** El evento **"${ev.title}"** comienza en **30 minutos**. ${roleMention}`,
+                        content: avisoTexto,
                         allowedMentions: { roles: asistenteRole ? [asistenteRole.id] : [] }
                     });
 
-                    await col.updateOne({ _id: ev._id }, { $set: { reminderSent: true } });
-                    console.log(`⏰ [Worker] Recordatorio de 30 min enviado para: "${ev.title}"`);
+                    console.log(`⏰ [Worker] Recordatorio de 30 min y revisión de reservas completado para: "${ev.title}"`);
                 } catch (remErr) {
-                    console.error('❌ Error enviando recordatorio de evento:', remErr);
+                    console.error('❌ Error en el proceso T-30 del evento:', remErr);
                 }
             }
 
@@ -173,7 +200,7 @@ export function setupEventWorker(client: Client) {
                             console.log(`🧹 [Worker] Rol asistente retirado tras el inicio de: "${ev.title}"`);
                         }
 
-                        // 🔒 Bloquear botones y cerrar la tarjeta visual en Discord (aplica a todos, incluidos recurrentes)
+                        // 🔒 Bloquear botones y cerrar la tarjeta visual en Discord (incluyendo los 4 botones)
                         if (ev.channelId && ev.messageId) {
                             const channelEdit = await guild.channels.fetch(ev.channelId).catch(() => null) as TextChannel;
                             if (channelEdit && channelEdit.isTextBased()) {
@@ -185,6 +212,7 @@ export function setupEventWorker(client: Client) {
 
                                     const rowDisabledRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
                                         new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✅').setDisabled(true),
+                                        new ButtonBuilder().setCustomId('event_rsvp_reserve').setLabel('Reserva').setStyle(ButtonStyle.Primary).setEmoji('®️').setDisabled(true),
                                         new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓').setDisabled(true),
                                         new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️').setDisabled(true)
                                     );
@@ -203,7 +231,7 @@ export function setupEventWorker(client: Client) {
                         await col.updateOne(
                             { _id: ev._id },
                             { 
-                                $set: { scheduledAt: nextScheduledAt, publishAt: nextPublishAt, status: 'pending_publish', messageId: undefined, reminderSent: false, rsvps: { yes: [], maybe: [], no: [] } },$inc: { remainingTimes: -1 } 
+                                $set: { scheduledAt: nextScheduledAt, publishAt: nextPublishAt, status: 'pending_publish', messageId: undefined, reminderSent: false, rsvps: { yes: [], reserve: [], maybe: [], no: [] } },$inc: { remainingTimes: -1 } 
                             }
                         );
                         console.log(`🔄 [Worker] Evento recurrente "${ev.title}" cerrado y reprogramado para su próximo envío.`);
