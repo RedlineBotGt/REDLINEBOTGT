@@ -6,7 +6,8 @@ import {
     ButtonBuilder,
     TextChannel,
     StringSelectMenuBuilder,
-    UserSelectMenuBuilder
+    UserSelectMenuBuilder,
+    GuildMember
 } from 'discord.js';
 import { getEventsCollection } from './eventosstorage';
 import { buildEventEmbedAndRows } from './eventosmanager';
@@ -29,7 +30,8 @@ export async function handleEventAdminManageButton(interaction: ButtonInteractio
         .setPlaceholder('📊 Selecciona el estado...')
         .addOptions(
             { label: '✅ Asistiré', value: 'yes', description: 'Añadir a la parrilla titular' },
-            { label: '❔ Duda', value: 'maybe', description: 'Añadir a lista de espera / duda' },
+            { label: '®️ Reserva', value: 'reserve', description: 'Añadir a lista de reservas' },
+            { label: '❔ Duda', value: 'maybe', description: 'Añadir a lista de duda' },
             { label: '❌ No puedo', value: 'no', description: 'Marcar como ausente' }
         );
 
@@ -89,7 +91,7 @@ export async function handleEventAdminStatusSelect(interaction: any): Promise<bo
     session.status = interaction.values[0];
     adminAdminSessions.set(sessionId, session);
 
-    const statusNames: Record<string, string> = { yes: 'Asistiré', maybe: 'Duda', no: 'No puedo' };
+    const statusNames: Record<string, string> = { yes: 'Asistiré', reserve: 'Reserva', maybe: 'Duda', no: 'No puedo' };
     await interaction.update({
         content: `⚙️ **Gestión Admin:** Estado seleccionado (**${statusNames[session.status]}**). Asegúrate de haber elegido usuario y pulsa Confirmar.`
     });
@@ -119,7 +121,6 @@ export async function handleEventAdminConfirmButton(interaction: ButtonInteracti
     if (!guild) return true;
 
     const col = await getEventsCollection();
-    // 🔒 Verificación multiserver por guildId
     const eventDoc = await col.findOne({ messageId, guildId: interaction.guildId });
 
     if (!eventDoc || eventDoc.status === 'completed' || eventDoc.status === 'cancelled') {
@@ -127,10 +128,12 @@ export async function handleEventAdminConfirmButton(interaction: ButtonInteracti
         return true;
     }
 
-    if (!eventDoc.rsvps) eventDoc.rsvps = { yes: [], maybe: [], no: [] };
+    if (!eventDoc.rsvps) eventDoc.rsvps = { yes: [], reserve: [], maybe: [], no: [] };
+    if (!eventDoc.rsvps.reserve) eventDoc.rsvps.reserve = [];
 
     // Limpieza estricta de todos los estados previos
     eventDoc.rsvps.yes = eventDoc.rsvps.yes.filter((id: string) => id !== targetUserId);
+    eventDoc.rsvps.reserve = eventDoc.rsvps.reserve.filter((id: string) => id !== targetUserId);
     eventDoc.rsvps.maybe = eventDoc.rsvps.maybe.filter((id: string) => id !== targetUserId);
     eventDoc.rsvps.no = eventDoc.rsvps.no.filter((id: string) => id !== targetUserId);
 
@@ -150,13 +153,11 @@ export async function handleEventAdminConfirmButton(interaction: ButtonInteracti
     const member = await guild.members.fetch(targetUserId).catch(() => null);
 
     if (targetStatus === 'yes') {
-        if (eventDoc.rsvps.yes.length < 16) {
-            eventDoc.rsvps.yes.push(targetUserId);
-            if (asistenteRole && member) await member.roles.add(asistenteRole).catch(() => {});
-        } else {
-            eventDoc.rsvps.maybe.push(targetUserId);
-            if (asistenteRole && member) await member.roles.add(asistenteRole).catch(() => {});
-        }
+        eventDoc.rsvps.yes.push(targetUserId);
+        if (asistenteRole && member) await member.roles.add(asistenteRole).catch(() => {});
+    } else if (targetStatus === 'reserve') {
+        eventDoc.rsvps.reserve.push(targetUserId);
+        if (asistenteRole && member) await member.roles.add(asistenteRole).catch(() => {});
     } else if (targetStatus === 'maybe') {
         eventDoc.rsvps.maybe.push(targetUserId);
         if (asistenteRole && member) await member.roles.add(asistenteRole).catch(() => {});
@@ -186,10 +187,10 @@ export async function handleEventAdminConfirmButton(interaction: ButtonInteracti
     return true;
 }
 
-// --- GESTIÓN DE RSVP Y LÍMITE DE 16 PLAZAS (SIN PROMOCIÓN AUTOMÁTICA) ---
+// --- 5. GESTIÓN DE RSVP Y RESTRICCIÓN DE ROLES (TITULAR VS RESERVA) ---
 export async function handleEventRsvpButton(interaction: ButtonInteraction): Promise<boolean> {
     const customId = interaction.customId;
-    if (!['event_rsvp_yes', 'event_rsvp_maybe', 'event_rsvp_no'].includes(customId)) return false;
+    if (!['event_rsvp_yes', 'event_rsvp_reserve', 'event_rsvp_maybe', 'event_rsvp_no'].includes(customId)) return false;
 
     const userId = interaction.user.id;
     const messageId = interaction.message.id;
@@ -197,8 +198,32 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
 
     if (!guild) return true;
 
+    const member = interaction.member as GuildMember;
+    if (!member) return true;
+
+    // Detectar si tiene rol Titular o Reserva por nombre de rol (o busca por ID si prefieres)
+    const isTitular = member.roles.cache.some(r => r.name.toLowerCase().includes('titular'));
+    const isReserva = member.roles.cache.some(r => r.name.toLowerCase().includes('reserva'));
+
+    // ⛔ Restricción 1: Un titular NO puede pulsar el botón Reserva (®️)
+    if (customId === 'event_rsvp_reserve' && isTitular) {
+        await interaction.reply({
+            content: '❌ Como **Piloto Titular**, no puedes apuntarte en la lista de reservas. Usa **Asistiré**, **Duda** o **No puedo**.',
+            flags: [MessageFlags.Ephemeral]
+        });
+        return true;
+    }
+
+    // ⛔ Restricción 2: Un reserva NO puede pulsar el botón Verde (🟢)
+    if (customId === 'event_rsvp_yes' && isReserva) {
+        await interaction.reply({
+            content: '❌ Como **Piloto Reserva**, no puedes confirmarte directamente en verde. Pulsa el botón ®️ **Reserva** para entrar en lista de espera.',
+            flags: [MessageFlags.Ephemeral]
+        });
+        return true;
+    }
+
     const col = await getEventsCollection();
-    // 🔒 Verificación multiserver por guildId
     const eventDoc = await col.findOne({ messageId, guildId: interaction.guildId });
 
     if (!eventDoc || eventDoc.status === 'completed' || eventDoc.status === 'cancelled') {
@@ -209,10 +234,12 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
         return true;
     }
 
-    if (!eventDoc.rsvps) eventDoc.rsvps = { yes: [], maybe: [], no: [] };
+    if (!eventDoc.rsvps) eventDoc.rsvps = { yes: [], reserve: [], maybe: [], no: [] };
+    if (!eventDoc.rsvps.reserve) eventDoc.rsvps.reserve = [];
 
     // Limpieza previa garantizada de todas las listas
     eventDoc.rsvps.yes = eventDoc.rsvps.yes.filter((id: string) => id !== userId);
+    eventDoc.rsvps.reserve = eventDoc.rsvps.reserve.filter((id: string) => id !== userId);
     eventDoc.rsvps.maybe = eventDoc.rsvps.maybe.filter((id: string) => id !== userId);
     eventDoc.rsvps.no = eventDoc.rsvps.no.filter((id: string) => id !== userId);
 
@@ -229,27 +256,33 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
         }
     }
 
-    const member = await guild.members.fetch(userId).catch(() => null);
     let responseContent = '';
 
     if (customId === 'event_rsvp_yes') {
-        if (eventDoc.rsvps.yes.length < 16) {
-            eventDoc.rsvps.yes.push(userId);
-            responseContent = '✅ ¡Tu asistencia (**Asistiré**) ha quedado registrada!';
-            if (asistenteRole && member) await member.roles.add(asistenteRole).catch(() => {});
-        } else {
-            eventDoc.rsvps.maybe.push(userId);
-            responseContent = '⚠️ La parrilla titular (16 plazas) está llena. Has sido colocado automáticamente en **Duda** (en lista de espera).';
-            if (asistenteRole && member) await member.roles.add(asistenteRole).catch(() => {});
+        eventDoc.rsvps.yes.push(userId);
+        responseContent = '✅ ¡Tu asistencia (**Asistiré**) ha quedado registrada!';
+        if (asistenteRole && !member.roles.cache.has(asistenteRole.id)) {
+            await member.roles.add(asistenteRole).catch(() => {});
+        }
+    } else if (customId === 'event_rsvp_reserve') {
+        eventDoc.rsvps.reserve.push(userId);
+        responseContent = '®️ ¡Te has registrado correctamente en la lista de **Reservas**!';
+        // Asignación de rol de asistente también para el Reserva
+        if (asistenteRole && !member.roles.cache.has(asistenteRole.id)) {
+            await member.roles.add(asistenteRole).catch(() => {});
         }
     } else if (customId === 'event_rsvp_maybe') {
         eventDoc.rsvps.maybe.push(userId);
-        responseContent = '✅ ¡Tu estado (**Duda**) ha quedado registrado!';
-        if (asistenteRole && member) await member.roles.add(asistenteRole).catch(() => {});
+        responseContent = '❓ Tu estado (**Duda**) ha quedado registrado.';
+        // Asignación de rol de asistente también para Duda
+        if (asistenteRole && !member.roles.cache.has(asistenteRole.id)) {
+            await member.roles.add(asistenteRole).catch(() => {});
+        }
     } else if (customId === 'event_rsvp_no') {
         eventDoc.rsvps.no.push(userId);
         responseContent = '❌ Tu asistencia ha sido marcada como **No puedo**.';
-        if (asistenteRole && member && member.roles.cache.has(asistenteRole.id)) {
+        // Retirar el rol de asistente
+        if (asistenteRole && member.roles.cache.has(asistenteRole.id)) {
             await member.roles.remove(asistenteRole).catch(() => {});
         }
     }
