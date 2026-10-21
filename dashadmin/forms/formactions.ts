@@ -16,7 +16,7 @@ import {
     MessageFlags 
 } from 'discord.js';
 import { obtenerFormularios, obtenerFormularioPorTitulo, guardarFormulario } from './formsstorage';
-import { appendSheetData } from '../../dashsheet/sheetsService';
+import { appendSheetData, readSheetData } from '../../dashsheet/sheetsService';
 
 // Mapa temporal para recordar qué formulario y canal de publicación se están configurando durante el flujo de colocación
 export const colocationContext = new Map<string, { titulo: string; canalPublicacionId: string }>();
@@ -113,7 +113,7 @@ export async function handleDashColocarPubliChannelSelect(interaction: ChannelSe
 
     const channelSelect = new ChannelSelectMenuBuilder()
         .setCustomId('dash_channel_respuestas_final')
-        .setChannelTypes(ChannelType.GuildText)
+        .setChannelTypes(ChannelType.GuildType ? ChannelType.GuildText : ChannelType.GuildText)
         .setPlaceholder('📥 Selecciona el canal donde llegarán las RESPUESTAS...');
 
     const row = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(channelSelect);
@@ -224,7 +224,7 @@ export async function handleFormButtonClick(interaction: ButtonInteraction): Pro
 export async function handleFormSubmitModal(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (!interaction.customId.startsWith('submit_form_')) return false;
 
-    if (!interaction.guildId) {
+    if (!interaction.guildId || !interaction.guild) {
         await interaction.reply({ content: '❌ Solo dentro de un servidor.', flags: [MessageFlags.Ephemeral] });
         return true;
     }
@@ -246,7 +246,7 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
     const serverName = interaction.guild?.name || 'Servidor';
     resumen += `— *${serverName}*`;
 
-    // 📊 Validación estricta pero flexible a mayúsculas/acentos para "InscripciónCup" (ignora tildes y mayúsculas, pero rechaza otros como inscripciónliga)
+    // 📊 Validación estricta para "InscripciónCup"
     const tituloNormalizado = tituloFormulario
         .trim()
         .toLowerCase()
@@ -257,18 +257,66 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
         try {
             const idPsn = interaction.fields.getTextInputValue('p_0') || '';
             const apodoGt7 = interaction.fields.getTextInputValue('p_1') || '';
-            const numero = interaction.fields.getTextInputValue('p_2') || '';
+            const rawNumero = (interaction.fields.getTextInputValue('p_2') || '').trim();
+
+            // 1️⃣ Formatear el número con '#' obligatoriamente delante y sin espacios (ej: #5)
+            const numeroFormateado = `#${rawNumero.replace(/^#/, '')}`;
 
             const rowData = [
                 interaction.user.username,          // Columna A: piloto discord
                 `<@${interaction.user.id}>`,        // Columna B: ID usuario (<@ID>)
                 idPsn,                              // Columna C: id PSN
                 apodoGt7,                           // Columna D: apodo Gt7
-                numero                              // Columna E: número
+                numeroFormateado                    // Columna E: número (#5)
             ];
 
             await appendSheetData('Inscripción!A:E', [rowData]);
             console.log('✅ [Google Sheets] Inscripción añadida correctamente a la pestaña "Inscripción".');
+
+            // 2️⃣ Asignar automáticamente el rol @GtCup2 al usuario
+            try {
+                const member = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+                if (member) {
+                    const roleGtCup2 = interaction.guild.roles.cache.find(
+                        r => r.name.toLowerCase() === 'gtcup2' || r.name.toLowerCase() === 'gt cup 2'
+                    );
+                    if (roleGtCup2) {
+                        await member.roles.add(roleGtCup2);
+                        console.log(`🏷️ [Roles] Rol @${roleGtCup2.name} asignado a ${interaction.user.username}.`);
+                    } else {
+                        console.warn('⚠️ [Roles] No se encontró el rol "GtCup2" en el servidor.');
+                    }
+                }
+            } catch (roleErr) {
+                console.error('❌ Error asignando el rol @GtCup2:', roleErr);
+            }
+
+            // 3️⃣ Publicar la lista completa y actualizada de inscritos en orden de llegada
+            try {
+                const sheetRows = await readSheetData('Inscripción!A:E');
+                if (sheetRows && sheetRows.length > 0) {
+                    let listaTexto = '🏁 **LISTA OFICIAL DE INSCRITOS (GtCup2)**\n\n';
+                    
+                    // Recorremos las filas omitiendo la cabecera si la hubiera
+                    sheetRows.forEach((row, idx) => {
+                        const mencionUsuario = row[1] || `<@${interaction.user.id}>`;
+                        const apodo = row[3] || row[0] || 'Piloto';
+                        const dorsal = row[4] || '';
+                        
+                        listaTexto += `**${idx + 1}.** ${mencionUsuario} (${apodo}) - Dorsal: \`${dorsal}\`\n`;
+                    });
+
+                    listaTexto += `\n— *Total inscritos: ${sheetRows.length}*`;
+
+                    const canalRespuestas = await interaction.guild.channels.fetch(formulario.canalRespuestas) as TextChannel;
+                    if (canalRespuestas && canalRespuestas.isTextBased()) {
+                        await canalRespuestas.send({ content: listaTexto });
+                    }
+                }
+            } catch (listErr) {
+                console.error('❌ Error publicando la lista de inscritos:', listErr);
+            }
+
         } catch (sheetError) {
             console.error('❌ Error al guardar la inscripción en Google Sheets:', sheetError);
         }
