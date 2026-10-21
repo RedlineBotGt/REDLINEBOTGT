@@ -30,7 +30,7 @@ export async function handleEventAdminManageButton(interaction: ButtonInteractio
         .setPlaceholder('📊 Selecciona el estado...')
         .addOptions(
             { label: '✅ Asistiré', value: 'yes', description: 'Añadir a la parrilla titular' },
-            { label: '®️ Reserva', value: 'reserve', description: 'Añadir a lista de reservas' },
+            { label: '🔃 Reserva', value: 'reserve', description: 'Añadir a lista de reservas' },
             { label: '❔ Duda', value: 'maybe', description: 'Añadir a lista de duda' },
             { label: '❌ No puedo', value: 'no', description: 'Marcar como ausente' }
         );
@@ -187,7 +187,7 @@ export async function handleEventAdminConfirmButton(interaction: ButtonInteracti
     return true;
 }
 
-// --- 5. GESTIÓN DE RSVP Y RESTRICCIÓN DE ROLES (TITULAR VS RESERVA) ---
+// --- 5. GESTIÓN DE RSVP Y RESTRICCIÓN ESTRICTA DE ROLES (TITULAR VS RESERVA) ---
 export async function handleEventRsvpButton(interaction: ButtonInteraction): Promise<boolean> {
     const customId = interaction.customId;
     if (!['event_rsvp_yes', 'event_rsvp_reserve', 'event_rsvp_maybe', 'event_rsvp_no'].includes(customId)) return false;
@@ -201,26 +201,44 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
     const member = interaction.member as GuildMember;
     if (!member) return true;
 
-    // Detectar si tiene rol Titular o Reserva por nombre de rol (o busca por ID si prefieres)
+    // Detectar roles por nombre
     const isTitular = member.roles.cache.some(r => r.name.toLowerCase().includes('titular'));
     const isReserva = member.roles.cache.some(r => r.name.toLowerCase().includes('reserva'));
 
-    // ⛔ Restricción 1: Un titular NO puede pulsar el botón Reserva (®️)
-    if (customId === 'event_rsvp_reserve' && isTitular) {
-        await interaction.reply({
-            content: '❌ Como **Piloto Titular**, no puedes apuntarte en la lista de reservas. Usa **Asistiré**, **Duda** o **No puedo**.',
-            flags: [MessageFlags.Ephemeral]
-        });
-        return true;
+    // ⛔ Restricción 1: Botón Reserva (🔃)
+    if (customId === 'event_rsvp_reserve') {
+        if (isTitular) {
+            await interaction.reply({
+                content: '❌ Como **Piloto Titular**, no puedes apuntarte en la lista de reservas.',
+                flags: [MessageFlags.Ephemeral]
+            });
+            return true;
+        }
+        if (!isReserva) {
+            await interaction.reply({
+                content: '❌ Necesitas tener el rol de **Reserva** para poder apuntarte en esta lista.',
+                flags: [MessageFlags.Ephemeral]
+            });
+            return true;
+        }
     }
 
-    // ⛔ Restricción 2: Un reserva NO puede pulsar el botón Verde (🟢)
-    if (customId === 'event_rsvp_yes' && isReserva) {
-        await interaction.reply({
-            content: '❌ Como **Piloto Reserva**, no puedes confirmarte directamente en verde. Pulsa el botón ®️ **Reserva** para entrar en lista de espera.',
-            flags: [MessageFlags.Ephemeral]
-        });
-        return true;
+    // ⛔ Restricción 2: Botón Verde / Asistiré (✅)
+    if (customId === 'event_rsvp_yes') {
+        if (isReserva) {
+            await interaction.reply({
+                content: '❌ Como **Piloto Reserva**, no puedes confirmarte directamente en verde. Pulsa el botón 🔃 **Reserva**.',
+                flags: [MessageFlags.Ephemeral]
+            });
+            return true;
+        }
+        if (!isTitular) {
+            await interaction.reply({
+                content: '❌ Necesitas tener el rol de **Titular** para confirmar asistencia en verde.',
+                flags: [MessageFlags.Ephemeral]
+            });
+            return true;
+        }
     }
 
     const col = await getEventsCollection();
@@ -266,22 +284,19 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
         }
     } else if (customId === 'event_rsvp_reserve') {
         eventDoc.rsvps.reserve.push(userId);
-        responseContent = '®️ ¡Te has registrado correctamente en la lista de **Reservas**!';
-        // Asignación de rol de asistente también para el Reserva
+        responseContent = '🔃 ¡Te has registrado correctamente en la lista de **Reservas**!';
         if (asistenteRole && !member.roles.cache.has(asistenteRole.id)) {
             await member.roles.add(asistenteRole).catch(() => {});
         }
     } else if (customId === 'event_rsvp_maybe') {
         eventDoc.rsvps.maybe.push(userId);
         responseContent = '❓ Tu estado (**Duda**) ha quedado registrado.';
-        // Asignación de rol de asistente también para Duda
         if (asistenteRole && !member.roles.cache.has(asistenteRole.id)) {
             await member.roles.add(asistenteRole).catch(() => {});
         }
     } else if (customId === 'event_rsvp_no') {
         eventDoc.rsvps.no.push(userId);
         responseContent = '❌ Tu asistencia ha sido marcada como **No puedo**.';
-        // Retirar el rol de asistente
         if (asistenteRole && member.roles.cache.has(asistenteRole.id)) {
             await member.roles.remove(asistenteRole).catch(() => {});
         }
