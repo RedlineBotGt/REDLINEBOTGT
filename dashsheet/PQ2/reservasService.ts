@@ -1,8 +1,8 @@
 import { Guild } from 'discord.js';
-import { readSheetData } from '../sheetsService';
+import { getSheetData } from '../sheetsService';
 
 export async function procesarAsignacionReservas(guild: Guild): Promise<{ success: number; errors: number; notFound: number }> {
-    const rows = await readSheetData('PQ2!K22:K37');
+    const rows = await getSheetData('PQ2!K22:K37');
     
     let success = 0;
     let errors = 0;
@@ -19,7 +19,6 @@ export async function procesarAsignacionReservas(guild: Guild): Promise<{ succes
 
     for (const row of rows) {
         const cellValue = row[0] || '';
-        
         const match = cellValue.match(/<@!?(\d+)>/) || cellValue.match(/^(\d+)$/);
         if (!match) continue;
 
