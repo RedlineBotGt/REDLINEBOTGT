@@ -214,6 +214,7 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
     }
 
     try {
+        // 🔄 Actualizado objeto del evento para incluir la lista 'reserve'
         const dummyEventDoc = {
             title: session.title,
             date: session.date,
@@ -221,7 +222,7 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
             description: session.description,
             image: session.image,
             status: 'sent',
-            rsvps: { yes: [], maybe: [], no: [] }
+            rsvps: { yes: [], maybe: [], no: [], reserve: [] }
         };
 
         const { embed, components } = buildEventEmbedAndRows(dummyEventDoc);
@@ -238,7 +239,7 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
                 $set: { 
                     messageId: sentMessage.id,
                     status: 'sent',
-                    rsvps: { yes: [], maybe: [], no: [] },
+                    rsvps: { yes: [], maybe: [], no: [], reserve: [] },
                     createdAt: new Date(),
                     scheduledAt: session.scheduledAt
                 } 
@@ -339,7 +340,8 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
                 intervalMs,
                 remainingTimes: repeats ? totalTimes : 1,
                 status: 'pending_publish',
-                rsvps: { yes: [], maybe: [], no: [] },
+                // 🔄 Inicializamos 'reserve' también para eventos programados
+                rsvps: { yes: [], maybe: [], no: [], reserve: [] },
                 createdAt: new Date()
             }
         }
