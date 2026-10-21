@@ -1,16 +1,14 @@
 import { Guild } from 'discord.js';
-import { readSheetData } from '../sheetsService'; // Ajusta la ruta relativa según tu estructura
+import { readSheetData } from '../sheetsService';
 
 export async function procesarAsignacionTitulares(guild: Guild): Promise<{ success: number; errors: number; notFound: number }> {
-    // Leemos el rango K2:K16 de la pestaña PQ2
     const rows = await readSheetData('PQ2!K2:K16');
     
     let success = 0;
     let errors = 0;
     let notFound = 0;
 
-    // Buscar el rol 'Titular' en el servidor
-    const rolTitular = guild.roles.cache.find(r => r.name.toLowerCase() === 'titular');
+    const rolTitular = guild.roles.cache.find(r => r.name.toLowerCase().trim() === 'titular');
     if (!rolTitular) {
         throw new Error('No se encontró el rol "Titular" en el servidor.');
     }
@@ -20,9 +18,9 @@ export async function procesarAsignacionTitulares(guild: Guild): Promise<{ succe
     }
 
     for (const row of rows) {
-        const cellValue = row[0] || ''; // Columna K
+        const cellValue = row[0] || '';
         
-        // Extraer el ID de usuario si viene en formato <@123456789> o como ID numérico puro
+        // Extrae el ID del formato <@123456789> o ID numérico directo
         const match = cellValue.match(/<@!?(\d+)>/) || cellValue.match(/^(\d+)$/);
         if (!match) continue;
 
@@ -40,7 +38,7 @@ export async function procesarAsignacionTitulares(guild: Guild): Promise<{ succe
             }
         } catch (err) {
             errors++;
-            console.error(`Error asignando rol al usuario ${userId}:`, err);
+            console.error(`Error asignando rol Titular al usuario ${userId}:`, err);
         }
     }
 
