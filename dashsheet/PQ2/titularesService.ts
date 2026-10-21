@@ -1,8 +1,8 @@
 import { Guild } from 'discord.js';
-import { readSheetData } from '../sheetsService';
+import { getSheetData } from '../sheetsService';
 
 export async function procesarAsignacionTitulares(guild: Guild): Promise<{ success: number; errors: number; notFound: number }> {
-    const rows = await readSheetData('PQ2!K2:K16');
+    const rows = await getSheetData('PQ2!K2:K16');
     
     let success = 0;
     let errors = 0;
@@ -19,8 +19,6 @@ export async function procesarAsignacionTitulares(guild: Guild): Promise<{ succe
 
     for (const row of rows) {
         const cellValue = row[0] || '';
-        
-        // Extrae el ID del formato <@123456789> o ID numérico directo
         const match = cellValue.match(/<@!?(\d+)>/) || cellValue.match(/^(\d+)$/);
         if (!match) continue;
 
