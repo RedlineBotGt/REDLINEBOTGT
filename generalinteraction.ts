@@ -4,7 +4,7 @@ import { handleSheetsInteraction } from './dashsheet/sheetsInteraction';   // �
 import { handleDadoModalSubmit } from './commands/dado'; // ➔ Comando del dado
 import { handleAvisosInteractions } from './dashadmin/avisos/interactionavisos'; // ➔ Ruta corregida
 import { handleClubInteractions } from './dashadmin/club/clubactions'; // ➔ Manejador de GT Club
-import { handleIngresoJornadaSelect } from './dashsheet/ingreso/ingresointeraction'; // 👈 1. Importar el manejador de /ingreso
+import { handlePQ2Interactions } from './dashsheet/PQ2/interactionPQ2'; // 👈 Importar enrutador de PQ2
 
 /**
  * Enrutador Maestro Global de Interacciones
@@ -12,8 +12,12 @@ import { handleIngresoJornadaSelect } from './dashsheet/ingreso/ingresointeracti
  */
 export async function handleGlobalInteraction(interaction: Interaction, client: Client & { commands?: Map<string, any> }) {
     try {
-        // 1. Manejo de Comandos Slash (ej: /dash, /dashstaff, /dashsheets, /borrar, /dado, /club, /ingreso)
+        // 1. Manejo de Comandos Slash generales o de PQ2 (/titulares, /reservas, etc.)
         if (interaction.isChatInputCommand()) {
+            // Comprobación prioritaria para comandos de PQ2
+            const handledByPQ2 = await handlePQ2Interactions(interaction);
+            if (handledByPQ2) return;
+
             const command = client.commands?.get(interaction.commandName);
 
             if (!command) {
@@ -32,12 +36,6 @@ export async function handleGlobalInteraction(interaction: Interaction, client: 
         if (interaction.isModalSubmit() && interaction.customId === 'modal_dado_lanza') {
             const handledDado = await handleDadoModalSubmit(interaction);
             if (handledDado) return;
-        }
-
-        // 1.6. Manejo de Interacciones de /ingreso (Menú desplegable de selección de jornada)
-        if (interaction.isStringSelectMenu() && interaction.customId.startsWith('ingreso_select_jornada')) {
-            await handleIngresoJornadaSelect(interaction);
-            return;
         }
 
         // 2. Manejo de Interacciones de GT Club (Comando /club, Modales y Selects)
