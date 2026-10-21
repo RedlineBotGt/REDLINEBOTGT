@@ -10,7 +10,7 @@ import { data as listaCommand } from './commands/lista';
 import { data as clubCommand } from './commands/club';
 import { data as clubclasCommand } from './commands/clubclas';
 import { data as transCommand } from './commands/trans';
-import { data as ingresoCommand } from './commands/ingreso'; // 👈 1. Importar el comando ingreso
+import { data as titularesCommand } from './commands/titulares'; // 👈 1. Importar el comando titulares
 
 // Mapeamos los comandos activos que se registrarán en Discord
 const commandList = [
@@ -25,7 +25,7 @@ const commandList = [
     { name: 'club', data: clubCommand },
     { name: 'clubclas', data: clubclasCommand },
     { name: 'trans', data: transCommand },
-    { name: 'ingreso', data: ingresoCommand }, // 👈 2. Añadirlo a la lista
+    { name: 'titulares', data: titularesCommand }, // 👈 2. Añadirlo a la lista
 ];
 
 const commands = commandList.map(cmd => {
