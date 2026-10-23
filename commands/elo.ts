@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction } from 'discord.js';
-import { getSheetData } from '../sheetsService'; // O la ruta relativa correcta desde commands/ hacia sheetsService
+import { getSheetData } from '../dashsheet/sheetservice';
 
 export const data = new SlashCommandBuilder()
   .setName('elo')
@@ -9,7 +9,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply();
 
   try {
-    // 1. Usar el mismo servicio de lectura que ya usa el resto del bot
+    // 1. Obtener datos de la pestaña ELO usando el servicio centralizado del bot
     const rows = await getSheetData('ELO!Q2:R24');
 
     if (!rows || rows.length === 0) {
