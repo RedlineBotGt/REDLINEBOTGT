@@ -6,8 +6,8 @@ import { calcularEloSesion, ParticipanteResultado } from './eloEngine';
  * calcula el Elo acumulado jornada a jornada y sobrescribe la columna P en 'PQ2'.
  */
 export async function procesarYActualizarEloGeneral(): Promise<void> {
-    // 1. Obtener los pilotos y su Elo Semilla/Inicial de 'PQ2' (Columnas M, N, O)
-    const pq2Data = await getSheetData('PQ2!M2:O22') || [];
+    // 1. Obtener los pilotos (Col N) y su Elo (Col P) de 'PQ2' (N2:P22)
+    const pq2Data = await getSheetData('PQ2!N2:P22') || [];
     
     if (pq2Data.length === 0) {
         console.error('❌ No se encontraron datos de pilotos en PQ2.');
@@ -18,8 +18,8 @@ export async function procesarYActualizarEloGeneral(): Promise<void> {
     const ordenPilotos: string[] = [];
 
     for (const row of pq2Data) {
-        const piloto = row[0] ? row[0].toString().trim() : '';
-        const eloInicial = row[2] ? parseFloat(row[2].toString()) : 1200;
+        const piloto = row[0] ? row[0].toString().trim() : ''; // Columna N: Nombre del piloto
+        const eloInicial = row[2] ? parseFloat(row[2].toString()) : 1200; // Columna P: Elo
 
         if (piloto) {
             const clave = piloto.toLowerCase();
@@ -36,11 +36,11 @@ export async function procesarYActualizarEloGeneral(): Promise<void> {
         return;
     }
 
-    // Agrupar los resultados por identificador de sesión respetando el orden de entrada
+    // Agrupar los resultados por identificador de sesión
     const sesionesMap = new Map<string, ParticipanteResultado[]>();
 
     for (const row of ingreso2Data) {
-        const sesion = row[0] ? row[0].toString().trim().toUpperCase() : ''; // Columna A: Q1, C1, Q2, C2...
+        const sesion = row[0] ? row[0].toString().trim().toUpperCase() : ''; // Columna A: Q1, C1...
         const posicion = row[1] ? parseInt(row[1].toString(), 10) : NaN;      // Columna B: Posición
         const piloto = row[2] ? row[2].toString().trim() : '';               // Columna C: Piloto
 
@@ -56,14 +56,11 @@ export async function procesarYActualizarEloGeneral(): Promise<void> {
         });
     }
 
-    // 3. Procesar secuencialmente todas las tandas (Q1 -> C1 -> Q2 -> C2...)
+    // 3. Procesar secuencialmente todas las tandas
     for (const [nombreSesion, participantes] of sesionesMap.entries()) {
         const esQualy = nombreSesion.startsWith('Q');
-        
-        // Recalcular Elo de la tanda usando los valores acumulados hasta este punto
         const nuevosElos = calcularEloSesion(participantes, eloAcumuladoMap, esQualy);
 
-        // Actualizar el estado del mapa acumulado
         for (const [pilotoKey, nuevoElo] of nuevosElos.entries()) {
             eloAcumuladoMap.set(pilotoKey, nuevoElo);
         }
@@ -75,7 +72,7 @@ export async function procesarYActualizarEloGeneral(): Promise<void> {
         return [eloFinal];
     });
 
-    // 5. Sobrescribir la columna P con el Elo tras la última carrera procesada
+    // 5. Sobrescribir la columna P con el Elo calculado
     await updateSheetData('PQ2!P2:P22', columnaEloFinalOutput);
 
     console.log(`✅ Elo recalculado exitosamente tras procesar ${sesionesMap.size} sesiones de Ingreso2.`);
