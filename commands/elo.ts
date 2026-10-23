@@ -16,9 +16,15 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     });
 
     const sheets = google.sheets({ version: 'v4', auth });
-    const spreadsheetId = process.env.SPREADSHEET_ID;
+    
+    // 2. ID de tu Google Sheet (con respaldo por si la variable de entorno no está cargada)
+    const spreadsheetId = process.env.SPREADSHEET_ID || '1E-dMxBrK7gZLAGR2Ge7OuGEt-IvzVK8BWOTtxZojsXs';
 
-    // 2. Leer rango Q2:R24 de la pestaña ELO
+    if (!spreadsheetId) {
+      return await interaction.editReply('❌ No se ha configurado el SPREADSHEET_ID.');
+    }
+
+    // 3. Leer rango Q2:R24 de la pestaña ELO
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: 'ELO!Q2:R24',
@@ -30,7 +36,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       return await interaction.editReply('No se encontraron datos en la hoja de ELO.');
     }
 
-    // 3. Formatear las filas (Q = ID/Mención de Discord, R = ELO)
+    // 4. Formatear las filas (Q = ID/Mención de Discord, R = ELO)
     const rankingText = rows
       .filter(row => row[0] && row[1])
       .map((row, index) => {
@@ -40,7 +46,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       })
       .join('\n');
 
-    // 4. Crear Embed para Discord
+    // 5. Crear Embed para Discord
     const embed = new EmbedBuilder()
       .setTitle('🏆 RANKING ELO')
       .setColor('#FF0000')
