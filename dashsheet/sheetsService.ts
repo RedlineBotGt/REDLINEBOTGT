@@ -1,82 +1,117 @@
-import { getSheetData, updateSheetData } from '../sheetsService';
-import { calcularEloSesion, ParticipanteResultado } from './eloEngine';
+import { google } from 'googleapis';
+import { Buffer } from 'buffer';
 
-/**
- * Procesa dinámicamente todas las sesiones (Qx y Cx) registradas en 'Ingreso2',
- * calcula el Elo acumulado jornada a jornada y sobrescribe la columna P en 'PQ2'.
- */
-export async function procesarYActualizarEloGeneral(): Promise<void> {
-    // 1. Obtener los pilotos y su Elo Semilla/Inicial de 'PQ2' (Columnas M, N, O)
-    const pq2Data = await getSheetData('PQ2!M2:O22') || [];
-    
-    if (pq2Data.length === 0) {
-        console.error('❌ No se encontraron datos de pilotos en PQ2.');
-        return;
+// 📌 ID de tu Google Sheet para REDLINE GT
+const SPREADSHEET_ID = '1E-dMxBrK7gZLAGR2Ge7OuGEt-IvzVK8BWOTtxZojsXs';
+
+function cleanAndFormatPrivateKey(raw: string): string {
+  let cleaned = raw.trim();
+
+  // Quitar comillas envolventes si las hubiera
+  if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+    cleaned = cleaned.slice(1, -1);
+  }
+
+  // Si está en Base64 (no empieza por -----BEGIN), la decodificamos
+  if (!cleaned.startsWith('-----BEGIN')) {
+    try {
+      cleaned = Buffer.from(cleaned, 'base64').toString('utf8');
+      console.log('🔓 [Google Auth] Clave decodificada con éxito desde Base64.');
+    } catch (e) {
+      console.error('❌ Error al decodificar Base64, usando valor directo.');
     }
+  }
 
-    const eloAcumuladoMap = new Map<string, number>();
-    const ordenPilotos: string[] = [];
+  // Normalizar escapes de saltos de línea
+  cleaned = cleaned
+    .replace(/\\\\n/g, '\n')
+    .replace(/\\n/g, '\n');
 
-    for (const row of pq2Data) {
-        const piloto = row[0] ? row[0].toString().trim() : '';
-        const eloInicial = row[2] ? parseFloat(row[2].toString()) : 1200;
+  const pemHeader = '-----BEGIN PRIVATE KEY-----';
+  const pemFooter = '-----END PRIVATE KEY-----';
 
-        if (piloto) {
-            const clave = piloto.toLowerCase();
-            eloAcumuladoMap.set(clave, eloInicial);
-            ordenPilotos.push(clave);
-        }
-    }
+  // Extraer exclusivamente el contenido base64 de la clave
+  const body = cleaned
+    .replace(pemHeader, '')
+    .replace(pemFooter, '')
+    .replace(/[\r\n\s]+/g, '');
 
-    // 2. Leer un rango amplio de 'Ingreso2' para cubrir todas las jornadas registradas
-    const ingreso2Data = await getSheetData('Ingreso2!A2:C1000') || [];
-    
-    if (ingreso2Data.length === 0) {
-        console.log('⚠️ No hay sesiones registradas en Ingreso2.');
-        return;
-    }
+  const chunkedBody = body.match(/.{1,64}/g)?.join('\n') || body;
 
-    // Agrupar los resultados por identificador de sesión respetando el orden de entrada
-    const sesionesMap = new Map<string, ParticipanteResultado[]>();
+  return `${pemHeader}\n${chunkedBody}\n${pemFooter}\n`;
+}
 
-    for (const row of ingreso2Data) {
-        const sesion = row[0] ? row[0].toString().trim().toUpperCase() : ''; // Columna A: Q1, C1, Q2, C2...
-        const posicion = row[1] ? parseInt(row[1].toString(), 10) : NaN;      // Columna B: Posición
-        const piloto = row[2] ? row[2].toString().trim() : '';               // Columna C: Piloto
+function getAuthClient() {
+  const privateKeyRaw = process.env.GOOGLE_PRIVATE_KEY || process.env.PRIVATE_KEY;
+  const clientEmail = process.env.GOOGLE_CLIENT_EMAIL || process.env.CLIENT_EMAIL;
 
-        if (!sesion || isNaN(posicion) || !piloto) continue;
+  if (!privateKeyRaw || !clientEmail) {
+    throw new Error('❌ Faltan las variables GOOGLE_PRIVATE_KEY o GOOGLE_CLIENT_EMAIL en Render.');
+  }
 
-        if (!sesionesMap.has(sesion)) {
-            sesionesMap.set(sesion, []);
-        }
+  const privateKey = cleanAndFormatPrivateKey(privateKeyRaw);
 
-        sesionesMap.get(sesion)!.push({
-            piloto,
-            posicion
-        });
-    }
+  return new google.auth.JWT({
+    email: clientEmail,
+    key: privateKey,
+    scopes: [
+      'https://www.googleapis.com/auth/spreadsheets.readonly',
+      'https://www.googleapis.com/auth/spreadsheets'
+    ]
+  });
+}
 
-    // 3. Procesar secuencialmente todas las tandas (Q1 -> C1 -> Q2 -> C2...)
-    for (const [nombreSesion, participantes] of sesionesMap.entries()) {
-        const esQualy = nombreSesion.startsWith('Q');
-        
-        // Recalcular Elo de la tanda usando los valores acumulados hasta este punto
-        const nuevosElos = calcularEloSesion(participantes, eloAcumuladoMap, esQualy);
+export async function getSheetData(range: string): Promise<any[][] | undefined> {
+  try {
+    const auth = getAuthClient();
+    const sheets = google.sheets({ version: 'v4', auth });
 
-        // Actualizar el estado del mapa acumulado
-        for (const [pilotoKey, nuevoElo] of nuevosElos.entries()) {
-            eloAcumuladoMap.set(pilotoKey, nuevoElo);
-        }
-    }
-
-    // 4. Preparar la salida final para la Columna P de PQ2
-    const columnaEloFinalOutput: (number)[][] = ordenPilotos.map(clavePiloto => {
-        const eloFinal = eloAcumuladoMap.get(clavePiloto) ?? 1200;
-        return [eloFinal];
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range,
     });
 
-    // 5. Sobrescribir la columna P con el Elo tras la última carrera procesada
-    await updateSheetData('PQ2!P2:P22', columnaEloFinalOutput);
+    return response.data.values;
+  } catch (error: any) {
+    console.error(`❌ Error al leer Google Sheets en el rango ${range}:`, error.message);
+    throw error;
+  }
+}
 
-    console.log(`✅ Elo recalculado exitosamente tras procesar ${sesionesMap.size} sesiones de Ingreso2.`);
+export async function appendSheetData(range: string, values: any[][]): Promise<void> {
+  try {
+    const auth = getAuthClient();
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values,
+      },
+    });
+  } catch (error: any) {
+    console.error(`❌ Error al escribir en Google Sheets en el rango ${range}:`, error.message);
+    throw error;
+  }
+}
+
+export async function updateSheetData(range: string, values: any[][]): Promise<void> {
+  try {
+    const auth = getAuthClient();
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values,
+      },
+    });
+  } catch (error: any) {
+    console.error(`❌ Error al actualizar Google Sheets en el rango ${range}:`, error.message);
+    throw error;
+  }
 }
