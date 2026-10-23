@@ -3,12 +3,18 @@ import { Buffer } from 'buffer';
 
 const DEFAULT_SPREADSHEET_ID = '1E-dMxBrK7gZLAGR2Ge7OuGEt-IvzVK8BWOTtxZojsXs';
 
+export interface DraftChoice {
+    pilot: string;
+    model: string;
+    choiceIndex?: number; // Guardamos el índice exacto de la opción elegida
+}
+
 export interface DraftState {
     pilots: string[];                              // Pilotos / IDs por turno (Columna B)
     allModels: string[];                           // Modelos de coches (Columna C)
-    choices: { pilot: string; model: string }[];   // Elecciones realizadas (Cols D y E)
+    choices: DraftChoice[];                        // Elecciones realizadas (Cols D y E)
     currentPilot: string | null;                   // Piloto al que le toca elegir en este turno
-    availableModels: string[];                     // Modelos libres
+    takenIndices: Set<number>;                     // Índices de la lista allModels que ya han sido cogidos
     isCompleted: boolean;                          // True si todos han elegido
 }
 
@@ -80,16 +86,26 @@ export async function getDraftState(): Promise<DraftState> {
         const pilots: string[] = pilotRows.map((row: any[]) => row[0]).filter(Boolean);
         const allModels: string[] = modelRows.map((row: any[]) => row[0]).filter(Boolean);
 
-        const choices: { pilot: string; model: string }[] = choiceRows
+        const choices: DraftChoice[] = choiceRows
             .filter((row: any[]) => row[0] && row[1])
             .map((row: any[]) => ({ pilot: row[0], model: row[1] }));
 
-        // Conjuntos para filtrado rápido normalizados por ID limpio
-        const chosenModelsSet = new Set(choices.map(c => c.model.toLowerCase().trim()));
-        const chosenPilotsCleanSet = new Set(choices.map(c => extractUserId(c.pilot)));
+        // Para evitar tachar réplicas del mismo modelo, emparejamos cada elección en orden de llegada
+        // asignándola a la primera aparición libre en la lista allModels
+        const takenIndices = new Set<number>();
 
-        // Modelos disponibles
-        const availableModels = allModels.filter(model => !chosenModelsSet.has(model.toLowerCase().trim()));
+        for (const choice of choices) {
+            const targetModelClean = choice.model.toLowerCase().trim();
+            for (let i = 0; i < allModels.length; i++) {
+                if (!takenIndices.has(i) && allModels[i].toLowerCase().trim() === targetModelClean) {
+                    takenIndices.add(i);
+                    choice.choiceIndex = i; // Guardamos el índice asignado a esta selección
+                    break;
+                }
+            }
+        }
+
+        const chosenPilotsCleanSet = new Set(choices.map(c => extractUserId(c.pilot)));
 
         // El primer piloto de la lista B que todavía no aparece en las elecciones D
         const currentPilot = pilots.find(pilot => {
@@ -97,7 +113,6 @@ export async function getDraftState(): Promise<DraftState> {
             return cleanId ? !chosenPilotsCleanSet.has(cleanId) : false;
         }) || null;
 
-        // Comprobación exacta: Es completado si no queda piloto pendiente o si las elecciones alcanzan/superan la lista de pilotos
         const isCompleted = currentPilot === null || pilots.length === 0 || choices.length >= pilots.length;
 
         return {
@@ -105,7 +120,7 @@ export async function getDraftState(): Promise<DraftState> {
             allModels,
             choices,
             currentPilot,
-            availableModels,
+            takenIndices,
             isCompleted
         };
     } catch (error) {
