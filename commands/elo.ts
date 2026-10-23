@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
-import { getSheetData } from '../sheetsService';
+import { getSheetData } from '../dashsheet/sheetService';
 
 export const data = new SlashCommandBuilder()
   .setName('elo')
