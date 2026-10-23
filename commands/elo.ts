@@ -18,10 +18,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const rankingLines = rows
       .filter(row => row[0] && row[1])
       .map((row, index) => {
-        const position = `${index + 1}.`.padEnd(4, ' ');
-        const userIdMention = row[0];
-        const eloPoints = `${row[1]} pts`;
-        return `${position} ${userIdMention} \`➡️\` **${eloPoints}**`;
+        const position = `${index + 1}`.padStart(2, ' ');
+        const userIdMention = row[0]; // Mención <@ID> fuera de comillas de código
+        const eloPoints = `${row[1]}`;
+        return `\`${position}\` | ${userIdMention} | \`${eloPoints} pts\``;
       });
 
     if (rankingLines.length === 0) {
