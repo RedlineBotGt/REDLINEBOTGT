@@ -1,4 +1,4 @@
-import { ButtonInteraction, StringSelectMenuInteraction, EmbedBuilder } from 'discord.js';
+import { Interaction, EmbedBuilder, ButtonInteraction, StringSelectMenuInteraction } from 'discord.js';
 import { getSheetData } from '../sheetsService';
 import { procesarYActualizarEloGeneral } from './eloService';
 
@@ -6,14 +6,22 @@ import { procesarYActualizarEloGeneral } from './eloService';
  * Manejador principal para todas las interacciones de componentes (botones, menús)
  * pertenecientes al módulo de ELO.
  */
-export async function handleEloInteraction(
-    interaction: ButtonInteraction | StringSelectMenuInteraction
-): Promise<void> {
+export async function handleEloInteraction(interaction: Interaction): Promise<boolean> {
+    if (!interaction.isButton() && !interaction.isStringSelectMenu()) {
+        return false;
+    }
+
     const customId = interaction.customId;
+
+    // Comprobamos si la interacción pertenece al módulo ELO
+    if (!customId.includes('elo')) {
+        return false;
+    }
 
     // 1. Botón para refrescar manualmente el ELO
     if (customId === 'btn_refrescar_elo') {
-        await interaction.deferUpdate();
+        const componentInteraction = interaction as ButtonInteraction;
+        await componentInteraction.deferUpdate();
 
         try {
             // Volver a procesar todas las sesiones
@@ -44,11 +52,15 @@ export async function handleEloInteraction(
                 .setTimestamp()
                 .setFooter({ text: 'REDLINE GT CUP • Actualizado en vivo' });
 
-            await interaction.editReply({ embeds: [embed] });
+            await componentInteraction.editReply({ embeds: [embed] });
 
         } catch (error) {
             console.error('Error al refrescar la interacción de ELO:', error);
-            await interaction.followUp({ content: '❌ Error al intentar refrescar la tabla de ELO.', ephemeral: true });
+            await componentInteraction.followUp({ content: '❌ Error al intentar refrescar la tabla de ELO.', ephemeral: true });
         }
+
+        return true;
     }
+
+    return false;
 }
