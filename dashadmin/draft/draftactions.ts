@@ -232,8 +232,8 @@ export async function handleDraftModalSubmit(interaction: ModalSubmitInteraction
 
         const selectedModel = state.allModels[carIndex];
 
-        // Guardar la elección en Google Sheets (Cols D y E)
-        await recordDraftChoice(`<@${interaction.user.id}>`, selectedModel);
+        // Guardar la elección incluyendo el número exacto para evitar conflictos de nombres duplicados
+        await recordDraftChoice(`<@${interaction.user.id}>`, `${carIndex + 1}. ${selectedModel}`);
 
         // Obtener el estado actualizado tras la elección
         const updatedState = await getDraftState();
