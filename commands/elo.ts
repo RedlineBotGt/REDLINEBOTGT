@@ -1,7 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { google } from 'googleapis';
-import * as fs from 'fs';
-import * as path from 'path';
 
 export const data = new SlashCommandBuilder()
   .setName('elo')
@@ -11,16 +9,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply();
 
   try {
+    // 1. Configuración de autenticación compatible con Render y entorno local
     let auth;
-    const credentialsPath = path.join(process.cwd(), 'credentials.json');
-
-    // Si existe el archivo físico (local), lo usa; si no, usa variables de entorno o autenticación estándar de Render
-    if (fs.existsSync(credentialsPath)) {
-      auth = new google.auth.GoogleAuth({
-        keyFile: credentialsPath,
-        scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-      });
-    } else if (process.env.GOOGLE_PRIVATE_KEY && process.env.GOOGLE_CLIENT_EMAIL) {
+    
+    if (process.env.GOOGLE_PRIVATE_KEY && process.env.GOOGLE_CLIENT_EMAIL) {
+      // Si estamos en Render y usamos variables de entorno para la cuenta de servicio
       auth = new google.auth.GoogleAuth({
         credentials: {
           client_email: process.env.GOOGLE_CLIENT_EMAIL,
@@ -29,21 +22,23 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
       });
     } else {
+      // Método estándar (busca credenciales por defecto o archivo local si existe)
       auth = new google.auth.GoogleAuth({
+        keyFile: 'credentials.json',
         scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
       });
     }
 
     const sheets = google.sheets({ version: 'v4', auth });
     
-    // ID de tu Google Sheet con respaldo
+    // 2. ID de la Google Sheet de la liga
     const spreadsheetId = process.env.SPREADSHEET_ID || '1E-dMxBrK7gZLAGR2Ge7OuGEt-IvzVK8BWOTtxZojsXs';
 
     if (!spreadsheetId) {
       return await interaction.editReply('❌ No se ha configurado el SPREADSHEET_ID.');
     }
 
-    // Leer rango Q2:R24 de la pestaña ELO
+    // 3. Leer rango Q2:R24 de la pestaña ELO
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: 'ELO!Q2:R24',
@@ -55,7 +50,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       return await interaction.editReply('No se encontraron datos en la hoja de ELO.');
     }
 
-    // Formatear las filas (Q = ID/Mención de Discord, R = ELO)
+    // 4. Formatear las filas (Q = ID/Mención de Discord, R = ELO)
     const rankingText = rows
       .filter(row => row[0] && row[1])
       .map((row, index) => {
@@ -65,7 +60,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       })
       .join('\n');
 
-    // Crear Embed para Discord
+    // 5. Crear Embed para Discord
     const embed = new EmbedBuilder()
       .setTitle('🏆 RANKING ELO')
       .setColor('#FF0000')
@@ -76,6 +71,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   } catch (error) {
     console.error('Error al obtener los datos de ELO:', error);
-    await interaction.editReply('Hubo un error al intentar consultar el ELO desde Google Sheets.');
+    await interaction.editReply('Hubo an error al intentar consultar el ELO desde Google Sheets.');
   }
 }
