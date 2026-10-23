@@ -109,3 +109,28 @@ export async function appendSheetData(range: string, values: any[][]): Promise<v
     throw error;
   }
 }
+/**
+ * 📊 Actualiza/Sobrescribe celdas en un rango específico de la hoja de Google Sheets.
+ * @param range El rango exacto a actualizar (ej: "PQ2!P2:P22")
+ * @param values Array bidimensional con los valores a escribir
+ */
+export async function updateSheetData(range: string, values: any[][]): Promise<void> {
+  try {
+    const auth = getAuthClient();
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values,
+      },
+    });
+
+    console.log(`✅ [Google Sheets] Datos actualizados correctamente en el rango ${range}`);
+  } catch (error: any) {
+    console.error(`❌ Error al actualizar Google Sheets en el rango ${range}:`, error.message);
+    throw error;
+  }
+}
