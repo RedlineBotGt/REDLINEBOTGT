@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from 'discord.js';
-import { getSheetData } from '../Dashsheet/sheetsService';
-import { procesarYActualizarEloGeneral } from '../Dashsheet/ELO/eloService';
+import { getSheetData } from '../dashsheet/sheetsService';
+import { procesarYActualizarEloGeneral } from '../dashsheet/ELO/eloService';
 
 export const data = new SlashCommandBuilder()
     .setName('elo')
