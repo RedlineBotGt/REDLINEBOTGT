@@ -5,7 +5,7 @@ import { handleDadoModalSubmit } from './commands/dado'; // ➔ Comando del dado
 import { handleAvisosInteractions } from './dashadmin/avisos/interactionavisos'; // ➔ Ruta corregida
 import { handleClubInteractions } from './dashadmin/club/clubactions'; // ➔ Manejador de GT Club
 import { handlePQ2Interactions } from './dashsheet/PQ2/interactionPQ2'; // 👈 Importar enrutador de PQ2
-import { handleEloInteraction } from './Dashsheet/ELO/eloInteraction'; // 👈 Importar manejador de ELO
+import { handleEloInteraction } from './dashsheet/ELO/eloInteraction'; // 👈 Importar manejador de ELO
 
 /**
  * Enrutador Maestro Global de Interacciones
