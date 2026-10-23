@@ -9,19 +9,21 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply();
 
   try {
-    const rows = await getSheetData('ELO!Q2:R');
+    // Leemos de la P a la R para coger Piloto (P) y Puntos (R)
+    const rows = await getSheetData('ELO!P2:R');
 
     if (!rows || rows.length === 0) {
       return await interaction.editReply('No se encontraron datos en la hoja de ELO.');
     }
 
     const rankingLines = rows
-      .filter(row => row[0] && row[1])
+      .filter(row => row[0] && row[2]) // row[0] es la P (Piloto) y row[2] es la R (ELO)
       .map((row, index) => {
         const pos = `${index + 1}`.padStart(2, ' ');
-        const driverName = `${row[0]}`.padEnd(18, ' '); // Anoratra ny anaran'ny mpamily mivantana
-        const eloPoints = `${row[1]}`.padStart(4, ' ');
-        return `${pos} | ${driverName} | ${eloPoints}`;
+        const driver = `${row[0]}`.padEnd(20, ' '); // Ajusta espacio para el nombre
+        const eloPoints = `${row[2]}`.padStart(4, ' ');
+        
+        return `${pos} | ${driver} | ${eloPoints}`;
       });
 
     if (rankingLines.length === 0) {
