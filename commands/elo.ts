@@ -18,17 +18,17 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const rankingLines = rows
       .filter(row => row[0] && row[1])
       .map((row, index) => {
-        const position = `${index + 1}`.padStart(2, ' ');
-        const userIdMention = row[0]; // Mención <@ID> fuera de comillas de código
-        const eloPoints = `${row[1]}`;
-        return `\`${position}\` | ${userIdMention} | \`${eloPoints} pts\``;
+        const pos = `${index + 1}`.padStart(2, ' ');
+        const driverName = `${row[0]}`.padEnd(18, ' '); // Anoratra ny anaran'ny mpamily mivantana
+        const eloPoints = `${row[1]}`.padStart(4, ' ');
+        return `${pos} | ${driverName} | ${eloPoints}`;
       });
 
     if (rankingLines.length === 0) {
       return await interaction.editReply('No se encontraron datos válidos en el ranking de ELO.');
     }
 
-    const rankingText = `🏆 **RANKING ELO**\n\n` + rankingLines.join('\n');
+    const rankingText = `🏆 **RANKING ELO**\n\`\`\`text\n` + rankingLines.join('\n') + `\n\`\`\``;
 
     await interaction.editReply({ content: rankingText });
 
