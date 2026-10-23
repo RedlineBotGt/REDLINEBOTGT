@@ -6,11 +6,11 @@ import { calcularEloSesion, ParticipanteResultado } from './eloEngine';
  * calcula el Elo acumulado jornada a jornada y sobrescribe la columna P en 'PQ2'.
  */
 export async function procesarYActualizarEloGeneral(): Promise<void> {
-    // 1. Obtener los pilotos (Col N) y su Elo (Col P) de 'PQ2' (N2:P22)
+    // 1. Obtener los pilotos de 'PQ2' (Columnas N a P)
     const pq2Data = await getSheetData('PQ2!N2:P22') || [];
     
     if (pq2Data.length === 0) {
-        console.error('❌ No se encontraron datos de pilotos en PQ2.');
+        console.error('❌ [EloService] No se encontraron datos de pilotos en PQ2.');
         return;
     }
 
@@ -18,7 +18,7 @@ export async function procesarYActualizarEloGeneral(): Promise<void> {
     const ordenPilotos: string[] = [];
 
     for (const row of pq2Data) {
-        const piloto = row[0] ? row[0].toString().trim() : ''; // Columna N: Nombre del piloto
+        const piloto = row[0] ? row[0].toString().trim() : ''; // Columna N: Nombre
         const eloInicial = row[2] ? parseFloat(row[2].toString()) : 1200; // Columna P: Elo
 
         if (piloto) {
@@ -27,14 +27,16 @@ export async function procesarYActualizarEloGeneral(): Promise<void> {
             ordenPilotos.push(clave);
         }
     }
+    console.log('🔍 [EloService] Pilotos cargados desde PQ2:', ordenPilotos);
 
     // 2. Leer un rango amplio de 'Ingreso2' para cubrir todas las jornadas registradas
     const ingreso2Data = await getSheetData('Ingreso2!A2:C1000') || [];
     
     if (ingreso2Data.length === 0) {
-        console.log('⚠️ No hay sesiones registradas en Ingreso2.');
+        console.log('⚠️ [EloService] No hay sesiones registradas en Ingreso2.');
         return;
     }
+    console.log('🔍 [EloService] Filas totales leídas de Ingreso2:', ingreso2Data.length);
 
     // Agrupar los resultados por identificador de sesión
     const sesionesMap = new Map<string, ParticipanteResultado[]>();
@@ -56,9 +58,23 @@ export async function procesarYActualizarEloGeneral(): Promise<void> {
         });
     }
 
+    console.log('🔍 [EloService] Sesiones agrupadas encontradas:', Array.from(sesionesMap.keys()));
+    for (const [sesion, parts] of sesionesMap.entries()) {
+        console.log(`   ➡️ Sesión ${sesion}: ${parts.length} participantes`, parts.map(p => `(${p.posicion}) ${p.piloto}`));
+    }
+
     // 3. Procesar secuencialmente todas las tandas
     for (const [nombreSesion, participantes] of sesionesMap.entries()) {
         const esQualy = nombreSesion.startsWith('Q');
+        
+        // Comprobar si los nombres de Ingreso2 hacen match exacto con PQ2
+        participantes.forEach(p => {
+            const clave = p.piloto.toLowerCase();
+            if (!eloAcumuladoMap.has(clave)) {
+                console.warn(`⚠️ [EloService] ADVERTENCIA: El piloto '${p.piloto}' en sesión '${nombreSesion}' NO coincide con ningún piloto registrado en PQ2 (clave buscada: '${clave}').`);
+            }
+        });
+
         const nuevosElos = calcularEloSesion(participantes, eloAcumuladoMap, esQualy);
 
         for (const [pilotoKey, nuevoElo] of nuevosElos.entries()) {
@@ -75,5 +91,5 @@ export async function procesarYActualizarEloGeneral(): Promise<void> {
     // 5. Sobrescribir la columna P con el Elo calculado
     await updateSheetData('PQ2!P2:P22', columnaEloFinalOutput);
 
-    console.log(`✅ Elo recalculado exitosamente tras procesar ${sesionesMap.size} sesiones de Ingreso2.`);
+    console.log(`✅ [EloService] Elo recalculado exitosamente tras procesar ${sesionesMap.size} sesiones de Ingreso2.`);
 }
