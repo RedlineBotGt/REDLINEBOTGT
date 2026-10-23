@@ -5,6 +5,7 @@ import { handleDadoModalSubmit } from './commands/dado'; // ➔ Comando del dado
 import { handleAvisosInteractions } from './dashadmin/avisos/interactionavisos'; // ➔ Ruta corregida
 import { handleClubInteractions } from './dashadmin/club/clubactions'; // ➔ Manejador de GT Club
 import { handlePQ2Interactions } from './dashsheet/PQ2/interactionPQ2'; // 👈 Importar enrutador de PQ2
+import { handleEloInteraction } from './Dashsheet/ELO/eloInteraction'; // 👈 Importar manejador de ELO
 
 /**
  * Enrutador Maestro Global de Interacciones
@@ -36,6 +37,12 @@ export async function handleGlobalInteraction(interaction: Interaction, client: 
         if (interaction.isModalSubmit() && interaction.customId === 'modal_dado_lanza') {
             const handledDado = await handleDadoModalSubmit(interaction);
             if (handledDado) return;
+        }
+
+        // 1.6. Manejo de Interacciones de ELO (Botones, Menús, Refrescar)
+        if ((interaction.isButton() || interaction.isStringSelectMenu()) && interaction.customId.includes('elo')) {
+            await handleEloInteraction(interaction);
+            return;
         }
 
         // 2. Manejo de Interacciones de GT Club (Comando /club, Modales y Selects)
