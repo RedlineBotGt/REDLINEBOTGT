@@ -2,8 +2,7 @@ import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { google } from 'googleapis';
 import * as fs from 'fs';
 import * as path from 'path';
-// Importamos tu convertidor exacto desde la raíz
-import { getPrivateKey } from '../../convertKey';
+import { getPrivateKey } from '../convertKey';
 
 export const data = new SlashCommandBuilder()
   .setName('elo')
@@ -18,7 +17,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
     };
 
-    // Si existe el archivo físico usa keyFile; si no, utiliza getPrivateKey() de convertKey.ts
     if (fs.existsSync(credentialsPath)) {
       authOptions.keyFile = credentialsPath;
     } else {
