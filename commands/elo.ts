@@ -11,12 +11,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   try {
     // 1. Configuración de Google Sheets API
     const auth = new google.auth.GoogleAuth({
-      keyFile: 'credentials.json', // Tu archivo de credenciales de Google
+      keyFile: 'credentials.json',
       scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
     });
 
     const sheets = google.sheets({ version: 'v4', auth });
-    const spreadsheetId = process.env.SPREADSHEET_ID; // Tu ID del Google Sheet
+    const spreadsheetId = process.env.SPREADSHEET_ID;
 
     // 2. Leer rango Q2:R24 de la pestaña ELO
     const response = await sheets.spreadsheets.values.get({
@@ -32,10 +32,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     // 3. Formatear las filas (Q = ID/Mención de Discord, R = ELO)
     const rankingText = rows
-      .filter(row => row[0] && row[1]) // Filtra filas que no tengan datos completos
+      .filter(row => row[0] && row[1])
       .map((row, index) => {
-        const userIdMention = row[0]; // Rango Q: <@ID>
-        const eloPoints = row[1];     // Rango R: Valor del Elo
+        const userIdMention = row[0]; // Mención <@ID>
+        const eloPoints = row[1];     // Valor de ELO
         return `**${index + 1}.** ${userIdMention} — **${eloPoints} pts**`;
       })
       .join('\n');
