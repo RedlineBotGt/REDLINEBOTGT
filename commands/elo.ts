@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from 'discord.js';
-import { getSheetData } from '../dashsheet/sheetsService';
+import { getSheetData } from '../dashsheet/sheetsService'; // ➔ Corregido aquí
 import { procesarYActualizarEloGeneral } from '../dashsheet/ELO/eloService';
 
 export const data = new SlashCommandBuilder()
@@ -15,8 +15,6 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         await procesarYActualizarEloGeneral();
 
         // 3. Leer la lista de pilotos (Mención) y Elo actualizado desde PQ2 (N2:P22)
-        // Columna N: Mención de Discord (<@ID>)
-        // Columna P: Elo recalculado
         const sheetData = await getSheetData('PQ2!N2:P22') || [];
 
         if (sheetData.length === 0) {
