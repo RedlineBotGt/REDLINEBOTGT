@@ -30,7 +30,7 @@ export function buildEventEmbedAndRows(ev: any) {
     }
 
     embed.addFields(
-        { name: `✅ Asistiré (${yesList.length}/16)`, value: formatVerticalList(yesList), inline: false },
+        { name: `✅ Asistiré (${yesList.length}/15)`, value: formatVerticalList(yesList), inline: false }, // 👈 Cambiado a /15
         { name: `🔃 Reserva (${reserveList.length})`, value: formatVerticalList(reserveList), inline: false },
         { name: `❔ Duda (${maybeList.length})`, value: formatVerticalList(maybeList), inline: false },
         { name: `❌ No puedo (${noList.length})`, value: formatVerticalList(noList), inline: false }
