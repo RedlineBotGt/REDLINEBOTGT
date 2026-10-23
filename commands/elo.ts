@@ -9,13 +9,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply();
 
   try {
-    // 1. Buscamos el rol GtCup2 para obtener su mención
     const role = interaction.guild?.roles.cache.find(
       r => r.name.toLowerCase().trim() === 'gtcup2'
     );
     const roleMention = role ? `<@&${role.id}>` : '@GtCup2';
 
-    // 2. Leemos las columnas P (Piloto) a R (ELO)
     const rows = await getSheetData('ELO!P2:R');
 
     if (!rows || rows.length === 0) {
@@ -36,10 +34,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       return await interaction.editReply('No se encontraron datos válidos en el ranking de ELO.');
     }
 
-    // 3. Título con la mención al rol fuera del bloque de código
     const rankingText = `🏆 **RANKING ELO** — ${roleMention}\n\`\`\`text\n` + rankingLines.join('\n') + `\n\`\`\``;
 
-    await interaction.editReply({ content: rankingText });
+    await interaction.editReply({ 
+      content: rankingText,
+      allowedMentions: { roles: role ? [role.id] : [] }
+    });
 
   } catch (error) {
     console.error('Error al obtener los datos de ELO:', error);
