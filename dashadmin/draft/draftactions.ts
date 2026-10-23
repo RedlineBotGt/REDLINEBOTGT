@@ -29,7 +29,7 @@ function buildDraftEmbed(state: any): EmbedBuilder {
         .setColor(state.isCompleted ? 0x00FF00 : 0xFFD700)
         .setTitle('🏁 SISTEMA DE DRAFT - SELECCIÓN DE COCHES')
         .setTimestamp()
-        .setFooter({ text: 'REDLINE GT' });
+        .setFooter({ text: 'DISCORDBOT' });
 
     if (state.isCompleted) {
         embed.setDescription('🎉 **¡El Draft ha concluido! Todos los pilotos han seleccionado su montura.**');
@@ -39,15 +39,13 @@ function buildDraftEmbed(state: any): EmbedBuilder {
         embed.setDescription(`📢 Turno actual para: ${currentMention}\n\nPulsa el botón de abajo e introduce el número del coche que deseas elegir.`);
     }
 
-    // Mapa para cruzar elecciones realizadas (Normalizando IDs para comparación exacta)
+    // Mapa para cruzar elecciones realizadas
     const choicesMap = new Map<string, string>();
-    const takenModelsMap = new Map<string, string>(); // Modelo -> Mención del piloto
 
     if (state.choices) {
         for (const c of state.choices) {
             const cleanId = extractUserId(c.pilot) || c.pilot;
             choicesMap.set(cleanId, c.model);
-            takenModelsMap.set(c.model.toLowerCase().trim(), c.pilot);
         }
     }
 
@@ -83,11 +81,11 @@ function buildDraftEmbed(state: any): EmbedBuilder {
         );
     }
 
-    // 3. Modelos Disponibles (MANTIENE LA NUMERACIÓN FIJA ORIGINAL Y MUESTRA SOLO LA X SIN MENCIONES)
+    // 3. Modelos Disponibles (COMPROBACIÓN POR ÍNDICE EXACTO DE LÍNEA)
     if (state.allModels && state.allModels.length > 0) {
         const modelsListText = state.allModels.map((model: string, idx: number) => {
             const numLabel = `\`${idx + 1}.\``;
-            const isTaken = takenModelsMap.has(model.toLowerCase().trim());
+            const isTaken = state.takenIndices?.has(idx); // Tacha SÓLO el índice elegido
 
             if (isTaken) {
                 return `${numLabel} ~~${model}~~ ❌`;
@@ -224,19 +222,15 @@ export async function handleDraftModalSubmit(interaction: ModalSubmitInteraction
             return true;
         }
 
-        const selectedModel = state.allModels[carIndex];
-
-        // Verificar si el coche ya fue cogido previamente
-        const isAlreadyTaken = state.choices.some(
-            (c: any) => c.model.toLowerCase().trim() === selectedModel.toLowerCase().trim()
-        );
-
-        if (isAlreadyTaken) {
+        // Validación por número de índice seleccionado
+        if (state.takenIndices.has(carIndex)) {
             await interaction.editReply({ 
-                content: `❌ El coche **${selectedModel}** ya ha sido seleccionado por otro piloto. Por favor, elige un coche disponible.` 
+                content: `❌ La opción **${carIndex + 1}** ya ha sido seleccionada por otro piloto. Por favor, elige una opción disponible.` 
             });
             return true;
         }
+
+        const selectedModel = state.allModels[carIndex];
 
         // Guardar la elección en Google Sheets (Cols D y E)
         await recordDraftChoice(`<@${interaction.user.id}>`, selectedModel);
@@ -278,12 +272,12 @@ export async function handleDraftModalSubmit(interaction: ModalSubmitInteraction
                 .setTitle('🏆 RESULTADOS FINALES DEL DRAFT')
                 .setDescription('**¡El Draft ha finalizado oficialmente! Aquí tienes las asignaciones de vehículos:**\n\n' + resultsText)
                 .setTimestamp()
-                .setFooter({ text: 'REDLINE GT' });
+                .setFooter({ text: 'DISCORDBOT' });
 
             await interaction.channel.send({ embeds: [finalEmbed] });
         }
 
-        await interaction.editReply({ content: `✅ ¡Has seleccionado con éxito el **${selectedModel}**!` });
+        await interaction.editReply({ content: `✅ ¡Has seleccionado con éxito la opción **${carIndex + 1}. ${selectedModel}**!` });
         return true;
 
     } catch (error) {
