@@ -1,5 +1,7 @@
 import { SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { google } from 'googleapis';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export const data = new SlashCommandBuilder()
   .setName('elo')
@@ -9,15 +11,32 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply();
 
   try {
-    // 1. Configuración de Google Sheets API
-    const auth = new google.auth.GoogleAuth({
-      keyFile: 'credentials.json',
-      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-    });
+    let auth;
+    const credentialsPath = path.join(process.cwd(), 'credentials.json');
+
+    // 1. Entorno local (con archivo credentials.json) o Render (con variables de entorno)
+    if (fs.existsSync(credentialsPath)) {
+      auth = new google.auth.GoogleAuth({
+        keyFile: credentialsPath,
+        scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+      });
+    } else {
+      const privateKey = process.env.GOOGLE_PRIVATE_KEY 
+        ? process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n') 
+        : undefined;
+
+      auth = new google.auth.GoogleAuth({
+        credentials: {
+          client_email: process.env.GOOGLE_CLIENT_EMAIL,
+          private_key: privateKey,
+        },
+        scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+      });
+    }
 
     const sheets = google.sheets({ version: 'v4', auth });
     
-    // 2. ID de tu Google Sheet con respaldo garantizado
+    // 2. ID de tu Google Sheet
     const spreadsheetId = process.env.SPREADSHEET_ID || '1E-dMxBrK7gZLAGR2Ge7OuGEt-IvzVK8BWOTtxZojsXs';
 
     // 3. Leer rango Q2:R24 de la pestaña ELO
