@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction } from 'discord.js';
-import { getSheetData } from '../dashsheet/sheetservice';
+import { google } from 'googleapis';
 
 export const data = new SlashCommandBuilder()
   .setName('elo')
@@ -9,14 +9,30 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply();
 
   try {
-    // 1. Obtener datos de la pestaña ELO usando el servicio centralizado del bot
-    const rows = await getSheetData('ELO!Q2:R24');
+    // 1. Configuración de Google Sheets API
+    const auth = new google.auth.GoogleAuth({
+      keyFile: 'credentials.json',
+      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+    });
+
+    const sheets = google.sheets({ version: 'v4', auth });
+    
+    // 2. ID de tu Google Sheet con respaldo garantizado
+    const spreadsheetId = process.env.SPREADSHEET_ID || '1E-dMxBrK7gZLAGR2Ge7OuGEt-IvzVK8BWOTtxZojsXs';
+
+    // 3. Leer rango Q2:R24 de la pestaña ELO
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: 'ELO!Q2:R24',
+    });
+
+    const rows = response.data.values;
 
     if (!rows || rows.length === 0) {
       return await interaction.editReply('No se encontraron datos en la hoja de ELO.');
     }
 
-    // 2. Formatear las filas (Q = ID/Mención de Discord, R = ELO)
+    // 4. Formatear las filas (Q = ID/Mención de Discord, R = ELO)
     const rankingText = rows
       .filter(row => row[0] && row[1])
       .map((row, index) => {
@@ -26,7 +42,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       })
       .join('\n');
 
-    // 3. Crear Embed para Discord
+    // 5. Crear Embed para Discord
     const embed = new EmbedBuilder()
       .setTitle('🏆 RANKING ELO')
       .setColor('#FF0000')
