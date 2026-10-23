@@ -9,7 +9,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply();
 
   try {
-    // Leemos de la P a la R para coger Piloto (P) y Puntos (R)
+    // 1. Buscamos el rol GtCup2 para obtener su mención
+    const role = interaction.guild?.roles.cache.find(
+      r => r.name.toLowerCase().trim() === 'gtcup2'
+    );
+    const roleMention = role ? `<@&${role.id}>` : '@GtCup2';
+
+    // 2. Leemos las columnas P (Piloto) a R (ELO)
     const rows = await getSheetData('ELO!P2:R');
 
     if (!rows || rows.length === 0) {
@@ -17,10 +23,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     }
 
     const rankingLines = rows
-      .filter(row => row[0] && row[2]) // row[0] es la P (Piloto) y row[2] es la R (ELO)
+      .filter(row => row[0] && row[2])
       .map((row, index) => {
         const pos = `${index + 1}`.padStart(2, ' ');
-        const driver = `${row[0]}`.padEnd(20, ' '); // Ajusta espacio para el nombre
+        const driver = `${row[0]}`.padEnd(20, ' ');
         const eloPoints = `${row[2]}`.padStart(4, ' ');
         
         return `${pos} | ${driver} | ${eloPoints}`;
@@ -30,7 +36,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       return await interaction.editReply('No se encontraron datos válidos en el ranking de ELO.');
     }
 
-    const rankingText = `🏆 **RANKING ELO**\n\`\`\`text\n` + rankingLines.join('\n') + `\n\`\`\``;
+    // 3. Título con la mención al rol fuera del bloque de código
+    const rankingText = `🏆 **RANKING ELO** — ${roleMention}\n\`\`\`text\n` + rankingLines.join('\n') + `\n\`\`\``;
 
     await interaction.editReply({ content: rankingText });
 
