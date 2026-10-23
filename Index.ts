@@ -34,6 +34,7 @@ import * as clubclasCommand from './commands/clubclas'; // ➔ Comando Club Clas
 import * as transCommand from './commands/trans'; // ➔ Comando Traducción
 import * as titularesCommand from './commands/titulares'; // 👈 Comando titulares
 import * as reservasCommand from './commands/reservas'; // 👈 Comando reservas
+import * as eloCommand from './commands/elo'; // 👈 Comando elo añadido
 import * as dashSheetsCommand from './dashsheet/dashsheet';
 import * as dashAdminCommand from './dashadmin/dashadmin'; // ➔ Comando dashadmin
 
@@ -83,8 +84,9 @@ const commandsList = [
     clubCommand,
     clubclasCommand,
     transCommand,
-    titularesCommand, // 👈 Se añade titulares
-    reservasCommand,  // 👈 Se añade reservas
+    titularesCommand, 
+    reservasCommand,
+    eloCommand, // 👈 Se añade elo a la colección
     dashSheetsCommand, 
     dashAdminCommand
 ];
