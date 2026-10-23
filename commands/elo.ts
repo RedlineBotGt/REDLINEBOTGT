@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
-import { getSheetData } from '../dashsheet/sheetsService';
+import { getSheetData } from '../utils/sheetsService';
 
 export const data = new SlashCommandBuilder()
   .setName('elo')
@@ -14,18 +14,23 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     );
     const roleMention = role ? `<@&${role.id}>` : '@GtCup2';
 
-    const rows = await getSheetData('ELO!P2:R');
+    // Rango desde la columna P hasta la Y
+    const rows = await getSheetData('ELO!P2:Y');
 
     if (!rows || rows.length === 0) {
       return await interaction.editReply('No se encontraron datos en la hoja de ELO.');
     }
 
     const rankingLines = rows
-      .filter(row => row[0] && row[2])
+      .filter(row => row[0] && row[9]) // row[0] es la P (Piloto) y row[9] es la Y (ELO)
       .map((row, index) => {
         const pos = `${index + 1}`.padStart(2, ' ');
-        const driver = `${row[0]}`.padEnd(20, ' ');
-        const eloPoints = `${row[2]}`.padStart(4, ' ');
+        
+        // Limpiamos menciones o caracteres extraños para no descuadrar la tabla
+        const rawDriver = `${row[0]}`.replace(/<@!?\d+>/g, '').trim();
+        const driver = rawDriver.padEnd(20, ' ').substring(0, 20);
+        
+        const eloPoints = `${row[9]}`.padStart(4, ' '); // Puntos de Elo desde la columna Y
         
         return `${pos} | ${driver} | ${eloPoints}`;
       });
