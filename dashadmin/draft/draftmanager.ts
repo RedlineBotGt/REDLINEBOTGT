@@ -6,7 +6,7 @@ const DEFAULT_SPREADSHEET_ID = '1E-dMxBrK7gZLAGR2Ge7OuGEt-IvzVK8BWOTtxZojsXs';
 export interface DraftChoice {
     pilot: string;
     model: string;
-    choiceIndex?: number; // Guardamos el índice exacto de la opción elegida
+    choiceIndex?: number;
 }
 
 export interface DraftState {
@@ -90,16 +90,28 @@ export async function getDraftState(): Promise<DraftState> {
             .filter((row: any[]) => row[0] && row[1])
             .map((row: any[]) => ({ pilot: row[0], model: row[1] }));
 
-        // Para evitar tachar réplicas del mismo modelo, emparejamos cada elección en orden de llegada
-        // asignándola a la primera aparición libre en la lista allModels
         const takenIndices = new Set<number>();
 
+        // Mapeamos las elecciones asociándolas a su número de opción
         for (const choice of choices) {
-            const targetModelClean = choice.model.toLowerCase().trim();
+            const rawChoice = choice.model.trim();
+            const matchNum = rawChoice.match(/^(\d+)\./);
+
+            if (matchNum) {
+                const chosenIdx = parseInt(matchNum[1], 10) - 1;
+                if (chosenIdx >= 0 && chosenIdx < allModels.length) {
+                    takenIndices.add(chosenIdx);
+                    choice.choiceIndex = chosenIdx;
+                    continue;
+                }
+            }
+
+            // Fallback por texto si la celda no incluía el prefijo "N."
+            const targetModelClean = rawChoice.toLowerCase();
             for (let i = 0; i < allModels.length; i++) {
                 if (!takenIndices.has(i) && allModels[i].toLowerCase().trim() === targetModelClean) {
                     takenIndices.add(i);
-                    choice.choiceIndex = i; // Guardamos el índice asignado a esta selección
+                    choice.choiceIndex = i;
                     break;
                 }
             }
