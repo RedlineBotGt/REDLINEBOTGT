@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from 'discord.js';
-import { getSheetData } from '../dashsheet/sheetsService'; // ➔ Corregido aquí
+import { getSheetData } from '../dashsheet/sheetsService';
 import { procesarYActualizarEloGeneral } from '../dashsheet/ELO/eloService';
 
 export const data = new SlashCommandBuilder()
@@ -7,14 +7,13 @@ export const data = new SlashCommandBuilder()
     .setDescription('Muestra la clasificación actual de Elo de los pilotos.');
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    // 1. Diferir la respuesta para dar tiempo a procesar los datos de Google Sheets
     await interaction.deferReply();
 
     try {
-        // 2. Ejecutar el recálculo acumulado por si hay nuevos datos en Ingreso2
+        // 1. Recalcular Elo con los datos actuales de Ingreso2
         await procesarYActualizarEloGeneral();
 
-        // 3. Leer la lista de pilotos (Mención) y Elo actualizado desde PQ2 (N2:P22)
+        // 2. Leer N2:P22 (N=Nombre, O=Mención, P=Elo)
         const sheetData = await getSheetData('PQ2!N2:P22') || [];
 
         if (sheetData.length === 0) {
@@ -22,16 +21,20 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
             return;
         }
 
-        // 4. Mapear y filtrar filas válidas
+        // 3. Mapear datos respetando que O es la mención y P es el Elo
         const listaPilotos = sheetData
             .map(row => {
-                const mencion = row[0] ? row[0].toString().trim() : '';
-                const elo = row[2] ? parseInt(row[2].toString(), 10) : 1200;
-                return { mencion, elo };
+                const nombre = row[0] ? row[0].toString().trim() : '';
+                const mencion = row[1] ? row[1].toString().trim() : ''; // Columna O: Mención
+                const elo = row[2] ? parseInt(row[2].toString(), 10) : 1200; // Columna P: Elo
+                return {
+                    display: mencion || nombre, // Usa la mención de Discord si existe, si no el nombre
+                    elo
+                };
             })
-            .filter(item => item.mencion.length > 0 && !isNaN(item.elo));
+            .filter(item => item.display.length > 0 && !isNaN(item.elo));
 
-        // 5. Ordenar de mayor a menor Elo
+        // 4. Ordenar de mayor a menor Elo
         listaPilotos.sort((a, b) => b.elo - a.elo);
 
         if (listaPilotos.length === 0) {
@@ -39,12 +42,12 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
             return;
         }
 
-        // 6. Construir el mensaje / Embed
+        // 5. Construir embed
         const medallas = ['🥇', '🥈', '🥉'];
         const descripcion = listaPilotos.map((p, index) => {
             const pos = index + 1;
             const prefijo = pos <= 3 ? medallas[index] : `**#${pos}**`;
-            return `${prefijo} ${p.mencion} — **${p.elo} ELO**`;
+            return `${prefijo} ${p.display} — **${p.elo} ELO**`;
         }).join('\n');
 
         const embed = new EmbedBuilder()
@@ -52,7 +55,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
             .setColor(0xF1C40F)
             .setDescription(descripcion)
             .setTimestamp()
-            .setFooter({ text: 'REDLINE GT CUP • Actualizado tras última sesión' });
+            .setFooter({ text: 'REDLINE GT CUP • Actualizado en vivo' });
 
         await interaction.editReply({ embeds: [embed] });
 
