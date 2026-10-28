@@ -1,5 +1,5 @@
 import { Interaction } from 'discord.js';
-import { handleAlarmaInteraction } from './alarma/alarmaactions';
+import { handleAlarmaInteraction } from '../alarma/alarmaactions';
 import { handleRetosInteraction } from './retos/retosactions';
 
 const LCS_GUILD_ID = '1564967606295732304';
