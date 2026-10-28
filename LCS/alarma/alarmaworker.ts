@@ -12,17 +12,33 @@ interface IAlarma {
     activa: boolean;
 }
 
+let cachedClient: MongoClient | null = null;
 let alarmasCollection: MongoCollection<IAlarma> | null = null;
 
 export async function getAlarmasCollection(): Promise<MongoCollection<IAlarma>> {
     if (alarmasCollection) return alarmasCollection;
-    const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL || process.env.MONGO_URL;
-    if (!uri) throw new Error('❌ No se encontró URI de MongoDB para las alarmas.');
 
-    const client = new MongoClient(uri);
-    await client.connect();
-    alarmasCollection = client.db().collection<IAlarma>('lcs_alarmas');
-    return alarmasCollection;
+    const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL || process.env.MONGO_URL;
+
+    if (!uri) {
+        console.error('❌ [AlarmaWorker] Error: No se encontró la variable de entorno de MongoDB en process.env.');
+        throw new Error('❌ No se encontró la URI de conexión a MongoDB.');
+    }
+
+    try {
+        if (!cachedClient) {
+            cachedClient = new MongoClient(uri);
+            await cachedClient.connect();
+        }
+        
+        // Se conecta a la base de datos por defecto y usa la colección 'lcs_alarmas'
+        alarmasCollection = cachedClient.db().collection<IAlarma>('lcs_alarmas');
+        console.log('⏰ [MongoDB] Conectado exitosamente a la colección lcs_alarmas.');
+        return alarmasCollection;
+    } catch (error) {
+        console.error('❌ Error al conectar a MongoDB en AlarmaWorker:', error);
+        throw error;
+    }
 }
 
 /**
@@ -58,11 +74,11 @@ export function setupAlarmaWorker(client: Client) {
                     console.log(`🔔 [LCS Alarma] Mensaje enviado al canal ${channel.name} a las ${ahora}`);
                 }
 
-                // Desactivar la alarma tras enviarla (o eliminarla)
+                // Desactivar la alarma tras enviarla
                 await collection.updateOne({ _id: alarma._id }, { $set: { activa: false } });
             }
         } catch (error) {
-            console.error('❌ Error en AlarmaWorker:', error);
+            console.error('❌ Error en ejecución de AlarmaWorker:', error);
         }
     }, 60000); // Se ejecuta cada 60 segundos
 }
