@@ -7,9 +7,11 @@ import {
     TextInputBuilder, 
     TextInputStyle,
     ChannelSelectMenuBuilder,
-    ChannelType 
+    ChannelType,
+    StringSelectMenuBuilder
 } from 'discord.js';
 import { getAlarmasCollection } from './alarmaworker';
+import { ObjectId } from 'mongodb';
 
 export async function handleAlarmaInteraction(interaction: Interaction): Promise<boolean> {
     if (!interaction.isChatInputCommand() && !interaction.isButton() && !interaction.isModalSubmit() && !interaction.isStringSelectMenu() && !interaction.isChannelSelectMenu()) {
@@ -36,7 +38,7 @@ export async function handleAlarmaInteraction(interaction: Interaction): Promise
                         .setStyle(ButtonStyle.Success),
                     new ButtonBuilder()
                         .setCustomId('alarm_listar')
-                        .setLabel('📋 Ver Alarmas Activas')
+                        .setLabel('⚙️ Editar / Eliminar Alarmas')
                         .setStyle(ButtonStyle.Primary)
                 );
 
@@ -242,7 +244,7 @@ export async function handleAlarmaInteraction(interaction: Interaction): Promise
                 return true;
             }
 
-            // 8. Listar Alarmas
+            // 8. Menú de Edición / Eliminación (Listar alarmas con select menu)
             if (interaction.isButton() && interaction.customId === 'alarm_listar') {
                 const collection = await getAlarmasCollection();
                 const alarmas = await collection.find({ guildId: interaction.guildId, activa: true }).toArray();
@@ -255,13 +257,142 @@ export async function handleAlarmaInteraction(interaction: Interaction): Promise
                     return true;
                 }
 
-                const lista = alarmas.map((a, i) => {
-                    const rep = a.esRecurrente ? `🔄 (${a.avisosRestantes} avisos restan)` : '⏱️ (Única)';
-                    return `${i + 1}. ⏰ **${a.hora}** [${a.dia}] - *${a.titulo}* ${rep} -> <#${a.channelId}>`;
-                }).join('\n');
+                const selectMenu = new StringSelectMenuBuilder()
+                    .setCustomId('select_alarma_gestionar')
+                    .setPlaceholder('Selecciona una alarma para editar o eliminar')
+                    .addOptions(
+                        alarmas.map((a) => ({
+                            label: `${a.titulo} (${a.hora})`,
+                            description: `Día: ${a.dia} | Canal: #${a.channelId}`,
+                            value: a._id.toString()
+                        }))
+                    );
+
+                const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
 
                 await interaction.reply({
-                    content: `📋 **Alarmas Activas:**\n\n${lista}`,
+                    content: '⚙️ **Selecciona la alarma que deseas gestionar:**',
+                    components: [row],
+                    ephemeral: true
+                });
+                return true;
+            }
+
+            // 9. Al seleccionar una alarma del menú desplegable -> Mostrar opciones (Editar / Borrar)
+            if (interaction.isStringSelectMenu() && interaction.customId === 'select_alarma_gestionar') {
+                const alarmId = interaction.values[0];
+
+                const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`alarm_editar_${alarmId}`)
+                        .setLabel('✏️ Editar Alarma')
+                        .setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder()
+                        .setCustomId(`alarm_borrar_${alarmId}`)
+                        .setLabel('🗑️ Eliminar Alarma')
+                        .setStyle(ButtonStyle.Danger)
+                );
+
+                await interaction.update({
+                    content: `🛠️ **¿Qué deseas hacer con esta alarma?**`,
+                    components: [row]
+                });
+                return true;
+            }
+
+            // 10. Eliminar Alarma
+            if (interaction.isButton() && interaction.customId.startsWith('alarm_borrar_')) {
+                const alarmId = interaction.customId.replace('alarm_borrar_', '');
+
+                const collection = await getAlarmasCollection();
+                await collection.deleteOne({ _id: new ObjectId(alarmId) });
+
+                await interaction.update({
+                    content: `🗑️ **¡Alarma eliminada correctamente!**`,
+                    components: []
+                });
+                return true;
+            }
+
+            // 11. Editar Alarma (Abrir modal con los datos actuales)
+            if (interaction.isButton() && interaction.customId.startsWith('alarm_editar_')) {
+                const alarmId = interaction.customId.replace('alarm_editar_', '');
+
+                const collection = await getAlarmasCollection();
+                const alarma = await collection.findOne({ _id: new ObjectId(alarmId) });
+
+                if (!alarma) {
+                    await interaction.reply({ content: '❌ No se encontró la alarma.', ephemeral: true });
+                    return true;
+                }
+
+                const modal = new ModalBuilder()
+                    .setCustomId(`modal_editar_alarma_${alarmId}`)
+                    .setTitle('Editar Alarma');
+
+                const inputTitulo = new TextInputBuilder()
+                    .setCustomId('input_edit_titulo')
+                    .setLabel('Título:')
+                    .setStyle(TextInputStyle.Short)
+                    .setValue(alarma.titulo)
+                    .setRequired(true);
+
+                const inputDia = new TextInputBuilder()
+                    .setCustomId('input_edit_dia')
+                    .setLabel('Día:')
+                    .setStyle(TextInputStyle.Short)
+                    .setValue(alarma.dia)
+                    .setRequired(true);
+
+                const inputHora = new TextInputBuilder()
+                    .setCustomId('input_edit_hora')
+                    .setLabel('Hora (HH:MM):')
+                    .setStyle(TextInputStyle.Short)
+                    .setValue(alarma.hora)
+                    .setRequired(true);
+
+                const inputTexto = new TextInputBuilder()
+                    .setCustomId('input_edit_texto')
+                    .setLabel('Texto del mensaje:')
+                    .setStyle(TextInputStyle.Paragraph)
+                    .setValue(alarma.texto)
+                    .setRequired(true);
+
+                modal.addComponents(
+                    new ActionRowBuilder<TextInputBuilder>().addComponents(inputTitulo),
+                    new ActionRowBuilder<TextInputBuilder>().addComponents(inputDia),
+                    new ActionRowBuilder<TextInputBuilder>().addComponents(inputHora),
+                    new ActionRowBuilder<TextInputBuilder>().addComponents(inputTexto)
+                );
+
+                await interaction.showModal(modal);
+                return true;
+            }
+
+            // 12. Guardar cambios de la edición en MongoDB
+            if (interaction.isModalSubmit() && interaction.customId.startsWith('modal_editar_alarma_')) {
+                const alarmId = interaction.customId.replace('modal_editar_alarma_', '');
+
+                const titulo = interaction.fields.getTextInputValue('input_edit_titulo');
+                const dia = interaction.fields.getTextInputValue('input_edit_dia');
+                const hora = interaction.fields.getTextInputValue('input_edit_hora');
+                const texto = interaction.fields.getTextInputValue('input_edit_texto');
+
+                const collection = await getAlarmasCollection();
+                await collection.updateOne(
+                    { _id: new ObjectId(alarmId) },
+                    { 
+                        $set: { 
+                            titulo: titulo, 
+                            dia: dia, 
+                            hora: hora.trim(), 
+                            texto: texto 
+                        } 
+                    }
+                );
+
+                await interaction.reply({
+                    content: `✅ **¡Alarma actualizada correctamente!**\n\n📌 **${titulo}** a las **${hora}** (${dia})`,
                     ephemeral: true
                 });
                 return true;
