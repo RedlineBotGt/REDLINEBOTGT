@@ -7,7 +7,7 @@ import { setupAvisosSystem } from './dashadmin/avisos/avisosmanager'; // ➔ Sis
 import { setupPollSystem, handleEncuestaReactionAdd } from './dashadmin/encuestas/encuestasmanager'; // ➔ Sistema de Encuestas
 import { setupEventWorker } from './dashadmin/eventos/eventosworker'; // ➔ Worker de Eventos y Campeonatos
 import { handleClubMessage } from './dashadmin/club/clubactions'; // ➔ Importación del escuchador de mensajes GT Club
-import { setupAlarmaWorker } from './LCS/alarma/alarmaworker'; // 👈 ⏰ Worker de Alarma para LCS
+import { setupAlarmaWorker } from './LCS/alarma/alarmaworker'; // ➔ Worker de Alarma para LCS
 import express from 'express';
 
 // 🛡️ REDES DE SEGURIDAD GLOBAL: Evitan que el bot muera silenciosamente por excepciones de red o promesas rechazadas
@@ -50,6 +50,7 @@ import * as dashAdminCommand from './dashadmin/dashadmin'; // ➔ Comando dashad
 
 // ➔ Importación de comandos exclusivos de LCS
 import * as alarmaCommand from './LCS/alarma/alarma';
+import * as menuCommand from './LCS/menu/menu'; // 👈 🎛️ Importamos el comando /menu de LCS
 
 /**
  * 📦 Conexión centralizada y segura a la colección de eventos de MongoDB
@@ -85,7 +86,7 @@ const client = new Client({
 // 🗂️ Inicializar la colección de comandos en el cliente
 client.commands = new Collection();
 
-// Registro de comandos en la colección (incluyendo el de LCS)
+// Registro de comandos en la colección (incluyendo los de LCS)
 const commandsList = [
     dashCommand, 
     dashStaffCommand, 
@@ -102,7 +103,8 @@ const commandsList = [
     eloCommand,
     dashSheetsCommand, 
     dashAdminCommand,
-    alarmaCommand // 👈 Comando /alarma exclusivo de LCS añadido a la colección
+    alarmaCommand,
+    menuCommand // 👈 🎛️ Comando /menu añadido a la colección del cliente
 ];
 
 for (const cmd of commandsList) {
@@ -187,7 +189,7 @@ client.on('messageCreate', async (message: Message) => {
 });
 
 // 🔐 Inicio de sesión del bot sin cortes estrictos
-console.log('🔄 [Discord] Intentando conectar el cliente con el token (esperando respuesta del Gateway)...');
+console.log('🔄 [Discord] Intentando conectar el cliente con el token (esperando respuesta del Gateway)');
 
 client.login(process.env.DISCORD_TOKEN)
     .then(() => {
