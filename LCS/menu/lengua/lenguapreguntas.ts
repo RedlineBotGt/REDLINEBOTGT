@@ -16,8 +16,14 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
             throw new Error('No se encontró la clave de API de Gemini en las variables de entorno.');
         }
 
-        const prompt = `Actúa como un profesor de lengua española experto en educación infantil, específicamente para niños de 2º de Primaria (7 años). 
-        Genera un reto de lengua único y divertido (puede ser sobre ortografía básica, plurales sencillos, sinónimos, antónimos, verbos fáciles, uso de m antes de b o mayúsculas).
+        // Prompt reforzado para garantizar variedad y evitar que repita siempre lo mismo
+        const prompt = `Actúa como un profesor de lengua española experto en educación infantil para niños de 2º de Primaria (7 años). 
+        Genera un reto de lengua ÚNICO, original y divertido. 
+        IMPORTANTE: NO repitas preguntas típicas sobre el plural de la palabra "lápiz". Rota los temas obligatoriamente entre:
+        - Ortografía básica (uso de m antes de b, z/c, r/rr, h).
+        - Plurales de palabras sencillas (flor, camión, papel, luz).
+        - Sinónimos y antónimos muy fáciles (contento/feliz, grande/pequeño).
+        - Identificar nombres propios, verbos sencillos o adjetivos.
         
         Devuelve ÚNICAMENTE un objeto JSON válido (sin formato de bloque de código markdown ni texto adicional) con esta estructura exacta:
         {
@@ -30,9 +36,8 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
             ],
             "explicacion": "Una explicación muy corta y sencilla de por qué es la respuesta correcta."
         }
-        Asegúrate de que las opciones estén barajadas y que solo una sea la correcta.`;
+        Asegúrate de que las opciones estén barajadas aleatoriamente y que solo una sea la correcta.`;
 
-        // Usamos el modelo gemini-2.5-flash mediante fetch directo
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
         
         const response = await fetch(url, {
@@ -45,7 +50,8 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
                     parts: [{ text: prompt }]
                 }],
                 generationConfig: {
-                    responseMimeType: "application/json"
+                    responseMimeType: "application/json",
+                    temperature: 1.0 // 🌡️ Temperatura alta para forzar creatividad y variedad de preguntas
                 }
             })
         });
@@ -72,16 +78,35 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
     } catch (error) {
         console.error('❌ Error al generar reto de lengua con IA, usando respaldo:', error);
         
-        // Respaldo de seguridad si falla la llamada
+        // Respaldo dinámico alternativo
+        const respaldos = [
+            {
+                pregunta: '¿Cuál es el sinónimo de la palabra "contento"?',
+                opciones: [
+                    { texto: 'Feliz', esCorrecta: true },
+                    { texto: 'Triste', esCorrecta: false },
+                    { texto: 'Enojado', esCorrecta: false },
+                    { texto: 'Cansado', esCorrecta: false }
+                ],
+                explicacion: 'Estar contento es estar feliz.'
+            },
+            {
+                pregunta: '¿Cómo se escribe correctamente la palabra?',
+                opciones: [
+                    { texto: 'Zanahoria', esCorrecta: true },
+                    { texto: 'Sanahoria', esCorrecta: false },
+                    { texto: 'Zanajoria', esCorrecta: false },
+                    { texto: 'Sanajoria', esCorrecta: false }
+                ],
+                explicacion: 'Se escribe con z y h.'
+            }
+        ];
+        const elegido = respaldos[Math.floor(Math.random() * respaldos.length)];
+
         return {
-            pregunta: '¿Cómo se escribe correctamente el plural de "lápiz"?',
-            opciones: [
-                { texto: 'Lápices', esCorrecta: true },
-                { texto: 'Lápis', esCorrecta: false },
-                { texto: 'Lapises', esCorrecta: false },
-                { texto: 'Lápizs', esCorrecta: false }
-            ].sort(() => Math.random() - 0.5),
-            explicacion: 'Termina en ces.',
+            pregunta: elegido.pregunta,
+            opciones: elegido.opciones.sort(() => Math.random() - 0.5),
+            explicacion: elegido.explicacion,
             nivel: nivelActual
         };
     }
