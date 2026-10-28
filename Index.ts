@@ -106,6 +106,11 @@ for (const cmd of commandsList) {
     }
 }
 
+// 🐛 Diagnóstico en tiempo real del WebSocket de Discord
+client.on('debug', (info) => {
+    console.log(`🐛 [Discord Debug] ${info}`);
+});
+
 // 🔄 Detectar cortes de conexión con Discord para autoreconectarse
 client.on('shardDisconnect', (event, id) => {
     console.warn(`⚠️ [Gateway] Shard ${id} desconectado. Intentando reconectar automáticamente...`);
