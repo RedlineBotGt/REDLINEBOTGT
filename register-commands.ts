@@ -14,8 +14,9 @@ import { data as titularesCommand } from './commands/titulares';
 import { data as reservasCommand } from './commands/reservas';
 import { data as eloCommand } from './commands/elo';
 
-// ➔ Importar comando exclusivo de LCS
+// ➔ Importar comandos exclusivos de LCS
 import { data as alarmaCommand } from './LCS/alarma/alarma';
+import { data as menuCommand } from './LCS/menu/menu'; // 👈 Importamos el comando /menu
 
 const LCS_GUILD_ID = '1564967606295732304';
 
@@ -44,9 +45,10 @@ const globalCommands = globalCommandList.map(cmd => {
     return cmd.data.toJSON();
 });
 
-// 2. Comandos Exclusivos de LCS
+// 2. Comandos Exclusivos de LCS (Se registran solo en el servidor LCS de forma instantánea)
 const lcsCommandList = [
     { name: 'alarma', data: alarmaCommand },
+    { name: 'menu', data: menuCommand }, // 👈 Añadido a los comandos exclusivos de LCS
 ];
 
 const lcsCommands = lcsCommandList.map(cmd => {
