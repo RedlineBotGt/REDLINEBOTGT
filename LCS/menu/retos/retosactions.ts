@@ -9,7 +9,7 @@ import {
     ChannelType 
 } from 'discord.js';
 import { generarRetoMates } from './mates/mates';
-import { getAlarmasCollection } from '../alarma/alarmaworker'; // 👈 Reutilizamos la conexión oficial y segura del bot
+import { getAlarmasCollection } from '../../alarma/alarmaworker'; // 👈 Ruta corregida subiendo dos niveles
 
 async function getRetosCollection() {
     const alarmasColl = await getAlarmasCollection();
