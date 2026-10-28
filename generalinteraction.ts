@@ -5,7 +5,9 @@ import { handleDadoModalSubmit } from './commands/dado';
 import { handleAvisosInteractions } from './dashadmin/avisos/interactionavisos';
 import { handleClubInteractions } from './dashadmin/club/clubactions';
 import { handlePQ2Interactions } from './dashsheet/PQ2/interactionPQ2';
-import { handleMenuInteraction } from './LCS/menu/menuactions'; // 👈 Importado
+import { handleMenuInteraction } from './LCS/menu/menuactions';
+import { handleRetosInteraction } from './LCS/menu/retos/retosactions'; // 👈 Retos / Mates
+import { handleLenguaInteraction } from './LCS/menu/lengua/lenguaactions'; // 👈 Lengua
 
 export async function handleGlobalInteraction(interaction: Interaction, client: Client & { commands?: Map<string, any> }) {
     try {
@@ -53,6 +55,14 @@ export async function handleGlobalInteraction(interaction: Interaction, client: 
         // 6. Manejo de Interacciones del Menú Fijo de LCS
         const handledByMenu = await handleMenuInteraction(interaction);
         if (handledByMenu) return;
+
+        // 6.1 Manejo de Interacciones del Módulo de Retos (Mates / Ranking)
+        const handledByRetos = await handleRetosInteraction(interaction);
+        if (handledByRetos) return;
+
+        // 6.2 Manejo de Interacciones del Módulo de Lengua
+        const handledByLengua = await handleLenguaInteraction(interaction);
+        if (handledByLengua) return;
 
         // 7. Si ningún router reclamó el componente
         if (interaction.isButton() || interaction.isModalSubmit() || interaction.isAnySelectMenu()) {
