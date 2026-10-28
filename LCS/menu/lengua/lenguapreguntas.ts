@@ -31,8 +31,8 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
             "explicacion": "Una explicación muy corta y sencilla."
         }`;
 
-        // Usamos gemini-2.5-flash que es el modelo activo y recomendado en la API REST actual
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        // Usamos el modelo correcto indicado por la API de Google: gemini-3.8-flash
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
         
         const response = await fetch(url, {
             method: 'POST',
@@ -69,7 +69,7 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
     } catch (error) {
         console.error('❌ Error al generar reto con Gemini, usando respaldo:', error);
         
-        // 🛡️ Banco de respaldo con rotación amplia por si hay intermitencias de red
+        // 🛡️ Banco de respaldo variado para evitar repeticiones si hay intermitencias
         const bancoRespaldo = [
             {
                 pregunta: '¿Cuál es el sinónimo de la palabra "contento"?',
