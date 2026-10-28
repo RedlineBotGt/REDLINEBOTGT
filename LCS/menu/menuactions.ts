@@ -245,15 +245,15 @@ export async function handleMenuInteraction(interaction: Interaction): Promise<b
                 return true;
             }
 
-            const estadoRep = alarma.esRecurrente 
-                .setLabel(`Recurrente (Restantes: ⏰${alarma.avisosRestantes})`) 
+            const textoRecurrente = alarma.esRecurrente && alarma.avisosRestantes !== undefined
+                ? `Recurrente (Restantes: ⏰${alarma.avisosRestantes})`
                 : 'Única (Sin repetición)';
 
             const infoTexto = `📌 **Título:** ${alarma.titulo}\n` +
                               `📍 **Canal ID:** <#${alarma.channelId}>\n` +
                               `📅 **Día:** ${alarma.dia}\n` +
                               `⏰ **Hora:** ${alarma.hora}\n` +
-                              `🔄 **Tipo:** ${estadoRep}\n` +
+                              `🔄 **Tipo:** ${textoRecurrente}\n` +
                               `💬 **Texto:** ${alarma.texto}`;
 
             const row = new ActionRowBuilder<ButtonBuilder>()
