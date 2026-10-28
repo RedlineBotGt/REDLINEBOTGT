@@ -3,7 +3,8 @@ import {
     ActionRowBuilder, 
     ButtonBuilder, 
     ButtonStyle, 
-    TextChannel 
+    TextChannel,
+    ComponentType 
 } from 'discord.js';
 import { generarRetoMates } from './mates/mates';
 
@@ -41,20 +42,25 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
         return true;
     }
 
-    // 2. Botón de RETOS BD (Archivo y estadísticas)
-    if (customId === 'lcs_menu_retos_bd') {
+    // 2. Botón de Estadísticas / Progreso
+    if (customId === 'lcs_retos_info') {
+        // TODO: Conectar con MongoDB para sacar las estadísticas reales del usuario
         await interaction.reply({ 
-            content: '📚 **Base de Datos de Retos**\n*Próximamente: Histórico de aciertos, fallos y tablas mensuales/anuales de Leo.*', 
+            content: '📊 **Progreso de la Academia**\n\n🏆 **Clasificación actual:**\n1. Leo - ⭐️ 0 aciertos\n\n*(Próximamente más estadísticas detalladas)*', 
             ephemeral: true 
         });
         return true;
     }
 
     // 3. Lanzar reto de Mates al canal específico
-    if (customId === 'lcs_retos_mates_lanzar') {
+    if (customId === 'lcs_retos_mates_lanzar' || customId === 'lcs_reto_siguiente') {
         const canalMates = interaction.guild?.channels.cache.get(CANAL_MATES_ID) as TextChannel;
         if (!canalMates) {
-            await interaction.reply({ content: '❌ No se pudo encontrar el canal de Mates configurado.', ephemeral: true });
+            if (interaction.deferred || interaction.replied) {
+                await interaction.followUp({ content: '❌ No se pudo encontrar el canal de Mates configurado.', ephemeral: true });
+            } else {
+                await interaction.reply({ content: '❌ No se pudo encontrar el canal de Mates configurado.', ephemeral: true });
+            }
             return true;
         }
 
@@ -72,31 +78,67 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
             );
         });
 
-        await canalMates.send({
-            content: `🎯 **¡Nuevo Reto de Matemáticas!** (Nivel ${nivelActual} - 1º Primaria)\n\n📌 **${reto.pregunta}**`,
-            components: [rowOpciones]
-        });
+        const mensajeReto = `🎯 **¡Nuevo Reto de Matemáticas!** (Nivel ${nivelActual} - 1º Primaria)\n\n📌 **${reto.pregunta}**`;
 
-        await interaction.reply({ 
-            content: `✅ ¡Reto de Mates lanzado con éxito al canal <#${CANAL_MATES_ID}>!`, 
-            ephemeral: true 
-        });
+        if (customId === 'lcs_reto_siguiente') {
+            await interaction.update({
+                content: `${mensajeReto}`,
+                components: [rowOpciones]
+            });
+        } else {
+            await canalMates.send({
+                content: mensajeReto,
+                components: [rowOpciones]
+            });
+
+            await interaction.reply({ 
+                content: `✅ ¡Reto de Mates lanzado con éxito al canal <#${CANAL_MATES_ID}>!`, 
+                ephemeral: true 
+            });
+        }
         return true;
     }
 
-    // 4. Capturar las respuestas de los botones del reto de mates (¡Nuevo!)
+    // 4. Capturar las respuestas de los botones del reto de mates
     if (customId.startsWith('lcs_reto_resp_')) {
         const esCorrecta = customId.includes('_si_');
-        
+        const userId = interaction.user.id;
+
+        // Deshabilitar los botones del mensaje actual para que no se pueda volver a pulsar
+        const rowDeshabilitada = new ActionRowBuilder<ButtonBuilder>();
+        interaction.message.components.forEach(row => {
+            row.components.forEach(component => {
+                if (component.type === ComponentType.Button) {
+                    const button = ButtonBuilder.from(component);
+                    button.setDisabled(true);
+                    // Destacar visualmente la respuesta correcta e incorrecta
+                    if (component.customId?.includes('_si_')) {
+                        button.setStyle(ButtonStyle.Success);
+                    } else if (component.customId === customId && !esCorrecta) {
+                        button.setStyle(ButtonStyle.Danger);
+                    }
+                    rowDeshabilitada.addComponents(button);
+                }
+            });
+        });
+
         if (esCorrecta) {
-            await interaction.reply({ 
-                content: '🎉 **¡Correcto! ¡Muy bien hecho!** 🌟', 
-                ephemeral: true 
+            // Botón para saltar directamente al siguiente reto
+            const rowSiguiente = new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder()
+                    .setCustomId('lcs_reto_siguiente')
+                    .setLabel('➡️ ¡Siguiente Reto!')
+                    .setStyle(ButtonStyle.Success)
+            );
+
+            await interaction.update({
+                content: `${interaction.message.content}\n\n🎉 **¡Respuesta Correcta de <@${userId}>! ¡Muy bien hecho!** 🌟`,
+                components: [rowDeshabilitada, rowSiguiente]
             });
         } else {
-            await interaction.reply({ 
-                content: '❌ **Vaya, casi. ¡Sigue probando!** 💪', 
-                ephemeral: true 
+            await interaction.update({
+                content: `${interaction.message.content}\n\n❌ **Vaya, <@${userId}>, esa no es. ¡Prueba otra vez o pide otro reto!** 💪`,
+                components: [rowDeshabilitada]
             });
         }
         return true;
