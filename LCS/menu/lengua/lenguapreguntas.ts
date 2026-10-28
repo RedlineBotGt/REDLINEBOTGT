@@ -18,7 +18,6 @@ export function generarRetoLengua(nivelActual: number): RetoLengua {
     if (nivelActual === 1) {
         const banco = [
             {
-                p,
                 prep: '¿Cómo se escribe correctamente?',
                 corr: 'Excepción',
                 falsas: ['Excepcion', 'Escepsión', 'Esepcion'],
@@ -49,44 +48,11 @@ export function generarRetoLengua(nivelActual: number): RetoLengua {
         opcionesFalsas = seleccionado.falsas;
         explicacion = seleccionado.exp;
 
-    } else if (nivelActual === 2) {
-        const banco = [
-            {
-                prep: '¿Cuál de las siguientes palabras contiene un hiato?',
-                corr: 'Raíz',
-                falsas: ['Cielo', 'Puerta', 'Ciudad'],
-                exp: 'Raíz tiene dos vocales abiertas/cerradas en contacto que se separan en sílabas distintas (ra-íz), formando hiato.'
-            },
-            {
-                prep: '¿Cómo se escribe la forma correcta del verbo haber?',
-                corr: 'Haya (del verbo haber)',
-                falsas: ['Halla (de hallar)', 'Aya (niñera)', 'Allá (adverbio)'],
-                exp: 'Haya es la forma del verbo haber (espero que haya suerte).'
-            },
-            {
-                prep: '¿Qué significa la expresión "In albis"?',
-                corr: 'En blanco / Sin saber nada',
-                falsas: ['De forma provisional', 'Por escrito', 'En secreto'],
-                exp: 'Estar "in albis" significa quedarse en blanco o ignorar algo por completo.'
-            },
-            {
-                prep: 'Indica cuál es el antónimo de la palabra "Incólume":',
-                corr: 'Dañado',
-                falsas: ['Sano', 'Seguro', 'Tranquilo'],
-                exp: 'Incólume significa sano, sin lesión ni menoscabo. Su antónimo es dañado o herido.'
-            }
-        ];
-        const seleccionado = banco[Math.floor(Math.random() * banco.length)];
-        pregunta = seleccionado.prep;
-        respuestaCorrecta = seleccionado.corr;
-        opcionesFalsas = seleccionado.falsas;
-        explicacion = seleccionado.exp;
-
     } else {
-        // Nivel avanzado dinámico (Ortografía culta y trampas del idioma)
+        // Nivel avanzado / dinámico (Ortografía culta y trampas del idioma)
         const banco = [
             {
-                prep: '¿Cuál es la forma correcta ante un caso deísmo?',
+                prep: '¿Cuál es la forma correcta ante un caso de deísmo?',
                 corr: 'Pienso que vendrá',
                 falsas: ['Pienso de que vendrá', 'Pienso de que viene', 'Pienso que de que vendrá'],
                 exp: 'El verbo pensar no rige la preposición "de". Lo correcto es "pienso que".'
@@ -96,12 +62,6 @@ export function generarRetoLengua(nivelActual: number): RetoLengua {
                 corr: 'Caracteres',
                 falsas: ['Carácteres', 'Caracters', 'Caracteris'],
                 exp: 'Al pasar al plural, la palabra carácter desplaza su acento y pierde la tilde: caracteres.'
-            },
-            {
-                prep: '¿Qué significa el extranjerismo adaptado "Ñoqui" o un "gourmet"? (Cultura)',
-                corr: 'Persona con cargo sin apenas funciones (en contexto administrativo)',
-                falsas: ['Un plato de pasta', 'Un crítico de arte', 'Un tipo de baile'],
-                exp: 'En el habla coloquial de algunos países, se usa para referirse a empleos ficticios o sin actividad real.'
             },
             {
                 prep: '¿Cuál es el significado de la palabra "Veleidoso"?',
@@ -121,7 +81,6 @@ export function generarRetoLengua(nivelActual: number): RetoLengua {
     const opcionesSet = new Set<string>([respuestaCorrecta]);
     opcionesFalsas.forEach(f => opcionesSet.add(f));
 
-    // Asegurar 4 opciones si faltaran por aleatoriedad
     const opcionesArray = Array.from(opcionesSet).sort(() => Math.random() - 0.5);
     const opcionesFinales = opcionesArray.map(val => ({
         texto: val,
