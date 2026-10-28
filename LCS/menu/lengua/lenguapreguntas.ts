@@ -1,5 +1,3 @@
-import { GoogleGenAI } from '@google/genai';
-
 export interface RetoLengua {
     pregunta: string;
     opciones: { texto: string; esCorrecta: boolean }[];
@@ -7,18 +5,21 @@ export interface RetoLengua {
     nivel: number;
 }
 
-// Inicializar el cliente oficial de Google Gen AI (lee automáticamente process.env.GEMINI_API_KEY)
-const ai = new GoogleGenAI({});
-
 /**
- * Generador dinámico de retos de Lengua usando la IA oficial de Gemini (Nivel 2º de Primaria)
+ * Generador dinámico de retos de Lengua usando la API REST de Gemini (Nivel 2º de Primaria)
  */
 export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua> {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
+
     try {
-        const prompt = `Actúa como un profesor de lengua española experto en educación infantil para niños de 2º de Primaria (7 años). 
-        Genera un reto de lengua ÚNICO, original y divertido. Varía los temas obligatoriamente entre ortografía básica (m antes de b, z/c), plurales sencillos, sinónimos, antónimos, o identificación de nombres y verbos.
+        if (!apiKey) {
+            throw new Error('Falta la API Key en las variables de entorno.');
+        }
+
+        const prompt = `Actúa como un profesor de lengua española para niños de 2º de Primaria (7 años). 
+        Genera un reto de lengua ÚNICO, original y variado sobre ortografía básica, plurales, sinónimos, antónimos o gramática elemental.
         
-        Devuelve ÚNICAMENTE un objeto JSON válido (sin bloques de código markdown ni texto adicional) con esta estructura exacta:
+        Devuelve ÚNICAMENTE un objeto JSON válido (sin markdown ni texto adicional) con esta estructura exacta:
         {
             "pregunta": "Texto de la pregunta clara y adaptada a 7 años",
             "opciones": [
@@ -27,25 +28,33 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
                 {"texto": "Opción 3", "esCorrecta": false},
                 {"texto": "Opción 4", "esCorrecta": false}
             ],
-            "explicacion": "Una explicación muy corta y sencilla de por qué es la respuesta correcta."
+            "explicacion": "Una explicación muy corta y sencilla."
         }`;
 
-        const response = await ai.models.generateContent({
-            model: 'gemini-1.5-flash',
-            contents: prompt,
-            // Forzamos la salida en JSON puro
-            config: {
-                responseMimeType: 'application/json',
-                temperature: 1.0 // Máxima creatividad para que no repita preguntas
-            }
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    temperature: 1.0
+                }
+            })
         });
 
-        const textoRespuesta = response.text?.trim() || '';
+        if (!response.ok) {
+            throw new Error(`Error HTTP ${response.status}`);
+        }
+
+        const data = await response.json() as any;
+        const textoRespuesta = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
         
         const jsonLimpio = textoRespuesta.replace(/```json/g, '').replace(/```/g, '').trim();
         const datosReto = JSON.parse(jsonLimpio);
 
-        // Barajar las opciones aleatoriamente
         const opcionesBarajadas = (datosReto.opciones || []).sort(() => Math.random() - 0.5);
 
         return {
@@ -56,9 +65,8 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
         };
 
     } catch (error) {
-        console.error('❌ [GEMINI] Error al generar reto de lengua, usando banco de respaldo:', error);
+        console.error('❌ Error al generar reto con Gemini, usando respaldo:', error);
         
-        // 🛡️ Banco de respaldo variado por si la API sufre cualquier altibajo
         const bancoRespaldo = [
             {
                 pregunta: '¿Cuál es el sinónimo de la palabra "contento"?',
@@ -89,26 +97,6 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
                     { texto: 'Floris', esCorrecta: false }
                 ],
                 explicacion: 'A las palabras que terminan en consonante se les añade "es".'
-            },
-            {
-                pregunta: '¿Qué palabra indica una acción (un verbo)?',
-                opciones: [
-                    { texto: 'Saltar', esCorrecta: true },
-                    { texto: 'Pelota', esCorrecta: false },
-                    { texto: 'Rojo', esCorrecta: false },
-                    { texto: 'Mesa', esCorrecta: false }
-                ],
-                explicacion: 'Saltar es algo que podemos hacer.'
-            },
-            {
-                pregunta: '¿Qué letra se escribe siempre antes de la letra "p"?',
-                opciones: [
-                    { texto: 'M', esCorrecta: true },
-                    { texto: 'N', esCorrecta: false },
-                    { texto: 'L', esCorrecta: false },
-                    { texto: 'R', esCorrecta: false }
-                ],
-                explicacion: 'Antes de P y B siempre va M.'
             }
         ];
 
