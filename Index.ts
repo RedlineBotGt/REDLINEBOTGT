@@ -158,9 +158,19 @@ client.on('messageCreate', async (message: Message) => {
     await handleClubMessage(message);
 });
 
-// 🔐 Inicio de sesión del bot con control de errores detallado en consola
+// 🔐 Inicio de sesión del bot con control de timeout por bloqueo de red
 console.log('🔄 [Discord] Intentando conectar el cliente con el token...');
-client.login(process.env.DISCORD_TOKEN)
+
+const loginWithTimeout = async () => {
+    const loginPromise = client.login(process.env.DISCORD_TOKEN);
+    const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('⏱️ [Timeout] El login de Discord ha tardado más de 10 segundos en responder. Posible bloqueo de red o Gateway caído.')), 10000)
+    );
+
+    await Promise.race([loginPromise, timeoutPromise]);
+};
+
+loginWithTimeout()
     .then(() => {
         console.log('✅ [Discord] client.login() se ha completado correctamente.');
     })
