@@ -135,46 +135,6 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
         return true;
     }
 
-    // 🔄 Botón para continuar jugando tras un fallo
-    if (customId === 'lcs_reto_reintentar') {
-        let nivelActual = 1;
-        try {
-            const collection = await getRetosCollection();
-            const usuarioDoc = await collection.findOne({ userId: interaction.user.id });
-            if (usuarioDoc?.puntos) {
-                nivelActual = usuarioDoc.puntos;
-            }
-        } catch (err) {
-            console.error('Error al obtener nivel para reintentar:', err);
-        }
-
-        const nuevoReto = generarRetoMates(nivelActual);
-        const rowNuevasOpciones = new ActionRowBuilder<ButtonBuilder>();
-        nuevoReto.opciones.forEach((op, index) => {
-            const customIdResp = `lcs_reto_resp_${op.esCorrecta ? 'si' : 'no'}_${index}`;
-            rowNuevasOpciones.addComponents(
-                new ButtonBuilder()
-                    .setCustomId(customIdResp)
-                    .setLabel(op.texto)
-                    .setStyle(ButtonStyle.Primary)
-            );
-        });
-
-        const canalActual = interaction.channel as TextChannel;
-        if (canalActual) {
-            await canalActual.send({
-                content: `🎯 **¡Nuevo Reto de Matemáticas!** (Nivel ${nivelActual})\n\n📌 **${nuevoReto.pregunta}**`,
-                components: [rowNuevasOpciones]
-            });
-        }
-
-        await interaction.update({
-            content: `${interaction.message.content}\n\n🔄 *Nuevo reto solicitado.*`,
-            components: []
-        });
-        return true;
-    }
-
     // 4. Capturar las respuestas de los botones y actualizar nivel por usuario en MongoDB
     if (customId.startsWith('lcs_reto_resp_')) {
         const partes = customId.split('_');
@@ -196,6 +156,8 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
                 }
             });
         });
+
+        const canalActual = interaction.channel as TextChannel;
 
         if (esCorrecta) {
             let siguienteNivel = 1;
@@ -237,7 +199,6 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
                 );
             });
 
-            const canalActual = interaction.channel as TextChannel;
             if (canalActual) {
                 await canalActual.send({
                     content: `📈 **¡Nivel Superado por <@${userId}>! Subimos a dificultad personalizada:**\n\n🎯 **¡Nuevo Reto de Matemáticas!** (Nivel ${siguienteNivel})\n\n📌 **${nuevoReto.pregunta}**`,
@@ -246,18 +207,49 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
             }
 
         } else {
-            // Añadimos el botón de reintentar para que pueda seguir jugando tras fallar
-            const rowReintentar = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                new ButtonBuilder()
-                    .setCustomId('lcs_reto_reintentar')
-                    .setLabel('🔄 ¡Intentar otro reto!')
-                    .setStyle(ButtonStyle.Secondary)
-            );
-
+            // 1. Deshabilitamos los botones del mensaje actual indicando el fallo
             await interaction.update({
-                content: `${interaction.message.content}\n\n❌ **Vaya, <@${userId}>, esa no es. ¡No pasa nada, prueba con el siguiente!** 💪`,
-                components: [rowDeshabilitada, rowReintentar]
+                content: `${interaction.message.content}\n\n❌ **Vaya, <@${userId}>, esa no es. ¡Inténtalo de nuevo con el mismo reto!** 💪`,
+                components: [rowDeshabilitada]
             });
+
+            // 2. Extraemos el texto de la pregunta actual del mensaje anterior
+            const contenidoMensajeOriginal = interaction.message.content;
+            const lineaPregunta = contenidoMensajeOriginal.split('\n').find(l => l.includes('📌')) || '📌 **¿Cuánto es...?**';
+
+            // 3. Extraemos las opciones que tenía el reto para volver a mostrarlas exactamente iguales
+            const opcionesMismoReto: { texto: string; esCorrecta: boolean }[] = [];
+            interaction.message.components.forEach(row => {
+                row.components.forEach(component => {
+                    if (component.type === ComponentType.Button) {
+                        const esCorrectaOpcion = component.customId?.includes('_si_') || false;
+                        opcionesMismoReto.push({
+                            texto: component.label || '',
+                            esCorrecta: esCorrectaOpcion
+                        });
+                    }
+                });
+            });
+
+            // 4. Creamos una nueva botonera limpia con las mismas opciones desordenadas o en su sitio
+            const rowReintentoOpciones = new ActionRowBuilder<ButtonBuilder>();
+            opcionesMismoReto.sort(() => Math.random() - 0.5).forEach((op, index) => {
+                const customIdResp = `lcs_reto_resp_${op.esCorrecta ? 'si' : 'no'}_${index}`;
+                rowReintentoOpciones.addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(customIdResp)
+                        .setLabel(op.texto)
+                        .setStyle(ButtonStyle.Primary)
+                );
+            });
+
+            // 5. Enviamos un mensaje nuevo al canal con el mismo reto para darle otra oportunidad
+            if (canalActual) {
+                await canalActual.send({
+                    content: `🔄 **¡Otra oportunidad para <@${userId}>!**\n\n🎯 **Repetimos Reto:**\n\n${lineaPregunta}`,
+                    components: [rowReintentoOpciones]
+                });
+            }
         }
         return true;
     }
