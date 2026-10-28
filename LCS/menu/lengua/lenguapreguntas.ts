@@ -6,7 +6,7 @@ export interface RetoLengua {
 }
 
 /**
- * Generador dinámico de retos de Lengua usando la API REST de Gemini (Nivel 2º de Primaria)
+ * Generador dinámico de retos de Lengua optimizado para velocidad con gemini-3.8-flash
  */
 export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua> {
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
@@ -16,22 +16,22 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
             throw new Error('Falta la API Key en las variables de entorno.');
         }
 
-        const prompt = `Actúa como un profesor de lengua española para niños de 2º de Primaria (7 años). 
-        Genera un reto de lengua ÚNICO, original y variado sobre ortografía básica, plurales, sinónimos, antónimos o gramática elemental.
+        const prompt = `Actúa como un profesor de lengua para niños de 7 años. 
+        Genera un reto corto sobre ortografía, plurales, sinónimos o antónimos.
         
-        Devuelve ÚNICAMENTE un objeto JSON válido (sin markdown ni texto adicional) con esta estructura exacta:
+        Devuelve ÚNICAMENTE un JSON válido (sin markdown) con esta estructura exacta:
         {
-            "pregunta": "Texto de la pregunta clara y adaptada a 7 años",
+            "pregunta": "Texto de la pregunta",
             "opciones": [
                 {"texto": "Opción 1", "esCorrecta": true},
                 {"texto": "Opción 2", "esCorrecta": false},
                 {"texto": "Opción 3", "esCorrecta": false},
                 {"texto": "Opción 4", "esCorrecta": false}
             ],
-            "explicacion": "Una explicación muy corta y sencilla."
+            "explicacion": "Explicación breve."
         }`;
 
-        // Usamos el modelo correcto indicado por la API de Google: gemini-3.8-flash
+        // Mantenemos gemini-3.8-flash que es el exigido por la API de Google
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
         
         const response = await fetch(url, {
@@ -41,7 +41,8 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
                 contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
-                    temperature: 1.0
+                    temperature: 0.7,
+                    maxOutputTokens: 300 // 👈 Forzamos una respuesta ultracorta para que no se quede pensando
                 }
             })
         });
@@ -67,9 +68,8 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
         };
 
     } catch (error) {
-        console.error('❌ Error al generar reto con Gemini, usando respaldo:', error);
+        console.error('❌ Error al generar reto con Gemini (usando respaldo):', error);
         
-        // 🛡️ Banco de respaldo variado para evitar repeticiones si hay intermitencias
         const bancoRespaldo = [
             {
                 pregunta: '¿Cuál es el sinónimo de la palabra "contento"?',
@@ -100,26 +100,6 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
                     { texto: 'Floris', esCorrecta: false }
                 ],
                 explicacion: 'A las palabras que terminan en consonante se les añade "es".'
-            },
-            {
-                pregunta: '¿Qué palabra indica una acción (un verbo)?',
-                opciones: [
-                    { texto: 'Saltar', esCorrecta: true },
-                    { texto: 'Pelota', esCorrecta: false },
-                    { texto: 'Rojo', esCorrecta: false },
-                    { texto: 'Mesa', esCorrecta: false }
-                ],
-                explicacion: 'Saltar es algo que podemos hacer.'
-            },
-            {
-                pregunta: '¿Cuál es el antónimo (lo contrario) de "grande"?',
-                opciones: [
-                    { texto: 'Pequeño', esCorrecta: true },
-                    { texto: 'Alto', esCorrecta: false },
-                    { texto: 'Gordo', esCorrecta: false },
-                    { texto: 'Ancho', esCorrecta: false }
-                ],
-                explicacion: 'Lo contrario de grande es pequeño.'
             }
         ];
 
