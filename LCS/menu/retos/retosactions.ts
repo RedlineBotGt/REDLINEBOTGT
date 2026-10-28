@@ -9,7 +9,7 @@ import {
     ChannelType 
 } from 'discord.js';
 import { generarRetoMates } from './mates/mates';
-import { getAlarmasCollection } from '../../alarma/alarmaworker'; // 👈 Reutilizamos la conexión oficial y segura del bot
+import { getAlarmasCollection } from '../../alarma/alarmaworker';
 
 async function getRetosCollection() {
     const alarmasColl = await getAlarmasCollection();
@@ -97,7 +97,7 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
         return true;
     }
 
-    // 3. Capturar la selección del canal y lanzar el primer reto (Nivel 1 por defecto para empezar)
+    // 3. Capturar la selección del canal y lanzar el primer reto (Nivel 1)
     if (interaction.isChannelSelectMenu() && interaction.customId === 'select_canal_reto_mates') {
         const canalId = interaction.values[0];
         const canalMates = interaction.guild?.channels.cache.get(canalId) as TextChannel;
@@ -135,6 +135,46 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
         return true;
     }
 
+    // 🔄 Botón para continuar jugando tras un fallo
+    if (customId === 'lcs_reto_reintentar') {
+        let nivelActual = 1;
+        try {
+            const collection = await getRetosCollection();
+            const usuarioDoc = await collection.findOne({ userId: interaction.user.id });
+            if (usuarioDoc?.puntos) {
+                nivelActual = usuarioDoc.puntos;
+            }
+        } catch (err) {
+            console.error('Error al obtener nivel para reintentar:', err);
+        }
+
+        const nuevoReto = generarRetoMates(nivelActual);
+        const rowNuevasOpciones = new ActionRowBuilder<ButtonBuilder>();
+        nuevoReto.opciones.forEach((op, index) => {
+            const customIdResp = `lcs_reto_resp_${op.esCorrecta ? 'si' : 'no'}_${index}`;
+            rowNuevasOpciones.addComponents(
+                new ButtonBuilder()
+                    .setCustomId(customIdResp)
+                    .setLabel(op.texto)
+                    .setStyle(ButtonStyle.Primary)
+            );
+        });
+
+        const canalActual = interaction.channel as TextChannel;
+        if (canalActual) {
+            await canalActual.send({
+                content: `🎯 **¡Nuevo Reto de Matemáticas!** (Nivel ${nivelActual})\n\n📌 **${nuevoReto.pregunta}**`,
+                components: [rowNuevasOpciones]
+            });
+        }
+
+        await interaction.update({
+            content: `${interaction.message.content}\n\n🔄 *Nuevo reto solicitado.*`,
+            components: []
+        });
+        return true;
+    }
+
     // 4. Capturar las respuestas de los botones y actualizar nivel por usuario en MongoDB
     if (customId.startsWith('lcs_reto_resp_')) {
         const partes = customId.split('_');
@@ -162,7 +202,6 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
 
             try {
                 const collection = await getRetosCollection();
-                // Actualizamos los puntos del usuario en MongoDB
                 await collection.updateOne(
                     { userId: userId },
                     { 
@@ -172,11 +211,8 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
                     { upsert: true }
                 );
 
-                // Consultamos cuántos puntos tiene ahora para calcular su nivel real
                 const usuarioDoc = await collection.findOne({ userId: userId });
                 const puntosTotales = usuarioDoc?.puntos || 1;
-                
-                // El nivel escala de manera progresiva según los puntos acumulados del usuario
                 siguienteNivel = puntosTotales; 
 
             } catch (err) {
@@ -188,7 +224,6 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
                 components: [rowDeshabilitada]
             });
 
-            // Generamos el siguiente reto adaptado al nivel actual del usuario
             const nuevoReto = generarRetoMates(siguienteNivel);
 
             const rowNuevasOpciones = new ActionRowBuilder<ButtonBuilder>();
@@ -211,9 +246,17 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
             }
 
         } else {
+            // Añadimos el botón de reintentar para que pueda seguir jugando tras fallar
+            const rowReintentar = new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder()
+                    .setCustomId('lcs_reto_reintentar')
+                    .setLabel('🔄 ¡Intentar otro reto!')
+                    .setStyle(ButtonStyle.Secondary)
+            );
+
             await interaction.update({
-                content: `${interaction.message.content}\n\n❌ **Vaya, <@${userId}>, esa no es. ¡Prueba otra vez en el siguiente!** 💪`,
-                components: [rowDeshabilitada]
+                content: `${interaction.message.content}\n\n❌ **Vaya, <@${userId}>, esa no es. ¡No pasa nada, prueba con el siguiente!** 💪`,
+                components: [rowDeshabilitada, rowReintentar]
             });
         }
         return true;
