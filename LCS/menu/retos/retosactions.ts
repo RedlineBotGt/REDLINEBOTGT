@@ -11,13 +11,13 @@ import {
 import { generarRetoMates } from './mates/mates';
 import { MongoClient, Db } from 'mongodb';
 
-// Reutilización segura de cliente MongoDB
-const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
+// Reutilización segura de cliente MongoDB utilizando MONGO_URI (nombre correcto en Render)
+const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
 let cachedDb: Db | null = null;
 
 async function getRetosCollection() {
     if (!MONGO_URI) {
-        throw new Error('❌ La variable MONGODB_URI no está definida en las variables de entorno de Render.');
+        throw new Error('❌ La variable MONGO_URI no está definida en las variables de entorno de Render.');
     }
     if (!cachedDb) {
         const client = new MongoClient(MONGO_URI);
