@@ -17,7 +17,7 @@ async function getRetosCollection() {
 }
 
 /**
- * Manejador principal para las interacciones del Módulo de Lengua
+ * Manejador principal para las interacciones del Módulo de Lengua con IA
  */
 export async function handleLenguaInteraction(interaction: Interaction): Promise<boolean> {
     if (!interaction.isButton() && !interaction.isChannelSelectMenu() && !interaction.isStringSelectMenu()) {
@@ -49,7 +49,7 @@ export async function handleLenguaInteraction(interaction: Interaction): Promise
         return true;
     }
 
-    // 2. Capturar selección de canal y lanzar el primer reto
+    // 2. Capturar selección de canal y lanzar el primer reto (Generado por IA)
     if (interaction.isChannelSelectMenu() && interaction.customId === 'select_canal_reto_lengua') {
         const canalId = interaction.values[0];
         const canalLengua = interaction.guild?.channels.cache.get(canalId) as TextChannel;
@@ -59,20 +59,25 @@ export async function handleLenguaInteraction(interaction: Interaction): Promise
             return true;
         }
 
+        // Deferimos la interacción porque la IA puede tardar 1-2 segundos en responder
+        await interaction.update({ 
+            content: `⏳ Generando reto de Lengua con IA para el canal <#${canalId}>...`, 
+            components: [] 
+        });
+
         const nivelInicial = 1; 
-        const reto = generarRetoLengua(nivelInicial);
+        const reto = await generarRetoLengua(nivelInicial);
 
         const rowOpciones = new ActionRowBuilder<ButtonBuilder>();
         reto.opciones.forEach((op, index) => {
             const esCorrectaStr = op.esCorrecta ? 'si' : 'no';
-            // Recortamos la pregunta en el customId para evitar desbordar el límite de 100 chars de Discord
             const preguntaCodificada = encodeURIComponent(reto.pregunta.substring(0, 30));
             const customIdResp = `lcs_lengua_resp_${esCorrectaStr}_${nivelInicial}_${preguntaCodificada}_${index}`;
             
             rowOpciones.addComponents(
                 new ButtonBuilder()
                     .setCustomId(customIdResp)
-                    .setLabel(op.texto.substring(0, 80)) // 🛡️ Restricción estricta de 80 chars máx de Discord
+                    .setLabel(op.texto.substring(0, 80))
                     .setStyle(ButtonStyle.Primary)
             );
         });
@@ -84,10 +89,6 @@ export async function handleLenguaInteraction(interaction: Interaction): Promise
             components: [rowOpciones]
         });
 
-        await interaction.update({ 
-            content: `✅ ¡Reto de Lengua lanzado con éxito al canal <#${canalId}>!`, 
-            components: [] 
-        });
         return true;
     }
 
@@ -142,8 +143,12 @@ export async function handleLenguaInteraction(interaction: Interaction): Promise
                 components: [rowDeshabilitada]
             });
 
-            // Si acierta, sube de nivel y lanza un reto NUEVO
-            const nuevoReto = generarRetoLengua(siguienteNivel);
+            // Si acierta, generamos un nuevo reto con IA
+            if (canalActual) {
+                await canalActual.send(`⏳ Generando siguiente reto de Lengua con IA...`);
+            }
+
+            const nuevoReto = await generarRetoLengua(siguienteNivel);
             const rowNuevasOpciones = new ActionRowBuilder<ButtonBuilder>();
             nuevoReto.opciones.forEach((op, index) => {
                 const esCorrectaStr = op.esCorrecta ? 'si' : 'no';
@@ -153,12 +158,17 @@ export async function handleLenguaInteraction(interaction: Interaction): Promise
                 rowNuevasOpciones.addComponents(
                     new ButtonBuilder()
                         .setCustomId(customIdResp)
-                        .setLabel(op.texto.substring(0, 80)) // 🛡️ Restricción de 80 chars
+                        .setLabel(op.texto.substring(0, 80))
                         .setStyle(ButtonStyle.Primary)
                 );
             });
 
             if (canalActual) {
+                // Borramos el mensaje temporal de "Generando..." y enviamos el reto
+                const mensajesCanal = await canalActual.messages.fetch({ limit: 2 });
+                const mensajeCarga = mensajesCanal.find(m => m.content.includes('Generando siguiente reto'));
+                if (mensajeCarga) await mensajeCarga.delete().catch(() => {});
+
                 await canalActual.send({
                     content: `📈 **¡Nivel Superado por <@${userId}>! Subimos de nivel en Lengua:**\n\n📚 **¡Nuevo Reto!** (Nivel ${siguienteNivel})\n\n📌 **${nuevoReto.pregunta}**`,
                     components: [rowNuevasOpciones]
@@ -197,7 +207,7 @@ export async function handleLenguaInteraction(interaction: Interaction): Promise
                 rowReintentoOpciones.addComponents(
                     new ButtonBuilder()
                         .setCustomId(customIdResp)
-                        .setLabel(op.texto.substring(0, 80)) // 🛡️ Restricción de 80 chars
+                        .setLabel(op.texto.substring(0, 80))
                         .setStyle(ButtonStyle.Primary)
                 );
             });
