@@ -20,7 +20,6 @@ export async function handleAlarmaInteraction(interaction: Interaction): Promise
     try {
         const customId = interaction.isCommand() ? interaction.commandName : interaction.customId;
 
-        // Comprobación amplia de cualquier interacción del módulo de alarmas
         if (
             customId === 'alarma' || 
             customId === 'lcs_menu_alarma' || 
@@ -49,47 +48,71 @@ export async function handleAlarmaInteraction(interaction: Interaction): Promise
                 return true;
             }
 
-            // 2. Abrir Modal para Crear Nueva Alarma
+            // 2. Abrir Modal Ampliado para Crear Nueva Alarma (con opción de repetición)
             if (interaction.isButton() && interaction.customId === 'alarm_crear') {
                 const modal = new ModalBuilder()
                     .setCustomId('modal_crear_alarma')
-                    .setTitle('Configurar Nueva Alarma');
+                    .setTitle('Configurar Alarma Recurrente');
 
                 const inputTitulo = new TextInputBuilder()
                     .setCustomId('input_titulo_alarma')
-                    .setLabel('Título / Nombre de la Alarma:')
+                    .setLabel('Título de la Alarma:')
                     .setStyle(TextInputStyle.Short)
-                    .setPlaceholder('Ej: Recordatorio Mates')
+                    .setPlaceholder('Ej: Reto diario Mates')
                     .setRequired(true);
 
                 const inputHora = new TextInputBuilder()
                     .setCustomId('input_hora_alarma')
-                    .setLabel('Hora de ejecución (HH:MM formato 24h):')
+                    .setLabel('Hora inicial (HH:MM formato 24h):')
                     .setStyle(TextInputStyle.Short)
                     .setPlaceholder('18:30')
+                    .setRequired(true);
+
+                const inputRecurrente = new TextInputBuilder()
+                    .setCustomId('input_recurrente_alarma')
+                    .setLabel('¿Recurrente? (SI / NO):')
+                    .setStyle(TextInputStyle.Short)
+                    .setPlaceholder('SI')
+                    .setValue('NO')
+                    .setRequired(true);
+
+                const inputAvisos = new TextInputBuilder()
+                    .setCustomId('input_avisos_alarma')
+                    .setLabel('Número total de avisos (si es recurrente):')
+                    .setStyle(TextInputStyle.Short)
+                    .setPlaceholder('Ej: 5 (déjalo en 1 si es única)')
+                    .setValue('1')
                     .setRequired(true);
 
                 const inputTexto = new TextInputBuilder()
                     .setCustomId('input_texto_alarma')
                     .setLabel('Mensaje a enviar:')
                     .setStyle(TextInputStyle.Paragraph)
-                    .setPlaceholder('¡Hora de hacer el reto de mates!')
+                    .setPlaceholder('¡Es la hora!')
                     .setRequired(true);
 
-                const row1 = new ActionRowBuilder<TextInputBuilder>().addComponents(inputTitulo);
-                const row2 = new ActionRowBuilder<TextInputBuilder>().addComponents(inputHora);
-                const row3 = new ActionRowBuilder<TextInputBuilder>().addComponents(inputTexto);
+                modal.addComponents(
+                    new ActionRowBuilder<TextInputBuilder>().addComponents(inputTitulo),
+                    new ActionRowBuilder<TextInputBuilder>().addComponents(inputHora),
+                    new ActionRowBuilder<TextInputBuilder>().addComponents(inputRecurrente),
+                    new ActionRowBuilder<TextInputBuilder>().addComponents(inputAvisos),
+                    new ActionRowBuilder<TextInputBuilder>().addComponents(inputTexto)
+                );
 
-                modal.addComponents(row1, row2, row3);
                 await interaction.showModal(modal);
                 return true;
             }
 
-            // 3. Procesar el Modal enviado (Guardar alarma en MongoDB)
+            // 3. Procesar el Modal ampliado y guardar en MongoDB con recurrencia
             if (interaction.isModalSubmit() && interaction.customId === 'modal_crear_alarma') {
                 const titulo = interaction.fields.getTextInputValue('input_titulo_alarma');
                 const hora = interaction.fields.getTextInputValue('input_hora_alarma');
+                const esRecurrenteStr = interaction.fields.getTextInputValue('input_recurrente_alarma').trim().toUpperCase();
+                const totalAvisosStr = interaction.fields.getTextInputValue('input_avisos_alarma').trim();
                 const texto = interaction.fields.getTextInputValue('input_texto_alarma');
+
+                const esRecurrente = esRecurrenteStr === 'SI' || esRecurrenteStr === 'SÍ';
+                const totalAvisos = parseInt(totalAvisosStr) || 1;
 
                 const collection = await getAlarmasCollection();
                 await collection.insertOne({
@@ -100,17 +123,20 @@ export async function handleAlarmaInteraction(interaction: Interaction): Promise
                     hora: hora.trim(),
                     texto: texto,
                     creadoPor: interaction.user.id,
-                    activa: true
+                    activa: true,
+                    esRecurrente: esRecurrente,
+                    totalAvisos: totalAvisos,
+                    avisosRestantes: totalAvisos
                 });
 
                 await interaction.reply({
-                    content: `✅ **Alarma guardada correctamente.**\n\n📌 **Título:** ${titulo}\n⏰ **Hora:** ${hora}\n💬 **Mensaje:** ${texto}`,
+                    content: `✅ **Alarma guardada correctamente.**\n\n📌 **Título:** ${titulo}\n⏰ **Hora:** ${hora}\n🔄 **Recurrente:** ${esRecurrente ? `Sí (${totalAvisos} avisos)` : 'No (Única)'}\n💬 **Mensaje:** ${texto}`,
                     ephemeral: true
                 });
                 return true;
             }
 
-            // 4. Listar Alarmas Activas
+            // 4. Listar Alarmas Activas (mostrando si son recurrentes)
             if (interaction.isButton() && interaction.customId === 'alarm_listar') {
                 const collection = await getAlarmasCollection();
                 const alarmas = await collection.find({ guildId: interaction.guildId, activa: true }).toArray();
@@ -123,7 +149,11 @@ export async function handleAlarmaInteraction(interaction: Interaction): Promise
                     return true;
                 }
 
-                const lista = alarmas.map((a, i) => `${i + 1}. ⏰ **${a.hora}** - *${a.titulo}*`).join('\n');
+                const lista = alarmas.map((a, i) => {
+                    const tipo = a.esRecurrente ? `🔄 (Restan ${a.avisosRestantes} avisos)` : '⏱️ (Única)';
+                    return `${i + 1}. ⏰ **${a.hora}** - *${a.titulo}* ${tipo}`;
+                }).join('\n');
+
                 await interaction.reply({
                     content: `📋 **Alarmas Activas:**\n\n${lista}`,
                     ephemeral: true
