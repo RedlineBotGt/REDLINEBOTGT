@@ -7,15 +7,17 @@ import {
     ButtonBuilder, 
     ButtonStyle, 
     StringSelectMenuBuilder, 
-    StringSelectMenuInteraction 
+    TextChannel 
 } from 'discord.js';
 import { ObjectId } from 'mongodb';
 import { getAlarmasCollection, AlarmaLCS } from '../alarma/alarmaworker';
+import { generarRetoMates } from './retos/mates/mates';
 
 const LCS_GUILD_ID = '1564967606295732304';
+const CANAL_MATES_ID = '1564998716740337795';
 
 /**
- * Manejador centralizado de interacciones del menú de alarmas de LCS
+ * Manejador centralizado de interacciones del menú de alarmas y retos de LCS
  */
 export async function handleMenuInteraction(interaction: Interaction): Promise<boolean> {
     if (interaction.guildId !== LCS_GUILD_ID) return false;
@@ -24,7 +26,7 @@ export async function handleMenuInteraction(interaction: Interaction): Promise<b
     // 1. MANEJO DE BOTONES
     // ==========================================
     if (interaction.isButton()) {
-        // Botón principal del menú para abrir la gestión de alarmas
+        // Botón principal de Alarmas
         if (interaction.customId === 'lcs_menu_alarma') {
             const row = new ActionRowBuilder<ButtonBuilder>()
                 .addComponents(
@@ -41,6 +43,74 @@ export async function handleMenuInteraction(interaction: Interaction): Promise<b
             await interaction.reply({ 
                 content: '⏰ **Gestión de Alarmas LCS**\n¿Qué acción deseas realizar?', 
                 components: [row], 
+                ephemeral: true 
+            });
+            return true;
+        }
+
+        // 🎯 Botón principal de RETOS
+        if (interaction.customId === 'lcs_menu_retos') {
+            const row = new ActionRowBuilder<ButtonBuilder>()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('lcs_retos_mates_lanzar')
+                        .setLabel('📐 Lanzar Reto de Mates (Nivel 1)')
+                        .setStyle(ButtonStyle.Success),
+                    new ButtonBuilder()
+                        .setCustomId('lcs_retos_info')
+                        .setLabel('📊 Ver Progreso / Niveles')
+                        .setStyle(ButtonStyle.Secondary)
+                );
+
+            await interaction.reply({ 
+                content: '🎯 **Academia Discord - Sección de Retos**\nSelecciona una opción para Leo:', 
+                components: [row], 
+                ephemeral: true 
+            });
+            return true;
+        }
+
+        // 📚 Botón de RETOS BD (Archivo y estadísticas)
+        if (interaction.customId === 'lcs_menu_retos_bd') {
+            await interaction.reply({ 
+                content: '📚 **Base de Datos de Retos**\n*Próximamente: Histórico de aciertos, fallos y tablas mensuales/anuales de Leo.*', 
+                ephemeral: true 
+            });
+            return true;
+        }
+
+        // Acción para lanzar un reto de Mates al canal específico
+        if (interaction.customId === 'lcs_retos_mates_lanzar') {
+            const canalMates = interaction.guild?.channels.cache.get(CANAL_MATES_ID) as TextChannel;
+            if (!canalMates) {
+                await interaction.reply({ content: '❌ No se pudo encontrar el canal de Mates configurado.', ephemeral: true });
+                return true;
+            }
+
+            // Generar reto de Mates (por defecto nivel 1 para empezar)
+            const nivelActual = 1; 
+            const reto = generarRetoMates(nivelActual);
+
+            // Crear botones con las opciones de respuesta
+            const rowOpciones = new ActionRowBuilder<ButtonBuilder>();
+            reto.opciones.forEach((op, index) => {
+                const customIdResp = `lcs_reto_resp_${op.esCorrecta ? 'si' : 'no'}_${index}`;
+                rowOpciones.addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(customIdResp)
+                        .setLabel(op.texto)
+                        .setStyle(ButtonStyle.Primary)
+                );
+            });
+
+            // Enviar el reto al canal de mates
+            await canalMates.send({
+                content: `🎯 **¡Nuevo Reto de Matemáticas!** (Nivel ${nivelActual} - 1º Primaria)\n\n📌 **${reto.pregunta}**`,
+                components: [rowOpciones]
+            });
+
+            await interaction.reply({ 
+                content: `✅ ¡Reto de Mates lanzado con éxito al canal <#${CANAL_MATES_ID}>!`, 
                 ephemeral: true 
             });
             return true;
@@ -122,7 +192,6 @@ export async function handleMenuInteraction(interaction: Interaction): Promise<b
                     .setPlaceholder('Selecciona una alarma para gestionar...')
                     .addOptions(
                         alarmas.map(a => {
-                            // Indicador visual con reloj y repeticiones restantes si es recurrente
                             let indicador = '';
                             if (a.esRecurrente && a.avisosRestantes !== undefined) {
                                 indicador = `⏰${a.avisosRestantes} - `;
@@ -132,7 +201,7 @@ export async function handleMenuInteraction(interaction: Interaction): Promise<b
 
                             const labelText = `${indicador}${a.titulo} (${a.hora})`;
                             return {
-                                label: labelText.substring(0, 100), // Límite de caracteres de Discord
+                                label: labelText.substring(0, 100),
                                 description: `Canal: ${a.channelId} | Día: ${a.dia}`,
                                 value: a._id.toString()
                             };
@@ -279,7 +348,6 @@ export async function handleMenuInteraction(interaction: Interaction): Promise<b
     // 3. MANEJO DE MODALS (ENVÍOS DE FORMULARIOS)
     // ==========================================
     if (interaction.isModalSubmit()) {
-        // Envio del Modal Principal de Creación
         if (interaction.customId === 'lcs_modal_crear_alarma') {
             const titulo = interaction.fields.getTextInputValue('alarma_titulo').trim();
             const channelId = interaction.fields.getTextInputValue('alarma_canal').trim();
@@ -314,7 +382,6 @@ export async function handleMenuInteraction(interaction: Interaction): Promise<b
                 const resultado = await collection.insertOne(nuevaAlarma);
                 const alarmaId = resultado.insertedId.toString();
 
-                // Preguntar si desea configurar repetición con botones interactivos
                 const row = new ActionRowBuilder<ButtonBuilder>()
                     .addComponents(
                         new ButtonBuilder()
@@ -342,7 +409,6 @@ export async function handleMenuInteraction(interaction: Interaction): Promise<b
             return true;
         }
 
-        // Envío del Modal Secundario de Repetición
         if (interaction.customId.startsWith('lcs_modal_repeticion_')) {
             const alarmaId = interaction.customId.replace('lcs_modal_repeticion_', '');
             
