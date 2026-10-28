@@ -7,13 +7,42 @@ import { getAlarmasCollection } from './alarmaworker';
 
 const LCS_GUILD_ID = '1564967606295732304';
 
+/**
+ * 📦 Estructura de datos completa para las alarmas de LCS en MongoDB
+ */
+export interface AlarmaLCS {
+    _id?: any;
+    guildId: string;
+    channelId: string;
+    titulo: string;
+    dia: string;
+    hora: string;
+    texto: string;
+    creadoPor: string;
+    activa: boolean;
+    esRecurrente: boolean;
+    horasIntervalo?: number;
+    diasIntervalo?: number;
+    totalAvisos?: number;
+    avisosRestantes?: number;
+    proximaEjecucion?: Date;
+}
+
 export const data = new SlashCommandBuilder()
     .setName('alarma')
     .setDescription('Programa o configura una alarma/mensaje automático para LCS')
+    .addStringOption(option =>
+        option.setName('titulo')
+            .setDescription('Título identificativo de la alarma')
+            .setRequired(true))
     .addChannelOption(option =>
         option.setName('canal')
             .setDescription('Canal donde se enviará el mensaje')
             .addChannelTypes(ChannelType.GuildText)
+            .setRequired(true))
+    .addStringOption(option =>
+        option.setName('dia')
+            .setDescription('Día de ejecución (Ej: 2026-11-01 o Todos)')
             .setRequired(true))
     .addStringOption(option =>
         option.setName('hora')
@@ -32,7 +61,9 @@ export async function execute(interaction: CommandInteraction) {
         });
     }
 
+    const titulo = interaction.options.get('titulo')?.value as string;
     const channel = interaction.options.get('canal')?.channel;
+    const dia = interaction.options.get('dia')?.value as string;
     const hora = interaction.options.get('hora')?.value as string;
     const texto = interaction.options.get('texto')?.value as string;
 
@@ -51,17 +82,22 @@ export async function execute(interaction: CommandInteraction) {
 
     try {
         const collection = await getAlarmasCollection();
-        await collection.insertOne({
+        const nuevaAlarma: AlarmaLCS = {
             guildId: LCS_GUILD_ID,
             channelId: channel!.id,
+            titulo: titulo,
+            dia: dia,
             hora: horaFormateada,
             texto: texto,
             creadoPor: interaction.user.id,
-            activa: true
-        });
+            activa: true,
+            esRecurrente: false // Vía slash directo es de único aviso por defecto
+        };
+
+        await collection.insertOne(nuevaAlarma);
 
         await interaction.reply({ 
-            content: `✅ **Alarma guardada y programada con éxito para LCS**\n📌 **Canal:** <#${channel?.id}>\n⏰ **Hora:** ${horaFormateada}\n💬 **Texto:** ${texto}`, 
+            content: `✅ **Alarma guardada y programada con éxito para LCS**\n📌 **Título:** ${titulo}\n📌 **Canal:** <#${channel?.id}>\n📅 **Día:** ${dia}\n⏰ **Hora:** ${horaFormateada}\n💬 **Texto:** ${texto}`, 
             ephemeral: true 
         });
     } catch (error) {
