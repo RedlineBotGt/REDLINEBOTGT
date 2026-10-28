@@ -4,63 +4,85 @@ import {
     ButtonBuilder, 
     ButtonStyle, 
     TextChannel,
-    ComponentType 
+    ComponentType,
+    ChannelSelectMenuBuilder,
+    ChannelType 
 } from 'discord.js';
 import { generarRetoMates } from './mates/mates';
+import { MongoClient } from 'mongodb';
 
-const CANAL_MATES_ID = '1564998716740337795';
+// Conexión a la colección de retos / puntos en MongoDB (reutiliza tu URI de conexión general)
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
+const DB_NAME = 'redlinebot'; // O el nombre de tu base de datos de la academia
+const CATEGORIA_MATES_ID = '1564998683496550573';
+
+async function getRetosCollection() {
+    const client = new MongoClient(MONGO_URI);
+    await client.connect();
+    return client.db(DB_NAME).collection('lcs_retos_puntos');
+}
 
 /**
- * Manejador exclusivo para las interacciones de Retos y Academia Discord
+ * Manejador principal para las interacciones del Módulo de Retos
  */
 export async function handleRetosInteraction(interaction: Interaction): Promise<boolean> {
-    if (!interaction.isButton()) {
+    if (!interaction.isButton() && !interaction.isChannelSelectMenu() && !interaction.isStringSelectMenu()) {
         return false;
     }
 
     const customId = interaction.customId;
 
-    // 1. Botón principal de RETOS en el menú
-    if (customId === 'lcs_menu_retos') {
-        const row = new ActionRowBuilder<ButtonBuilder>()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('lcs_retos_mates_lanzar')
-                    .setLabel('📐 Lanzar Reto de Mates (Nivel 1)')
-                    .setStyle(ButtonStyle.Success),
-                new ButtonBuilder()
-                    .setCustomId('lcs_retos_info')
-                    .setLabel('📊 Ver Progreso / Niveles')
-                    .setStyle(ButtonStyle.Secondary)
-            );
+    // 1. Botón principal de RETOS en el menú (Muestra Ranking y Retos de Mates)
+    if (customId === 'lcs_retos_ranking' || customId === 'lcs_menu_retos') {
+        if (customId === 'lcs_retos_ranking') {
+            // Mostrar directamente el ranking dinámico
+            const collection = await getRetosCollection();
+            const ranking = await collection.find({}).sort({ puntos: -1 }).limit(10).toArray();
 
-        await interaction.reply({ 
-            content: '🎯 **Academia Discord - Sección de Retos**\nSelecciona una opción para Leo:', 
-            components: [row], 
-            ephemeral: true 
-        });
-        return true;
-    }
-
-    // 2. Botón de Estadísticas / Progreso
-    if (customId === 'lcs_retos_info') {
-        // TODO: Conectar con MongoDB para sacar las estadísticas reales del usuario
-        await interaction.reply({ 
-            content: '📊 **Progreso de la Academia**\n\n🏆 **Clasificación actual:**\n1. Leo - ⭐️ 0 aciertos\n\n*(Próximamente más estadísticas detalladas)*', 
-            ephemeral: true 
-        });
-        return true;
-    }
-
-    // 3. Lanzar reto de Mates al canal específico
-    if (customId === 'lcs_retos_mates_lanzar' || customId === 'lcs_reto_siguiente') {
-        const canalMates = interaction.guild?.channels.cache.get(CANAL_MATES_ID) as TextChannel;
-        if (!canalMates) {
-            if (interaction.deferred || interaction.replied) {
-                await interaction.followUp({ content: '❌ No se pudo encontrar el canal de Mates configurado.', ephemeral: true });
+            let rankingTexto = '🏆 **Clasificación General - Academia LCS**\n\n';
+            if (ranking.length === 0) {
+                rankingTexto += 'ℹ️ Aún no hay participantes registrados. ¡Sé el primero en resolver un reto!';
             } else {
-                await interaction.reply({ content: '❌ No se pudo encontrar el canal de Mates configurado.', ephemeral: true });
+                rankingTexto += ranking.map((r, index) => {
+                    const medalla = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🔹';
+                    return `${medalla} **${index + 1}.** <@${r.userId}> - ⭐️ **${r.puntos}** aciertos`;
+                }).join('\n');
             }
+
+            await interaction.reply({ 
+                content: rankingTexto, 
+                ephemeral: true 
+            });
+            return true;
+        }
+    }
+
+    // 2. Botón para iniciar Retos de Mates -> Despliega el selector de canales de la categoría
+    if (customId === 'lcs_retos_mates_crear') {
+        const row = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(
+            new ChannelSelectMenuBuilder()
+                .setCustomId('select_canal_reto_mates')
+                .setPlaceholder('Selecciona el canal de Mates para enviar el reto')
+                .addChannelTypes(ChannelType.GuildText)
+                .setMinValues(1)
+                .setMaxValues(1)
+        );
+
+        await interaction.reply({
+            content: '📐 **Retos de Mates**\nSelecciona el canal de destino dentro de la categoría de Mates:',
+            components: [row],
+            ephemeral: true
+        });
+        return true;
+    }
+
+    // 3. Capturar la selección del canal y lanzar el primer reto de mates ahí
+    if (interaction.isChannelSelectMenu() && interaction.customId === 'select_canal_reto_mates') {
+        const canalId = interaction.values[0];
+        const canalMates = interaction.guild?.channels.cache.get(canalId) as TextChannel;
+
+        if (!canalMates) {
+            await interaction.reply({ content: '❌ No se pudo encontrar el canal seleccionado.', ephemeral: true });
             return true;
         }
 
@@ -78,40 +100,57 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
             );
         });
 
-        const mensajeReto = `🎯 **¡Nuevo Reto de Matemáticas!** (Nivel ${nivelActual} - 1º Primaria)\n\n📌 **${reto.pregunta}**`;
+        const mensajeReto = `🎯 **¡Nuevo Reto de Matemáticas!** (Nivel ${nivelActual})\n\n📌 **${reto.pregunta}**`;
 
-        if (customId === 'lcs_reto_siguiente') {
-            await interaction.update({
-                content: `${mensajeReto}`,
-                components: [rowOpciones]
-            });
-        } else {
-            await canalMates.send({
-                content: mensajeReto,
-                components: [rowOpciones]
-            });
+        // Enviar el reto al canal elegido
+        await canalMates.send({
+            content: mensajeReto,
+            components: [rowOpciones]
+        });
 
-            await interaction.reply({ 
-                content: `✅ ¡Reto de Mates lanzado con éxito al canal <#${CANAL_MATES_ID}>!`, 
-                ephemeral: true 
-            });
-        }
+        await interaction.update({ 
+            content: `✅ ¡Reto de Mates lanzado con éxito al canal <#${canalId}>!`, 
+            components: [] 
+        });
         return true;
     }
 
-    // 4. Capturar las respuestas de los botones del reto de mates
+    // 4. Botón para saltar al siguiente reto (dentro del canal)
+    if (customId === 'lcs_reto_siguiente') {
+        const nivelActual = 1; 
+        const reto = generarRetoMates(nivelActual);
+
+        const rowOpciones = new ActionRowBuilder<ButtonBuilder>();
+        reto.opciones.forEach((op, index) => {
+            const customIdResp = `lcs_reto_resp_${op.esCorrecta ? 'si' : 'no'}_${index}`;
+            rowOpciones.addComponents(
+                new ButtonBuilder()
+                    .setCustomId(customIdResp)
+                    .setLabel(op.texto)
+                    .setStyle(ButtonStyle.Primary)
+            );
+        });
+
+        const mensajeReto = `🎯 **¡Nuevo Reto de Matemáticas!** (Nivel ${nivelActual})\n\n📌 **${reto.pregunta}**`;
+
+        await interaction.update({
+            content: mensajeReto,
+            components: [rowOpciones]
+        });
+        return true;
+    }
+
+    // 5. Capturar las respuestas de los botones del reto y sumar puntos en MongoDB
     if (customId.startsWith('lcs_reto_resp_')) {
         const esCorrecta = customId.includes('_si_');
         const userId = interaction.user.id;
 
-        // Deshabilitar los botones del mensaje actual para que no se pueda volver a pulsar
         const rowDeshabilitada = new ActionRowBuilder<ButtonBuilder>();
         interaction.message.components.forEach(row => {
             row.components.forEach(component => {
                 if (component.type === ComponentType.Button) {
                     const button = ButtonBuilder.from(component);
                     button.setDisabled(true);
-                    // Destacar visualmente la respuesta correcta e incorrecta
                     if (component.customId?.includes('_si_')) {
                         button.setStyle(ButtonStyle.Success);
                     } else if (component.customId === customId && !esCorrecta) {
@@ -123,7 +162,17 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
         });
 
         if (esCorrecta) {
-            // Botón para saltar directamente al siguiente reto
+            // Guardar o actualizar puntos en MongoDB
+            const collection = await getRetosCollection();
+            await collection.updateOne(
+                { userId: userId },
+                { 
+                    $inc: { puntos: 1 },
+                    $set: { username: interaction.user.username }
+                },
+                { upsert: true }
+            );
+
             const rowSiguiente = new ActionRowBuilder<ButtonBuilder>().addComponents(
                 new ButtonBuilder()
                     .setCustomId('lcs_reto_siguiente')
@@ -132,12 +181,12 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
             );
 
             await interaction.update({
-                content: `${interaction.message.content}\n\n🎉 **¡Respuesta Correcta de <@${userId}>! ¡Muy bien hecho!** 🌟`,
+                content: `${interaction.message.content}\n\n🎉 **¡Respuesta Correcta de <@${userId}>! (+1 punto)** 🌟`,
                 components: [rowDeshabilitada, rowSiguiente]
             });
         } else {
             await interaction.update({
-                content: `${interaction.message.content}\n\n❌ **Vaya, <@${userId}>, esa no es. ¡Prueba otra vez o pide otro reto!** 💪`,
+                content: `${interaction.message.content}\n\n❌ **Vaya, <@${userId}>, esa no es. ¡Prueba otra vez!** 💪`,
                 components: [rowDeshabilitada]
             });
         }
