@@ -16,16 +16,11 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
             throw new Error('No se encontró la clave de API de Gemini en las variables de entorno.');
         }
 
-        // Prompt reforzado para garantizar variedad y evitar que repita siempre lo mismo
         const prompt = `Actúa como un profesor de lengua española experto en educación infantil para niños de 2º de Primaria (7 años). 
         Genera un reto de lengua ÚNICO, original y divertido. 
-        IMPORTANTE: NO repitas preguntas típicas sobre el plural de la palabra "lápiz". Rota los temas obligatoriamente entre:
-        - Ortografía básica (uso de m antes de b, z/c, r/rr, h).
-        - Plurales de palabras sencillas (flor, camión, papel, luz).
-        - Sinónimos y antónimos muy fáciles (contento/feliz, grande/pequeño).
-        - Identificar nombres propios, verbos sencillos o adjetivos.
+        Varía los temas obligatoriamente entre: ortografía básica (m antes de b, z/c), plurales, sinónimos, antónimos, o identificar nombres y verbos.
         
-        Devuelve ÚNICAMENTE un objeto JSON válido (sin formato de bloque de código markdown ni texto adicional) con esta estructura exacta:
+        Devuelve ÚNICAMENTE un objeto JSON válido (sin markdown ni texto adicional) con esta estructura exacta:
         {
             "pregunta": "Texto de la pregunta clara y adaptada a 7 años",
             "opciones": [
@@ -34,11 +29,11 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
                 {"texto": "Opción 3", "esCorrecta": false},
                 {"texto": "Opción 4", "esCorrecta": false}
             ],
-            "explicacion": "Una explicación muy corta y sencilla de por qué es la respuesta correcta."
-        }
-        Asegúrate de que las opciones estén barajadas aleatoriamente y que solo una sea la correcta.`;
+            "explicacion": "Una explicación muy corta y sencilla."
+        }`;
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        // Usamos gemini-1.5-flash que es el modelo estándar más estable para la API REST
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
         
         const response = await fetch(url, {
             method: 'POST',
@@ -51,13 +46,14 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
                 }],
                 generationConfig: {
                     responseMimeType: "application/json",
-                    temperature: 1.0 // 🌡️ Temperatura alta para forzar creatividad y variedad de preguntas
+                    temperature: 1.0
                 }
             })
         });
 
         if (!response.ok) {
-            throw new Error(`Error en la API de Gemini: ${response.statusText}`);
+            const errorBody = await response.text();
+            throw new Error(`Error HTTP ${response.status}: ${errorBody}`);
         }
 
         const data = await response.json() as any;
@@ -76,9 +72,9 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
         };
 
     } catch (error) {
-        console.error('❌ Error al generar reto de lengua con IA, usando respaldo:', error);
+        console.error('❌ Error exacto al generar reto con Gemini:', error);
         
-        // Respaldo dinámico alternativo
+        // 🛡️ Banco de respaldo amplio y variado para que nunca se repita lo mismo
         const respaldos = [
             {
                 pregunta: '¿Cuál es el sinónimo de la palabra "contento"?',
@@ -91,7 +87,7 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
                 explicacion: 'Estar contento es estar feliz.'
             },
             {
-                pregunta: '¿Cómo se escribe correctamente la palabra?',
+                pregunta: '¿Cómo se escribe correctamente?',
                 opciones: [
                     { texto: 'Zanahoria', esCorrecta: true },
                     { texto: 'Sanahoria', esCorrecta: false },
@@ -99,8 +95,49 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
                     { texto: 'Sanajoria', esCorrecta: false }
                 ],
                 explicacion: 'Se escribe con z y h.'
+            },
+            {
+                pregunta: '¿Cuál es el plural de la palabra "flor"?',
+                opciones: [
+                    { texto: 'Flores', esCorrecta: true },
+                    { texto: 'Floreses', esCorrecta: false },
+                    { texto: 'Flors', esCorrecta: false },
+                    { texto: 'Floris', esCorrecta: false }
+                ],
+                explicacion: 'A las palabras que terminan en consonante se les añade "es".'
+            },
+            {
+                pregunta: '¿Qué palabra indica una acción (un verbo)?',
+                opciones: [
+                    { texto: 'Saltar', esCorrecta: true },
+                    { texto: 'Pelota', esCorrecta: false },
+                    { texto: 'Rojo', esCorrecta: false },
+                    { texto: 'Mesa', esCorrecta: false }
+                ],
+                explicacion: 'Saltar es algo que podemos hacer.'
+            },
+            {
+                pregunta: '¿Cómo se escribe antes de la letra "p"?',
+                opciones: [
+                    { texto: 'Siempre M', esCorrecta: true },
+                    { texto: 'Siempre N', esCorrecta: false },
+                    { texto: 'Depende', esCorrecta: false },
+                    { texto: 'Con H', esCorrecta: false }
+                ],
+                explicacion: 'Antes de P y B siempre va M.'
+            },
+            {
+                pregunta: '¿Cuál es el antónimo (lo contrario) de "grande"?',
+                opciones: [
+                    { texto: 'Pequeño', esCorrecta: true },
+                    { texto: 'Alto', esCorrecta: false },
+                    { texto: 'Gordo', esCorrecta: false },
+                    { texto: 'Ancho', esCorrecta: false }
+                ],
+                explicacion: 'Lo contrario de grande es pequeño.'
             }
         ];
+
         const elegido = respaldos[Math.floor(Math.random() * respaldos.length)];
 
         return {
