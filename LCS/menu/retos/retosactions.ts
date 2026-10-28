@@ -9,7 +9,7 @@ import {
     ChannelType 
 } from 'discord.js';
 import { generarRetoMates } from './mates/mates';
-import { getAlarmasCollection } from '../../alarma/alarmaworker'; // 👈 Ruta corregida subiendo dos niveles
+import { getAlarmasCollection } from '../../alarma/alarmaworker'; // 👈 Reutilizamos la conexión oficial y segura del bot
 
 async function getRetosCollection() {
     const alarmasColl = await getAlarmasCollection();
@@ -60,7 +60,7 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
             } else {
                 rankingTexto += ranking.map((r, index) => {
                     const medalla = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🔹';
-                    return `${medalla} **${index + 1}.** <@${r.userId}> - ⭐️ **${r.puntos}** puntos`;
+                    return `${medalla} **${index + 1}.** <@${r.userId}> - ⭐️ **${r.puntos}** puntos (Nivel ${r.puntos || 1})`;
                 }).join('\n');
             }
 
@@ -97,7 +97,7 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
         return true;
     }
 
-    // 3. Capturar la selección del canal y lanzar el primer reto (Nivel 1)
+    // 3. Capturar la selección del canal y lanzar el primer reto (Nivel 1 por defecto para empezar)
     if (interaction.isChannelSelectMenu() && interaction.customId === 'select_canal_reto_mates') {
         const canalId = interaction.values[0];
         const canalMates = interaction.guild?.channels.cache.get(canalId) as TextChannel;
@@ -112,7 +112,7 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
 
         const rowOpciones = new ActionRowBuilder<ButtonBuilder>();
         reto.opciones.forEach((op, index) => {
-            const customIdResp = `lcs_reto_resp_${op.esCorrecta ? 'si' : 'no'}_${nivelInicial}_${index}`;
+            const customIdResp = `lcs_reto_resp_${op.esCorrecta ? 'si' : 'no'}_${index}`;
             rowOpciones.addComponents(
                 new ButtonBuilder()
                     .setCustomId(customIdResp)
@@ -135,11 +135,10 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
         return true;
     }
 
-    // 4. Capturar las respuestas de los botones y guardar/avanzar
+    // 4. Capturar las respuestas de los botones y actualizar nivel por usuario en MongoDB
     if (customId.startsWith('lcs_reto_resp_')) {
         const partes = customId.split('_');
         const esCorrecta = partes[3] === 'si';
-        const nivelActual = parseInt(partes[4]) || 1;
         const userId = interaction.user.id;
 
         const rowDeshabilitada = new ActionRowBuilder<ButtonBuilder>();
@@ -159,8 +158,11 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
         });
 
         if (esCorrecta) {
+            let siguienteNivel = 1;
+
             try {
                 const collection = await getRetosCollection();
+                // Actualizamos los puntos del usuario en MongoDB
                 await collection.updateOne(
                     { userId: userId },
                     { 
@@ -169,8 +171,16 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
                     },
                     { upsert: true }
                 );
+
+                // Consultamos cuántos puntos tiene ahora para calcular su nivel real
+                const usuarioDoc = await collection.findOne({ userId: userId });
+                const puntosTotales = usuarioDoc?.puntos || 1;
+                
+                // El nivel escala de manera progresiva según los puntos acumulados del usuario
+                siguienteNivel = puntosTotales; 
+
             } catch (err) {
-                console.error('❌ Error al guardar puntos en MongoDB:', err);
+                console.error('❌ Error al gestionar puntos/nivel en MongoDB:', err);
             }
 
             await interaction.update({
@@ -178,13 +188,12 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
                 components: [rowDeshabilitada]
             });
 
-            // Siguiente reto automático con mayor nivel
-            const siguienteNivel = nivelActual + 1;
+            // Generamos el siguiente reto adaptado al nivel actual del usuario
             const nuevoReto = generarRetoMates(siguienteNivel);
 
             const rowNuevasOpciones = new ActionRowBuilder<ButtonBuilder>();
             nuevoReto.opciones.forEach((op, index) => {
-                const customIdResp = `lcs_reto_resp_${op.esCorrecta ? 'si' : 'no'}_${siguienteNivel}_${index}`;
+                const customIdResp = `lcs_reto_resp_${op.esCorrecta ? 'si' : 'no'}_${index}`;
                 rowNuevasOpciones.addComponents(
                     new ButtonBuilder()
                         .setCustomId(customIdResp)
@@ -196,7 +205,7 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
             const canalActual = interaction.channel as TextChannel;
             if (canalActual) {
                 await canalActual.send({
-                    content: `📈 **¡Nivel Superado! Subimos la dificultad:**\n\n🎯 **¡Nuevo Reto de Matemáticas!** (Nivel ${siguienteNivel})\n\n📌 **${nuevoReto.pregunta}**`,
+                    content: `📈 **¡Nivel Superado por <@${userId}>! Subimos a dificultad personalizada:**\n\n🎯 **¡Nuevo Reto de Matemáticas!** (Nivel ${siguienteNivel})\n\n📌 **${nuevoReto.pregunta}**`,
                     components: [rowNuevasOpciones]
                 });
             }
