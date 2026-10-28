@@ -9,6 +9,15 @@ import { setupEventWorker } from './dashadmin/eventos/eventosworker'; // ➔ Wor
 import { handleClubMessage } from './dashadmin/club/clubactions'; // ➔ Importación del escuchador de mensajes GT Club
 import express from 'express';
 
+// 🛡️ REDES DE SEGURIDAD GLOBAL: Evitan que el bot muera silenciosamente por excepciones de red o promesas rechazadas
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('⚠️ [Anti-Crash] Promesa rechazada no capturada:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('💥 [Anti-Crash] Excepción no capturada:', error);
+});
+
 // 🌐 Configuración del servidor Express para satisfacer el requisito de puertos de Render (Plan Gratuito)
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -96,6 +105,15 @@ for (const cmd of commandsList) {
         client.commands.set((cmd.data as any).name, cmd);
     }
 }
+
+// 🔄 Detectar cortes de conexión con Discord para autoreconectarse
+client.on('shardDisconnect', (event, id) => {
+    console.warn(`⚠️ [Gateway] Shard ${id} desconectado. Intentando reconectar automáticamente...`);
+});
+
+client.on('shardError', (error, shardId) => {
+    console.error(`❌ [Gateway] Error crítico en Shard ${shardId}:`, error);
+});
 
 /**
  * 🚀 Evento de Arranque (Ready)
