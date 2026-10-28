@@ -12,10 +12,15 @@ import { data as clubclasCommand } from './commands/clubclas';
 import { data as transCommand } from './commands/trans';
 import { data as titularesCommand } from './commands/titulares';
 import { data as reservasCommand } from './commands/reservas';
-import { data as eloCommand } from './commands/elo'; // 👈 Comando elo añadido
+import { data as eloCommand } from './commands/elo';
 
-// Mapeamos los comandos activos que se registrarán en Discord
-const commandList = [
+// ➔ Importar comando exclusivo de LCS
+import { data as alarmaCommand } from './LCS/alarma/alarma';
+
+const LCS_GUILD_ID = '1564967606295732304';
+
+// 1. Comandos Globales
+const globalCommandList = [
     { name: 'dash', data: dashCommand },
     { name: 'dashstaff', data: dashstaffCommand },
     { name: 'msn', data: msnCommand },
@@ -29,12 +34,24 @@ const commandList = [
     { name: 'trans', data: transCommand },
     { name: 'titulares', data: titularesCommand },
     { name: 'reservas', data: reservasCommand },
-    { name: 'elo', data: eloCommand }, // 👈 Añadido
+    { name: 'elo', data: eloCommand },
 ];
 
-const commands = commandList.map(cmd => {
+const globalCommands = globalCommandList.map(cmd => {
     if (!cmd.data || typeof cmd.data.toJSON !== 'function') {
-        throw new Error(`❌ El comando '${cmd.name}' no está exportando 'data' correctamente.`);
+        throw new Error(`❌ El comando global '${cmd.name}' no está exportando 'data' correctamente.`);
+    }
+    return cmd.data.toJSON();
+});
+
+// 2. Comandos Exclusivos de LCS
+const lcsCommandList = [
+    { name: 'alarma', data: alarmaCommand },
+];
+
+const lcsCommands = lcsCommandList.map(cmd => {
+    if (!cmd.data || typeof cmd.data.toJSON !== 'function') {
+        throw new Error(`❌ El comando LCS '${cmd.name}' no está exportando 'data' correctamente.`);
     }
     return cmd.data.toJSON();
 });
@@ -45,12 +62,20 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
     try {
         console.log('🔄 Registrando comandos activos en la API de Discord...');
 
+        // Registrar comandos globales
         await rest.put(
             Routes.applicationCommands(process.env.CLIENT_ID!),
-            { body: commands },
+            { body: globalCommands },
         );
+        console.log('✅ ¡Comandos globales actualizados con éxito!');
 
-        console.log('✅ ¡Comandos actualizados y registrados con éxito!');
+        // Registrar comandos exclusivos del servidor LCS (Instantáneo)
+        await rest.put(
+            Routes.applicationGuildCommands(process.env.CLIENT_ID!, LCS_GUILD_ID),
+            { body: lcsCommands },
+        );
+        console.log('✅ ¡Comandos exclusivos de LCS registrados en el servidor con éxito!');
+
         process.exit(0);
     } catch (error) {
         console.error('❌ Error al registrar comandos:', error);
