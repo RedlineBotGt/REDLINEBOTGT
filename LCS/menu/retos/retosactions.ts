@@ -32,7 +32,7 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
 
     const customId = interaction.customId;
 
-    // 1. Botón principal de RETOS en el menú (o el botón viejo del panel)
+    // 1. Botón principal de RETOS / Menú de opciones (Ranking y Mates)
     if (customId === 'lcs_menu_retos' || customId === 'lcs_retos_ranking') {
         const row = new ActionRowBuilder<ButtonBuilder>()
             .addComponents(
@@ -54,7 +54,7 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
         return true;
     }
 
-    // 1.1 Mostrar el Ranking dinámico desde MongoDB
+    // 1.1 Mostrar el Ranking dinámico desde MongoDB (Responde al botón del menú)
     if (customId === 'lcs_retos_ranking_ver') {
         const collection = await getRetosCollection();
         const ranking = await collection.find({}).sort({ puntos: -1 }).limit(10).toArray();
@@ -65,7 +65,7 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
         } else {
             rankingTexto += ranking.map((r, index) => {
                 const medalla = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🔹';
-                return `${medalla} **${index + 1}.** <@${r.userId}> - ⭐️ **${r.puntos}** aciertos`;
+                return `${medalla} **${index + 1}.** <@${r.userId}> - ⭐️ **${r.puntos}** puntos`;
             }).join('\n');
         }
 
@@ -76,7 +76,7 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
         return true;
     }
 
-    // 2. Botón para iniciar Retos de Mates -> Despliega el selector de canales filtrado por la categoría
+    // 2. Botón para iniciar Retos de Mates -> Despliega el selector de canales de la categoría
     if (customId === 'lcs_retos_mates_crear') {
         const row = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(
             new ChannelSelectMenuBuilder()
@@ -95,7 +95,7 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
         return true;
     }
 
-    // 3. Capturar la selección del canal y lanzar el primer reto de mates ahí
+    // 3. Capturar la selección del canal y lanzar el primer reto de mates (Nivel 1)
     if (interaction.isChannelSelectMenu() && interaction.customId === 'select_canal_reto_mates') {
         const canalId = interaction.values[0];
         const canalMates = interaction.guild?.channels.cache.get(canalId) as TextChannel;
@@ -105,12 +105,13 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
             return true;
         }
 
-        const nivelActual = 1; 
-        const reto = generarRetoMates(nivelActual);
+        const nivelInicial = 1; 
+        const reto = generarRetoMates(nivelInicial);
 
         const rowOpciones = new ActionRowBuilder<ButtonBuilder>();
         reto.opciones.forEach((op, index) => {
-            const customIdResp = `lcs_reto_resp_${op.esCorrecta ? 'si' : 'no'}_${index}`;
+            // Guardamos el nivel actual en el customId para saber la progresión
+            const customIdResp = `lcs_reto_resp_${op.esCorrecta ? 'si' : 'no'}_${nivelInicial}_${index}`;
             rowOpciones.addComponents(
                 new ButtonBuilder()
                     .setCustomId(customIdResp)
@@ -119,7 +120,7 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
             );
         });
 
-        const mensajeReto = `🎯 **¡Nuevo Reto de Matemáticas!** (Nivel ${nivelActual})\n\n📌 **${reto.pregunta}**`;
+        const mensajeReto = `🎯 **¡Nuevo Reto de Matemáticas!** (Nivel ${nivelInicial})\n\n📌 **${reto.pregunta}**`;
 
         // Enviar el reto al canal elegido
         await canalMates.send({
@@ -134,36 +135,15 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
         return true;
     }
 
-    // 4. Botón para saltar al siguiente reto (dentro del canal)
-    if (customId === 'lcs_reto_siguiente') {
-        const nivelActual = 1; 
-        const reto = generarRetoMates(nivelActual);
-
-        const rowOpciones = new ActionRowBuilder<ButtonBuilder>();
-        reto.opciones.forEach((op, index) => {
-            const customIdResp = `lcs_reto_resp_${op.esCorrecta ? 'si' : 'no'}_${index}`;
-            rowOpciones.addComponents(
-                new ButtonBuilder()
-                    .setCustomId(customIdResp)
-                    .setLabel(op.texto)
-                    .setStyle(ButtonStyle.Primary)
-            );
-        });
-
-        const mensajeReto = `🎯 **¡Nuevo Reto de Matemáticas!** (Nivel ${nivelActual})\n\n📌 **${reto.pregunta}**`;
-
-        await interaction.update({
-            content: mensajeReto,
-            components: [rowOpciones]
-        });
-        return true;
-    }
-
-    // 5. Capturar las respuestas de los botones del reto y sumar puntos en MongoDB
+    // 4. Capturar las respuestas de los botones del reto (Progresión automática y MongoDB)
     if (customId.startsWith('lcs_reto_resp_')) {
-        const esCorrecta = customId.includes('_si_');
+        const partes = customId.split('_');
+        // Formato esperado: lcs_reto_resp_[si/no]_[nivel]_[index]
+        const esCorrecta = partes[3] === 'si';
+        const nivelActual = parseInt(partes[4]) || 1;
         const userId = interaction.user.id;
 
+        // Deshabilitar los botones del mensaje actual
         const rowDeshabilitada = new ActionRowBuilder<ButtonBuilder>();
         interaction.message.components.forEach(row => {
             row.components.forEach(component => {
@@ -181,7 +161,7 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
         });
 
         if (esCorrecta) {
-            // Guardar o actualizar puntos en MongoDB
+            // Guardar o actualizar puntos en MongoDB (+1 punto)
             const collection = await getRetosCollection();
             await collection.updateOne(
                 { userId: userId },
@@ -192,20 +172,38 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
                 { upsert: true }
             );
 
-            const rowSiguiente = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                new ButtonBuilder()
-                    .setCustomId('lcs_reto_siguiente')
-                    .setLabel('➡️ ¡Siguiente Reto!')
-                    .setStyle(ButtonStyle.Success)
-            );
-
+            // Actualizar el mensaje actual indicando el acierto
             await interaction.update({
                 content: `${interaction.message.content}\n\n🎉 **¡Respuesta Correcta de <@${userId}>! (+1 punto)** 🌟`,
-                components: [rowDeshabilitada, rowSiguiente]
+                components: [rowDeshabilitada]
             });
+
+            // 🚀 AUTOMÁTICO: Calcular el siguiente nivel (más difícil) y enviar el nuevo reto al canal
+            const siguienteNivel = nivelActual + 1;
+            const nuevoReto = generarRetoMates(siguienteNivel);
+
+            const rowNuevasOpciones = new ActionRowBuilder<ButtonBuilder>();
+            nuevoReto.opciones.forEach((op, index) => {
+                const customIdResp = `lcs_reto_resp_${op.esCorrecta ? 'si' : 'no'}_${siguienteNivel}_${index}`;
+                rowNuevasOpciones.addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(customIdResp)
+                        .setLabel(op.texto)
+                        .setStyle(ButtonStyle.Primary)
+                );
+            });
+
+            const canalActual = interaction.channel as TextChannel;
+            if (canalActual) {
+                await canalActual.send({
+                    content: `📈 **¡Nivel Superado! Subimos la dificultad:**\n\n🎯 **¡Nuevo Reto de Matemáticas!** (Nivel ${siguienteNivel})\n\n📌 **${nuevoReto.pregunta}**`,
+                    components: [rowNuevasOpciones]
+                });
+            }
+
         } else {
             await interaction.update({
-                content: `${interaction.message.content}\n\n❌ **Vaya, <@${userId}>, esa no es. ¡Prueba otra vez!** 💪`,
+                content: `${interaction.message.content}\n\n❌ **Vaya, <@${userId}>, esa no es. ¡Prueba otra vez en el siguiente!** 💪`,
                 components: [rowDeshabilitada]
             });
         }
