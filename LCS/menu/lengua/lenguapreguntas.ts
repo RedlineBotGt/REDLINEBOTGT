@@ -31,7 +31,8 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
             "explicacion": "Una explicación muy corta y sencilla."
         }`;
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        // Usamos gemini-2.5-flash que es el modelo activo y recomendado en la API REST actual
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
         
         const response = await fetch(url, {
             method: 'POST',
@@ -46,7 +47,8 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
         });
 
         if (!response.ok) {
-            throw new Error(`Error HTTP ${response.status}`);
+            const errorTexto = await response.text();
+            throw new Error(`Error HTTP ${response.status}: ${errorTexto}`);
         }
 
         const data = await response.json() as any;
@@ -67,6 +69,7 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
     } catch (error) {
         console.error('❌ Error al generar reto con Gemini, usando respaldo:', error);
         
+        // 🛡️ Banco de respaldo con rotación amplia por si hay intermitencias de red
         const bancoRespaldo = [
             {
                 pregunta: '¿Cuál es el sinónimo de la palabra "contento"?',
@@ -97,6 +100,26 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
                     { texto: 'Floris', esCorrecta: false }
                 ],
                 explicacion: 'A las palabras que terminan en consonante se les añade "es".'
+            },
+            {
+                pregunta: '¿Qué palabra indica una acción (un verbo)?',
+                opciones: [
+                    { texto: 'Saltar', esCorrecta: true },
+                    { texto: 'Pelota', esCorrecta: false },
+                    { texto: 'Rojo', esCorrecta: false },
+                    { texto: 'Mesa', esCorrecta: false }
+                ],
+                explicacion: 'Saltar es algo que podemos hacer.'
+            },
+            {
+                pregunta: '¿Cuál es el antónimo (lo contrario) de "grande"?',
+                opciones: [
+                    { texto: 'Pequeño', esCorrecta: true },
+                    { texto: 'Alto', esCorrecta: false },
+                    { texto: 'Gordo', esCorrecta: false },
+                    { texto: 'Ancho', esCorrecta: false }
+                ],
+                explicacion: 'Lo contrario de grande es pequeño.'
             }
         ];
 
