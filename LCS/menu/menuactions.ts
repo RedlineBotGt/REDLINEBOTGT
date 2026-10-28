@@ -1,6 +1,7 @@
 import { Interaction, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { handleAlarmaInteraction } from '../alarma/alarmaactions';
 import { handleRetosInteraction } from './retos/retosactions';
+import { handleLenguaInteraction } from './lengua/lenguaactions'; // 👈 Importamos Lengua
 
 const LCS_GUILD_ID = '1564967606295732304';
 
@@ -28,6 +29,10 @@ export async function handleMenuInteraction(interaction: Interaction): Promise<b
             new ButtonBuilder()
                 .setCustomId('lcs_retos_mates_crear')
                 .setLabel('📐 Retos de Mates')
+                .setStyle(ButtonStyle.Success),
+            new ButtonBuilder()
+                .setCustomId('lcs_retos_lengua_crear') // 👈 Botón añadido para Lengua
+                .setLabel('📚 Retos de Lengua')
                 .setStyle(ButtonStyle.Success),
             new ButtonBuilder()
                 .setCustomId('lcs_menu_alarma')
@@ -63,7 +68,21 @@ export async function handleMenuInteraction(interaction: Interaction): Promise<b
         }
     }
 
-    // 3. Módulo de Alarmas (incluye select_canal_alarma y modales)
+    // 3. Módulo de Lengua (IA) 👈 Bloque nuevo para gestionar Lengua
+    if (
+        customId === 'lcs_menu_lengua' ||
+        customId === 'lcs_retos_lengua_crear' ||
+        customId === 'select_canal_reto_lengua' ||
+        customId.startsWith('lcs_lengua_resp_')
+    ) {
+        const handled = await handleLenguaInteraction(interaction);
+        if (handled) {
+            console.log(`✅ [MenuRouter] Gestionado por Lengua: ${customId}`);
+            return true;
+        }
+    }
+
+    // 4. Módulo de Alarmas (incluye select_canal_alarma y modales)
     if (
         customId === 'lcs_menu_alarma' || 
         customId === 'alarma' || 
@@ -78,7 +97,10 @@ export async function handleMenuInteraction(interaction: Interaction): Promise<b
         }
     }
 
-    // 4. Respaldos
+    // 5. Respaldos globales
+    const handledLengua = await handleLenguaInteraction(interaction);
+    if (handledLengua) return true;
+
     const handledAlarma = await handleAlarmaInteraction(interaction);
     if (handledAlarma) return true;
 
