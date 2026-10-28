@@ -11,9 +11,9 @@ import {
 import { generarRetoMates } from './mates/mates';
 import { MongoClient } from 'mongodb';
 
-// Conexión a la colección de retos / puntos en MongoDB (reutiliza tu URI de conexión general)
+// Conexión a la colección de retos / puntos en MongoDB
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
-const DB_NAME = 'redlinebot'; // O el nombre de tu base de datos de la academia
+const DB_NAME = 'redlinebot'; 
 const CATEGORIA_MATES_ID = '1564998683496550573';
 
 async function getRetosCollection() {
@@ -32,32 +32,51 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
 
     const customId = interaction.customId;
 
-    // 1. Botón principal de RETOS en el menú (Muestra Ranking y Retos de Mates)
-    if (customId === 'lcs_retos_ranking' || customId === 'lcs_menu_retos') {
-        if (customId === 'lcs_retos_ranking') {
-            // Mostrar directamente el ranking dinámico
-            const collection = await getRetosCollection();
-            const ranking = await collection.find({}).sort({ puntos: -1 }).limit(10).toArray();
+    // 1. Botón principal de RETOS en el menú (o el botón viejo del panel)
+    if (customId === 'lcs_menu_retos' || customId === 'lcs_retos_ranking') {
+        const row = new ActionRowBuilder<ButtonBuilder>()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('lcs_retos_ranking_ver')
+                    .setLabel('🏆 Ranking')
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId('lcs_retos_mates_crear')
+                    .setLabel('📐 Retos de Mates')
+                    .setStyle(ButtonStyle.Success)
+            );
 
-            let rankingTexto = '🏆 **Clasificación General - Academia LCS**\n\n';
-            if (ranking.length === 0) {
-                rankingTexto += 'ℹ️ Aún no hay participantes registrados. ¡Sé el primero en resolver un reto!';
-            } else {
-                rankingTexto += ranking.map((r, index) => {
-                    const medalla = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🔹';
-                    return `${medalla} **${index + 1}.** <@${r.userId}> - ⭐️ **${r.puntos}** aciertos`;
-                }).join('\n');
-            }
-
-            await interaction.reply({ 
-                content: rankingTexto, 
-                ephemeral: true 
-            });
-            return true;
-        }
+        await interaction.reply({ 
+            content: '🎯 **Academia LCS - Menú Principal**\nSelecciona una opción:', 
+            components: [row], 
+            ephemeral: true 
+        });
+        return true;
     }
 
-    // 2. Botón para iniciar Retos de Mates -> Despliega el selector de canales de la categoría
+    // 1.1 Mostrar el Ranking dinámico desde MongoDB
+    if (customId === 'lcs_retos_ranking_ver') {
+        const collection = await getRetosCollection();
+        const ranking = await collection.find({}).sort({ puntos: -1 }).limit(10).toArray();
+
+        let rankingTexto = '🏆 **Clasificación General - Academia LCS**\n\n';
+        if (ranking.length === 0) {
+            rankingTexto += 'ℹ️ Aún no hay participantes registrados. ¡Sé el primero en resolver un reto!';
+        } else {
+            rankingTexto += ranking.map((r, index) => {
+                const medalla = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🔹';
+                return `${medalla} **${index + 1}.** <@${r.userId}> - ⭐️ **${r.puntos}** aciertos`;
+            }).join('\n');
+        }
+
+        await interaction.reply({ 
+            content: rankingTexto, 
+            ephemeral: true 
+        });
+        return true;
+    }
+
+    // 2. Botón para iniciar Retos de Mates -> Despliega el selector de canales filtrado por la categoría
     if (customId === 'lcs_retos_mates_crear') {
         const row = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(
             new ChannelSelectMenuBuilder()
