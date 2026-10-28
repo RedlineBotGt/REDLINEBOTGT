@@ -5,7 +5,9 @@ import {
     ButtonStyle, 
     ModalBuilder, 
     TextInputBuilder, 
-    TextInputStyle 
+    TextInputStyle,
+    ChannelSelectMenuBuilder,
+    ChannelType
 } from 'discord.js';
 import { getAlarmasCollection } from './alarmaworker';
 
@@ -13,7 +15,7 @@ import { getAlarmasCollection } from './alarmaworker';
  * Manejador de interacciones para el sistema de Alarmas de LCS.
  */
 export async function handleAlarmaInteraction(interaction: Interaction): Promise<boolean> {
-    if (!interaction.isChatInputCommand() && !interaction.isButton() && !interaction.isModalSubmit() && !interaction.isStringSelectMenu()) {
+    if (!interaction.isChatInputCommand() && !interaction.isButton() && !interaction.isModalSubmit() && !interaction.isStringSelectMenu() && !interaction.isChannelSelectMenu()) {
         return false;
     }
 
@@ -48,54 +50,65 @@ export async function handleAlarmaInteraction(interaction: Interaction): Promise
                 return true;
             }
 
-            // 2. Abrir Modal Ampliado para Crear Nueva Alarma (con opción de repetición)
+            // 2. Paso 1: Seleccionar canal donde se enviará la alarma
             if (interaction.isButton() && interaction.customId === 'alarm_crear') {
+                const row = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(
+                    new ChannelSelectMenuBuilder()
+                        .setCustomId('select_canal_alarma')
+                        .setPlaceholder('Selecciona el canal para la alarma')
+                        .addChannelTypes(ChannelType.GuildText)
+                        .setMinValues(1)
+                        .setMaxValues(1)
+                );
+
+                await interaction.reply({
+                    content: '📍 **Paso 1/2:** Selecciona el canal de texto donde quieres que el bot envíe esta alarma:',
+                    components: [row],
+                    ephemeral: true
+                });
+                return true;
+            }
+
+            // 3. Paso 2: Al seleccionar el canal, abrir el modal con Título, Día, Hora y Texto
+            if (interaction.isChannelSelectMenu() && interaction.customId === 'select_canal_alarma') {
+                const channelId = interaction.values[0];
+
                 const modal = new ModalBuilder()
-                    .setCustomId('modal_crear_alarma')
-                    .setTitle('Configurar Alarma Recurrente');
+                    .setCustomId(`modal_alarma_datos_${channelId}`)
+                    .setTitle('Configurar Nueva Alarma');
 
                 const inputTitulo = new TextInputBuilder()
                     .setCustomId('input_titulo_alarma')
-                    .setLabel('Título de la Alarma:')
+                    .setLabel('Título:')
                     .setStyle(TextInputStyle.Short)
-                    .setPlaceholder('Ej: Reto diario Mates')
+                    .setPlaceholder('Ej: Reto de Mates')
+                    .setRequired(true);
+
+                const inputDia = new TextInputBuilder()
+                    .setCustomId('input_dia_alarma')
+                    .setLabel('Día:')
+                    .setStyle(TextInputStyle.Short)
+                    .setPlaceholder('Ej: Lunes / Todos / Diario')
                     .setRequired(true);
 
                 const inputHora = new TextInputBuilder()
                     .setCustomId('input_hora_alarma')
-                    .setLabel('Hora inicial (HH:MM formato 24h):')
+                    .setLabel('Hora (HH:MM):')
                     .setStyle(TextInputStyle.Short)
                     .setPlaceholder('18:30')
                     .setRequired(true);
 
-                const inputRecurrente = new TextInputBuilder()
-                    .setCustomId('input_recurrente_alarma')
-                    .setLabel('¿Recurrente? (SI / NO):')
-                    .setStyle(TextInputStyle.Short)
-                    .setPlaceholder('SI')
-                    .setValue('NO')
-                    .setRequired(true);
-
-                const inputAvisos = new TextInputBuilder()
-                    .setCustomId('input_avisos_alarma')
-                    .setLabel('Número total de avisos (si es recurrente):')
-                    .setStyle(TextInputStyle.Short)
-                    .setPlaceholder('Ej: 5 (déjalo en 1 si es única)')
-                    .setValue('1')
-                    .setRequired(true);
-
                 const inputTexto = new TextInputBuilder()
                     .setCustomId('input_texto_alarma')
-                    .setLabel('Mensaje a enviar:')
+                    .setLabel('Texto del mensaje:')
                     .setStyle(TextInputStyle.Paragraph)
-                    .setPlaceholder('¡Es la hora!')
+                    .setPlaceholder('Mensaje que enviará el bot...')
                     .setRequired(true);
 
                 modal.addComponents(
                     new ActionRowBuilder<TextInputBuilder>().addComponents(inputTitulo),
+                    new ActionRowBuilder<TextInputBuilder>().addComponents(inputDia),
                     new ActionRowBuilder<TextInputBuilder>().addComponents(inputHora),
-                    new ActionRowBuilder<TextInputBuilder>().addComponents(inputRecurrente),
-                    new ActionRowBuilder<TextInputBuilder>().addComponents(inputAvisos),
                     new ActionRowBuilder<TextInputBuilder>().addComponents(inputTexto)
                 );
 
@@ -103,40 +116,147 @@ export async function handleAlarmaInteraction(interaction: Interaction): Promise
                 return true;
             }
 
-            // 3. Procesar el Modal ampliado y guardar en MongoDB con recurrencia
-            if (interaction.isModalSubmit() && interaction.customId === 'modal_crear_alarma') {
+            // 4. Procesar los datos iniciales y preguntar si desea repetir
+            if (interaction.isModalSubmit() && interaction.customId.startsWith('modal_alarma_datos_')) {
+                const channelId = interaction.customId.replace('modal_alarma_datos_', '');
                 const titulo = interaction.fields.getTextInputValue('input_titulo_alarma');
+                const dia = interaction.fields.getTextInputValue('input_dia_alarma');
                 const hora = interaction.fields.getTextInputValue('input_hora_alarma');
-                const esRecurrenteStr = interaction.fields.getTextInputValue('input_recurrente_alarma').trim().toUpperCase();
-                const totalAvisosStr = interaction.fields.getTextInputValue('input_avisos_alarma').trim();
                 const texto = interaction.fields.getTextInputValue('input_texto_alarma');
 
-                const esRecurrente = esRecurrenteStr === 'SI' || esRecurrenteStr === 'SÍ';
-                const totalAvisos = parseInt(totalAvisosStr) || 1;
-
-                const collection = await getAlarmasCollection();
-                await collection.insertOne({
-                    guildId: interaction.guildId || '1564967606295732304',
-                    channelId: interaction.channelId || '',
-                    titulo: titulo,
-                    dia: 'Diario',
-                    hora: hora.trim(),
-                    texto: texto,
-                    creadoPor: interaction.user.id,
-                    activa: true,
-                    esRecurrente: esRecurrente,
-                    totalAvisos: totalAvisos,
-                    avisosRestantes: totalAvisos
-                });
+                // Guardamos temporalmente o pasamos los datos mediante botones de repetición (Sí / No)
+                const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`alarm_rep_si_${channelId}_${encodeURIComponent(titulo)}_${encodeURIComponent(dia)}_${hora}_${encodeURIComponent(texto)}`)
+                        .setLabel('Sí, configurar repetición')
+                        .setStyle(ButtonStyle.Success),
+                    new ButtonBuilder()
+                        .setCustomId(`alarm_rep_no_${channelId}_${encodeURIComponent(titulo)}_${encodeURIComponent(dia)}_${hora}_${encodeURIComponent(texto)}`)
+                        .setLabel('No, guardar única')
+                        .setStyle(ButtonStyle.Secondary)
+                );
 
                 await interaction.reply({
-                    content: `✅ **Alarma guardada correctamente.**\n\n📌 **Título:** ${titulo}\n⏰ **Hora:** ${hora}\n🔄 **Recurrente:** ${esRecurrente ? `Sí (${totalAvisos} avisos)` : 'No (Única)'}\n💬 **Mensaje:** ${texto}`,
+                    content: `📌 **Datos guardados:**\n• **Título:** ${titulo}\n• **Día:** ${dia}\n• **Hora:** ${hora}\n\n🔄 **¿Quieres que esta alarma se repita?**`,
+                    components: [row],
                     ephemeral: true
                 });
                 return true;
             }
 
-            // 4. Listar Alarmas Activas (mostrando si son recurrentes)
+            // 5. Si elige NO repetir -> Se guarda directamente en MongoDB
+            if (interaction.isButton() && interaction.customId.startsWith('alarm_rep_no_')) {
+                const partes = interaction.customId.replace('alarm_rep_no_', '').split('_');
+                const channelId = partes[0];
+                const titulo = decodeURIComponent(partes[1]);
+                const dia = decodeURIComponent(partes[2]);
+                const hora = partes[3];
+                const texto = decodeURIComponent(partes[4]);
+
+                const collection = await getAlarmasCollection();
+                await collection.insertOne({
+                    guildId: interaction.guildId || '1564967606295732304',
+                    channelId: channelId,
+                    titulo: titulo,
+                    dia: dia,
+                    hora: hora.trim(),
+                    texto: texto,
+                    creadoPor: interaction.user.id,
+                    activa: true,
+                    esRecurrente: false,
+                    totalAvisos: 1,
+                    avisosRestantes: 1
+                });
+
+                await interaction.update({
+                    content: `✅ **¡Alarma única creada con éxito!**\n\n📌 **${titulo}** a las **${hora}** en <#${channelId}>`,
+                    components: []
+                });
+                return true;
+            }
+
+            // 6. Si elige SÍ repetir -> Abrir modal de repetición (horas, días, total envíos)
+            if (interaction.isButton() && interaction.customId.startsWith('alarm_rep_si_')) {
+                const datosOriginales = interaction.customId.replace('alarm_rep_si_', '');
+
+                const modal = new ModalBuilder()
+                    .setCustomId(`modal_alarma_repeticion_${datosOriginales}`)
+                    .setTitle('Configurar Repetición');
+
+                const inputHoras = new TextInputBuilder()
+                    .setCustomId('input_rep_horas')
+                    .setLabel('¿Cuántas horas de intervalo? (Opcional):')
+                    .setStyle(TextInputStyle.Short)
+                    .setPlaceholder('Ej: 2 (déjalo vacío si no aplica)')
+                    .setRequired(false);
+
+                const inputDias = new TextInputBuilder()
+                    .setCustomId('input_rep_dias')
+                    .setLabel('¿Cuántos días de intervalo? (Opcional):')
+                    .setStyle(TextInputStyle.Short)
+                    .setPlaceholder('Ej: 1 (déjalo vacío si no aplica)')
+                    .setRequired(false);
+
+                const inputTotal = new TextInputBuilder()
+                    .setCustomId('input_rep_total')
+                    .setLabel('Total de envíos (Obligatorio):')
+                    .setStyle(TextInputStyle.Short)
+                    .setPlaceholder('Ej: 5')
+                    .setRequired(true);
+
+                modal.addComponents(
+                    new ActionRowBuilder<TextInputBuilder>().addComponents(inputHoras),
+                    new ActionRowBuilder<TextInputBuilder>().addComponents(inputDias),
+                    new ActionRowBuilder<TextInputBuilder>().addComponents(inputTotal)
+                );
+
+                await interaction.showModal(modal);
+                return true;
+            }
+
+            // 7. Procesar el modal final de repetición y guardar en MongoDB
+            if (interaction.isModalSubmit() && interaction.customId.startsWith('modal_alarma_repeticion_')) {
+                const datosOriginales = interaction.customId.replace('modal_alarma_repeticion_', '');
+                const partes = datosOriginales.split('_');
+                const channelId = partes[0];
+                const titulo = decodeURIComponent(partes[1]);
+                const dia = decodeURIComponent(partes[2]);
+                const hora = partes[3];
+                const texto = decodeURIComponent(partes[4]);
+
+                const horasIntervaloStr = interaction.fields.getTextInputValue('input_rep_horas').trim();
+                const diasIntervaloStr = interaction.fields.getTextInputValue('input_rep_dias').trim();
+                const totalAvisosStr = interaction.fields.getTextInputValue('input_rep_total').trim();
+
+                const horasIntervalo = horasIntervaloStr ? parseInt(horasIntervaloStr) : undefined;
+                const diasIntervalo = diasIntervaloStr ? parseInt(diasIntervaloStr) : undefined;
+                const totalAvisos = parseInt(totalAvisosStr) || 1;
+
+                const collection = await getAlarmasCollection();
+                await collection.insertOne({
+                    guildId: interaction.guildId || '1564967606295732304',
+                    channelId: channelId,
+                    titulo: titulo,
+                    dia: dia,
+                    hora: hora.trim(),
+                    texto: texto,
+                    creadoPor: interaction.user.id,
+                    activa: true,
+                    esRecurrente: true,
+                    horasIntervalo: horasIntervalo,
+                    diasIntervalo: diasIntervalo,
+                    totalAvisos: totalAvisos,
+                    avisosRestantes: totalAvisos
+                });
+
+                await interaction.reply({
+                    content: `✅ **¡Alarma recurrente creada con éxito!**\n\n📌 **${titulo}** a las **${hora}** (${totalAvisos} envíos)`,
+                    ephemeral: true
+                });
+                return true;
+            }
+
+            // 8. Listar Alarmas Activas
             if (interaction.isButton() && interaction.customId === 'alarm_listar') {
                 const collection = await getAlarmasCollection();
                 const alarmas = await collection.find({ guildId: interaction.guildId, activa: true }).toArray();
@@ -150,8 +270,8 @@ export async function handleAlarmaInteraction(interaction: Interaction): Promise
                 }
 
                 const lista = alarmas.map((a, i) => {
-                    const tipo = a.esRecurrente ? `🔄 (Restan ${a.avisosRestantes} avisos)` : '⏱️ (Única)';
-                    return `${i + 1}. ⏰ **${a.hora}** - *${a.titulo}* ${tipo}`;
+                    const rep = a.esRecurrente ? `🔄 (${a.avisosRestantes} envíos restantes)` : '⏱️ (Única)';
+                    return `${i + 1}. ⏰ **${a.hora}** [${a.dia}] - *${a.titulo}* ${rep} -> <#${a.channelId}>`;
                 }).join('\n');
 
                 await interaction.reply({
