@@ -244,7 +244,7 @@ export async function handleAlarmaInteraction(interaction: Interaction): Promise
                 return true;
             }
 
-            // 8. Menú de Edición / Eliminación (Listar alarmas con select menu)
+           // 8. Menú de Edición / Eliminación (Listar alarmas con select menu optimizado)
             if (interaction.isButton() && interaction.customId === 'alarm_listar') {
                 const collection = await getAlarmasCollection();
                 const alarmas = await collection.find({ guildId: interaction.guildId, activa: true }).toArray();
@@ -257,16 +257,27 @@ export async function handleAlarmaInteraction(interaction: Interaction): Promise
                     return true;
                 }
 
+                const options = alarmas.map((a) => {
+                    // Buscar el nombre real del canal en el servidor
+                    const channel = interaction.guild?.channels.cache.get(a.channelId);
+                    const channelName = channel ? `#${channel.name}` : '#canal-desconocido';
+
+                    // Calcular repeticiones restantes de forma clara
+                    const repeticionesInfo = a.esRecurrente 
+                        ? `🔄 Quedan ${a.avisosRestantes} envíos` 
+                        : '⏱️ Alarma Única';
+
+                    return {
+                        label: `${a.titulo} (${a.hora})`,
+                        description: `Canal: ${channelName} | ${repeticionesInfo}`,
+                        value: a._id.toString()
+                    };
+                });
+
                 const selectMenu = new StringSelectMenuBuilder()
                     .setCustomId('select_alarma_gestionar')
                     .setPlaceholder('Selecciona una alarma para editar o eliminar')
-                    .addOptions(
-                        alarmas.map((a) => ({
-                            label: `${a.titulo} (${a.hora})`,
-                            description: `Día: ${a.dia} | Canal: #${a.channelId}`,
-                            value: a._id.toString()
-                        }))
-                    );
+                    .addOptions(options);
 
                 const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
 
@@ -277,6 +288,7 @@ export async function handleAlarmaInteraction(interaction: Interaction): Promise
                 });
                 return true;
             }
+
 
             // 9. Al seleccionar una alarma del menú desplegable -> Mostrar opciones (Editar / Borrar)
             if (interaction.isStringSelectMenu() && interaction.customId === 'select_alarma_gestionar') {
