@@ -37,13 +37,13 @@ export async function execute(interaction: CommandInteraction) {
         .setTitle('🎛️ Panel de Control - LCS')
         .setDescription(
             'Bienvenido a tu centro de mandos privado.\n\n' +
-            'Utiliza los botones inferiores para gestionar las alarmas, acceder a los retos de mates y actualizar las configuraciones del servidor.'
+            'Utiliza los botones inferiores para gestionar las alarmas, acceder a los retos de mates o lengua y actualizar las configuraciones del servidor.'
         )
         .setColor('#2b2d31')
         .setFooter({ text: 'DISCORDBOT' })
         .setTimestamp();
 
-    // 🎮 Botones interactivos iniciales para el menú (Alarmas, Retos/Mates y Refrescar)
+    // 🎮 Botones interactivos iniciales para el menú (Alarmas, Mates, Lengua y Refrescar)
     const row = new ActionRowBuilder<ButtonBuilder>()
         .addComponents(
             new ButtonBuilder()
@@ -51,8 +51,12 @@ export async function execute(interaction: CommandInteraction) {
                 .setLabel('⏰ Alarmas')
                 .setStyle(ButtonStyle.Primary),
             new ButtonBuilder()
-                .setCustomId('lcs_menu_retos')
-                .setLabel('🎯 Retos (Mates)')
+                .setCustomId('lcs_retos_mates_crear')
+                .setLabel('📐 Mates')
+                .setStyle(ButtonStyle.Success),
+            new ButtonBuilder()
+                .setCustomId('lcs_retos_lengua_crear')
+                .setLabel('📚 Lengua')
                 .setStyle(ButtonStyle.Success),
             new ButtonBuilder()
                 .setCustomId('lcs_menu_refrescar')
