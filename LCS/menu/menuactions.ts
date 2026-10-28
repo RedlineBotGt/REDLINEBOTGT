@@ -11,7 +11,6 @@ const LCS_GUILD_ID = '1564967606295732304';
 export async function handleMenuInteraction(interaction: Interaction): Promise<boolean> {
     if (interaction.guildId !== LCS_GUILD_ID) return false;
 
-    // Solo nos interesan botones, modales o menús desplegables
     if (!interaction.isButton() && !interaction.isModalSubmit() && !interaction.isStringSelectMenu()) {
         return false;
     }
@@ -25,7 +24,16 @@ export async function handleMenuInteraction(interaction: Interaction): Promise<b
         return true;
     }
 
-    // 2. Gestión de Alarmas (incluye el botón del menú lcs_menu_alarma y acciones internas)
+    // 2. Gestión de Retos (Prioridad para cualquier botón de retos, mates o respuestas)
+    if (customId.startsWith('lcs_menu_retos') || customId.startsWith('lcs_retos_') || customId.startsWith('lcs_reto_')) {
+        const handled = await handleRetosInteraction(interaction);
+        if (handled) {
+            console.log(`✅ [MenuRouter] Gestionado por Retos: ${customId}`);
+            return true;
+        }
+    }
+
+    // 3. Gestión de Alarmas
     if (customId === 'lcs_menu_alarma' || customId === 'alarma' || customId.startsWith('alarm_') || customId.startsWith('modal_crear_alarma')) {
         const handled = await handleAlarmaInteraction(interaction);
         if (handled) {
@@ -34,21 +42,12 @@ export async function handleMenuInteraction(interaction: Interaction): Promise<b
         }
     }
 
-    // 3. Gestión de Retos (incluye lcs_menu_retos, lcs_retos_* y acciones de mates)
-    if (customId === 'lcs_menu_retos' || customId.startsWith('lcs_retos_') || customId.startsWith('reto_') || customId.startsWith('mate_')) {
-        const handled = await handleRetosInteraction(interaction);
-        if (handled) {
-            console.log(`✅ [MenuRouter] Gestionado por Retos: ${customId}`);
-            return true;
-        }
-    }
-
-    // 4. Delegación de respaldo general por si algún customId interno no coincidió arriba
-    const handledAlarma = await handleAlarmaInteraction(interaction);
-    if (handledAlarma) return true;
-
+    // 4. Delegación de respaldo general por seguridad
     const handledRetos = await handleRetosInteraction(interaction);
     if (handledRetos) return true;
+
+    const handledAlarma = await handleAlarmaInteraction(interaction);
+    if (handledAlarma) return true;
 
     console.log(`⚠️ [MenuRouter] Ningún submódulo reclamó el customId: ${customId}`);
     return false;
