@@ -158,5 +158,12 @@ client.on('messageCreate', async (message: Message) => {
     await handleClubMessage(message);
 });
 
-// 🔐 Inicio de sesión del bot con el token de entorno
-client.login(process.env.DISCORD_TOKEN);
+// 🔐 Inicio de sesión del bot con control de errores detallado en consola
+console.log('🔄 [Discord] Intentando conectar el cliente con el token...');
+client.login(process.env.DISCORD_TOKEN)
+    .then(() => {
+        console.log('✅ [Discord] client.login() se ha completado correctamente.');
+    })
+    .catch((err) => {
+        console.error('❌ [Discord] ERROR CRÍTICO al intentar hacer login en Discord:', err);
+    });
