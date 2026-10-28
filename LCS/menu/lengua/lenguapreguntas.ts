@@ -1,5 +1,3 @@
-import { GoogleGenAI } from '@google/genai';
-
 export interface RetoLengua {
     pregunta: string;
     opciones: { texto: string; esCorrecta: boolean }[];
@@ -7,18 +5,21 @@ export interface RetoLengua {
     nivel: number;
 }
 
-// Inicializar el cliente de Google Gen AI con la clave de entorno
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '' });
-
 /**
- * Generador dinámico de retos de Lengua usando IA (Nivel 2º de Primaria)
+ * Generador dinámico de retos de Lengua usando la API REST de Gemini (Nivel 2º de Primaria)
  */
 export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua> {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
+
     try {
+        if (!apiKey) {
+            throw new Error('No se encontró la clave de API de Gemini en las variables de entorno.');
+        }
+
         const prompt = `Actúa como un profesor de lengua española experto en educación infantil, específicamente para niños de 2º de Primaria (7 años). 
         Genera un reto de lengua único y divertido (puede ser sobre ortografía básica, plurales sencillos, sinónimos, antónimos, verbos fáciles, uso de m antes de b o mayúsculas).
         
-        Devuelve ÚNICAMENTE un objeto JSON válido (sin formato de bloque de código markdown adicional ni texto fuera del JSON) con esta estructura exacta:
+        Devuelve ÚNICAMENTE un objeto JSON válido (sin formato de bloque de código markdown ni texto adicional) con esta estructura exacta:
         {
             "pregunta": "Texto de la pregunta clara y adaptada a 7 años",
             "opciones": [
@@ -31,18 +32,34 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
         }
         Asegúrate de que las opciones estén barajadas y que solo una sea la correcta.`;
 
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash', // O el modelo que estés usando
-            contents: prompt,
+        // Usamos el modelo gemini-2.5-flash mediante fetch directo
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{ text: prompt }]
+                }],
+                generationConfig: {
+                    responseMimeType: "application/json"
+                }
+            })
         });
 
-        const textoRespuesta = response.text?.trim() || '';
+        if (!response.ok) {
+            throw new Error(`Error en la API de Gemini: ${response.statusText}`);
+        }
+
+        const data = await response.json() as any;
+        const textoRespuesta = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
         
-        // Limpiar posibles bloques de código markdown si la IA los incluye
         const jsonLimpio = textoRespuesta.replace(/```json/g, '').replace(/```/g, '').trim();
         const datosReto = JSON.parse(jsonLimpio);
 
-        // Barajar las opciones por seguridad
         const opcionesBarajadas = (datosReto.opciones || []).sort(() => Math.random() - 0.5);
 
         return {
@@ -55,7 +72,7 @@ export async function generarRetoLengua(nivelActual: number): Promise<RetoLengua
     } catch (error) {
         console.error('❌ Error al generar reto de lengua con IA, usando respaldo:', error);
         
-        // Respaldo de seguridad por si falla la IA puntualmente
+        // Respaldo de seguridad si falla la llamada
         return {
             pregunta: '¿Cómo se escribe correctamente el plural de "lápiz"?',
             opciones: [
