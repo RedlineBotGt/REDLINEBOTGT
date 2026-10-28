@@ -1,4 +1,4 @@
-import { Interaction } from 'discord.js';
+import { Interaction, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { handleAlarmaInteraction } from '../alarma/alarmaactions';
 import { handleRetosInteraction } from './retos/retosactions';
 
@@ -18,14 +18,44 @@ export async function handleMenuInteraction(interaction: Interaction): Promise<b
     const customId = interaction.customId;
     console.log(`🔍 [MenuRouter] Procesando customId: ${customId}`);
 
+    // 0. Comando principal del Menú LCS (Panel Inicial con Ranking primero)
+    if (customId === 'lcs_menu_principal' || customId === 'lcs_menu') {
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder()
+                .setCustomId('lcs_retos_ranking')
+                .setLabel('🏆 Ranking')
+                .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
+                .setCustomId('lcs_retos_mates_crear')
+                .setLabel('📐 Retos de Mates')
+                .setStyle(ButtonStyle.Success),
+            new ButtonBuilder()
+                .setCustomId('lcs_menu_alarma')
+                .setLabel('⏰ Alarmas')
+                .setStyle(ButtonStyle.Secondary)
+        );
+
+        await interaction.reply({
+            content: '🎓 **Panel de Control - Academia LCS**\n\nSelecciona una opción:',
+            components: [row],
+            ephemeral: true
+        });
+        return true;
+    }
+
     // 1. Refrescar panel
     if (customId === 'lcs_menu_refrescar') {
         await interaction.reply({ content: '🔄 ¡Menú actualizado correctamente!', ephemeral: true });
         return true;
     }
 
-    // 2. Módulo de Retos
-    if (customId.startsWith('lcs_menu_retos') || customId.startsWith('lcs_retos_') || customId.startsWith('lcs_reto_')) {
+    // 2. Módulo de Retos (Ranking y Mates)
+    if (
+        customId.startsWith('lcs_menu_retos') || 
+        customId.startsWith('lcs_retos_') || 
+        customId.startsWith('lcs_reto_') ||
+        customId === 'select_canal_reto_mates'
+    ) {
         const handled = await handleRetosInteraction(interaction);
         if (handled) {
             console.log(`✅ [MenuRouter] Gestionado por Retos: ${customId}`);
