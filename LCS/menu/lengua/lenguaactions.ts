@@ -65,11 +65,14 @@ export async function handleLenguaInteraction(interaction: Interaction): Promise
         const rowOpciones = new ActionRowBuilder<ButtonBuilder>();
         reto.opciones.forEach((op, index) => {
             const esCorrectaStr = op.esCorrecta ? 'si' : 'no';
-            const customIdResp = `lcs_lengua_resp_${esCorrectaStr}_${nivelInicial}_${encodeURIComponent(reto.pregunta)}_${index}`;
+            // Recortamos la pregunta en el customId para evitar desbordar el límite de 100 chars de Discord
+            const preguntaCodificada = encodeURIComponent(reto.pregunta.substring(0, 30));
+            const customIdResp = `lcs_lengua_resp_${esCorrectaStr}_${nivelInicial}_${preguntaCodificada}_${index}`;
+            
             rowOpciones.addComponents(
                 new ButtonBuilder()
                     .setCustomId(customIdResp)
-                    .setLabel(op.texto.substring(0, 80)) // Límite de caracteres de Discord
+                    .setLabel(op.texto.substring(0, 80)) // 🛡️ Restricción estricta de 80 chars máx de Discord
                     .setStyle(ButtonStyle.Primary)
             );
         });
@@ -144,11 +147,13 @@ export async function handleLenguaInteraction(interaction: Interaction): Promise
             const rowNuevasOpciones = new ActionRowBuilder<ButtonBuilder>();
             nuevoReto.opciones.forEach((op, index) => {
                 const esCorrectaStr = op.esCorrecta ? 'si' : 'no';
-                const customIdResp = `lcs_lengua_resp_${esCorrectaStr}_${siguienteNivel}_${encodeURIComponent(nuevoReto.pregunta)}_${index}`;
+                const preguntaCodificada = encodeURIComponent(nuevoReto.pregunta.substring(0, 30));
+                const customIdResp = `lcs_lengua_resp_${esCorrectaStr}_${siguienteNivel}_${preguntaCodificada}_${index}`;
+                
                 rowNuevasOpciones.addComponents(
                     new ButtonBuilder()
                         .setCustomId(customIdResp)
-                        .setLabel(op.texto.substring(0, 80))
+                        .setLabel(op.texto.substring(0, 80)) // 🛡️ Restricción de 80 chars
                         .setStyle(ButtonStyle.Primary)
                 );
             });
@@ -186,11 +191,13 @@ export async function handleLenguaInteraction(interaction: Interaction): Promise
             const rowReintentoOpciones = new ActionRowBuilder<ButtonBuilder>();
             opcionesMismoReto.sort(() => Math.random() - 0.5).forEach((op, index) => {
                 const esCorrectaStr = op.esCorrecta ? 'si' : 'no';
-                const customIdResp = `lcs_lengua_resp_${esCorrectaStr}_${nivelActual}_${encodeURIComponent(preguntaActual)}_${index}`;
+                const preguntaCodificada = encodeURIComponent(preguntaActual.substring(0, 30));
+                const customIdResp = `lcs_lengua_resp_${esCorrectaStr}_${nivelActual}_${preguntaCodificada}_${index}`;
+                
                 rowReintentoOpciones.addComponents(
                     new ButtonBuilder()
                         .setCustomId(customIdResp)
-                        .setLabel(op.texto.substring(0, 80))
+                        .setLabel(op.texto.substring(0, 80)) // 🛡️ Restricción de 80 chars
                         .setStyle(ButtonStyle.Primary)
                 );
             });
