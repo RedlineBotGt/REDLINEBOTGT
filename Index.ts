@@ -7,6 +7,7 @@ import { setupAvisosSystem } from './dashadmin/avisos/avisosmanager'; // ➔ Sis
 import { setupPollSystem, handleEncuestaReactionAdd } from './dashadmin/encuestas/encuestasmanager'; // ➔ Sistema de Encuestas
 import { setupEventWorker } from './dashadmin/eventos/eventosworker'; // ➔ Worker de Eventos y Campeonatos
 import { handleClubMessage } from './dashadmin/club/clubactions'; // ➔ Importación del escuchador de mensajes GT Club
+import { setupAlarmaWorker } from './LCS/alarma/alarmaworker'; // 👈 ⏰ Worker de Alarma para LCS
 import express from 'express';
 
 // 🛡️ REDES DE SEGURIDAD GLOBAL: Evitan que el bot muera silenciosamente por excepciones de red o promesas rechazadas
@@ -47,6 +48,9 @@ import * as eloCommand from './commands/elo'; // 👈 Comando elo añadido
 import * as dashSheetsCommand from './dashsheet/dashsheet';
 import * as dashAdminCommand from './dashadmin/dashadmin'; // ➔ Comando dashadmin
 
+// ➔ Importación de comandos exclusivos de LCS
+import * as alarmaCommand from './LCS/alarma/alarma';
+
 /**
  * 📦 Conexión centralizada y segura a la colección de eventos de MongoDB
  */
@@ -81,7 +85,7 @@ const client = new Client({
 // 🗂️ Inicializar la colección de comandos en el cliente
 client.commands = new Collection();
 
-// Registro de comandos en la colección
+// Registro de comandos en la colección (incluyendo el de LCS)
 const commandsList = [
     dashCommand, 
     dashStaffCommand, 
@@ -95,9 +99,10 @@ const commandsList = [
     transCommand,
     titularesCommand, 
     reservasCommand,
-    eloCommand, // 👈 Se añade elo a la colección
+    eloCommand,
     dashSheetsCommand, 
-    dashAdminCommand
+    dashAdminCommand,
+    alarmaCommand // 👈 Comando /alarma exclusivo de LCS añadido a la colección
 ];
 
 for (const cmd of commandsList) {
@@ -140,6 +145,9 @@ client.once('ready', () => {
 
     // ➔ Inicializar el worker de Eventos y Campeonatos (Avisos 30 min e inicio/limpieza de roles)
     setupEventWorker(client);
+
+    // ⏰ ➔ Inicializar el worker de Alarmas para LCS
+    setupAlarmaWorker(client);
 });
 
 /**
