@@ -173,22 +173,13 @@ client.on('messageCreate', async (message: Message) => {
     await handleClubMessage(message);
 });
 
-// 🔐 Inicio de sesión del bot con control de timeout
-console.log('🔄 [Discord] Intentando conectar el cliente con el token...');
+// 🔐 Inicio de sesión del bot sin cortes estrictos
+console.log('🔄 [Discord] Intentando conectar el cliente con el token (esperando respuesta del Gateway)...');
 
-const loginWithTimeout = async () => {
-    const loginPromise = client.login(process.env.DISCORD_TOKEN);
-    const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('⏱️ [Timeout] El login de Discord ha tardado más de 15 segundos en responder.')), 15000)
-    );
-
-    await Promise.race([loginPromise, timeoutPromise]);
-};
-
-loginWithTimeout()
+client.login(process.env.DISCORD_TOKEN)
     .then(() => {
-        console.log('✅ [Discord] client.login() se ha completado correctamente.');
+        console.log('✅ [Discord] client.login() se ha completado y conectado correctamente.');
     })
     .catch((err) => {
-        console.error('❌ [Discord] ERROR CRÍTICO al intentar hacer login en Discord:', err);
+        console.error('❌ [Discord] Error al iniciar sesión:', err);
     });
