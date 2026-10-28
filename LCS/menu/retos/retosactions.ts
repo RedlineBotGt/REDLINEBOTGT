@@ -9,22 +9,11 @@ import {
     ChannelType 
 } from 'discord.js';
 import { generarRetoMates } from './mates/mates';
-import { MongoClient, Db } from 'mongodb';
-
-// Reutilización segura de cliente MongoDB utilizando MONGO_URI (nombre correcto en Render)
-const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
-let cachedDb: Db | null = null;
+import { getAlarmasCollection } from '../alarma/alarmaworker'; // 👈 Reutilizamos la conexión oficial y segura del bot
 
 async function getRetosCollection() {
-    if (!MONGO_URI) {
-        throw new Error('❌ La variable MONGO_URI no está definida en las variables de entorno de Render.');
-    }
-    if (!cachedDb) {
-        const client = new MongoClient(MONGO_URI);
-        await client.connect();
-        cachedDb = client.db('redlinebot');
-    }
-    return cachedDb.collection('lcs_retos_puntos');
+    const alarmasColl = await getAlarmasCollection();
+    return alarmasColl.db.collection('lcs_retos_puntos');
 }
 
 /**
@@ -54,7 +43,7 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
         await interaction.reply({ 
             content: '🎯 **Academia LCS - Menú Principal**\nSelecciona una opción:', 
             components: [row], 
-            flags: [1 << 6] // Reemplazo limpio de ephemeral para evitar warning
+            flags: [1 << 6] 
         });
         return true;
     }
@@ -79,10 +68,10 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
                 content: rankingTexto, 
                 flags: [1 << 6] 
             });
-        } catch (err) {
+        } catch (err: any) {
             console.error('❌ Error al consultar ranking en MongoDB:', err);
             await interaction.reply({
-                content: '❌ Error al conectar con la base de datos para obtener el ranking.',
+                content: `❌ Error de base de datos: ${err.message}`,
                 flags: [1 << 6]
             });
         }
@@ -189,7 +178,7 @@ export async function handleRetosInteraction(interaction: Interaction): Promise<
                 components: [rowDeshabilitada]
             });
 
-            // Siguiente reto automático
+            // Siguiente reto automático con mayor nivel
             const siguienteNivel = nivelActual + 1;
             const nuevoReto = generarRetoMates(siguienteNivel);
 
