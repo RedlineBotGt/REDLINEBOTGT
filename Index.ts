@@ -138,10 +138,25 @@ client.once('ready', () => {
 });
 
 /**
- * ⚡ Enrutador Maestro de Interacciones (Conectado a generalinteraction.ts)
+ * ⚡ Enrutador Maestro de Interacciones (Con depuración de llegada)
  */
 client.on('interactionCreate', async (interaction: Interaction) => {
-    await handleGlobalInteraction(interaction, client);
+    const user = interaction.user.tag;
+    const type = interaction.isChatInputCommand() 
+        ? `Slash Command: /${interaction.commandName}` 
+        : interaction.isButton() 
+            ? `Botón: ${interaction.customId}` 
+            : interaction.isStringSelectMenu() 
+                ? `Menú desplegable: ${interaction.customId}` 
+                : 'Otra interacción';
+
+    console.log(`📥 [Interacción recibida] Usuario: ${user} | Tipo: ${type}`);
+
+    try {
+        await handleGlobalInteraction(interaction, client);
+    } catch (error) {
+        console.error('❌ Error no capturado dentro de handleGlobalInteraction:', error);
+    }
 });
 
 /**
@@ -158,13 +173,13 @@ client.on('messageCreate', async (message: Message) => {
     await handleClubMessage(message);
 });
 
-// 🔐 Inicio de sesión del bot con control de timeout por bloqueo de red
+// 🔐 Inicio de sesión del bot con control de timeout
 console.log('🔄 [Discord] Intentando conectar el cliente con el token...');
 
 const loginWithTimeout = async () => {
     const loginPromise = client.login(process.env.DISCORD_TOKEN);
     const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('⏱️ [Timeout] El login de Discord ha tardado más de 10 segundos en responder. Posible bloqueo de red o Gateway caído.')), 10000)
+        setTimeout(() => reject(new Error('⏱️ [Timeout] El login de Discord ha tardado más de 15 segundos en responder.')), 15000)
     );
 
     await Promise.race([loginPromise, timeoutPromise]);
