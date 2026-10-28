@@ -7,13 +7,10 @@ import {
     TextInputBuilder, 
     TextInputStyle,
     ChannelSelectMenuBuilder,
-    ChannelType
+    ChannelType 
 } from 'discord.js';
 import { getAlarmasCollection } from './alarmaworker';
 
-/**
- * Manejador de interacciones para el sistema de Alarmas de LCS.
- */
 export async function handleAlarmaInteraction(interaction: Interaction): Promise<boolean> {
     if (!interaction.isChatInputCommand() && !interaction.isButton() && !interaction.isModalSubmit() && !interaction.isStringSelectMenu() && !interaction.isChannelSelectMenu()) {
         return false;
@@ -26,10 +23,11 @@ export async function handleAlarmaInteraction(interaction: Interaction): Promise
             customId === 'alarma' || 
             customId === 'lcs_menu_alarma' || 
             customId?.startsWith('alarm_') || 
-            customId?.startsWith('modal_')
+            customId?.startsWith('modal_') ||
+            customId?.startsWith('select_')
         ) {
             
-            // 1. Clic en el botón principal del menú ("Gestionar Alarmas")
+            // 1. Clic en "Gestionar Alarmas"
             if (interaction.isButton() && interaction.customId === 'lcs_menu_alarma') {
                 const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
                     new ButtonBuilder()
@@ -50,32 +48,32 @@ export async function handleAlarmaInteraction(interaction: Interaction): Promise
                 return true;
             }
 
-            // 2. Paso 1: Seleccionar canal donde se enviará la alarma
+            // 2. Paso 1: Elegir canal
             if (interaction.isButton() && interaction.customId === 'alarm_crear') {
                 const row = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(
                     new ChannelSelectMenuBuilder()
                         .setCustomId('select_canal_alarma')
-                        .setPlaceholder('Selecciona el canal para la alarma')
+                        .setPlaceholder('Selecciona el canal destino')
                         .addChannelTypes(ChannelType.GuildText)
                         .setMinValues(1)
                         .setMaxValues(1)
                 );
 
                 await interaction.reply({
-                    content: '📍 **Paso 1/2:** Selecciona el canal de texto donde quieres que el bot envíe esta alarma:',
+                    content: '📍 **Paso 1:** Selecciona el canal donde se enviará el aviso:',
                     components: [row],
                     ephemeral: true
                 });
                 return true;
             }
 
-            // 3. Paso 2: Al seleccionar el canal, abrir el modal con Título, Día, Hora y Texto
+            // 3. Paso 2: Abrir Modal con Título, Día, Hora y Texto
             if (interaction.isChannelSelectMenu() && interaction.customId === 'select_canal_alarma') {
                 const channelId = interaction.values[0];
 
                 const modal = new ModalBuilder()
                     .setCustomId(`modal_alarma_datos_${channelId}`)
-                    .setTitle('Configurar Nueva Alarma');
+                    .setTitle('Datos de la Alarma');
 
                 const inputTitulo = new TextInputBuilder()
                     .setCustomId('input_titulo_alarma')
@@ -88,7 +86,7 @@ export async function handleAlarmaInteraction(interaction: Interaction): Promise
                     .setCustomId('input_dia_alarma')
                     .setLabel('Día:')
                     .setStyle(TextInputStyle.Short)
-                    .setPlaceholder('Ej: Lunes / Todos / Diario')
+                    .setPlaceholder('Ej: Lunes / Todos')
                     .setRequired(true);
 
                 const inputHora = new TextInputBuilder()
@@ -102,7 +100,7 @@ export async function handleAlarmaInteraction(interaction: Interaction): Promise
                     .setCustomId('input_texto_alarma')
                     .setLabel('Texto del mensaje:')
                     .setStyle(TextInputStyle.Paragraph)
-                    .setPlaceholder('Mensaje que enviará el bot...')
+                    .setPlaceholder('¡Hora de practicar!')
                     .setRequired(true);
 
                 modal.addComponents(
@@ -116,7 +114,7 @@ export async function handleAlarmaInteraction(interaction: Interaction): Promise
                 return true;
             }
 
-            // 4. Procesar los datos iniciales y preguntar si desea repetir
+            // 4. Preguntar si desea repetición
             if (interaction.isModalSubmit() && interaction.customId.startsWith('modal_alarma_datos_')) {
                 const channelId = interaction.customId.replace('modal_alarma_datos_', '');
                 const titulo = interaction.fields.getTextInputValue('input_titulo_alarma');
@@ -124,43 +122,40 @@ export async function handleAlarmaInteraction(interaction: Interaction): Promise
                 const hora = interaction.fields.getTextInputValue('input_hora_alarma');
                 const texto = interaction.fields.getTextInputValue('input_texto_alarma');
 
-                // Guardamos temporalmente o pasamos los datos mediante botones de repetición (Sí / No)
+                const payload = `${channelId}|${encodeURIComponent(titulo)}|${encodeURIComponent(dia)}|${hora}|${encodeURIComponent(texto)}`;
+
                 const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
                     new ButtonBuilder()
-                        .setCustomId(`alarm_rep_si_${channelId}_${encodeURIComponent(titulo)}_${encodeURIComponent(dia)}_${hora}_${encodeURIComponent(texto)}`)
-                        .setLabel('Sí, configurar repetición')
+                        .setCustomId(`alarm_rep_si_${payload}`)
+                        .setLabel('Sí, repetir')
                         .setStyle(ButtonStyle.Success),
                     new ButtonBuilder()
-                        .setCustomId(`alarm_rep_no_${channelId}_${encodeURIComponent(titulo)}_${encodeURIComponent(dia)}_${hora}_${encodeURIComponent(texto)}`)
+                        .setCustomId(`alarm_rep_no_${payload}`)
                         .setLabel('No, guardar única')
                         .setStyle(ButtonStyle.Secondary)
                 );
 
                 await interaction.reply({
-                    content: `📌 **Datos guardados:**\n• **Título:** ${titulo}\n• **Día:** ${dia}\n• **Hora:** ${hora}\n\n🔄 **¿Quieres que esta alarma se repita?**`,
+                    content: `📌 **Datos recibidos:**\n• **Título:** ${titulo}\n• **Canal:** <#${channelId}>\n• **Día:** ${dia}\n• **Hora:** ${hora}\n\n🔄 **¿Quieres configurar repetición?**`,
                     components: [row],
                     ephemeral: true
                 });
                 return true;
             }
 
-            // 5. Si elige NO repetir -> Se guarda directamente en MongoDB
+            // 5. Opción NO repetir -> Guarda directamente
             if (interaction.isButton() && interaction.customId.startsWith('alarm_rep_no_')) {
-                const partes = interaction.customId.replace('alarm_rep_no_', '').split('_');
-                const channelId = partes[0];
-                const titulo = decodeURIComponent(partes[1]);
-                const dia = decodeURIComponent(partes[2]);
-                const hora = partes[3];
-                const texto = decodeURIComponent(partes[4]);
+                const payload = interaction.customId.replace('alarm_rep_no_', '');
+                const [channelId, rawTitulo, rawDia, hora, rawTexto] = payload.split('|');
 
                 const collection = await getAlarmasCollection();
                 await collection.insertOne({
                     guildId: interaction.guildId || '1564967606295732304',
                     channelId: channelId,
-                    titulo: titulo,
-                    dia: dia,
+                    titulo: decodeURIComponent(rawTitulo),
+                    dia: decodeURIComponent(rawDia),
                     hora: hora.trim(),
-                    texto: texto,
+                    texto: decodeURIComponent(rawTexto),
                     creadoPor: interaction.user.id,
                     activa: true,
                     esRecurrente: false,
@@ -169,32 +164,32 @@ export async function handleAlarmaInteraction(interaction: Interaction): Promise
                 });
 
                 await interaction.update({
-                    content: `✅ **¡Alarma única creada con éxito!**\n\n📌 **${titulo}** a las **${hora}** en <#${channelId}>`,
+                    content: `✅ **Alarma única guardada con éxito.**`,
                     components: []
                 });
                 return true;
             }
 
-            // 6. Si elige SÍ repetir -> Abrir modal de repetición (horas, días, total envíos)
+            // 6. Opción SÍ repetir -> Modal con Intervalo horas, Días y Total envíos
             if (interaction.isButton() && interaction.customId.startsWith('alarm_rep_si_')) {
-                const datosOriginales = interaction.customId.replace('alarm_rep_si_', '');
+                const payload = interaction.customId.replace('alarm_rep_si_', '');
 
                 const modal = new ModalBuilder()
-                    .setCustomId(`modal_alarma_repeticion_${datosOriginales}`)
-                    .setTitle('Configurar Repetición');
+                    .setCustomId(`modal_alarma_rep_${payload}`)
+                    .setTitle('Ajustes de Repetición');
 
                 const inputHoras = new TextInputBuilder()
                     .setCustomId('input_rep_horas')
-                    .setLabel('¿Cuántas horas de intervalo? (Opcional):')
+                    .setLabel('Horas de intervalo (Opcional):')
                     .setStyle(TextInputStyle.Short)
-                    .setPlaceholder('Ej: 2 (déjalo vacío si no aplica)')
+                    .setPlaceholder('Ej: 2')
                     .setRequired(false);
 
                 const inputDias = new TextInputBuilder()
                     .setCustomId('input_rep_dias')
-                    .setLabel('¿Cuántos días de intervalo? (Opcional):')
+                    .setLabel('Días de intervalo (Opcional):')
                     .setStyle(TextInputStyle.Short)
-                    .setPlaceholder('Ej: 1 (déjalo vacío si no aplica)')
+                    .setPlaceholder('Ej: 1')
                     .setRequired(false);
 
                 const inputTotal = new TextInputBuilder()
@@ -214,63 +209,54 @@ export async function handleAlarmaInteraction(interaction: Interaction): Promise
                 return true;
             }
 
-            // 7. Procesar el modal final de repetición y guardar en MongoDB
-            if (interaction.isModalSubmit() && interaction.customId.startsWith('modal_alarma_repeticion_')) {
-                const datosOriginales = interaction.customId.replace('modal_alarma_repeticion_', '');
-                const partes = datosOriginales.split('_');
-                const channelId = partes[0];
-                const titulo = decodeURIComponent(partes[1]);
-                const dia = decodeURIComponent(partes[2]);
-                const hora = partes[3];
-                const texto = decodeURIComponent(partes[4]);
+            // 7. Guardar alarma recurrente
+            if (interaction.isModalSubmit() && interaction.customId.startsWith('modal_alarma_rep_')) {
+                const payload = interaction.customId.replace('modal_alarma_rep_', '');
+                const [channelId, rawTitulo, rawDia, hora, rawTexto] = payload.split('|');
 
-                const horasIntervaloStr = interaction.fields.getTextInputValue('input_rep_horas').trim();
-                const diasIntervaloStr = interaction.fields.getTextInputValue('input_rep_dias').trim();
-                const totalAvisosStr = interaction.fields.getTextInputValue('input_rep_total').trim();
-
-                const horasIntervalo = horasIntervaloStr ? parseInt(horasIntervaloStr) : undefined;
-                const diasIntervalo = diasIntervaloStr ? parseInt(diasIntervaloStr) : undefined;
-                const totalAvisos = parseInt(totalAvisosStr) || 1;
+                const horasStr = interaction.fields.getTextInputValue('input_rep_horas').trim();
+                const diasStr = interaction.fields.getTextInputValue('input_rep_dias').trim();
+                const totalStr = interaction.fields.getTextInputValue('input_rep_total').trim();
 
                 const collection = await getAlarmasCollection();
                 await collection.insertOne({
                     guildId: interaction.guildId || '1564967606295732304',
                     channelId: channelId,
-                    titulo: titulo,
-                    dia: dia,
+                    titulo: decodeURIComponent(rawTitulo),
+                    dia: decodeURIComponent(rawDia),
                     hora: hora.trim(),
-                    texto: texto,
+                    texto: decodeURIComponent(rawTexto),
                     creadoPor: interaction.user.id,
                     activa: true,
                     esRecurrente: true,
-                    horasIntervalo: horasIntervalo,
-                    diasIntervalo: diasIntervalo,
-                    totalAvisos: totalAvisos,
-                    avisosRestantes: totalAvisos
+                    horasIntervalo: horasStr ? parseInt(horasStr) : undefined,
+                    diasIntervalo: diasStr ? parseInt(diasStr) : undefined,
+                    totalAvisos: parseInt(totalStr) || 1,
+                    avisosRestantes: parseInt(totalStr) || 1
                 });
 
                 await interaction.reply({
-                    content: `✅ **¡Alarma recurrente creada con éxito!**\n\n📌 **${titulo}** a las **${hora}** (${totalAvisos} envíos)`,
+                    content: `✅ **Alarma recurrente guardada con éxito.** (${totalStr} envíos)`,
                     ephemeral: true
                 });
                 return true;
             }
 
-            // 8. Listar Alarmas Activas
+            // 8. Listar Alarmas
             if (interaction.isButton() && interaction.customId === 'alarm_listar') {
                 const collection = await getAlarmasCollection();
                 const alarmas = await collection.find({ guildId: interaction.guildId, activa: true }).toArray();
 
                 if (alarmas.length === 0) {
                     await interaction.reply({
-                        content: 'ℹ️ No hay ninguna alarma activa registrada actualmente.',
+                        content: 'ℹ️ No hay ninguna alarma activa registrada.',
                         ephemeral: true
                     });
                     return true;
                 }
 
                 const lista = alarmas.map((a, i) => {
-                    const rep = a.esRecurrente ? `🔄 (${a.avisosRestantes} envíos restantes)` : '⏱️ (Única)';
+                    const rep = a.esRecurrente ? `🔄 (${a.avisosRestantes} avisos restan)` : '⏱️ (Única)';
                     return `${i + 1}. ⏰ **${a.hora}** [${a.dia}] - *${a.titulo}* ${rep} -> <#${a.channelId}>`;
                 }).join('\n');
 
@@ -284,7 +270,7 @@ export async function handleAlarmaInteraction(interaction: Interaction): Promise
 
         return false;
     } catch (error) {
-        console.error('❌ Error al manejar la interacción de alarma:', error);
+        console.error('❌ Error en el manejador de alarmas:', error);
         return false;
     }
 }
