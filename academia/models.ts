@@ -1,31 +1,25 @@
 // academia/models.ts
-import mongoose, { Schema, Document } from 'mongoose';
+import { MongoClient, Db, Collection } from 'mongodb';
 
-// Interfaz para el Progreso del Usuario
-export interface IUserProgress extends Document {
-    userId: string; // 'leo', 'papa', 'mama'
-    currentLevel: number; // Nivel actual de dificultad
-    streak: number; // Aciertos consecutivos
-    history: {
-        challengePrompt: string;
-        userAnswer: string;
-        aiFeedback: string;
-        solvedAt: Date;
-    }[];
+let client: MongoClient | null = null;
+let db: Db | null = null;
+
+export async function connectDB(): Promise<Db> {
+    if (db) return db;
+    
+    // Utiliza la misma URI de MongoDB que ya usa tu bot en las variables de entorno
+    const uri = process.env.MONGODB_URI || process.env.MONGO_URI || '';
+    if (!uri) {
+        throw new Error("No se ha encontrado la variable de entorno MONGODB_URI o MONGO_URI");
+    }
+
+    client = new MongoClient(uri);
+    await client.connect();
+    db = client.db('academia_campos');
+    return db;
 }
 
-const UserProgressSchema = new Schema<IUserProgress>({
-    userId: { type: String, required: true, unique: true },
-    currentLevel: { type: Number, default: 1 },
-    streak: { type: Number, default: 0 },
-    history: [
-        {
-            challengePrompt: String,
-            userAnswer: String,
-            aiFeedback: String,
-            solvedAt: { type: Date, default: Date.now }
-        }
-    ]
-});
-
-export const UserProgress = mongoose.models.UserProgress || mongoose.model<IUserProgress>('UserProgress', UserProgressSchema);
+export async function getUserProgressCollection(): Promise<Collection> {
+    const database = await connectDB();
+    return database.collection('user_progress');
+}
