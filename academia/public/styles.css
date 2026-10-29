@@ -1,3 +1,5 @@
+/* academia/public/styles.css */
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -94,3 +96,112 @@ body {
 .profile-card.leo:hover { border-color: #f59e0b; }
 .profile-card.papa:hover { border-color: #3b82f6; }
 .profile-card.mama:hover { border-color: #ec4899; }
+
+/* ==========================================
+   ESTILOS PARA LA ZONA DE RETOS (PENSAMIENTO LATERAL)
+   ========================================== */
+
+.challenge-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.back-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #38bdf8;
+    padding: 8px 16px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.back-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.level-badge {
+    background: #38bdf8;
+    color: #0f172a;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: 800;
+}
+
+.challenge-card {
+    background: rgba(30, 41, 59, 0.8);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: 30px;
+    text-align: left;
+}
+
+.category-tag {
+    display: inline-block;
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+.prompt-text {
+    font-size: 1.25rem;
+    line-height: 1.6;
+    color: #f8fafc;
+    margin-bottom: 25px;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+textarea {
+    width: 100%;
+    height: 110px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 15px;
+    color: #ffffff;
+    font-size: 1rem;
+    resize: none;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: #38bdf8;
+}
+
+.send-btn {
+    background: linear-gradient(90deg, #38bdf8, #818cf8);
+    border: none;
+    color: #0f172a;
+    padding: 14px;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.send-btn:hover {
+    opacity: 0.9;
+}
+
+.feedback-box {
+    margin-top: 20px;
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid #10b981;
+    color: #a7f3d0;
+    padding: 18px;
+    border-radius: 12px;
+    line-height: 1.5;
+}
