@@ -2,7 +2,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 // Interfaz para el Progreso del Usuario
-IUserProgress extends Document {
+export interface IUserProgress extends Document {
     userId: string; // 'leo', 'papa', 'mama'
     currentLevel: number; // Nivel actual de dificultad
     streak: number; // Aciertos consecutivos
