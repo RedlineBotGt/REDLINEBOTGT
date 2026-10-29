@@ -22,21 +22,21 @@
 
                 <div class="profiles-grid">
                     <!-- Perfil Leo -->
-                    <button class="profile-card leo" onclick="seleccionarPerfil('leo')">
+                    <button class="profile-card leo" onclick="seleccionarPerfil('leo', 'Leo')">
                         <div class="avatar">🙇</div>
                         <span class="name">Leo</span>
                         <span class="role">Explorador</span>
                     </button>
 
                     <!-- Perfil Papá -->
-                    <button class="profile-card papa" onclick="seleccionarPerfil('papa')">
+                    <button class="profile-card papa" onclick="seleccionarPerfil('papa', 'Papá')">
                         <div class="avatar">🧔🏻‍♂️</div>
                         <span class="name">Papá</span>
                         <span class="role">Mentor</span>
                     </button>
 
                     <!-- Perfil Mamá -->
-                    <button class="profile-card mama" onclick="seleccionarPerfil('mama')">
+                    <button class="profile-card mama" onclick="seleccionarPerfil('mama', 'Mamá')">
                         <div class="avatar">👩🏾‍🦱</div>
                         <span class="name">Mamá</span>
                         <span class="role">Mentora</span>
@@ -45,10 +45,45 @@
             </main>
         </section>
 
-        <!-- 2. Pantalla de Retos de Pensamiento Lateral -->
+        <!-- 2. Pantalla de Selección de Asignatura / Categoría (NUEVA) -->
+        <section id="subjects-screen" style="display: none;">
+            <header class="challenge-header">
+                <button class="back-btn" onclick="volverAPerfiles()">← Cambiar Perfil</button>
+                <h2 id="subject-user-greeting">Hola</h2>
+                <div class="level-badge">Elige tu reto</div>
+            </header>
+
+            <main class="profiles-section">
+                <h2>Selecciona una Materia</h2>
+
+                <div class="profiles-grid">
+                    <!-- Pensamiento Lateral (Activo) -->
+                    <button class="profile-card" onclick="seleccionarMateria('lateral')">
+                        <div class="avatar">🧠</div>
+                        <span class="name">Pensamiento Lateral</span>
+                        <span class="role">Lógica e ingenio</span>
+                    </button>
+
+                    <!-- Próximas asignaturas preparadas -->
+                    <button class="profile-card" style="opacity: 0.5; cursor: not-allowed;">
+                        <div class="avatar">🔢</div>
+                        <span class="name">Matemáticas</span>
+                        <span class="role">Próximamente</span>
+                    </button>
+
+                    <button class="profile-card" style="opacity: 0.5; cursor: not-allowed;">
+                        <div class="avatar">🌍</div>
+                        <span class="name">Geografía / Ciencia</span>
+                        <span class="role">Próximamente</span>
+                    </button>
+                </div>
+            </main>
+        </section>
+
+        <!-- 3. Pantalla de Retos de Pensamiento Lateral -->
         <section id="challenge-screen" style="display: none;">
             <header class="challenge-header">
-                <button class="back-btn" onclick="volverAlMenu()">← Cambiar Perfil</button>
+                <button class="back-btn" onclick="volverAMenu()">← Volver a Materias</button>
                 <h2 id="user-greeting">Entrenando...</h2>
                 <div class="level-badge">Nivel <span id="current-level">1</span></div>
             </header>
