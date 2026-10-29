@@ -6,6 +6,9 @@ import { generarRetoIA, evaluarRespuestaIA } from './aiService';
 
 export const academiaRouter = Router();
 
+// Middleware obligatorio para parsear el cuerpo JSON de las peticiones del cliente
+academiaRouter.use(express.json());
+
 const publicPath = path.join(__dirname, 'public');
 academiaRouter.use(express.static(publicPath));
 
