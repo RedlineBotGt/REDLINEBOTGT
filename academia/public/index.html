@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Academia Campos</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo-icon">🎓</div>
+            <h1>Academia Campos</h1>
+            <p>Espacio de aprendizaje y retos para la familia</p>
+        </header>
+
+        <main class="profiles-section">
+            <h2>¿Quién entra hoy?</h2>
+            
+            <div class="profiles-grid">
+                <!-- Perfil Leo -->
+                <button class="profile-card leo" onclick="seleccionarPerfil('leo')">
+                    <div class="avatar">🚀</div>
+                    <span class="name">Leo</span>
+                    <span class="role">Explorador</span>
+                </button>
+
+                <!-- Perfil Papá -->
+                <button class="profile-card papa" onclick="seleccionarPerfil('papa')">
+                    <div class="avatar">🧠</div>
+                    <span class="name">Papá</span>
+                    <span class="role">Mentor</span>
+                </button>
+
+                <!-- Perfil Mamá -->
+                <button class="profile-card mama" onclick="seleccionarPerfil('mama')">
+                    <div class="avatar">🌟</div>
+                    <span class="name">Mamá</span>
+                    <span class="role">Mentora</span>
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function seleccionarPerfil(perfil) {
+            localStorage.setItem('perfil_activo', perfil);
+            // Redirigiremos al panel principal de retos
+            alert('¡Bienvenido/a ' + perfil.toUpperCase() + '! Entrando a la Academia...');
+        }
+    </script>
+</body>
+</html>
