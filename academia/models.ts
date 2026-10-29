@@ -1,25 +1,20 @@
 // academia/models.ts
-import { MongoClient, Db, Collection } from 'mongodb';
+import { Collection, MongoClient } from 'mongodb';
 
-let client: MongoClient | null = null;
-let db: Db | null = null;
-
-export async function connectDB(): Promise<Db> {
-    if (db) return db;
-    
-    // Comprobamos todas las variantes posibles de variables de entorno de MongoDB
-    const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.MONGO_URL || process.env.MONGODB_URL || '';
-    if (!uri) {
-        throw new Error("No se ha encontrado ninguna variable de entorno válida para MongoDB (MONGODB_URI, MONGO_URI, MONGO_URL, etc.)");
-    }
-
-    client = new MongoClient(uri);
-    await client.connect();
-    db = client.db('academia_campos');
-    return db;
-}
+let cachedClient: MongoClient | null = null;
 
 export async function getUserProgressCollection(): Promise<Collection> {
-    const database = await connectDB();
-    return database.collection('user_progress');
+    const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL || process.env.MONGO_URL;
+
+    if (!uri) {
+        throw new Error('❌ No se encontró ninguna variable de entorno para MongoDB (revisa Render).');
+    }
+
+    if (!cachedClient) {
+        cachedClient = new MongoClient(uri);
+        await cachedClient.connect();
+    }
+
+    // Se conecta a la misma base de datos y crea/usa la colección 'user_progress'
+    return cachedClient.db().collection('user_progress');
 }
