@@ -6,29 +6,38 @@ export const academiaRouter = Router();
 
 academiaRouter.use(express.json());
 
+// Función auxiliar para añadir timeout a cualquier promesa (evita que se quede colgado eternamente)
+function conTimeout<T>(promesa: Promise<T>, ms: number = 8000): Promise<T> {
+    return Promise.race([
+        promesa,
+        new Promise<T>((_, reject) => setTimeout(() => reject(new Error('⏱️ Timeout: La operación ha tardado demasiado en responder')), ms))
+    ]);
+}
+
 // 1. Obtener el siguiente reto
 academiaRouter.post('/api/academia/challenge/next', async (req, res) => {
-    console.log('🔍 [Academia] Recibida petición POST /api/academia/challenge/next con body:', req.body);
+    console.log('🔍 [Academia] Petición recibida en /next con body:', req.body);
     try {
         const { userId } = req.body;
         if (!userId) {
-            console.log('⚠️ [Academia] Falta el userId');
             return res.status(400).json({ success: false, error: 'Falta el userId' });
         }
 
-        console.log('📦 [Academia] Conectando con MongoDB para usuario:', userId);
-        const collection = await getUserProgressCollection();
-        let userProgress = await collection.findOne({ userId });
+        console.log('📦 [Academia] Intentando conectar con MongoDB...');
+        // Protegemos la llamada a MongoDB con un timeout de 6 segundos
+        const collection = await conTimeout(getUserProgressCollection(), 6000);
+        
+        console.log('📦 [Academia] Buscando progreso para usuario:', userId);
+        let userProgress = await conTimeout(collection.findOne({ userId }), 5000);
 
         if (!userProgress) {
-            console.log('👤 [Academia] Usuario nuevo, inicializando en Nivel 1');
+            console.log('👤 [Academia] Usuario nuevo, creando registro en Nivel 1...');
             userProgress = { userId, currentLevel: 1, completedChallenges: [] };
-            await collection.insertOne(userProgress);
+            await conTimeout(collection.insertOne(userProgress), 5000);
         }
 
         const currentLevel = userProgress.currentLevel || 1;
         const completed = userProgress.completedChallenges || [];
-        console.log(`📊 [Academia] Nivel actual: ${currentLevel}, Retos completados: ${completed.length}`);
 
         let availableChallenges = initialChallenges.filter(
             c => c.level === currentLevel && !completed.includes(c.id)
@@ -37,15 +46,15 @@ academiaRouter.post('/api/academia/challenge/next', async (req, res) => {
         let selectedChallenge: { id: string; prompt: string; category: string; explanation: string };
 
         if (availableChallenges.length > 0) {
-            console.log('📚 [Academia] Seleccionando reto del banco estático...');
+            console.log('📚 [Academia] Cogiendo reto del banco estático.');
             const c = availableChallenges[0];
             selectedChallenge = { id: c.id, prompt: c.prompt, category: c.category, explanation: c.explanation };
         } else {
-            console.log('🤖 [Academia] Banco agotado para este nivel. Solicitando reto a la IA...');
+            console.log('🤖 [Academia] Banco agotado. Solicitando reto a la IA...');
             const apiKey = process.env.GEMINI_API_KEY || process.env.GEMAI_API_KEY;
             
             if (!apiKey) {
-                console.log('⚠️ [Academia] No hay API Key de Gemini, usando fallback del banco.');
+                console.log('⚠️ [Academia] No hay API Key, usando fallback.');
                 const fallback = initialChallenges[0];
                 selectedChallenge = { id: 'fb_' + Date.now(), prompt: fallback.prompt, category: fallback.category, explanation: fallback.explanation };
             } else {
@@ -60,14 +69,12 @@ academiaRouter.post('/api/academia/challenge/next', async (req, res) => {
                 }
                 `;
 
-                console.log('🚀 [Academia] Enviando petición HTTP a Google Gemini...');
-                const aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+                const aiRes = await conTimeout(fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ contents: [{ parts: [{ text: promptGen }] }] })
-                });
+                }), 8000);
 
-                console.log('📥 [Academia] Respuesta recibida de Gemini, procesando JSON...');
                 const aiData = await aiRes.json();
                 const textRes = aiData.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
                 const cleanJson = textRes.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -82,8 +89,8 @@ academiaRouter.post('/api/academia/challenge/next', async (req, res) => {
             }
         }
 
-        console.log('✅ [Academia] Enviando reto seleccionado al cliente:', selectedChallenge.id);
-        res.json({
+        console.log('✅ [Academia] Enviando reto al cliente con éxito.');
+        return res.json({
             success: true,
             level: currentLevel,
             challenge: {
@@ -93,15 +100,15 @@ academiaRouter.post('/api/academia/challenge/next', async (req, res) => {
             }
         });
 
-    } catch (error) {
-        console.error('❌ [Academia Error en /next]:', error);
-        res.status(500).json({ success: false, error: 'Error interno del servidor en academia' });
+    } catch (error: any) {
+        console.error('❌ [Academia Error Crítico en /next]:', error.message || error);
+        return res.status(500).json({ success: false, error: error.message || 'Error interno del servidor' });
     }
 });
 
 // 2. Enviar respuesta y evaluar
 academiaRouter.post('/api/academia/challenge/submit', async (req, res) => {
-    console.log('🔍 [Academia] Recibida petición POST /api/academia/challenge/submit');
+    console.log('🔍 [Academia] Petición recibida en /submit');
     try {
         const { userId, challengeId, userAnswer } = req.body;
         if (!userId || !userAnswer || !challengeId) {
@@ -129,11 +136,11 @@ academiaRouter.post('/api/academia/challenge/submit', async (req, res) => {
         }
         `;
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        const response = await conTimeout(fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: promptGemini }] }] })
-        });
+        }), 8000);
 
         const aiData = await response.json();
         const textResult = aiData.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
@@ -141,21 +148,21 @@ academiaRouter.post('/api/academia/challenge/submit', async (req, res) => {
         const evaluation = JSON.parse(cleanJson);
 
         if (evaluation.correct) {
-            const collection = await getUserProgressCollection();
-            await collection.updateOne(
+            const collection = await conTimeout(getUserProgressCollection(), 5000);
+            await conTimeout(collection.updateOne(
                 { userId },
                 { $addToSet: { completedChallenges: challengeId } }
-            );
+            ), 5000);
         }
 
-        res.json({
+        return res.json({
             success: true,
             correct: evaluation.correct,
             feedback: evaluation.feedback
         });
 
-    } catch (error) {
-        console.error('❌ [Academia Error en /submit]:', error);
-        res.status(500).json({ success: false, error: 'Error al procesar la evaluación' });
+    } catch (error: any) {
+        console.error('❌ [Academia Error Crítico en /submit]:', error.message || error);
+        return res.status(500).json({ success: false, error: error.message || 'Error al procesar la evaluación' });
     }
 });
