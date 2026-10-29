@@ -1,4 +1,4 @@
-// academia/routers.ts
+// academia/router.ts
 import express, { Router, Request, Response } from 'express';
 import path from 'path';
 import { getUserProgressCollection } from './models';
