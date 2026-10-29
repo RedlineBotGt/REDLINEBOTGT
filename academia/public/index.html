@@ -19,23 +19,23 @@
             <h2>¿Quién entra hoy?</h2>
             
             <div class="profiles-grid">
-                <!-- Perfil Leo -->
+                <!-- Perfil Leo (Niño moreno) -->
                 <button class="profile-card leo" onclick="seleccionarPerfil('leo')">
-                    <div class="avatar">🚀</div>
+                    <div class="avatar">👦🏽</div>
                     <span class="name">Leo</span>
                     <span class="role">Explorador</span>
                 </button>
 
-                <!-- Perfil Papá -->
+                <!-- Perfil Papá (Hombre pelo negro con barba y gafas) -->
                 <button class="profile-card papa" onclick="seleccionarPerfil('papa')">
-                    <div class="avatar">🧠</div>
+                    <div class="avatar">🧔🏻‍♂️👓</div>
                     <span class="name">Papá</span>
                     <span class="role">Mentor</span>
                 </button>
 
-                <!-- Perfil Mamá -->
+                <!-- Perfil Mamá (Mujer pelo negro oscura de piel) -->
                 <button class="profile-card mama" onclick="seleccionarPerfil('mama')">
-                    <div class="avatar">🌟</div>
+                    <div class="avatar">👩🏾‍🦱</div>
                     <span class="name">Mamá</span>
                     <span class="role">Mentora</span>
                 </button>
@@ -46,7 +46,6 @@
     <script>
         function seleccionarPerfil(perfil) {
             localStorage.setItem('perfil_activo', perfil);
-            // Redirigiremos al panel principal de retos
             alert('¡Bienvenido/a ' + perfil.toUpperCase() + '! Entrando a la Academia...');
         }
     </script>
