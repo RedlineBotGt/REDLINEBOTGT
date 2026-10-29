@@ -10,6 +10,7 @@ import { handleClubMessage } from './dashadmin/club/clubactions'; // ➔ Importa
 import { setupAlarmaWorker } from './LCS/alarma/alarmaworker'; // ➔ Worker de Alarma para LCS
 import { academiaRouter } from './academia/router'; // 👈 🎓 Importamos el enrutador independiente de la Academia
 import express from 'express';
+import path from 'path'; // 👈 Importante para construir la ruta estática
 
 // 🛡️ REDES DE SEGURIDAD GLOBAL: Evitan que el proceso muera silenciosamente por excepciones de red o promesas rechazadas
 process.on('unhandledRejection', (reason, promise) => {
@@ -24,8 +25,11 @@ process.on('uncaughtException', (error) => {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 🎓 Enganchamos la Academia Familiar en la raíz del servidor web
-app.use('/', academiaRouter);
+// 📁 1. Servir los archivos estáticos de la interfaz web (index.html, styles.css, app.js) desde academia/public
+app.use(express.static(path.join(__dirname, 'academia', 'public')));
+
+// 🎓 2. Enganchamos la API de la Academia Familiar
+app.use(academiaRouter);
 
 app.listen(PORT, () => {
     console.log(`🌐 Servidor web HTTP activo en el puerto ${PORT} (Academia Campos activa)`);
@@ -196,5 +200,5 @@ client.login(process.env.DISCORD_TOKEN)
         console.log('✅ [Discord] client.login() se ha completado y conectado correctamente.');
     })
     .catch((err) => {
-        console.error('❌ [Discord] Error al iniciar sesión:', err);
+        console.error('❌ Error al iniciar sesión:', err);
     });
