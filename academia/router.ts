@@ -1,64 +1,99 @@
-//academia/routers.ts
+// academia/routers.ts
 import express, { Router, Request, Response } from 'express';
 import path from 'path';
+import { UserProgress } from './models';
 
 export const academiaRouter = Router();
 
-// Servir archivos estáticos (HTML, CSS, JS) de la carpeta academia/public
+// Servir archivos estáticos (HTML, CSS, JS)
 const publicPath = path.join(__dirname, 'public');
 academiaRouter.use(express.static(publicPath));
 
-// Ruta principal de la academia
+// Ruta principal
 academiaRouter.get('/', (req: Request, res: Response) => {
     res.sendFile(path.join(publicPath, 'index.html'));
 });
 
-// Endpoint: Obtener el siguiente reto de pensamiento lateral adaptado
+// Endpoint: Obtener el siguiente reto adaptado según el nivel en MongoDB
 academiaRouter.post('/api/academia/challenge/next', async (req: Request, res: Response) => {
     try {
         const { userId } = req.body;
-        
-        // TODO: Consultar en MongoDB el nivel actual de userId (ej. nivel de Leo)
-        // Por ahora simulamos un reto dinámico de pensamiento lateral nivel 2º Primaria (altas capacidades)
-        
-        const retosEjemplo = [
+        if (!userId) {
+            return res.status(400).json({ success: false, error: "Usuario no especificado" });
+        }
+
+        // Buscar o crear el progreso del usuario en MongoDB
+        let progress = await UserProgress.findOne({ userId });
+        if (!progress) {
+            progress = await UserProgress.create({ userId, currentLevel: 1, streak: 0, history: [] });
+        }
+
+        // Banco de retos de pensamiento lateral (nivel base 2º Primaria con chispa de lógica)
+        const bancoRetos = [
             {
                 id: "p_lat_01",
+                level: 1,
                 prompt: "Vas conduciendo un autobús. En la primera parada suben 4 personas. En la segunda baja 1 y suben 3. En la tercera bajan 2. ¿De qué color son los ojos del conductor?"
             },
             {
                 id: "p_lat_02",
-                prompt: "Tengo un granero con tres interruptores fuera que encienden tres bombillas dentro. Desde fuera no se ve el interior. ¿Cómo puedes averiguar qué interruptor enciende cada bombilla si solo puedes entrar una vez a mirar?"
+                level: 2,
+                prompt: "Tengo un granero con tres interruptores fuera que encienden tres bombillas dentro. Desde fuera no se ve el interior. Si solo puedes entrar una vez a mirar, ¿cómo averiguas qué interruptor enciende cada bombilla?"
+            },
+            {
+                id: "p_lat_03",
+                level: 3,
+                prompt: "Un murciélago y una pelota cuestan juntos 1,10 euros en total. El murciélago cuesta 1 euro más que la pelota. ¿Cuánto cuesta la pelota?"
             }
         ];
 
-        // Seleccionar uno de ejemplo de forma aleatoria o secuencial
-        const retoAleatorio = retosEjemplo[Math.floor(Math.random() * retosEjemplo.length)];
+        // Seleccionar un reto acorde al nivel actual del usuario
+        const retoActual = bancoRetos.find(r => r.level === progress.currentLevel) || bancoRetos[0];
 
         res.json({
             success: true,
-            level: userId === 'leo' ? 2 : 1, // Ejemplo de adaptación por perfil
-            challenge: retoAleatorio
+            level: progress.currentLevel,
+            challenge: retoActual
         });
     } catch (error) {
+        console.error("Error al obtener reto:", error);
         res.status(500).json({ success: false, error: "Error al generar el reto" });
     }
 });
 
-// Endpoint: Evaluar la respuesta del usuario con la IA
+// Endpoint: Evaluar respuesta y actualizar MongoDB
 academiaRouter.post('/api/academia/challenge/submit', async (req: Request, res: Response) => {
     try {
         const { userId, userAnswer } = req.body;
+        if (!userId || !userAnswer) {
+            return res.status(400).json({ success: false, error: "Datos incompletos" });
+        }
 
-        // Aquí conectaremos con el servicio de IA para evaluar si el razonamiento es brillante
-        // y ajustar las estadísticas en MongoDB para el usuario.
+        let progress = await UserProgress.findOne({ userId });
+        if (!progress) {
+            progress = await UserProgress.create({ userId, currentLevel: 1, streak: 0, history: [] });
+        }
+
+        // Simulación de validación inteligente (en el siguiente paso lo enlazaremos con la IA generativa)
+        const feedbackText = `¡Impresionante razonamiento, ${userId.toUpperCase()}! Has analizado el problema saliendo de lo habitual. Tu nivel de lógica es excelente.`;
+
+        // Guardar en el historial y subir un nivel como recompensa
+        progress.history.push({
+            challengePrompt: "Reto de Pensamiento Lateral",
+            userAnswer,
+            aiFeedback: feedbackText,
+            solvedAt: new Date()
+        });
+        progress.currentLevel += 1; // Sube de nivel dinámicamente
+        await progress.save();
 
         res.json({
             success: true,
             correct: true,
-            feedback: `¡Excelente uso de la lógica, ${userId.toUpperCase()}! Has analizado el problema desde otra perspectiva y tu razonamiento es completamente acertado.`
+            feedback: feedbackText
         });
     } catch (error) {
+        console.error("Error al procesar respuesta:", error);
         res.status(500).json({ success: false, error: "Error al procesar la respuesta" });
     }
 });
