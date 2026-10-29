@@ -7,10 +7,10 @@ let db: Db | null = null;
 export async function connectDB(): Promise<Db> {
     if (db) return db;
     
-    // Utiliza la misma URI de MongoDB que ya usa tu bot en las variables de entorno
-    const uri = process.env.MONGODB_URI || process.env.MONGO_URI || '';
+    // Comprobamos todas las variantes posibles de variables de entorno de MongoDB
+    const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.MONGO_URL || process.env.MONGODB_URL || '';
     if (!uri) {
-        throw new Error("No se ha encontrado la variable de entorno MONGODB_URI o MONGO_URI");
+        throw new Error("No se ha encontrado ninguna variable de entorno válida para MongoDB (MONGODB_URI, MONGO_URI, MONGO_URL, etc.)");
     }
 
     client = new MongoClient(uri);
