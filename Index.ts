@@ -8,9 +8,10 @@ import { setupPollSystem, handleEncuestaReactionAdd } from './dashadmin/encuesta
 import { setupEventWorker } from './dashadmin/eventos/eventosworker'; // ➔ Worker de Eventos y Campeonatos
 import { handleClubMessage } from './dashadmin/club/clubactions'; // ➔ Importación del escuchador de mensajes GT Club
 import { setupAlarmaWorker } from './LCS/alarma/alarmaworker'; // ➔ Worker de Alarma para LCS
+import { academiaRouter } from './academia/router'; // 👈 🎓 Importamos el enrutador independiente de la Academia
 import express from 'express';
 
-// 🛡️ REDES DE SEGURIDAD GLOBAL: Evitan que el bot muera silenciosamente por excepciones de red o promesas rechazadas
+// 🛡️ REDES DE SEGURIDAD GLOBAL: Evitan que el proceso muera silenciosamente por excepciones de red o promesas rechazadas
 process.on('unhandledRejection', (reason, promise) => {
     console.error('⚠️ [Anti-Crash] Promesa rechazada no capturada:', reason);
 });
@@ -19,16 +20,15 @@ process.on('uncaughtException', (error) => {
     console.error('💥 [Anti-Crash] Excepción no capturada:', error);
 });
 
-// 🌐 Configuración del servidor Express para satisfacer el requisito de puertos de Render (Plan Gratuito)
+// 🌐 Configuración del servidor Express para servir la Academia y satisfacer a Render
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.get('/', (req, res) => {
-    res.send('🚗 REDLINE GT Bot está en línea y funcionando perfectamente.');
-});
+// 🎓 Enganchamos la Academia Familiar en la raíz del servidor web
+app.use('/', academiaRouter);
 
 app.listen(PORT, () => {
-    console.log(`🌐 Servidor web HTTP activo en el puerto ${PORT}`);
+    console.log(`🌐 Servidor web HTTP activo en el puerto ${PORT} (Academia Campos activa)`);
 });
 
 // 📌 Importación de comandos Slash principales
@@ -131,7 +131,7 @@ client.on('shardError', (error, shardId) => {
  * 🚀 Evento de Arranque (Ready)
  */
 client.once('ready', () => {
-    console.log(`🤖 [REDLINE GT] Bot conectado exitosamente como ${client.user?.tag}`);
+    console.log(`🤖 [DISCORDBOT] Bot conectado exitosamente como ${client.user?.tag}`);
 
     // Inicializar el sistema de apodos automáticos
     setupNicknameSystem(client);
@@ -182,7 +182,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
 });
 
 /**
- * 🏎️ Listener de Mensajes para GT Club (Tiempos de Desafíos Offline)
+ * 🏎️ Listener de Mensajes para GT Club
  */
 client.on('messageCreate', async (message: Message) => {
     await handleClubMessage(message);
