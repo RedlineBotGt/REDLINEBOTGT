@@ -1,7 +1,7 @@
 // academia/routers.ts
 import express, { Router, Request, Response } from 'express';
 import path from 'path';
-import { UserProgress } from './models';
+import { getUserProgressCollection } from './models';
 import { generarRetoIA, evaluarRespuestaIA } from './aiService';
 
 export const academiaRouter = Router();
@@ -13,7 +13,7 @@ academiaRouter.get('/', (req: Request, res: Response) => {
     res.sendFile(path.join(publicPath, 'index.html'));
 });
 
-// Endpoint: Obtener el siguiente reto generado por la IA según el nivel en MongoDB
+// Endpoint: Obtener el siguiente reto generado por la IA
 academiaRouter.post('/api/academia/challenge/next', async (req: Request, res: Response) => {
     try {
         const { userId } = req.body;
@@ -21,15 +21,15 @@ academiaRouter.post('/api/academia/challenge/next', async (req: Request, res: Re
             return res.status(400).json({ success: false, error: "Usuario no especificado" });
         }
 
-        let progress = await UserProgress.findOne({ userId });
+        const collection = await getUserProgressCollection();
+        let progress = await collection.findOne({ userId });
+
         if (!progress) {
-            progress = await UserProgress.create({ userId, currentLevel: 1, streak: 0, history: [] });
+            progress = { userId, currentLevel: 1, streak: 0, history: [] };
+            await collection.insertOne(progress);
         }
 
-        // Extraer historiales previos para dar contexto a la IA
-        const historialPrompts = progress.history.map(h => h.challengePrompt);
-
-        // Llamada real a la IA para generar un reto único y adaptado
+        const historialPrompts = (progress.history || []).map((h: any) => h.challengePrompt);
         const nuevoReto = await generarRetoIA(progress.currentLevel, historialPrompts);
 
         res.json({
@@ -55,30 +55,33 @@ academiaRouter.post('/api/academia/challenge/submit', async (req: Request, res: 
             return res.status(400).json({ success: false, error: "Datos incompletos" });
         }
 
-        let progress = await UserProgress.findOne({ userId });
+        const collection = await getUserProgressCollection();
+        let progress = await collection.findOne({ userId });
+
         if (!progress) {
-            progress = await UserProgress.create({ userId, currentLevel: 1, streak: 0, history: [] });
+            progress = { userId, currentLevel: 1, streak: 0, history: [] };
         }
 
-        // Evaluar la respuesta mediante la IA
         const evaluacion = await evaluarRespuestaIA(challengePrompt || "Reto lógico", userAnswer);
 
-        // Guardar en el historial
-        progress.history.push({
+        const nuevoHistorialItem = {
             challengePrompt: challengePrompt || "Reto lógico",
             userAnswer,
             aiFeedback: evaluacion.feedback,
             solvedAt: new Date()
-        });
+        };
 
-        if (evaluacion.correct) {
-            progress.currentLevel += 1; // Sube de nivel si el razonamiento es acertado
-            progress.streak += 1;
-        } else {
-            progress.streak = 0;
-        }
+        const newLevel = evaluacion.correct ? (progress.currentLevel + 1) : progress.currentLevel;
+        const newStreak = evaluacion.correct ? (progress.streak + 1) : 0;
 
-        await progress.save();
+        await collection.updateOne(
+            { userId },
+            { 
+                $set: { currentLevel: newLevel, streak: newStreak },
+                $push: { history: nuevoHistorialItem as any }
+            },
+            { upsert: true }
+        );
 
         res.json({
             success: true,
