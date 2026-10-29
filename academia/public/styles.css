@@ -1,0 +1,96 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Outfit', sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+    color: #f8fafc;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.container {
+    max-width: 800px;
+    width: 100%;
+    text-align: center;
+}
+
+.header {
+    margin-bottom: 40px;
+}
+
+.logo-icon {
+    font-size: 64px;
+    margin-bottom: 10px;
+}
+
+.header h1 {
+    font-size: 2.8rem;
+    font-weight: 800;
+    background: linear-gradient(90deg, #38bdf8, #818cf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.header p {
+    color: #94a3b8;
+    font-size: 1.1rem;
+    margin-top: 8px;
+}
+
+.profiles-section h2 {
+    font-size: 1.5rem;
+    color: #cbd5e1;
+    margin-bottom: 25px;
+}
+
+.profiles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.profile-card {
+    background: rgba(30, 41, 59, 0.7);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 30px 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.profile-card:hover {
+    transform: translateY(-8px);
+    border-color: #38bdf8;
+    box-shadow: 0 12px 24px rgba(56, 189, 248, 0.2);
+}
+
+.avatar {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.name {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.role {
+    font-size: 0.9rem;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+.profile-card.leo:hover { border-color: #f59e0b; }
+.profile-card.papa:hover { border-color: #3b82f6; }
+.profile-card.mama:hover { border-color: #ec4899; }
