@@ -4,50 +4,70 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Academia Campos</title>
-    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <header class="header">
-            <div class="logo-icon">🎓</div>
-            <h1>Academia Campos</h1>
-            <p>Espacio de aprendizaje y retos para la familia</p>
-        </header>
+        <!-- 1. Pantalla de Selección de Perfil -->
+        <section id="profiles-screen">
+            <header class="header">
+                <div class="logo-icon">🎓</div>
+                <h1>Academia Campos</h1>
+                <p>Espacio de aprendizaje y retos para la familia</p>
+            </header>
 
-        <main class="profiles-section">
-            <h2>¿Quién entra hoy?</h2>
-            
-            <div class="profiles-grid">
-                <!-- Perfil Leo (Niño moreno) -->
-                <button class="profile-card leo" onclick="seleccionarPerfil('leo')">
-                    <div class="avatar">🙇</div>
-                    <span class="name">Leo</span>
-                    <span class="role">Explorador</span>
-                </button>
+            <main class="profiles-section">
+                <h2>¿Quién entra hoy?</h2>
 
-                <!-- Perfil Papá (Hombre pelo negro con barba y gafas) -->
-                <button class="profile-card papa" onclick="seleccionarPerfil('papa')">
-                    <div class="avatar">🧔🏻‍♂️</div>
-                    <span class="name">Papá</span>
-                    <span class="role">Mentor</span>
-                </button>
+                <div class="profiles-grid">
+                    <!-- Perfil Leo -->
+                    <button class="profile-card leo" onclick="seleccionarPerfil('leo')">
+                        <div class="avatar">🙇</div>
+                        <span class="name">Leo</span>
+                        <span class="role">Explorador</span>
+                    </button>
 
-                <!-- Perfil Mamá (Mujer pelo negro oscura de piel) -->
-                <button class="profile-card mama" onclick="seleccionarPerfil('mama')">
-                    <div class="avatar">👩🏾‍🦱</div>
-                    <span class="name">Mamá</span>
-                    <span class="role">Mentora</span>
-                </button>
-            </div>
-        </main>
+                    <!-- Perfil Papá -->
+                    <button class="profile-card papa" onclick="seleccionarPerfil('papa')">
+                        <div class="avatar">🧔🏻‍♂️</div>
+                        <span class="name">Papá</span>
+                        <span class="role">Mentor</span>
+                    </button>
+
+                    <!-- Perfil Mamá -->
+                    <button class="profile-card mama" onclick="seleccionarPerfil('mama')">
+                        <div class="avatar">👩🏾‍🦱</div>
+                        <span class="name">Mamá</span>
+                        <span class="role">Mentora</span>
+                    </button>
+                </div>
+            </main>
+        </section>
+
+        <!-- 2. Pantalla de Retos de Pensamiento Lateral -->
+        <section id="challenge-screen" style="display: none;">
+            <header class="challenge-header">
+                <button class="back-btn" onclick="volverAlMenu()">← Cambiar Perfil</button>
+                <h2 id="user-greeting">Entrenando...</h2>
+                <div class="level-badge">Nivel <span id="current-level">1</span></div>
+            </header>
+
+            <main class="challenge-card">
+                <div class="category-tag">🧠 Pensamiento Lateral y Lógica</div>
+                
+                <p id="challenge-prompt" class="prompt-text">Cargando el reto de la IA...</p>
+                
+                <div class="input-group">
+                    <textarea id="user-answer" placeholder="Escribe aquí tu respuesta o cómo lo has pensado..."></textarea>
+                    <button class="send-btn" onclick="enviarRespuesta()">Enviar Respuesta</button>
+                </div>
+
+                <div id="ai-feedback" class="feedback-box" style="display: none;"></div>
+            </main>
+        </section>
     </div>
 
-    <script>
-        function seleccionarPerfil(perfil) {
-            localStorage.setItem('perfil_activo', perfil);
-            alert('¡Bienvenido/a ' + perfil.toUpperCase() + '! Entrando a la Academia...');
-        }
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>
