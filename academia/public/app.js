@@ -1,15 +1,10 @@
-// academia/public/app.js
-
 let perfilActivo = null;
+let currentChallengeId = null; // 👈 Variable para almacenar el ID del reto actual
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Verificar si ya había un perfil seleccionado previamente en localStorage
     const guardado = localStorage.getItem('perfil_activo');
     if (guardado) {
         perfilActivo = guardado;
-        // Si quieres que salte directo al menú de materias si ya hay sesión:
-        // document.getElementById('profiles-screen').style.display = 'none';
-        // document.getElementById('subjects-screen').style.display = 'block';
     }
 });
 
@@ -18,13 +13,12 @@ function seleccionarPerfil(perfil) {
     perfilActivo = perfil;
     localStorage.setItem('perfil_activo', perfil);
 
-    // Ocultar pantalla de perfiles y mostrar pantalla de selección de materias
     document.getElementById('profiles-screen').style.display = 'none';
     document.getElementById('subjects-screen').style.display = 'block';
 
     const nombres = { leo: 'Leo 🙇', papa: 'Papá 🧔🏻‍♂️', mama: 'Mamá 👩🏾‍🦱' };
     const nombreLegible = nombres[perfil] || perfil;
-    
+
     const saludoEl = document.getElementById('subject-user-greeting');
     if (saludoEl) {
         saludoEl.innerText = `Hola, ${nombreLegible}`;
@@ -39,18 +33,16 @@ function volverAPerfiles() {
     document.getElementById('profiles-screen').style.display = 'block';
 }
 
-// Paso 2: Seleccionar la asignatura (de momento, Pensamiento Lateral)
+// Paso 2: Seleccionar la asignatura
 async function seleccionarMateria(materia) {
-    if (materia !== 'lateral') return; // Preparado para futuras asignaturas
+    if (materia !== 'lateral') return;
 
-    // Ocultar selector de materias y mostrar pantalla de juego/retos
     document.getElementById('subjects-screen').style.display = 'none';
     document.getElementById('challenge-screen').style.display = 'block';
 
     const nombres = { leo: 'Leo 🙇', papa: 'Papá 🧔🏻‍♂️', mama: 'Mamá 👩🏾‍🦱' };
     document.getElementById('user-greeting').innerText = `Entrenando: ${nombres[perfil_activo] || perfilActivo}`;
 
-    // Cargar el primer reto de pensamiento lateral
     await cargarSiguienteReto();
 }
 
@@ -59,7 +51,7 @@ async function cargarSiguienteReto() {
     const answerInput = document.getElementById('user-answer');
     const feedbackBox = document.getElementById('ai-feedback');
 
-    promptElement.innerText = "🧠 La IA está generando un reto de pensamiento lateral a su medida...";
+    promptElement.innerText = "🧠 La IA está generando un reto a su medida...";
     if (answerInput) answerInput.value = '';
     if (feedbackBox) feedbackBox.style.display = 'none';
 
@@ -73,6 +65,7 @@ async function cargarSiguienteReto() {
 
         if (data.success) {
             promptElement.innerText = data.challenge.prompt;
+            currentChallengeId = data.challenge.id; // 👈 Guardamos el ID del reto recibido
             document.getElementById('current-level').innerText = data.level || 1;
         } else {
             promptElement.innerText = "No se pudo cargar el reto. Inténtalo de nuevo.";
@@ -90,15 +83,24 @@ async function enviarRespuesta() {
         return;
     }
 
+    if (!currentChallengeId) {
+        alert('Error: No hay ningún reto activo cargado.');
+        return;
+    }
+
     const feedbackBox = document.getElementById('ai-feedback');
     feedbackBox.style.display = 'block';
-    feedbackBox.innerHTML = "🔍 Analizando tu razonamiento lógico...";
+    feedbackBox.innerHTML = "🔍 Analizando tu razonamiento...";
 
     try {
         const response = await fetch('/api/academia/challenge/submit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: perfilActivo, userAnswer: answer })
+            body: JSON.stringify({ 
+                userId: perfilActivo, 
+                challengeId: currentChallengeId, // 👈 Enviamos el ID obligatorio que pedía el router
+                userAnswer: answer 
+            })
         });
         const data = await response.json();
 
