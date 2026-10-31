@@ -1,4 +1,9 @@
 
+/* =====================================================
+   ACADEMIA CAMPOS
+   academia/router.ts
+   ===================================================== */
+
 import { Router, Request, Response } from 'express';
 import { randomUUID } from 'crypto';
 import { getUserProgressCollection } from './models';
@@ -10,6 +15,10 @@ import {
 const router = Router();
 
 const SCHEMA_VERSION = 2;
+const POINTS_PER_CORRECT = 10;
+const CORRECT_ANSWERS_PER_LEVEL = 5;
+const MAX_HISTORY = 100;
+const MAX_GENERATION_HISTORY = 30;
 
 const PROFILES: Record<string, string> = {
     leo: 'Leo',
@@ -25,14 +34,68 @@ const SUBJECTS = [
 
 type Subject = typeof SUBJECTS[number];
 
+interface Challenge {
+    id: string;
+    prompt: string;
+    category: string;
+    hint: string;
+    solution: string;
+    createdAt: Date;
+}
+
+interface HistoryEntry {
+    challengeId: string;
+    prompt: string;
+    answer: string;
+    correct: boolean;
+    feedback: string;
+    createdAt: Date;
+}
+
 interface SubjectProgress {
     currentLevel: number;
     score: number;
     totalAttempts: number;
     totalCorrect: number;
     totalIncorrect: number;
-    history: any[];
-    activeChallenge: any | null;
+    history: HistoryEntry[];
+    activeChallenge: Challenge | null;
+}
+
+interface UserProgress {
+    userId: string;
+    schemaVersion: number;
+    subjects: Record<Subject, SubjectProgress>;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+/* =====================================================
+   UTILIDADES
+   ===================================================== */
+
+function isValidProfile(userId: unknown): userId is string {
+    return (
+        typeof userId === 'string' &&
+        Object.prototype.hasOwnProperty.call(PROFILES, userId)
+    );
+}
+
+function isValidSubject(value: unknown): value is Subject {
+    return (
+        typeof value === 'string' &&
+        SUBJECTS.includes(value as Subject)
+    );
+}
+
+function getSubject(body: any): Subject | null {
+    if (!body || body.subject === undefined) {
+        return 'lateral';
+    }
+
+    return isValidSubject(body.subject)
+        ? body.subject
+        : null;
 }
 
 function createInitialSubjectProgress(): SubjectProgress {
@@ -47,7 +110,7 @@ function createInitialSubjectProgress(): SubjectProgress {
     };
 }
 
-function createInitialSubjects() {
+function createInitialSubjects(): Record<Subject, SubjectProgress> {
     return {
         lateral: createInitialSubjectProgress(),
         matematicas: createInitialSubjectProgress(),
@@ -55,36 +118,43 @@ function createInitialSubjects() {
     };
 }
 
-function isValidUser(userId: any): userId is string {
-    return typeof userId === 'string' &&
-        Object.prototype.hasOwnProperty.call(PROFILES, userId);
+function getAccuracy(progress: SubjectProgress): number {
+    if (progress.totalAttempts === 0) {
+        return 0;
+    }
+
+    return Math.round(
+        (progress.totalCorrect / progress.totalAttempts) * 100
+    );
 }
 
-function isValidSubject(subject: any): subject is Subject {
-    return typeof subject === 'string' &&
-        SUBJECTS.includes(subject as Subject);
+function getSafeSubjectProgress(
+    document: any,
+    subject: Subject
+): SubjectProgress {
+    const saved = document?.subjects?.[subject];
+
+    if (!saved) {
+        return createInitialSubjectProgress();
+    }
+
+    return {
+        currentLevel: Number(saved.currentLevel) || 1,
+        score: Number(saved.score) || 0,
+        totalAttempts: Number(saved.totalAttempts) || 0,
+        totalCorrect: Number(saved.totalCorrect) || 0,
+        totalIncorrect: Number(saved.totalIncorrect) || 0,
+        history: Array.isArray(saved.history) ? saved.history : [],
+        activeChallenge: saved.activeChallenge || null
+    };
 }
 
-function getSubject(body: any): Subject {
-    return isValidSubject(body?.subject)
-        ? body.subject
-        : 'lateral';
-}
-
-function getAccuracy(progress: any): number {
-    const attempts = Number(progress?.totalAttempts || 0);
-    const correct = Number(progress?.totalCorrect || 0);
-
-    if (attempts === 0) return 0;
-
-    return Math.round((correct / attempts) * 100);
-}
-
-/**
- * Crea el documento del perfil o inicializa la nueva versión.
- * Los datos antiguos de pruebas no se utilizan en el sistema nuevo.
+/*
+ * Crea los perfiles nuevos con sus tres asignaturas.
+ * La versión anterior de progreso se sustituye una sola vez
+ * al pasar al esquema nuevo.
  */
-async function ensureUserProgress(userId: string) {
+async function ensureUserProgress(userId: string): Promise<any> {
     const collection = await getUserProgressCollection();
 
     await collection.updateOne(
@@ -92,45 +162,62 @@ async function ensureUserProgress(userId: string) {
         {
             $setOnInsert: {
                 userId,
-                createdAt: new Date()
+                schemaVersion: SCHEMA_VERSION,
+                subjects: createInitialSubjects(),
+                createdAt: new Date(),
+                updatedAt: new Date()
             }
         },
         { upsert: true }
     );
 
-    await collection.updateOne(
-        {
-            userId,
-            schemaVersion: { $ne: SCHEMA_VERSION }
-        },
-        {
-            $set: {
-                schemaVersion: SCHEMA_VERSION,
-                subjects: createInitialSubjects(),
-                updatedAt: new Date()
-            }
-        }
-    );
+    const document = await collection.findOne({ userId });
 
-    const progress = await collection.findOne({ userId });
-
-    if (!progress) {
-        throw new Error('No se pudo inicializar el progreso del perfil.');
+    if (!document) {
+        throw new Error('No se ha podido crear el progreso del usuario.');
     }
 
-    return progress;
+    if (document.schemaVersion !== SCHEMA_VERSION) {
+        await collection.updateOne(
+            {
+                userId,
+                schemaVersion: { $ne: SCHEMA_VERSION }
+            },
+            {
+                $set: {
+                    schemaVersion: SCHEMA_VERSION,
+                    subjects: createInitialSubjects(),
+                    updatedAt: new Date()
+                }
+            }
+        );
+    }
+
+    const updated = await collection.findOne({ userId });
+
+    if (!updated) {
+        throw new Error('No se ha podido recuperar el progreso del usuario.');
+    }
+
+    return updated;
 }
 
-function getSubjectProgress(document: any, subject: Subject) {
-    const progress = document?.subjects?.[subject];
-
-    return progress || createInitialSubjectProgress();
+function sendError(
+    response: Response,
+    status: number,
+    message: string
+): void {
+    response.status(status).json({
+        success: false,
+        message
+    });
 }
 
-/**
- * POST /api/academia/challenge/next
- * Obtiene el reto activo o genera uno nuevo.
- */
+/* =====================================================
+   SIGUIENTE RETO
+   POST /api/academia/challenge/next
+   ===================================================== */
+
 router.post(
     '/api/academia/challenge/next',
     async (req: Request, res: Response) => {
@@ -138,77 +225,75 @@ router.post(
             const { userId } = req.body;
             const subject = getSubject(req.body);
 
-            if (!isValidUser(userId)) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Perfil no válido.'
-                });
+            if (!isValidProfile(userId)) {
+                sendError(res, 400, 'Perfil no válido.');
+                return;
+            }
+
+            if (!subject) {
+                sendError(res, 400, 'Asignatura no válida.');
+                return;
             }
 
             if (subject !== 'lateral') {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Esta asignatura todavía no está activada.'
-                });
+                sendError(
+                    res,
+                    400,
+                    'Esta asignatura todavía no está disponible.'
+                );
+                return;
             }
 
             const collection = await getUserProgressCollection();
             const document = await ensureUserProgress(userId);
+            const progress = getSafeSubjectProgress(document, subject);
 
-            const subjectProgress = getSubjectProgress(
-                document,
-                subject
-            );
-
-            if (subjectProgress.activeChallenge) {
-                const active = subjectProgress.activeChallenge;
-
-                return res.json({
+            if (progress.activeChallenge) {
+                res.json({
                     success: true,
-                    level: subjectProgress.currentLevel,
-                    challenge: {
-                        id: active.id,
-                        prompt: active.prompt,
-                        category: active.category,
-                        hint: active.hint
-                    }
+                    challenge: progress.activeChallenge,
+                    level: progress.currentLevel,
+                    reused: true
                 });
+                return;
             }
 
-            const history = (subjectProgress.history || [])
-                .map((item: any) => item.prompt)
-                .filter((prompt: any) => typeof prompt === 'string')
-                .slice(-30);
+            const history = progress.history
+                .slice(-MAX_GENERATION_HISTORY)
+                .map((entry: HistoryEntry) => entry.prompt);
 
-            const reto = await generarRetoIA(
-                subjectProgress.currentLevel || 1,
+            const generated = await generarRetoIA(
+                progress.currentLevel,
                 history
             );
 
             if (
-                !reto ||
-                typeof reto.prompt !== 'string' ||
-                typeof reto.solution !== 'string' ||
-                !reto.prompt.trim() ||
-                !reto.solution.trim()
+                !generated ||
+                typeof generated.prompt !== 'string' ||
+                !generated.prompt.trim() ||
+                typeof generated.solution !== 'string' ||
+                !generated.solution.trim()
             ) {
-                throw new Error('Gemini no ha generado un reto válido.');
+                sendError(
+                    res,
+                    502,
+                    'Gemini no ha generado un reto válido. Inténtalo de nuevo.'
+                );
+                return;
             }
 
-            const challengeId = randomUUID();
-
-            const activeChallenge = {
-                id: challengeId,
-                prompt: reto.prompt,
-                category: reto.category || 'Pensamiento lateral',
-                hint: reto.hint || '',
-                solution: reto.solution,
+            const challenge: Challenge = {
+                id: randomUUID(),
+                prompt: generated.prompt.trim(),
+                category: generated.category || 'Pensamiento lateral',
+                hint: generated.hint || '',
+                solution: generated.solution.trim(),
                 createdAt: new Date()
             };
 
             const activePath = `subjects.${subject}.activeChallenge`;
 
-            const result = await collection.updateOne(
+            const saved = await collection.updateOne(
                 {
                     userId,
                     schemaVersion: SCHEMA_VERSION,
@@ -219,63 +304,64 @@ router.post(
                 },
                 {
                     $set: {
-                        [activePath]: activeChallenge,
+                        [activePath]: challenge,
                         updatedAt: new Date()
                     }
                 }
             );
 
-            if (result.modifiedCount === 0) {
+            if (saved.modifiedCount !== 1) {
                 const latest = await collection.findOne({ userId });
-                const latestProgress = getSubjectProgress(latest, subject);
-                const active = latestProgress.activeChallenge;
+                const latestProgress = getSafeSubjectProgress(
+                    latest,
+                    subject
+                );
 
-                if (active) {
-                    return res.json({
+                if (latestProgress.activeChallenge) {
+                    res.json({
                         success: true,
+                        challenge: latestProgress.activeChallenge,
                         level: latestProgress.currentLevel,
-                        challenge: {
-                            id: active.id,
-                            prompt: active.prompt,
-                            category: active.category,
-                            hint: active.hint
-                        }
+                        reused: true
                     });
+                    return;
                 }
 
-                return res.status(409).json({
-                    success: false,
-                    message: 'No se pudo guardar el reto. Inténtalo de nuevo.'
-                });
+                sendError(
+                    res,
+                    409,
+                    'No se ha podido guardar el reto. Vuelve a intentarlo.'
+                );
+                return;
             }
 
-            return res.json({
+            res.json({
                 success: true,
-                level: subjectProgress.currentLevel || 1,
-                challenge: {
-                    id: challengeId,
-                    prompt: activeChallenge.prompt,
-                    category: activeChallenge.category,
-                    hint: activeChallenge.hint
-                }
+                challenge,
+                level: progress.currentLevel,
+                reused: false
             });
 
         } catch (error) {
-            console.error('Error generando reto:', error);
+            console.error(
+                'Error generando reto de Academia:',
+                error
+            );
 
-            return res.status(500).json({
-                success: false,
-                message: 'No se pudo generar el reto. Inténtalo de nuevo.'
-            });
+            sendError(
+                res,
+                500,
+                'No se ha podido preparar el reto. Inténtalo de nuevo.'
+            );
         }
     }
 );
 
-/**
- * POST /api/academia/challenge/submit
- *
- * Evalúa la respuesta y actualiza el progreso de forma atómica.
- */
+/* =====================================================
+   ENVÍO Y EVALUACIÓN
+   POST /api/academia/challenge/submit
+   ===================================================== */
+
 router.post(
     '/api/academia/challenge/submit',
     async (req: Request, res: Response) => {
@@ -283,18 +369,14 @@ router.post(
             const { userId, challengeId, userAnswer } = req.body;
             const subject = getSubject(req.body);
 
-            if (!isValidUser(userId)) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Perfil no válido.'
-                });
+            if (!isValidProfile(userId)) {
+                sendError(res, 400, 'Perfil no válido.');
+                return;
             }
 
-            if (!isValidSubject(subject)) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Asignatura no válida.'
-                });
+            if (!subject) {
+                sendError(res, 400, 'Asignatura no válida.');
+                return;
             }
 
             if (
@@ -302,27 +384,26 @@ router.post(
                 typeof userAnswer !== 'string' ||
                 !userAnswer.trim()
             ) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Falta el reto o la respuesta.'
-                });
+                sendError(
+                    res,
+                    400,
+                    'Falta el identificador del reto o la respuesta.'
+                );
+                return;
             }
 
             const collection = await getUserProgressCollection();
             const document = await ensureUserProgress(userId);
-
-            const subjectProgress = getSubjectProgress(
-                document,
-                subject
-            );
-
-            const active = subjectProgress.activeChallenge;
+            const progress = getSafeSubjectProgress(document, subject);
+            const active = progress.activeChallenge;
 
             if (!active || active.id !== challengeId) {
-                return res.status(409).json({
-                    success: false,
-                    message: 'Este reto ya no está activo. Carga el siguiente reto.'
-                });
+                sendError(
+                    res,
+                    409,
+                    'Este reto ya no está activo. Carga uno nuevo.'
+                );
+                return;
             }
 
             let evaluation;
@@ -333,159 +414,183 @@ router.post(
                     userAnswer.trim(),
                     active.solution
                 );
-            } catch (aiError) {
-                console.error('Error evaluando respuesta:', aiError);
+            } catch (error) {
+                console.error('Error evaluando con Gemini:', error);
 
-                return res.status(502).json({
-                    success: false,
-                    message: 'No se pudo evaluar la respuesta. Puedes intentarlo de nuevo.'
-                });
+                sendError(
+                    res,
+                    502,
+                    'No se ha podido evaluar la respuesta. No se han sumado puntos.'
+                );
+                return;
             }
 
             if (
                 !evaluation ||
                 typeof evaluation.correct !== 'boolean'
             ) {
-                return res.status(502).json({
-                    success: false,
-                    message: 'La evaluación recibida no es válida. Inténtalo de nuevo.'
-                });
+                sendError(
+                    res,
+                    502,
+                    'Gemini ha devuelto una evaluación no válida.'
+                );
+                return;
             }
 
-            const prefix = `subjects.${subject}`;
+            const correct = evaluation.correct;
+            const points = correct ? POINTS_PER_CORRECT : 0;
 
-            const oldCorrect = {
-                $ifNull: [`$${prefix}.totalCorrect`, 0]
-            };
-
-            const oldAttempts = {
-                $ifNull: [`$${prefix}.totalAttempts`, 0]
-            };
-
-            const oldIncorrect = {
-                $ifNull: [`$${prefix}.totalIncorrect`, 0]
-            };
-
-            const oldScore = {
-                $ifNull: [`$${prefix}.score`, 0]
-            };
-
-            const newCorrect = {
-                $add: [
-                    oldCorrect,
-                    evaluation.correct ? 1 : 0
-                ]
-            };
-
-            const historyEntry = {
+            const historyEntry: HistoryEntry = {
+                challengeId,
                 prompt: active.prompt,
-                category: active.category,
-                answeredAt: new Date(),
-                correct: evaluation.correct
+                answer: userAnswer.trim(),
+                correct,
+                feedback: evaluation.feedback || '',
+                createdAt: new Date()
             };
 
-            const result = await collection.updateOne(
+            const subjectPath = `subjects.${subject}`;
+            const attemptsPath = `${subjectPath}.totalAttempts`;
+            const correctPath = `${subjectPath}.totalCorrect`;
+            const incorrectPath = `${subjectPath}.totalIncorrect`;
+            const scorePath = `${subjectPath}.score`;
+            const historyPath = `${subjectPath}.history`;
+            const activePath = `${subjectPath}.activeChallenge`;
+            const levelPath = `${subjectPath}.currentLevel`;
+
+            /*
+             * La actualización es atómica:
+             * el reto solo puede puntuarse una vez.
+             */
+            const updateResult = await collection.updateOne(
                 {
                     userId,
                     schemaVersion: SCHEMA_VERSION,
-                    [`${prefix}.activeChallenge.id`]: challengeId
+                    [`${activePath}.id`]: challengeId
                 },
                 [
                     {
                         $set: {
-                            [`${prefix}.totalAttempts`]: {
-                                $add: [oldAttempts, 1]
-                            },
-                            [`${prefix}.totalCorrect`]: newCorrect,
-                            [`${prefix}.totalIncorrect`]: {
+                            [attemptsPath]: {
                                 $add: [
-                                    oldIncorrect,
-                                    evaluation.correct ? 0 : 1
+                                    { $ifNull: [`$${attemptsPath}`, 0] },
+                                    1
                                 ]
                             },
-                            [`${prefix}.score`]: {
+                            [correctPath]: {
                                 $add: [
-                                    oldScore,
-                                    evaluation.correct ? 10 : 0
+                                    { $ifNull: [`$${correctPath}`, 0] },
+                                    correct ? 1 : 0
                                 ]
                             },
-                            [`${prefix}.currentLevel`]: {
+                            [incorrectPath]: {
+                                $add: [
+                                    { $ifNull: [`$${incorrectPath}`, 0] },
+                                    correct ? 0 : 1
+                                ]
+                            },
+                            [scorePath]: {
+                                $add: [
+                                    { $ifNull: [`$${scorePath}`, 0] },
+                                    points
+                                ]
+                            },
+                            [levelPath]: {
                                 $add: [
                                     1,
                                     {
                                         $floor: {
-                                            $divide: [newCorrect, 5]
+                                            $divide: [
+                                                {
+                                                    $add: [
+                                                        {
+                                                            $ifNull: [
+                                                                `$${correctPath}`,
+                                                                0
+                                                            ]
+                                                        },
+                                                        correct ? 1 : 0
+                                                    ]
+                                                },
+                                                CORRECT_ANSWERS_PER_LEVEL
+                                            ]
                                         }
                                     }
                                 ]
                             },
-                            [`${prefix}.activeChallenge`]: null,
-                            [`${prefix}.history`]: {
+                            [historyPath]: {
                                 $slice: [
                                     {
                                         $concatArrays: [
                                             {
                                                 $ifNull: [
-                                                    `$${prefix}.history`,
+                                                    `$${historyPath}`,
                                                     []
                                                 ]
                                             },
-                                            {
-                                                $literal: [historyEntry]
-                                            }
+                                            { $literal: [historyEntry] }
                                         ]
                                     },
-                                    -100
+                                    -MAX_HISTORY
                                 ]
                             },
+                            [activePath]: null,
                             updatedAt: '$$NOW'
                         }
                     }
-                ] as any
+                ]
             );
 
-            if (result.modifiedCount !== 1) {
-                return res.status(409).json({
-                    success: false,
-                    message: 'El reto ya se ha enviado o ha dejado de estar activo.'
-                });
+            if (updateResult.modifiedCount !== 1) {
+                sendError(
+                    res,
+                    409,
+                    'La respuesta ya se ha procesado o el reto ha caducado.'
+                );
+                return;
             }
 
             const updatedDocument = await collection.findOne({ userId });
 
-            const updatedProgress = getSubjectProgress(
+            const updatedProgress = getSafeSubjectProgress(
                 updatedDocument,
                 subject
             );
 
-            return res.json({
+            res.json({
                 success: true,
-                correct: evaluation.correct,
-                feedback: evaluation.feedback,
-                explanation: evaluation.explanation,
+                correct,
+                feedback: evaluation.feedback || '',
+                explanation: evaluation.explanation || '',
+                pointsAwarded: points,
                 level: updatedProgress.currentLevel,
                 score: updatedProgress.score,
-                totalCorrect: updatedProgress.totalCorrect,
                 totalAttempts: updatedProgress.totalAttempts,
-                totalIncorrect: updatedProgress.totalIncorrect
+                totalCorrect: updatedProgress.totalCorrect,
+                totalIncorrect: updatedProgress.totalIncorrect,
+                accuracy: getAccuracy(updatedProgress)
             });
 
         } catch (error) {
-            console.error('Error enviando respuesta:', error);
+            console.error(
+                'Error enviando respuesta de Academia:',
+                error
+            );
 
-            return res.status(500).json({
-                success: false,
-                message: 'No se pudo procesar la respuesta.'
-            });
+            sendError(
+                res,
+                500,
+                'Ha ocurrido un error al procesar la respuesta.'
+            );
         }
     }
 );
 
-/**
- * POST /api/academia/progress
- *
- * Devuelve las estadísticas de una asignatura concreta.
- */
+/* =====================================================
+   CONSULTAR PROGRESO
+   POST /api/academia/progress
+   ===================================================== */
+
 router.post(
     '/api/academia/progress',
     async (req: Request, res: Response) => {
@@ -493,21 +598,20 @@ router.post(
             const { userId } = req.body;
             const subject = getSubject(req.body);
 
-            if (!isValidUser(userId)) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Perfil no válido.'
-                });
+            if (!isValidProfile(userId)) {
+                sendError(res, 400, 'Perfil no válido.');
+                return;
+            }
+
+            if (!subject) {
+                sendError(res, 400, 'Asignatura no válida.');
+                return;
             }
 
             const document = await ensureUserProgress(userId);
+            const progress = getSafeSubjectProgress(document, subject);
 
-            const progress = getSubjectProgress(
-                document,
-                subject
-            );
-
-            return res.json({
+            res.json({
                 success: true,
                 subject,
                 progress: {
@@ -521,22 +625,22 @@ router.post(
             });
 
         } catch (error) {
-            console.error('Error cargando progreso:', error);
+            console.error('Error consultando progreso:', error);
 
-            return res.status(500).json({
-                success: false,
-                message: 'No se pudo cargar el progreso.'
-            });
+            sendError(
+                res,
+                500,
+                'No se ha podido consultar el progreso.'
+            );
         }
     }
 );
 
-/**
- * POST /api/academia/ranking
- *
- * Sin subject: ranking general.
- * Con subject: ranking de esa asignatura.
- */
+/* =====================================================
+   RANKING GENERAL Y POR ASIGNATURA
+   POST /api/academia/ranking
+   ===================================================== */
+
 router.post(
     '/api/academia/ranking',
     async (req: Request, res: Response) => {
@@ -547,67 +651,57 @@ router.post(
                 requestedSubject !== undefined &&
                 !isValidSubject(requestedSubject)
             ) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Asignatura no válida.'
-                });
+                sendError(res, 400, 'Asignatura no válida.');
+                return;
             }
 
             const collection = await getUserProgressCollection();
 
-            const documents = await collection
-                .find({
-                    userId: { $in: Object.keys(PROFILES) },
-                    schemaVersion: SCHEMA_VERSION
-                })
-                .toArray();
+            const documents = await collection.find({
+                schemaVersion: SCHEMA_VERSION,
+                userId: { $in: Object.keys(PROFILES) }
+            }).toArray();
 
             const ranking = Object.keys(PROFILES).map(userId => {
                 const document = documents.find(
                     item => item.userId === userId
                 );
 
-                if (requestedSubject) {
-                    const progress = getSubjectProgress(
-                        document,
-                        requestedSubject
-                    );
-
-                    return {
-                        userId,
-                        name: PROFILES[userId],
-                        subject: requestedSubject,
-                        level: progress.currentLevel,
-                        score: progress.score,
-                        totalAttempts: progress.totalAttempts,
-                        totalCorrect: progress.totalCorrect,
-                        totalIncorrect: progress.totalIncorrect,
-                        accuracy: getAccuracy(progress)
-                    };
-                }
-
                 let score = 0;
                 let totalAttempts = 0;
                 let totalCorrect = 0;
                 let totalIncorrect = 0;
 
-                const subjectLevels: Record<string, number> = {};
-
-                for (const subject of SUBJECTS) {
-                    const progress = getSubjectProgress(
+                if (requestedSubject) {
+                    const progress = getSafeSubjectProgress(
                         document,
-                        subject
+                        requestedSubject
                     );
 
-                    score += Number(progress.score || 0);
-                    totalAttempts += Number(progress.totalAttempts || 0);
-                    totalCorrect += Number(progress.totalCorrect || 0);
-                    totalIncorrect += Number(progress.totalIncorrect || 0);
+                    score = progress.score;
+                    totalAttempts = progress.totalAttempts;
+                    totalCorrect = progress.totalCorrect;
+                    totalIncorrect = progress.totalIncorrect;
 
-                    subjectLevels[subject] = Number(
-                        progress.currentLevel || 1
-                    );
+                } else {
+                    for (const subject of SUBJECTS) {
+                        const progress = getSafeSubjectProgress(
+                            document,
+                            subject
+                        );
+
+                        score += progress.score;
+                        totalAttempts += progress.totalAttempts;
+                        totalCorrect += progress.totalCorrect;
+                        totalIncorrect += progress.totalIncorrect;
+                    }
                 }
+
+                const accuracy = totalAttempts > 0
+                    ? Math.round(
+                        (totalCorrect / totalAttempts) * 100
+                    )
+                    : 0;
 
                 return {
                     userId,
@@ -616,35 +710,36 @@ router.post(
                     totalAttempts,
                     totalCorrect,
                     totalIncorrect,
-                    accuracy: totalAttempts === 0
-                        ? 0
-                        : Math.round(
-                            (totalCorrect / totalAttempts) * 100
-                        ),
-                    subjectLevels
+                    accuracy
                 };
             });
 
-            ranking.sort((a, b) =>
-                b.score - a.score ||
-                b.accuracy - a.accuracy ||
-                b.totalCorrect - a.totalCorrect
-            );
+            ranking.sort((a, b) => {
+                if (b.score !== a.score) {
+                    return b.score - a.score;
+                }
 
-            return res.json({
+                if (b.accuracy !== a.accuracy) {
+                    return b.accuracy - a.accuracy;
+                }
+
+                return b.totalCorrect - a.totalCorrect;
+            });
+
+            res.json({
                 success: true,
-                scope: requestedSubject ? 'subject' : 'general',
-                subject: requestedSubject || null,
+                subject: requestedSubject || 'general',
                 ranking
             });
 
         } catch (error) {
-            console.error('Error cargando ranking:', error);
+            console.error('Error generando ranking:', error);
 
-            return res.status(500).json({
-                success: false,
-                message: 'No se pudo cargar el ranking.'
-            });
+            sendError(
+                res,
+                500,
+                'No se ha podido cargar el ranking.'
+            );
         }
     }
 );
