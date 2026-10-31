@@ -1,82 +1,171 @@
-import { Client, GatewayIntentBits, Collection, Interaction, Message } from 'discord.js';
-import { MongoClient, Collection as MongoCollection } from 'mongodb';
+
+import {
+    Client,
+    GatewayIntentBits,
+    Collection,
+    Interaction,
+    Message
+} from 'discord.js';
+
+import {
+    MongoClient,
+    Collection as MongoCollection
+} from 'mongodb';
+
 import { handleGlobalInteraction } from './generalinteraction';
 import { setupNicknameSystem } from './dashadmin/nickname/nicknamemanager';
-import { setupWelcomeSystem } from './dashadmin/welcome/welcomemanager'; // ➔ Sistema de bienvenidas y despedidas
-import { setupAvisosSystem } from './dashadmin/avisos/avisosmanager'; // ➔ Sistema de avisos y logs
-import { setupPollSystem, handleEncuestaReactionAdd } from './dashadmin/encuestas/encuestasmanager'; // ➔ Sistema de Encuestas
-import { setupEventWorker } from './dashadmin/eventos/eventosworker'; // ➔ Worker de Eventos y Campeonatos
-import { handleClubMessage } from './dashadmin/club/clubactions'; // ➔ Importación del escuchador de mensajes GT Club
-import { setupAlarmaWorker } from './LCS/alarma/alarmaworker'; // ➔ Worker de Alarma para LCS
-import { academiaRouter } from './academia/router'; // 👈 🎓 Importamos el enrutador independiente de la Academia
-import express from 'express';
-import path from 'path'; // 👈 Importante para construir la ruta estática
+import { setupWelcomeSystem } from './dashadmin/welcome/welcomemanager';
+import { setupAvisosSystem } from './dashadmin/avisos/avisosmanager';
+import {
+    setupPollSystem,
+    handleEncuestaReactionAdd
+} from './dashadmin/encuestas/encuestasmanager';
+import { setupEventWorker } from './dashadmin/eventos/eventosworker';
+import { handleClubMessage } from './dashadmin/club/clubactions';
+import { setupAlarmaWorker } from './LCS/alarma/alarmaworker';
+import academiaRouter from './academia/router';
 
-// 🛡️ REDES DE SEGURIDAD GLOBAL: Evitan que el proceso muera silenciosamente por excepciones de red o promesas rechazadas
+import express from 'express';
+import path from 'path';
+
+// =====================================================
+// REDES DE SEGURIDAD GLOBAL
+// =====================================================
+
 process.on('unhandledRejection', (reason, promise) => {
-    console.error('⚠️ [Anti-Crash] Promesa rechazada no capturada:', reason);
+    console.error(
+        '⚠️ [Anti-Crash] Promesa rechazada no capturada:',
+        reason
+    );
 });
 
 process.on('uncaughtException', (error) => {
-    console.error('💥 [Anti-Crash] Excepción no capturada:', error);
+    console.error(
+        '💥 [Anti-Crash] Excepción no capturada:',
+        error
+    );
 });
 
-// 🌐 Configuración del servidor Express para servir la Academia y satisfacer a Render
+// =====================================================
+// SERVIDOR WEB EXPRESS
+// =====================================================
+
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-// 📁 1. Servir los archivos estáticos de la interfaz web (index.html, styles.css, app.js) desde academia/public
-app.use(express.static(path.join(__dirname, 'academia', 'public')));
+const PORT = Number(process.env.PORT) || 10000;
 
-// 🎓 2. Enganchamos la API de la Academia Familiar
+// Permite recibir JSON en las peticiones POST de la Academia.
+app.use(express.json({ limit: '1mb' }));
+
+// Archivos públicos: index.html, styles.css y app.js.
+app.use(
+    express.static(
+        path.join(__dirname, 'academia', 'public')
+    )
+);
+
+// API de Academia Campos.
 app.use(academiaRouter);
 
-app.listen(PORT, () => {
-    console.log(`🌐 Servidor web HTTP activo en el puerto ${PORT} (Academia Campos activa)`);
+// Comprobación de salud para Render.
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        success: true,
+        service: 'REDLINE Bot GT',
+        academy: 'Academia Campos'
+    });
 });
 
-// 📌 Importación de comandos Slash principales
+app.listen(PORT, () => {
+    console.log(
+        `🌐 Servidor web HTTP activo en el puerto ${PORT}`
+    );
+    console.log('🎓 Academia Campos preparada.');
+});
+
+// =====================================================
+// COMANDOS SLASH
+// =====================================================
+
 import * as dashCommand from './commands/dash';
 import * as dashStaffCommand from './commands/dashstaff';
 import * as dadoCommand from './commands/dado';
 import * as borrarCommand from './commands/borrar';
-import * as msnCommand from './commands/msn'; // ➔ Comando msn
-import * as draftCommand from './commands/draft'; // ➔ Comando draft
-import * as listaCommand from './commands/lista'; // ➔ Comando Lista
-import * as clubCommand from './commands/club'; // ➔ Comando Club
-import * as clubclasCommand from './commands/clubclas'; // ➔ Comando Club Clasificación General
-import * as transCommand from './commands/trans'; // ➔ Comando Traducción
-import * as titularesCommand from './commands/titulares'; // 👈 Comando titulares
-import * as reservasCommand from './commands/reservas'; // 👈 Comando reservas
-import * as eloCommand from './commands/elo'; // 👈 Comando elo añadido
+import * as msnCommand from './commands/msn';
+import * as draftCommand from './commands/draft';
+import * as listaCommand from './commands/lista';
+import * as clubCommand from './commands/club';
+import * as clubclasCommand from './commands/clubclas';
+import * as transCommand from './commands/trans';
+import * as titularesCommand from './commands/titulares';
+import * as reservasCommand from './commands/reservas';
+import * as eloCommand from './commands/elo';
 import * as dashSheetsCommand from './dashsheet/dashsheet';
-import * as dashAdminCommand from './dashadmin/dashadmin'; // ➔ Comando dashadmin
+import * as dashAdminCommand from './dashadmin/dashadmin';
 
-// ➔ Importación de comandos exclusivos de LCS
+// Comandos exclusivos de LCS.
 import * as alarmaCommand from './LCS/alarma/alarma';
-import * as menuCommand from './LCS/menu/menu'; // 👈 🎛️ Importamos el comando /menu de LCS
+import * as menuCommand from './LCS/menu/menu';
 
-/**
- * 📦 Conexión centralizada y segura a la colección de eventos de MongoDB
- */
+// =====================================================
+// CONEXIÓN CENTRALIZADA A MONGODB
+// =====================================================
+
 let cachedCollection: MongoCollection | null = null;
 
+let mongoConnectionPromise:
+    Promise<MongoCollection> | null = null;
+
 export async function getEventsCollection(): Promise<MongoCollection> {
-    if (cachedCollection) return cachedCollection;
-
-    const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL || process.env.MONGO_URL;
-
-    if (!uri) {
-        throw new Error('❌ No se encontró ninguna variable de entorno para MongoDB (revisa Render).');
+    if (cachedCollection) {
+        return cachedCollection;
     }
 
-    const mongoClient = new MongoClient(uri);
-    await mongoClient.connect();
-    cachedCollection = mongoClient.db().collection('events');
-    return cachedCollection;
+    if (mongoConnectionPromise) {
+        return mongoConnectionPromise;
+    }
+
+    mongoConnectionPromise = (async () => {
+        const uri =
+            process.env.MONGODB_URI ||
+            process.env.MONGO_URI ||
+            process.env.DATABASE_URL ||
+            process.env.MONGO_URL;
+
+        if (!uri) {
+            throw new Error(
+                'No se encontró ninguna variable de entorno para MongoDB.'
+            );
+        }
+
+        const mongoClient = new MongoClient(uri, {
+            serverSelectionTimeoutMS: 10000
+        });
+
+        await mongoClient.connect();
+
+        cachedCollection = mongoClient
+            .db()
+            .collection('events');
+
+        console.log('✅ Conexión con MongoDB establecida.');
+
+        return cachedCollection;
+    })();
+
+    try {
+        return await mongoConnectionPromise;
+    } catch (error) {
+        mongoConnectionPromise = null;
+        cachedCollection = null;
+        throw error;
+    }
 }
 
-// 🤖 Inicialización del Cliente de Discord con los Intents necesarios
+// =====================================================
+// CLIENTE DISCORD
+// =====================================================
+
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -85,120 +174,165 @@ const client = new Client({
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMessageReactions
     ]
-}) as Client & { commands: Collection<string, any> };
+}) as Client & {
+    commands: Collection<string, any>;
+};
 
-// 🗂️ Inicializar la colección de comandos en el cliente
+// =====================================================
+// REGISTRO DE COMANDOS
+// =====================================================
+
 client.commands = new Collection();
 
-// Registro de comandos en la colección (incluyendo los de LCS)
 const commandsList = [
-    dashCommand, 
-    dashStaffCommand, 
-    dadoCommand, 
-    borrarCommand, 
-    msnCommand, 
+    dashCommand,
+    dashStaffCommand,
+    dadoCommand,
+    borrarCommand,
+    msnCommand,
     draftCommand,
     listaCommand,
     clubCommand,
     clubclasCommand,
     transCommand,
-    titularesCommand, 
+    titularesCommand,
     reservasCommand,
     eloCommand,
-    dashSheetsCommand, 
+    dashSheetsCommand,
     dashAdminCommand,
     alarmaCommand,
-    menuCommand // 👈 🎛️ Comando /menu añadido a la colección del cliente
+    menuCommand
 ];
 
 for (const cmd of commandsList) {
     if ('data' in cmd && 'execute' in cmd) {
-        client.commands.set((cmd.data as any).name, cmd);
+        client.commands.set(
+            (cmd.data as any).name,
+            cmd
+        );
     }
 }
 
-// 🐛 Diagnóstico en tiempo real del WebSocket de Discord
+// =====================================================
+// DIAGNÓSTICO DEL WEBSOCKET
+// =====================================================
+
 client.on('debug', (info) => {
-    console.log(`🐛 [Discord Debug] ${info}`);
+    console.log(`[Discord Debug] ${info}`);
 });
 
-// 🔄 Detectar cortes de conexión con Discord para autoreconectarse
 client.on('shardDisconnect', (event, id) => {
-    console.warn(`⚠️ [Gateway] Shard ${id} desconectado. Intentando reconectar automáticamente...`);
+    console.warn(
+        `[Gateway] Shard ${id} desconectado.`
+    );
 });
 
 client.on('shardError', (error, shardId) => {
-    console.error(`❌ [Gateway] Error crítico en Shard ${shardId}:`, error);
+    console.error(
+        `[Gateway] Error en Shard ${shardId}:`,
+        error
+    );
 });
 
-/**
- * 🚀 Evento de Arranque (Ready)
- */
+// =====================================================
+// ARRANQUE DE SISTEMAS AL CONECTAR DISCORD
+// =====================================================
+
 client.once('ready', () => {
-    console.log(`🤖 [DISCORDBOT] Bot conectado exitosamente como ${client.user?.tag}`);
+    console.log(
+        `🤖 [DISCORDBOT] Bot conectado como ${client.user?.tag}`
+    );
 
-    // Inicializar el sistema de apodos automáticos
     setupNicknameSystem(client);
-
-    // Inicializar el sistema de Bienvenidas y Despedidas
     setupWelcomeSystem(client);
-
-    // Inicializar el sistema de Avisos y Logs
     setupAvisosSystem(client);
-
-    // ➔ Inicializar el sistema de Encuestas (Worker de cierre automático)
     setupPollSystem(client);
-
-    // ➔ Inicializar el worker de Eventos y Campeonatos (Avisos 30 min e inicio/limpieza de roles)
     setupEventWorker(client);
-
-    // ⏰ ➔ Inicializar el worker de Alarmas para LCS
     setupAlarmaWorker(client);
 });
 
-/**
- * ⚡ Enrutador Maestro de Interacciones (Con depuración de llegada)
- */
-client.on('interactionCreate', async (interaction: Interaction) => {
-    const user = interaction.user.tag;
-    const type = interaction.isChatInputCommand() 
-        ? `Slash Command: /${interaction.commandName}` 
-        : interaction.isButton() 
-            ? `Botón: ${interaction.customId}` 
-            : interaction.isStringSelectMenu() 
-                ? `Menú desplegable: ${interaction.customId}` 
-                : 'Otra interacción';
+// =====================================================
+// ENRUTADOR MAESTRO DE INTERACCIONES
+// =====================================================
 
-    console.log(`📥 [Interacción recibida] Usuario: ${user} | Tipo: ${type}`);
+client.on(
+    'interactionCreate',
+    async (interaction: Interaction) => {
+        const user = interaction.user.tag;
 
+        const type = interaction.isChatInputCommand()
+            ? `Slash Command: /${interaction.commandName}`
+            : interaction.isButton()
+                ? `Botón: ${interaction.customId}`
+                : interaction.isStringSelectMenu()
+                    ? `Menú desplegable: ${interaction.customId}`
+                    : 'Otra interacción';
+
+        console.log(
+            `[Interacción recibida] Usuario: ${user} | Tipo: ${type}`
+        );
+
+        try {
+            await handleGlobalInteraction(
+                interaction,
+                client
+            );
+        } catch (error) {
+            console.error(
+                'Error dentro de handleGlobalInteraction:',
+                error
+            );
+        }
+    }
+);
+
+// =====================================================
+// REACCIONES DE ENCUESTAS
+// =====================================================
+
+client.on('messageReactionAdd', async (reaction, user) => {
     try {
-        await handleGlobalInteraction(interaction, client);
+        await handleEncuestaReactionAdd(reaction, user);
     } catch (error) {
-        console.error('❌ Error no capturado dentro de handleGlobalInteraction:', error);
+        console.error(
+            'Error procesando reacción de encuesta:',
+            error
+        );
     }
 });
 
-/**
- * 🗳️ Listener de Reacciones para las Encuestas
- */
-client.on('messageReactionAdd', async (reaction, user) => {
-    await handleEncuestaReactionAdd(reaction, user);
-});
+// =====================================================
+// MENSAJES DE GT CLUB
+// =====================================================
 
-/**
- * 🏎️ Listener de Mensajes para GT Club
- */
 client.on('messageCreate', async (message: Message) => {
-    await handleClubMessage(message);
+    try {
+        await handleClubMessage(message);
+    } catch (error) {
+        console.error(
+            'Error procesando mensaje de GT Club:',
+            error
+        );
+    }
 });
 
-// 🔐 Inicio de sesión del bot sin cortes estrictos
-console.log('🔄 [Discord] Intentando conectar el cliente con el token (esperando respuesta del Gateway)');
+// =====================================================
+// INICIO DE SESIÓN DE DISCORD
+// =====================================================
+
+console.log(
+    '🔄 [Discord] Intentando conectar el cliente...'
+);
 
 client.login(process.env.DISCORD_TOKEN)
     .then(() => {
-        console.log('✅ [Discord] client.login() se ha completado y conectado correctamente.');
+        console.log(
+            '✅ [Discord] Inicio de sesión completado.'
+        );
     })
-    .catch((err) => {
-        console.error('❌ Error al iniciar sesión:', err);
+    .catch((error) => {
+        console.error(
+            '❌ Error al iniciar sesión en Discord:',
+            error
+        );
     });
