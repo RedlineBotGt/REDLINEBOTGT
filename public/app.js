@@ -15,13 +15,14 @@ let perfilActual = null;
 let asignaturaActual = null;
 let preguntaActual = null;
 let preguntaLocal = false;
+let peticionActual = 0;
 
 const preguntasLocales = {
   lateral: [
     {
       pregunta: "¿Cuál es el planeta más grande del sistema solar?",
       respuesta: "jupiter",
-      explicacion: "Júpiter es el planeta más grande.",
+      explicacion: "Júpiter es el planeta más grande del sistema solar.",
       pista: "Es un gigante gaseoso."
     },
     {
@@ -49,59 +50,118 @@ const preguntasLocales = {
   ]
 };
 
+// ========================================
+// UTILIDADES DE INTERFAZ
+// ========================================
+
+function obtenerElemento(id) {
+  return document.getElementById(id);
+}
+
 function mostrarPantalla(id) {
   document.querySelectorAll(".screen").forEach(pantalla => {
     pantalla.classList.add("hidden");
   });
 
-  document.getElementById(id)?.classList.remove("hidden");
+  obtenerElemento(id)?.classList.remove("hidden");
 }
 
+function mostrarMensaje(elemento, mensaje) {
+  if (elemento) {
+    elemento.textContent = mensaje;
+  }
+}
+
+// ========================================
+// SELECCIÓN DE PERFIL
+// ========================================
+
 function seleccionarPerfil(perfil) {
-  if (!perfiles[perfil]) return;
+  if (!perfiles[perfil]) {
+    console.warn("[ACADEMIA] Perfil desconocido:", perfil);
+    return;
+  }
 
   perfilActual = perfil;
-  localStorage.setItem("academiaPerfil", perfil);
 
-  document.getElementById("profile-name").textContent =
-    perfiles[perfil].nombre;
+  try {
+    localStorage.setItem("academiaPerfil", perfil);
+  } catch (error) {
+    console.warn("[ACADEMIA] No se pudo guardar el perfil:", error);
+  }
+
+  const nombre = obtenerElemento("profile-name");
+
+  if (nombre) {
+    nombre.textContent = perfiles[perfil].nombre;
+  }
 
   mostrarPantalla("subjects-screen");
 }
 
+// ========================================
+// SELECCIÓN DE ASIGNATURA
+// ========================================
+
 function abrirAsignatura(asignatura) {
-  if (!perfilActual || !asignaturas[asignatura]) return;
+  if (!perfilActual || !asignaturas[asignatura]) {
+    console.warn("[ACADEMIA] Perfil o asignatura no válidos");
+    return;
+  }
 
   asignaturaActual = asignatura;
 
-  document.getElementById("challenge-title").textContent =
-    asignaturas[asignatura];
+  const titulo = obtenerElemento("challenge-title");
+
+  if (titulo) {
+    titulo.textContent = asignaturas[asignatura];
+  }
 
   mostrarPantalla("challenge-screen");
 
   cargarPregunta();
 }
 
-async function cargarPregunta() {
-  const prompt = document.getElementById("challenge-prompt");
-  const feedback = document.getElementById("ai-feedback");
-  const boton = document.getElementById("send-btn");
+// ========================================
+// PREGUNTAS
+// ========================================
 
-  prompt.textContent = "Preparando una pregunta...";
-  feedback.textContent = "";
+async function cargarPregunta() {
+  const numeroPeticion = ++peticionActual;
+
+  const prompt = obtenerElemento("challenge-prompt");
+  const feedback = obtenerElemento("ai-feedback");
+  const boton = obtenerElemento("send-btn");
+  const respuesta = obtenerElemento("user-answer");
+
+  if (!prompt || !boton) {
+    console.error("[ACADEMIA] Faltan elementos de la pantalla");
+    return;
+  }
+
+  mostrarMensaje(prompt, "Preparando una pregunta...");
+  mostrarMensaje(feedback, "");
+
   boton.disabled = true;
 
   preguntaActual = null;
   preguntaLocal = false;
 
+  if (respuesta) {
+    respuesta.value = "";
+  }
+
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
 
-    let response;
+    const timeout = setTimeout(() => {
+      controller.abort();
+    }, 15000);
+
+    let data;
 
     try {
-      response = await fetch("/api/academia/question", {
+      const response = await fetch("/api/academia/question", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -113,47 +173,82 @@ async function cargarPregunta() {
         }),
         signal: controller.signal
       });
+
+      if (!response.ok) {
+        throw new Error(
+          "El servidor respondió con error " + response.status
+        );
+      }
+
+      data = await response.json();
+
     } finally {
       clearTimeout(timeout);
     }
 
-    if (!response.ok) {
-      throw new Error("El servidor respondió con error " + response.status);
-    }
+    if (numeroPeticion !== peticionActual) return;
 
-    const data = await response.json();
-
-    if (!data.ok || !data.pregunta?.pregunta) {
-      throw new Error("Respuesta no válida del servidor");
+    if (
+      !data.ok ||
+      !data.pregunta ||
+      typeof data.pregunta.pregunta !== "string" ||
+      typeof data.pregunta.respuesta !== "string" ||
+      typeof data.pregunta.explicacion !== "string" ||
+      typeof data.pregunta.pista !== "string"
+    ) {
+      throw new Error("Respuesta incompleta del servidor");
     }
 
     preguntaActual = data.pregunta;
 
+    console.log("[ACADEMIA] Pregunta recibida de Gemini");
+
   } catch (error) {
+    if (numeroPeticion !== peticionActual) return;
+
     console.warn("[ACADEMIA] Gemini no disponible:", error);
 
     const lista = preguntasLocales[asignaturaActual] || [];
 
     if (lista.length > 0) {
-      preguntaActual =
-        lista[Math.floor(Math.random() * lista.length)];
+      const indice = Math.floor(Math.random() * lista.length);
 
+      preguntaActual = lista[indice];
       preguntaLocal = true;
+
+      console.log("[ACADEMIA] Usando pregunta local");
+
+    } else {
+      mostrarMensaje(
+        prompt,
+        "No hay preguntas disponibles. Comprueba la conexión e inténtalo de nuevo."
+      );
+
+      boton.disabled = true;
+      return;
     }
   }
 
-  if (!preguntaActual) {
-    prompt.textContent =
-      "No hay preguntas disponibles. Comprueba tu conexión e inténtalo de nuevo.";
+  if (numeroPeticion !== peticionActual) return;
 
+  if (!preguntaActual) {
+    mostrarMensaje(prompt, "No se ha podido preparar la pregunta.");
+    boton.disabled = true;
     return;
   }
 
-  prompt.textContent = preguntaActual.pregunta;
-  document.getElementById("user-answer").value = "";
+  mostrarMensaje(prompt, preguntaActual.pregunta);
+
+  if (respuesta) {
+    respuesta.value = "";
+  }
 
   boton.disabled = false;
 }
+
+// ========================================
+// COMPROBACIÓN DE RESPUESTAS
+// ========================================
 
 function normalizar(texto) {
   return String(texto)
@@ -161,24 +256,31 @@ function normalizar(texto) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim()
-    .replace(/[.,!?¿¡]/g, "");
+    .replace(/[.,!?¿¡]/g, "")
+    .replace(/\s+/g, " ");
 }
 
 function enviarRespuesta() {
-  if (!preguntaActual) return;
+  if (!preguntaActual) {
+    alert("Primero debes cargar una pregunta.");
+    return;
+  }
 
-  const respuesta =
-    document.getElementById("user-answer").value;
+  const campo = obtenerElemento("user-answer");
+  const boton = obtenerElemento("send-btn");
+  const feedback = obtenerElemento("ai-feedback");
 
-  if (!respuesta.trim()) {
+  if (!campo || !feedback) return;
+
+  const respuesta = campo.value.trim();
+
+  if (!respuesta) {
     alert("Escribe una respuesta antes de continuar.");
     return;
   }
 
   const correcta =
     normalizar(respuesta) === normalizar(preguntaActual.respuesta);
-
-  const feedback = document.getElementById("ai-feedback");
 
   if (correcta) {
     feedback.textContent =
@@ -195,26 +297,53 @@ function enviarRespuesta() {
     feedback.textContent += " (Pregunta de respaldo local)";
   }
 
-  document.getElementById("send-btn").disabled = true;
+  if (boton) {
+    boton.disabled = true;
+  }
 }
+
+// ========================================
+// PISTAS
+// ========================================
 
 function mostrarPista() {
   if (!preguntaActual) return;
 
-  document.getElementById("ai-feedback").textContent =
-    "💡 Pista: " + preguntaActual.pista;
+  const feedback = obtenerElemento("ai-feedback");
+
+  mostrarMensaje(
+    feedback,
+    "💡 Pista: " + preguntaActual.pista
+  );
 }
 
+// ========================================
+// NAVEGACIÓN
+// ========================================
+
 function volverAsignaturas() {
+  peticionActual++;
   mostrarPantalla("subjects-screen");
 }
 
 function siguientePregunta() {
+  if (!asignaturaActual || !perfilActual) return;
+
   cargarPregunta();
 }
 
+// ========================================
+// INICIO DE LA APLICACIÓN
+// ========================================
+
 document.addEventListener("DOMContentLoaded", () => {
-  const guardado = localStorage.getItem("academiaPerfil");
+  let guardado = null;
+
+  try {
+    guardado = localStorage.getItem("academiaPerfil");
+  } catch (error) {
+    console.warn("[ACADEMIA] No se pudo leer el perfil guardado");
+  }
 
   if (guardado && perfiles[guardado]) {
     seleccionarPerfil(guardado);
@@ -222,12 +351,18 @@ document.addEventListener("DOMContentLoaded", () => {
     mostrarPantalla("profiles-screen");
   }
 
-  const botonPista = document.getElementById("hint-btn");
+  const botonPista = obtenerElemento("hint-btn");
 
   if (botonPista) {
     botonPista.addEventListener("click", mostrarPista);
   }
+
+  console.log("[ACADEMIA] Interfaz iniciada correctamente");
 });
+
+// ========================================
+// FUNCIONES ACCESIBLES DESDE HTML
+// ========================================
 
 window.seleccionarPerfil = seleccionarPerfil;
 window.abrirAsignatura = abrirAsignatura;
