@@ -1,3 +1,4 @@
+
 {
   "name": "academia-campos",
   "version": "1.0.0",
@@ -8,6 +9,7 @@
     "dev": "tsx watch server.ts"
   },
   "dependencies": {
+    "@google/genai": "^2.32.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
