@@ -1,76 +1,171 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#101827">
+  <meta name="description" content="Academia Campos: aprender juntos, crecer juntos.">
   <title>Academia Campos</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
-<body>
 
+<body>
   <main class="container">
+
+    <!-- CABECERA -->
     <header class="header">
       <h1>Academia Campos</h1>
       <p>Aprender juntos, crecer juntos</p>
     </header>
 
-    <section id="profiles-screen" class="screen">
-      <h2>¿Quién va a jugar hoy?</h2>
+    <!-- SELECCIÓN DE PERFIL -->
+    <section
+      id="profiles-screen"
+      class="screen"
+      aria-labelledby="profiles-title"
+    >
+      <h2 id="profiles-title">¿Quién va a jugar hoy?</h2>
 
       <div class="profiles">
-        <button class="profile-card" onclick="seleccionarPerfil('leo')">
-          <span>🙇</span>
+        <button
+          type="button"
+          class="profile-card"
+          onclick="seleccionarPerfil('leo')"
+        >
+          <span aria-hidden="true">🙇</span>
           <strong>Leo</strong>
         </button>
 
-        <button class="profile-card" onclick="seleccionarPerfil('papa')">
-          <span>🧔</span>
+        <button
+          type="button"
+          class="profile-card"
+          onclick="seleccionarPerfil('papa')"
+        >
+          <span aria-hidden="true">🧔</span>
           <strong>Papá</strong>
         </button>
 
-        <button class="profile-card" onclick="seleccionarPerfil('mama')">
-          <span>👩🏾</span>
+        <button
+          type="button"
+          class="profile-card"
+          onclick="seleccionarPerfil('mama')"
+        >
+          <span aria-hidden="true">👩🏾</span>
           <strong>Mamá</strong>
         </button>
       </div>
     </section>
 
-    <section id="subjects-screen" class="screen hidden">
-      <h2>¡Hola, <span id="profile-name"></span>!</h2>
+    <!-- SELECCIÓN DE ASIGNATURA -->
+    <section
+      id="subjects-screen"
+      class="screen hidden"
+      aria-labelledby="subjects-title"
+    >
+      <h2 id="subjects-title">
+        ¡Hola, <span id="profile-name"></span>!
+      </h2>
+
       <p>Elige una asignatura para empezar.</p>
 
       <div class="subjects">
-        <button class="subject-card" onclick="abrirAsignatura('lateral')">
+        <button
+          type="button"
+          class="subject-card"
+          onclick="abrirAsignatura('lateral')"
+        >
           🧠 Cultura general
         </button>
 
-        <button class="subject-card" onclick="abrirAsignatura('matematicas')">
+        <button
+          type="button"
+          class="subject-card"
+          onclick="abrirAsignatura('matematicas')"
+        >
           ➗ Matemáticas
         </button>
 
-        <button class="subject-card" onclick="abrirAsignatura('geografia')">
+        <button
+          type="button"
+          class="subject-card"
+          onclick="abrirAsignatura('geografia')"
+        >
           🌍 Geografía
         </button>
       </div>
     </section>
 
-    <section id="challenge-screen" class="screen hidden">
-      <button onclick="volverAsignaturas()">← Volver</button>
-
-      <h2 id="challenge-title">Reto</h2>
-      <p id="challenge-prompt">Preparando pregunta...</p>
-
-      <textarea id="user-answer" placeholder="Escribe tu respuesta..."></textarea>
-
-      <button id="send-btn" onclick="enviarRespuesta()">
-        Comprobar respuesta
+    <!-- PANTALLA DE RETOS -->
+    <section
+      id="challenge-screen"
+      class="screen hidden"
+      aria-labelledby="challenge-title"
+    >
+      <button
+        type="button"
+        onclick="volverAsignaturas()"
+      >
+        ← Volver
       </button>
 
-      <div id="ai-feedback"></div>
+      <h2 id="challenge-title">Reto</h2>
+
+      <p
+        id="challenge-prompt"
+        aria-live="polite"
+      >
+        Preparando pregunta...
+      </p>
+
+      <label for="user-answer">
+        Tu respuesta
+      </label>
+
+      <textarea
+        id="user-answer"
+        rows="3"
+        placeholder="Escribe tu respuesta..."
+        autocomplete="off"
+      ></textarea>
+
+      <div class="challenge-actions">
+        <button
+          type="button"
+          id="send-btn"
+          onclick="enviarRespuesta()"
+          disabled
+        >
+          Comprobar respuesta
+        </button>
+
+        <button
+          type="button"
+          id="hint-btn"
+          onclick="mostrarPista()"
+        >
+          💡 Pedir una pista
+        </button>
+
+        <button
+          type="button"
+          id="next-btn"
+          onclick="siguientePregunta()"
+        >
+          Siguiente pregunta →
+        </button>
+      </div>
+
+      <div
+        id="ai-feedback"
+        aria-live="polite"
+        role="status"
+      ></div>
     </section>
+
   </main>
 
-  <script src="/app.js"></script>
+  <!-- JAVASCRIPT -->
+  <script src="/app.js" defer></script>
 </body>
 </html>
