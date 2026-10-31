@@ -1,15 +1,18 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0f172a">
     <title>Academia Campos</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <!-- 1. Pantalla de Selección de Perfil -->
+
+        <!-- 1. SELECCIÓN DE PERFIL -->
         <section id="profiles-screen">
             <header class="header">
                 <div class="logo-icon">🎓</div>
@@ -21,86 +24,133 @@
                 <h2>¿Quién entra hoy?</h2>
 
                 <div class="profiles-grid">
-                    <!-- Perfil Leo -->
-                    <button class="profile-card leo" onclick="seleccionarPerfil('leo', 'Leo')">
+
+                    <button class="profile-card leo" onclick="seleccionarPerfil('leo')">
                         <div class="avatar">🙇</div>
                         <span class="name">Leo</span>
                         <span class="role">Explorador</span>
                     </button>
 
-                    <!-- Perfil Papá -->
-                    <button class="profile-card papa" onclick="seleccionarPerfil('papa', 'Papá')">
+                    <button class="profile-card papa" onclick="seleccionarPerfil('papa')">
                         <div class="avatar">🧔🏻‍♂️</div>
                         <span class="name">Papá</span>
                         <span class="role">Mentor</span>
                     </button>
 
-                    <!-- Perfil Mamá -->
-                    <button class="profile-card mama" onclick="seleccionarPerfil('mama', 'Mamá')">
+                    <button class="profile-card mama" onclick="seleccionarPerfil('mama')">
                         <div class="avatar">👩🏾‍🦱</div>
                         <span class="name">Mamá</span>
                         <span class="role">Mentora</span>
                     </button>
+
                 </div>
             </main>
         </section>
 
-        <!-- 2. Pantalla de Selección de Asignatura / Categoría (NUEVA) -->
+        <!-- 2. SELECCIÓN DE ASIGNATURAS -->
         <section id="subjects-screen" style="display: none;">
+
             <header class="challenge-header">
-                <button class="back-btn" onclick="volverAPerfiles()">← Cambiar Perfil</button>
+                <button class="back-btn" onclick="volverAPerfiles()">
+                    ← Cambiar perfil
+                </button>
+
                 <h2 id="subject-user-greeting">Hola</h2>
                 <div class="level-badge">Elige tu reto</div>
             </header>
 
             <main class="profiles-section">
-                <h2>Selecciona una Materia</h2>
+                <h2>Selecciona una materia</h2>
 
                 <div class="profiles-grid">
-                    <!-- Pensamiento Lateral (Activo) -->
+
                     <button class="profile-card" onclick="seleccionarMateria('lateral')">
                         <div class="avatar">🧠</div>
                         <span class="name">Pensamiento Lateral</span>
                         <span class="role">Lógica e ingenio</span>
                     </button>
 
-                    <!-- Próximas asignaturas preparadas -->
-                    <button class="profile-card" style="opacity: 0.5; cursor: not-allowed;">
+                    <button class="profile-card coming-soon" onclick="seleccionarMateria('matematicas')">
                         <div class="avatar">🔢</div>
                         <span class="name">Matemáticas</span>
                         <span class="role">Próximamente</span>
                     </button>
 
-                    <button class="profile-card" style="opacity: 0.5; cursor: not-allowed;">
+                    <button class="profile-card coming-soon" onclick="seleccionarMateria('geografia')">
                         <div class="avatar">🌍</div>
-                        <span class="name">Geografía / Ciencia</span>
+                        <span class="name">Geografía y Ciencia</span>
                         <span class="role">Próximamente</span>
                     </button>
+
                 </div>
             </main>
         </section>
 
-        <!-- 3. Pantalla de Retos de Pensamiento Lateral -->
+        <!-- 3. PANTALLA DE PENSAMIENTO LATERAL -->
         <section id="challenge-screen" style="display: none;">
+
             <header class="challenge-header">
-                <button class="back-btn" onclick="volverAMenu()">← Volver a Materias</button>
+                <button class="back-btn" onclick="volverAlMenu()">
+                    ← Volver a materias
+                </button>
+
                 <h2 id="user-greeting">Entrenando...</h2>
-                <div class="level-badge">Nivel <span id="current-level">1</span></div>
+
+                <div class="level-badge">
+                    Nivel <span id="current-level">1</span>
+                </div>
             </header>
 
+            <!-- ESTADÍSTICAS INDIVIDUALES -->
+            <div id="academy-stats" class="academy-stats">
+                ⭐ 0 puntos | ✅ 0 aciertos | 📝 0 intentos
+            </div>
+
             <main class="challenge-card">
-                <div class="category-tag">🧠 Pensamiento Lateral y Lógica</div>
-                
-                <p id="challenge-prompt" class="prompt-text">Cargando el reto de la IA...</p>
-                
-                <div class="input-group">
-                    <textarea id="user-answer" placeholder="Escribe aquí tu respuesta o cómo lo has pensado..."></textarea>
-                    <button class="send-btn" onclick="enviarRespuesta()">Enviar Respuesta</button>
+
+                <div class="category-tag">
+                    🧠 Pensamiento Lateral y Lógica
                 </div>
 
-                <div id="ai-feedback" class="feedback-box" style="display: none;"></div>
+                <p id="challenge-prompt" class="prompt-text">
+                    Gemini está preparando tu reto...
+                </p>
+
+                <div class="input-group">
+
+                    <textarea
+                        id="user-answer"
+                        placeholder="Escribe aquí tu respuesta o cómo lo has pensado..."
+                    ></textarea>
+
+                    <button
+                        id="hint-btn"
+                        class="hint-btn"
+                        onclick="mostrarPista()"
+                        style="display: none;"
+                    >
+                        💡 Necesito una pista
+                    </button>
+
+                    <button
+                        class="send-btn"
+                        onclick="enviarRespuesta()"
+                    >
+                        Enviar respuesta
+                    </button>
+
+                </div>
+
+                <!-- RESPUESTA Y EXPLICACIÓN DE LA IA -->
+                <div
+                    id="ai-feedback"
+                    class="feedback-box"
+                    style="display: none;"
+                ></div>
+
             </main>
         </section>
+
     </div>
 
     <script src="app.js"></script>
