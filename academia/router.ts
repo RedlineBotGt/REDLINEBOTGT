@@ -1,4 +1,3 @@
-
 /* =====================================================
    ACADEMIA CAMPOS
    academia/router.ts
@@ -40,6 +39,14 @@ interface Challenge {
     category: string;
     hint: string;
     solution: string;
+    createdAt: Date;
+}
+
+interface PublicChallenge {
+    id: string;
+    prompt: string;
+    category: string;
+    hint: string;
     createdAt: Date;
 }
 
@@ -98,6 +105,22 @@ function getSubject(body: any): Subject | null {
         : null;
 }
 
+/*
+ * Esta función crea la versión pública del reto.
+ * IMPORTANTE: nunca incluye la solución.
+ */
+function toPublicChallenge(
+    challenge: Challenge
+): PublicChallenge {
+    return {
+        id: challenge.id,
+        prompt: challenge.prompt,
+        category: challenge.category,
+        hint: challenge.hint,
+        createdAt: challenge.createdAt
+    };
+}
+
 function createInitialSubjectProgress(): SubjectProgress {
     return {
         currentLevel: 1,
@@ -150,33 +173,47 @@ function getSafeSubjectProgress(
 }
 
 /*
- * Crea los perfiles nuevos con sus tres asignaturas.
- * La versión anterior de progreso se sustituye una sola vez
- * al pasar al esquema nuevo.
+ * Inicializa los perfiles y las asignaturas.
+ * Si hay dos peticiones simultáneas al crear un perfil,
+ * controla el posible error de clave duplicada.
  */
 async function ensureUserProgress(userId: string): Promise<any> {
     const collection = await getUserProgressCollection();
 
-    await collection.updateOne(
-        { userId },
-        {
-            $setOnInsert: {
-                userId,
-                schemaVersion: SCHEMA_VERSION,
-                subjects: createInitialSubjects(),
-                createdAt: new Date(),
-                updatedAt: new Date()
-            }
-        },
-        { upsert: true }
-    );
+    try {
+        await collection.updateOne(
+            { userId },
+            {
+                $setOnInsert: {
+                    userId,
+                    schemaVersion: SCHEMA_VERSION,
+                    subjects: createInitialSubjects(),
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                }
+            },
+            { upsert: true }
+        );
+    } catch (error: any) {
+        // Otra petición pudo crear el mismo perfil simultáneamente.
+        if (error?.code !== 11000) {
+            throw error;
+        }
+    }
 
     const document = await collection.findOne({ userId });
 
     if (!document) {
-        throw new Error('No se ha podido crear el progreso del usuario.');
+        throw new Error(
+            'No se ha podido crear el progreso del usuario.'
+        );
     }
 
+    /*
+     * Migración única al esquema 2.
+     * El filtro condicional evita que dos peticiones
+     * reinicien el progreso simultáneamente.
+     */
     if (document.schemaVersion !== SCHEMA_VERSION) {
         await collection.updateOne(
             {
@@ -196,7 +233,9 @@ async function ensureUserProgress(userId: string): Promise<any> {
     const updated = await collection.findOne({ userId });
 
     if (!updated) {
-        throw new Error('No se ha podido recuperar el progreso del usuario.');
+        throw new Error(
+            'No se ha podido recuperar el progreso del usuario.'
+        );
     }
 
     return updated;
@@ -246,12 +285,18 @@ router.post(
 
             const collection = await getUserProgressCollection();
             const document = await ensureUserProgress(userId);
-            const progress = getSafeSubjectProgress(document, subject);
+            const progress = getSafeSubjectProgress(
+                document,
+                subject
+            );
 
+            // Si ya hay un reto activo, se reutiliza sin revelar solución.
             if (progress.activeChallenge) {
                 res.json({
                     success: true,
-                    challenge: progress.activeChallenge,
+                    challenge: toPublicChallenge(
+                        progress.activeChallenge
+                    ),
                     level: progress.currentLevel,
                     reused: true
                 });
@@ -291,7 +336,8 @@ router.post(
                 createdAt: new Date()
             };
 
-            const activePath = `subjects.${subject}.activeChallenge`;
+            const activePath =
+                `subjects.${subject}.activeChallenge`;
 
             const saved = await collection.updateOne(
                 {
@@ -312,6 +358,7 @@ router.post(
 
             if (saved.modifiedCount !== 1) {
                 const latest = await collection.findOne({ userId });
+
                 const latestProgress = getSafeSubjectProgress(
                     latest,
                     subject
@@ -320,7 +367,9 @@ router.post(
                 if (latestProgress.activeChallenge) {
                     res.json({
                         success: true,
-                        challenge: latestProgress.activeChallenge,
+                        challenge: toPublicChallenge(
+                            latestProgress.activeChallenge
+                        ),
                         level: latestProgress.currentLevel,
                         reused: true
                     });
@@ -337,7 +386,7 @@ router.post(
 
             res.json({
                 success: true,
-                challenge,
+                challenge: toPublicChallenge(challenge),
                 level: progress.currentLevel,
                 reused: false
             });
@@ -356,7 +405,6 @@ router.post(
         }
     }
 );
-
 /* =====================================================
    ENVÍO Y EVALUACIÓN
    POST /api/academia/challenge/submit
@@ -394,7 +442,11 @@ router.post(
 
             const collection = await getUserProgressCollection();
             const document = await ensureUserProgress(userId);
-            const progress = getSafeSubjectProgress(document, subject);
+            const progress = getSafeSubjectProgress(
+                document,
+                subject
+            );
+
             const active = progress.activeChallenge;
 
             if (!active || active.id !== challengeId) {
@@ -415,7 +467,10 @@ router.post(
                     active.solution
                 );
             } catch (error) {
-                console.error('Error evaluando con Gemini:', error);
+                console.error(
+                    'Error evaluando con Gemini:',
+                    error
+                );
 
                 sendError(
                     res,
@@ -459,7 +514,7 @@ router.post(
             const levelPath = `${subjectPath}.currentLevel`;
 
             /*
-             * La actualización es atómica:
+             * Actualización atómica:
              * el reto solo puede puntuarse una vez.
              */
             const updateResult = await collection.updateOne(
@@ -528,7 +583,9 @@ router.post(
                                                     []
                                                 ]
                                             },
-                                            { $literal: [historyEntry] }
+                                            {
+                                                $literal: [historyEntry]
+                                            }
                                         ]
                                     },
                                     -MAX_HISTORY
@@ -550,7 +607,9 @@ router.post(
                 return;
             }
 
-            const updatedDocument = await collection.findOne({ userId });
+            const updatedDocument = await collection.findOne({
+                userId
+            });
 
             const updatedProgress = getSafeSubjectProgress(
                 updatedDocument,
@@ -609,7 +668,10 @@ router.post(
             }
 
             const document = await ensureUserProgress(userId);
-            const progress = getSafeSubjectProgress(document, subject);
+            const progress = getSafeSubjectProgress(
+                document,
+                subject
+            );
 
             res.json({
                 success: true,
@@ -625,7 +687,10 @@ router.post(
             });
 
         } catch (error) {
-            console.error('Error consultando progreso:', error);
+            console.error(
+                'Error consultando progreso:',
+                error
+            );
 
             sendError(
                 res,
@@ -651,7 +716,11 @@ router.post(
                 requestedSubject !== undefined &&
                 !isValidSubject(requestedSubject)
             ) {
-                sendError(res, 400, 'Asignatura no válida.');
+                sendError(
+                    res,
+                    400,
+                    'Asignatura no válida.'
+                );
                 return;
             }
 
@@ -659,7 +728,9 @@ router.post(
 
             const documents = await collection.find({
                 schemaVersion: SCHEMA_VERSION,
-                userId: { $in: Object.keys(PROFILES) }
+                userId: {
+                    $in: Object.keys(PROFILES)
+                }
             }).toArray();
 
             const ranking = Object.keys(PROFILES).map(userId => {
@@ -733,7 +804,10 @@ router.post(
             });
 
         } catch (error) {
-            console.error('Error generando ranking:', error);
+            console.error(
+                'Error generando ranking:',
+                error
+            );
 
             sendError(
                 res,
