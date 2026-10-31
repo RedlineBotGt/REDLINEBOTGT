@@ -10,22 +10,38 @@ export interface PreguntaGenerada {
 
 const MODELO = "gemini-3.8-flash";
 
-function validarPregunta(datos: any): PreguntaGenerada {
-  if (
-    !datos ||
-    typeof datos.pregunta !== "string" ||
-    typeof datos.respuesta !== "string" ||
-    typeof datos.explicacion !== "string" ||
-    typeof datos.pista !== "string"
-  ) {
-    throw new Error("Gemini devolvió una pregunta incompleta");
+function validarTexto(
+  valor: string,
+  nombre: string
+): string {
+  const texto = String(valor || "").trim();
+
+  if (!texto) {
+    throw new Error(`El campo ${nombre} está vacío`);
   }
 
+  if (texto.length > 100) {
+    throw new Error(`El campo ${nombre} es demasiado largo`);
+  }
+
+  return texto;
+}
+
+function validarPregunta(datos: any): PreguntaGenerada {
+  if (!datos || typeof datos !== "object") {
+    throw new Error("Gemini devolvió datos no válidos");
+  }
+
+  const pregunta = validarTexto(datos.pregunta, "pregunta");
+  const respuesta = validarTexto(datos.respuesta, "respuesta");
+  const explicacion = validarTexto(datos.explicacion, "explicación");
+  const pista = validarTexto(datos.pista, "pista");
+
   return {
-    pregunta: datos.pregunta.trim(),
-    respuesta: datos.respuesta.trim(),
-    explicacion: datos.explicacion.trim(),
-    pista: datos.pista.trim()
+    pregunta,
+    respuesta,
+    explicacion,
+    pista
   };
 }
 
@@ -40,6 +56,10 @@ export async function generarPregunta(
     throw new Error("Falta configurar GEMINI_API_KEY");
   }
 
+  const perfilSeguro = validarTexto(perfil, "perfil");
+  const asignaturaSegura = validarTexto(asignatura, "asignatura");
+  const nivelSeguro = validarTexto(nivel, "nivel");
+
   const ai = new GoogleGenAI({ apiKey });
 
   const prompt = `
@@ -48,9 +68,9 @@ Eres el profesor de una academia familiar llamada Academia Campos.
 Genera UNA pregunta educativa en español.
 
 Datos del alumno:
-- Perfil: ${perfil}
-- Asignatura: ${asignatura}
-- Nivel: ${nivel}
+- Perfil: ${perfilSeguro}
+- Asignatura: ${asignaturaSegura}
+- Nivel: ${nivelSeguro}
 
 Requisitos:
 - Adapta la dificultad al nivel indicado.
@@ -59,11 +79,15 @@ Requisitos:
 - La explicación debe ayudar a aprender.
 - La pista debe orientar sin revelar la respuesta.
 - Evita preguntas ambiguas o demasiado abiertas.
+- Utiliza un lenguaje adecuado para la edad y el nivel.
+- No añadas saludos ni texto fuera de los campos solicitados.
 
 Devuelve exclusivamente los cuatro campos solicitados.
 `;
 
   try {
+    console.log("[GEMINI] Solicitando pregunta...");
+
     const resultado = await ai.models.generateContent({
       model: MODELO,
       contents: prompt,
@@ -101,15 +125,23 @@ Devuelve exclusivamente los cuatro campos solicitados.
       throw new Error("Gemini devolvió una respuesta vacía");
     }
 
-    const datos = JSON.parse(texto);
+    let datos: unknown;
+
+    try {
+      datos = JSON.parse(texto);
+    } catch {
+      throw new Error("Gemini devolvió un JSON no válido");
+    }
+
     const pregunta = validarPregunta(datos);
 
-    console.log("[GEMINI] Pregunta creada correctamente");
+    console.log("[GEMINI] Pregunta generada correctamente");
 
     return pregunta;
 
   } catch (error) {
-    console.error("[GEMINI] Fallo al generar pregunta:", error);
+    console.error("[GEMINI] Error al generar pregunta:", error);
+
     throw new Error("No se pudo generar la pregunta");
   }
 }
