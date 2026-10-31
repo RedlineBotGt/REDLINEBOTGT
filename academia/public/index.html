@@ -4,155 +4,267 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#111827">
     <title>Academia Campos</title>
     <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
 </head>
+
 <body>
-    <div class="container">
 
-        <!-- 1. SELECCIÓN DE PERFIL -->
-        <section id="profiles-screen">
-            <header class="header">
-                <div class="logo-icon">🎓</div>
-                <h1>Academia Campos</h1>
-                <p>Espacio de aprendizaje y retos para la familia</p>
+    <main class="academy-container">
+
+        <!-- =========================================
+             PANTALLA DE PERFILES
+             ========================================= -->
+
+        <section id="profiles-screen" class="screen">
+            <header class="academy-header">
+                <h1>🎓 Academia Campos</h1>
+                <p>Aprender, pensar y superarse en familia</p>
             </header>
 
-            <main class="profiles-section">
-                <h2>¿Quién entra hoy?</h2>
-
-                <div class="profiles-grid">
-
-                    <button class="profile-card leo" onclick="seleccionarPerfil('leo')">
-                        <div class="avatar">🙇</div>
-                        <span class="name">Leo</span>
-                        <span class="role">Explorador</span>
-                    </button>
-
-                    <button class="profile-card papa" onclick="seleccionarPerfil('papa')">
-                        <div class="avatar">🧔🏻‍♂️</div>
-                        <span class="name">Papá</span>
-                        <span class="role">Mentor</span>
-                    </button>
-
-                    <button class="profile-card mama" onclick="seleccionarPerfil('mama')">
-                        <div class="avatar">👩🏾‍🦱</div>
-                        <span class="name">Mamá</span>
-                        <span class="role">Mentora</span>
-                    </button>
-
-                </div>
-            </main>
-        </section>
-
-        <!-- 2. SELECCIÓN DE ASIGNATURAS -->
-        <section id="subjects-screen" style="display: none;">
-
-            <header class="challenge-header">
-                <button class="back-btn" onclick="volverAPerfiles()">
-                    ← Cambiar perfil
-                </button>
-
-                <h2 id="subject-user-greeting">Hola</h2>
-                <div class="level-badge">Elige tu reto</div>
-            </header>
-
-            <main class="profiles-section">
-                <h2>Selecciona una materia</h2>
-
-                <div class="profiles-grid">
-
-                    <button class="profile-card" onclick="seleccionarMateria('lateral')">
-                        <div class="avatar">🧠</div>
-                        <span class="name">Pensamiento Lateral</span>
-                        <span class="role">Lógica e ingenio</span>
-                    </button>
-
-                    <button class="profile-card coming-soon" onclick="seleccionarMateria('matematicas')">
-                        <div class="avatar">🔢</div>
-                        <span class="name">Matemáticas</span>
-                        <span class="role">Próximamente</span>
-                    </button>
-
-                    <button class="profile-card coming-soon" onclick="seleccionarMateria('geografia')">
-                        <div class="avatar">🌍</div>
-                        <span class="name">Geografía y Ciencia</span>
-                        <span class="role">Próximamente</span>
-                    </button>
-
-                </div>
-            </main>
-        </section>
-
-        <!-- 3. PANTALLA DE PENSAMIENTO LATERAL -->
-        <section id="challenge-screen" style="display: none;">
-
-            <header class="challenge-header">
-                <button class="back-btn" onclick="volverAlMenu()">
-                    ← Volver a materias
-                </button>
-
-                <h2 id="user-greeting">Entrenando...</h2>
-
-                <div class="level-badge">
-                    Nivel <span id="current-level">1</span>
-                </div>
-            </header>
-
-            <!-- ESTADÍSTICAS INDIVIDUALES -->
-            <div id="academy-stats" class="academy-stats">
-                ⭐ 0 puntos | ✅ 0 aciertos | 📝 0 intentos
+            <div class="section-heading">
+                <h2>¿Quién va a jugar?</h2>
+                <p>Selecciona tu perfil para continuar.</p>
             </div>
 
-            <main class="challenge-card">
+            <div class="profiles-grid">
 
-                <div class="category-tag">
-                    🧠 Pensamiento Lateral y Lógica
+                <button
+                    type="button"
+                    class="profile-card"
+                    onclick="seleccionarPerfil('leo')"
+                >
+                    <span class="profile-avatar">🧒</span>
+                    <span class="profile-name">Leo</span>
+                    <span class="profile-description">Mi academia</span>
+                </button>
+
+                <button
+                    type="button"
+                    class="profile-card"
+                    onclick="seleccionarPerfil('papa')"
+                >
+                    <span class="profile-avatar">👨</span>
+                    <span class="profile-name">Papá</span>
+                    <span class="profile-description">Mi academia</span>
+                </button>
+
+                <button
+                    type="button"
+                    class="profile-card"
+                    onclick="seleccionarPerfil('mama')"
+                >
+                    <span class="profile-avatar">👩</span>
+                    <span class="profile-name">Mamá</span>
+                    <span class="profile-description">Mi academia</span>
+                </button>
+
+            </div>
+        </section>
+
+
+        <!-- =========================================
+             MENÚ PRINCIPAL Y ASIGNATURAS
+             ========================================= -->
+
+        <section id="subjects-screen" class="screen" style="display:none;">
+
+            <header class="academy-header">
+                <h1>🎓 Academia Campos</h1>
+                <p id="user-greeting">¡Bienvenido!</p>
+            </header>
+
+            <div class="general-progress-card">
+                <div>
+                    <span class="progress-label">🏆 Puntuación general</span>
+                    <strong id="general-score">0 puntos</strong>
                 </div>
 
-                <p id="challenge-prompt" class="prompt-text">
-                    Gemini está preparando tu reto...
-                </p>
+                <button
+                    type="button"
+                    class="ranking-access-btn"
+                    onclick="mostrarRanking()"
+                >
+                    Ver ranking
+                </button>
+            </div>
+
+            <div class="section-heading">
+                <h2>Mis asignaturas</h2>
+                <p>Cada asignatura tiene su propio nivel y progreso.</p>
+            </div>
+
+            <div class="subjects-grid">
+
+                <button
+                    type="button"
+                    class="subject-card"
+                    onclick="seleccionarMateria('lateral')"
+                >
+                    <span class="subject-icon">🧩</span>
+                    <span class="subject-name">Pensamiento lateral</span>
+                    <span class="subject-description">
+                        Acertijos, lógica e imaginación.
+                    </span>
+                    <span class="subject-status active-status">
+                        Disponible
+                    </span>
+                </button>
+
+                <button
+                    type="button"
+                    class="subject-card coming-soon"
+                    onclick="seleccionarMateria('matematicas')"
+                >
+                    <span class="subject-icon">🔢</span>
+                    <span class="subject-name">Matemáticas</span>
+                    <span class="subject-description">
+                        Números, operaciones y problemas.
+                    </span>
+                    <span class="subject-status">
+                        Próximamente
+                    </span>
+                </button>
+
+                <button
+                    type="button"
+                    class="subject-card coming-soon"
+                    onclick="seleccionarMateria('geografia')"
+                >
+                    <span class="subject-icon">🌍</span>
+                    <span class="subject-name">Geografía y ciencia</span>
+                    <span class="subject-description">
+                        El mundo, la naturaleza y la ciencia.
+                    </span>
+                    <span class="subject-status">
+                        Próximamente
+                    </span>
+                </button>
+
+            </div>
+
+            <div class="screen-actions">
+                <button
+                    type="button"
+                    class="secondary-btn"
+                    onclick="volverAperfiles()"
+                >
+                    Cambiar de perfil
+                </button>
+            </div>
+
+        </section>
+
+
+        <!-- =========================================
+             PANTALLA DE RETOS
+             ========================================= -->
+
+        <section id="challenge-screen" class="screen" style="display:none;">
+
+            <header class="challenge-header">
+                <button
+                    type="button"
+                    class="back-btn"
+                    onclick="volverAsignaturas()"
+                >
+                    ← Asignaturas
+                </button>
+
+                <div class="challenge-heading">
+                    <h1>Academia Campos</h1>
+                    <p id="user-greeting">¡A por el reto!</p>
+                </div>
+            </header>
+
+            <div class="challenge-progress">
+                <div class="level-card">
+                    <span class="progress-label">Nivel actual</span>
+                    <strong id="current-level">Nivel 1</strong>
+                </div>
+
+                <div class="stats-card">
+                    <span class="progress-label">Mi progreso</span>
+                    <strong id="academy-stats">
+                        0 puntos · 0 aciertos
+                    </strong>
+                </div>
+            </div>
+
+            <article class="challenge-card">
+
+                <div class="challenge-card-header">
+                    <span id="category-tag" class="category-tag">
+                        Pensamiento lateral
+                    </span>
+                    <span class="challenge-symbol">🧩</span>
+                </div>
+
+                <h2>Tu reto</h2>
+
+                <div id="challenge-prompt" class="challenge-prompt">
+                    Preparando un nuevo reto...
+                </div>
+
+                <button
+                    type="button"
+                    id="hint-btn"
+                    class="hint-btn"
+                    onclick="mostrarPista()"
+                >
+                    💡 Necesito una pista
+                </button>
 
                 <div class="input-group">
 
+                    <label for="user-answer">
+                        Escribe tu respuesta:
+                    </label>
+
                     <textarea
                         id="user-answer"
-                        placeholder="Escribe aquí tu respuesta o cómo lo has pensado..."
+                        rows="4"
+                        placeholder="Piensa con calma y escribe tu razonamiento..."
                     ></textarea>
 
                     <button
-                        id="hint-btn"
-                        class="hint-btn"
-                        onclick="mostrarPista()"
-                        style="display: none;"
-                    >
-                        💡 Necesito una pista
-                    </button>
-
-                    <button
+                        type="button"
+                        id="send-btn"
                         class="send-btn"
-                        onclick="enviarRespuesta()"
                     >
                         Enviar respuesta
                     </button>
 
                 </div>
 
-                <!-- RESPUESTA Y EXPLICACIÓN DE LA IA -->
                 <div
                     id="ai-feedback"
-                    class="feedback-box"
-                    style="display: none;"
+                    class="ai-feedback"
+                    style="display:none;"
+                    aria-live="polite"
                 ></div>
 
-            </main>
+            </article>
+
         </section>
 
-    </div>
+
+    </main>
+
+    <!-- =========================================
+         PIE DE PÁGINA
+         ========================================= -->
+
+    <footer class="academy-footer">
+        <p>Academia Campos · Aprendemos en familia</p>
+    </footer>
+
+    <!-- =========================================
+         JAVASCRIPT
+         ========================================= -->
 
     <script src="app.js"></script>
+
 </body>
 </html>
