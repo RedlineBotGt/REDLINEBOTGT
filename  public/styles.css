@@ -1,0 +1,147 @@
+:root {
+  --bg: #101827;
+  --panel: #1b2940;
+  --panel-light: #263852;
+  --primary: #38bdf8;
+  --text: #f1f5f9;
+  --muted: #a8b7ca;
+  --success: #34d399;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Arial, sans-serif;
+}
+
+.container {
+  width: min(100% - 32px, 850px);
+  margin: auto;
+  padding: 30px 0;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 45px;
+}
+
+.header h1 {
+  color: var(--primary);
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+.header p {
+  color: var(--muted);
+}
+
+.screen {
+  background: var(--panel);
+  padding: 25px;
+  border-radius: 18px;
+  margin-bottom: 20px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+h2 {
+  margin-top: 0;
+}
+
+.profiles,
+.subjects {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 15px;
+  margin-top: 25px;
+}
+
+.profile-card,
+.subject-card {
+  background: var(--panel-light);
+  color: var(--text);
+  border: 2px solid transparent;
+  border-radius: 14px;
+  padding: 22px 12px;
+  min-height: 100px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.profile-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-card span {
+  font-size: 2rem;
+}
+
+.profile-card:hover,
+.subject-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+button {
+  font-family: inherit;
+}
+
+#challenge-screen textarea {
+  display: block;
+  width: 100%;
+  min-height: 120px;
+  margin: 20px 0;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid #52647c;
+  background: #101827;
+  color: var(--text);
+  font-size: 1rem;
+  resize: vertical;
+}
+
+#challenge-screen > button,
+#send-btn {
+  background: var(--primary);
+  color: #082033;
+  border: 0;
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+#ai-feedback {
+  margin-top: 20px;
+  padding: 15px;
+  border-radius: 10px;
+  background: var(--panel-light);
+  line-height: 1.5;
+}
+
+@media (max-width: 500px) {
+  .container {
+    width: min(100% - 20px, 850px);
+    padding-top: 20px;
+  }
+
+  .screen {
+    padding: 18px;
+  }
+
+  .header {
+    margin-bottom: 25px;
+  }
+}
