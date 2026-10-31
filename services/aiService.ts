@@ -1,9 +1,9 @@
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 
-const apiKey = process.env.GEMINI_API_KEY;
 const MODEL = "gemini-3.8-flash";
 
+const apiKey = process.env.GEMINI_API_KEY;
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 export interface PreguntaGenerada {
@@ -19,15 +19,16 @@ export async function generarPregunta(
   nivel: string
 ): Promise<PreguntaGenerada> {
   if (!ai) {
-    throw new Error("GEMINI_API_KEY no está configurada");
+    throw new Error("Falta configurar GEMINI_API_KEY");
   }
 
-  console.log(`[IA] Solicitando pregunta a ${MODEL}`);
+  console.log(`[GEMINI] Modelo: ${MODEL}`);
+  console.log(`[GEMINI] Generando pregunta de ${asignatura}`);
 
   const response = await ai.models.generateContent({
     model: MODEL,
     contents: `
-      Eres un profesor experto y cercano.
+      Eres un profesor experto en educación.
 
       Genera una pregunta educativa original en español.
 
@@ -35,23 +36,20 @@ export async function generarPregunta(
       Asignatura: ${asignatura}
       Nivel: ${nivel}
 
-      Requisitos:
-      - Adapta la dificultad al nivel indicado.
-      - Haz una sola pregunta clara.
-      - Incluye una respuesta correcta y verificable.
-      - Explica brevemente por qué es correcta.
-      - Añade una pista que no revele la respuesta.
-      - No inventes datos.
+      La pregunta debe adaptarse al nivel indicado.
+      Debe tener una respuesta correcta y verificable.
+      La explicación debe enseñar.
+      La pista debe ayudar sin revelar la respuesta.
     `,
     config: {
       responseMimeType: "application/json",
       responseSchema: {
-        type: "OBJECT",
+        type: Type.OBJECT,
         properties: {
-          pregunta: { type: "STRING" },
-          respuesta: { type: "STRING" },
-          explicacion: { type: "STRING" },
-          pista: { type: "STRING" }
+          pregunta: { type: Type.STRING },
+          respuesta: { type: Type.STRING },
+          explicacion: { type: Type.STRING },
+          pista: { type: Type.STRING }
         },
         required: [
           "pregunta",
@@ -64,10 +62,16 @@ export async function generarPregunta(
   });
 
   if (!response.text) {
-    throw new Error("Gemini devolvió una respuesta vacía");
+    throw new Error("Gemini ha devuelto una respuesta vacía");
   }
 
-  const resultado = JSON.parse(response.text) as PreguntaGenerada;
+  let resultado: PreguntaGenerada;
+
+  try {
+    resultado = JSON.parse(response.text);
+  } catch {
+    throw new Error("Gemini ha devuelto un JSON no válido");
+  }
 
   if (
     !resultado.pregunta?.trim() ||
@@ -75,10 +79,10 @@ export async function generarPregunta(
     !resultado.explicacion?.trim() ||
     !resultado.pista?.trim()
   ) {
-    throw new Error("Gemini devolvió una pregunta incompleta");
+    throw new Error("La pregunta generada está incompleta");
   }
 
-  console.log("[IA] Pregunta generada correctamente");
+  console.log("[GEMINI] Pregunta generada correctamente");
 
   return resultado;
 }
