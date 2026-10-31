@@ -32,7 +32,6 @@ if (process.env.GEMINI_API_KEY) {
   console.log("[CONFIG] GEMINI_API_KEY: configurada");
 } else {
   console.warn("[CONFIG] GEMINI_API_KEY: NO CONFIGURADA");
-  console.warn("[CONFIG] La generación con IA no estará disponible");
 }
 
 // ========================================
@@ -77,12 +76,18 @@ app.get("/api/academia/status", (_req, res) => {
 app.get("/api/academia/diagnostico", (_req, res) => {
   res.json({
     servidor: "activo",
-    gemini: process.env.GEMINI_API_KEY ? "configurada" : "falta_api_key",
+    gemini: process.env.GEMINI_API_KEY
+      ? "configurada"
+      : "falta_api_key",
     puerto: PORT,
     node: process.version,
     memoria: {
-      usada: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-      total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024)
+      usada: Math.round(
+        process.memoryUsage().heapUsed / 1024 / 1024
+      ),
+      total: Math.round(
+        process.memoryUsage().heapTotal / 1024 / 1024
+      )
     },
     tiempoActivo: Math.floor((Date.now() - inicio) / 1000)
   });
@@ -141,8 +146,7 @@ app.post("/api/academia/question", async (req, res) => {
 
     return res.status(502).json({
       ok: false,
-      error: "Gemini no ha podido generar la pregunta",
-      detalle: error instanceof Error ? error.message : "Error desconocido"
+      error: "Gemini no ha podido generar la pregunta. Inténtalo de nuevo."
     });
   }
 });
@@ -172,6 +176,8 @@ app.use((
   _next: express.NextFunction
 ) => {
   console.error("[ERROR SERVIDOR]", error);
+
+  if (res.headersSent) return;
 
   res.status(500).json({
     ok: false,
