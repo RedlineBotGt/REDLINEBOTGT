@@ -1,11 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-const MODEL = "gemini-3.8-flash";
-
-const apiKey = process.env.GEMINI_API_KEY;
-const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
-
 export interface PreguntaGenerada {
   pregunta: string;
   respuesta: string;
@@ -13,76 +8,108 @@ export interface PreguntaGenerada {
   pista: string;
 }
 
+const MODELO = "gemini-3.8-flash";
+
+function validarPregunta(datos: any): PreguntaGenerada {
+  if (
+    !datos ||
+    typeof datos.pregunta !== "string" ||
+    typeof datos.respuesta !== "string" ||
+    typeof datos.explicacion !== "string" ||
+    typeof datos.pista !== "string"
+  ) {
+    throw new Error("Gemini devolvió una pregunta incompleta");
+  }
+
+  return {
+    pregunta: datos.pregunta.trim(),
+    respuesta: datos.respuesta.trim(),
+    explicacion: datos.explicacion.trim(),
+    pista: datos.pista.trim()
+  };
+}
+
 export async function generarPregunta(
   perfil: string,
   asignatura: string,
   nivel: string
 ): Promise<PreguntaGenerada> {
-  if (!ai) {
+  const apiKey = process.env.GEMINI_API_KEY;
+
+  if (!apiKey) {
     throw new Error("Falta configurar GEMINI_API_KEY");
   }
 
-  console.log(`[GEMINI] Modelo: ${MODEL}`);
-  console.log(`[GEMINI] Generando pregunta de ${asignatura}`);
+  const ai = new GoogleGenAI({ apiKey });
 
-  const response = await ai.models.generateContent({
-    model: MODEL,
-    contents: `
-      Eres un profesor experto en educación.
+  const prompt = `
+Eres el profesor de una academia familiar llamada Academia Campos.
 
-      Genera una pregunta educativa original en español.
+Genera UNA pregunta educativa en español.
 
-      Perfil: ${perfil}
-      Asignatura: ${asignatura}
-      Nivel: ${nivel}
+Datos del alumno:
+- Perfil: ${perfil}
+- Asignatura: ${asignatura}
+- Nivel: ${nivel}
 
-      La pregunta debe adaptarse al nivel indicado.
-      Debe tener una respuesta correcta y verificable.
-      La explicación debe enseñar.
-      La pista debe ayudar sin revelar la respuesta.
-    `,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          pregunta: { type: Type.STRING },
-          respuesta: { type: Type.STRING },
-          explicacion: { type: Type.STRING },
-          pista: { type: Type.STRING }
-        },
-        required: [
-          "pregunta",
-          "respuesta",
-          "explicacion",
-          "pista"
-        ]
-      }
-    }
-  });
+Requisitos:
+- Adapta la dificultad al nivel indicado.
+- La pregunta debe ser clara y tener una única respuesta correcta.
+- No incluyas la respuesta dentro del enunciado.
+- La explicación debe ayudar a aprender.
+- La pista debe orientar sin revelar la respuesta.
+- Evita preguntas ambiguas o demasiado abiertas.
 
-  if (!response.text) {
-    throw new Error("Gemini ha devuelto una respuesta vacía");
-  }
-
-  let resultado: PreguntaGenerada;
+Devuelve exclusivamente los cuatro campos solicitados.
+`;
 
   try {
-    resultado = JSON.parse(response.text);
-  } catch {
-    throw new Error("Gemini ha devuelto un JSON no válido");
+    const resultado = await ai.models.generateContent({
+      model: MODELO,
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            pregunta: {
+              type: Type.STRING
+            },
+            respuesta: {
+              type: Type.STRING
+            },
+            explicacion: {
+              type: Type.STRING
+            },
+            pista: {
+              type: Type.STRING
+            }
+          },
+          required: [
+            "pregunta",
+            "respuesta",
+            "explicacion",
+            "pista"
+          ]
+        }
+      }
+    });
+
+    const texto = resultado.text;
+
+    if (!texto) {
+      throw new Error("Gemini devolvió una respuesta vacía");
+    }
+
+    const datos = JSON.parse(texto);
+    const pregunta = validarPregunta(datos);
+
+    console.log("[GEMINI] Pregunta creada correctamente");
+
+    return pregunta;
+
+  } catch (error) {
+    console.error("[GEMINI] Fallo al generar pregunta:", error);
+    throw new Error("No se pudo generar la pregunta");
   }
-
-  if (
-    !resultado.pregunta?.trim() ||
-    !resultado.respuesta?.trim() ||
-    !resultado.explicacion?.trim() ||
-    !resultado.pista?.trim()
-  ) {
-    throw new Error("La pregunta generada está incompleta");
-  }
-
-  console.log("[GEMINI] Pregunta generada correctamente");
-
-  return resultado;
 }
