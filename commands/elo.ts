@@ -30,7 +30,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       );
     }
 
-    // Buscar la última jornada publicada en H2:N2
+    // Obtener encabezados y variaciones de las jornadas
     const headers = await getSheetData('ELO!H1:N1');
     const deltas = await getSheetData('ELO!H2:N2');
 
@@ -39,7 +39,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     let lastDeltaIndex = -1;
 
-    // Buscar de derecha a izquierda la última celda con contenido
+    // Buscar la última columna con contenido, de derecha a izquierda
     for (let i = 6; i >= 0; i--) {
       if (`${deltaRow[i] ?? ''}`.trim() !== '') {
         lastDeltaIndex = i;
@@ -47,19 +47,18 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       }
     }
 
-    // Recuperar el encabezado de esa misma columna
-    const lastWeek = lastDeltaIndex >= 0 &&
-      headerRow[lastDeltaIndex]
-      ? ` | ${headerRow[lastDeltaIndex]}`
-      : '';
+    // Recuperar el nombre de la última jornada publicada
+    const lastWeek =
+      lastDeltaIndex >= 0 && headerRow[lastDeltaIndex]
+        ? ` | ${headerRow[lastDeltaIndex]}`
+        : '';
 
-    // Preparar líneas del ranking
+    // Preparar ranking
     const rankingLines = rows
       .filter(row => row[0] && row[10])
       .map((row, index) => {
         const pos = `${index + 1}`.padStart(2, ' ');
 
-        // Limpiar menciones y caracteres extraños
         const rawDriver = `${row[0]}`
           .replace(/<@!?\d+>/g, '')
           .trim();
@@ -81,13 +80,15 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     // Crear Embed
     const embed = new EmbedBuilder()
-      .setTitle(`🏆 RANKING ELO ${roleMention}${lastWeek}`)
+      .setTitle(`🏆 RANKING ELO${lastWeek}`)
       .setDescription(
         `\`\`\`text\n${rankingLines.join('\n')}\n\`\`\``
       )
       .setColor(0xF1C40F);
 
+    // La mención real debe ir fuera del Embed
     await interaction.editReply({
+      content: roleMention,
       embeds: [embed],
       allowedMentions: {
         roles: role ? [role.id] : []
