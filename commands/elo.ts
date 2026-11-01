@@ -1,4 +1,3 @@
-
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
@@ -30,9 +29,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       );
     }
 
-    // Obtener encabezados y variaciones de las jornadas
-    const headers = await getSheetData('ELO!H1:N1');
-    const deltas = await getSheetData('ELO!H2:N2');
+    // Obtener encabezados y variaciones de las jornadas: G a N
+    const headers = await getSheetData('ELO!G1:N1');
+    const deltas = await getSheetData('ELO!G2:N2');
 
     const headerRow = headers?.[0] || [];
     const deltaRow = deltas?.[0] || [];
@@ -40,7 +39,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     let lastDeltaIndex = -1;
 
     // Buscar la última columna con contenido, de derecha a izquierda
-    for (let i = 6; i >= 0; i--) {
+    for (let i = 7; i >= 0; i--) {
       if (`${deltaRow[i] ?? ''}`.trim() !== '') {
         lastDeltaIndex = i;
         break;
