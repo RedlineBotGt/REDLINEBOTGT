@@ -1,3 +1,4 @@
+
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
@@ -10,95 +11,206 @@ export const data = new SlashCommandBuilder()
   .setName('elo')
   .setDescription('Muestra el ranking de ELO actualizado');
 
-export async function execute(interaction: ChatInputCommandInteraction) {
+const ROLE_ID = '1561657316284309534';
+const SHEET = 'ELO';
+
+const PILOT_COL = 0;       // A: nombre del piloto
+const WEEK_START = 6;      // G
+const WEEK_END = 13;       // N
+
+const RANK_NAME_COL = 0;   // Q
+const RANK_TOTAL_COL = 10; // AA
+
+function numberValue(value: unknown): number {
+  if (value === null || value === undefined || value === '') {
+    return 0;
+  }
+
+  const parsed = Number(String(value).replace(',', '.'));
+
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function cleanName(value: unknown): string {
+  return String(value ?? '').trim();
+}
+
+function shortName(name: string, max = 17): string {
+  const chars = Array.from(name);
+
+  if (chars.length <= max) return name;
+
+  return chars.slice(0, max - 1).join('') + '…';
+}
+
+export async function execute(
+  interaction: ChatInputCommandInteraction
+) {
   await interaction.deferReply();
 
   try {
-    const role = interaction.guild?.roles.cache.find(
-      r => r.name.toLowerCase().trim() === 'gtcup2'
+    // Tabla original con variaciones semanales
+    const original = await getSheetData(
+      `${SHEET}!A2:N`
     );
 
-    const roleMention = role ? `<@&${role.id}>` : '@GtCup2';
+    // Encabezados de las jornadas G:N
+    const headers = await getSheetData(
+      `${SHEET}!G1:N1`
+    );
 
-    // Obtener ranking ELO: columnas Q a AA
-    const rows = await getSheetData('ELO!Q2:AA');
+    // Tabla ordenada por ELO total
+    const ranking = await getSheetData(
+      `${SHEET}!Q2:AA`
+    );
 
-    if (!rows || rows.length === 0) {
-      return await interaction.editReply(
-        'No se encontraron datos en la hoja de ELO.'
+    if (!ranking || ranking.length === 0) {
+      await interaction.editReply(
+        'No hay datos disponibles para el ranking ELO.'
       );
+      return;
     }
 
-    // Obtener encabezados y variaciones de las jornadas: G a N
-    const headers = await getSheetData('ELO!G1:N1');
-    const deltas = await getSheetData('ELO!G2:N2');
+    // Localizar última jornada con datos
+    let lastWeek = -1;
 
-    const headerRow = headers?.[0] || [];
-    const deltaRow = deltas?.[0] || [];
+    for (let col = WEEK_END; col >= WEEK_START; col--) {
+      const weekIndex = col - WEEK_START;
+      const header = headers?.[0]?.[weekIndex];
 
-    let lastDeltaIndex = -1;
+      if (!header) continue;
 
-    // Buscar la última columna con contenido, de derecha a izquierda
-    for (let i = 7; i >= 0; i--) {
-      if (`${deltaRow[i] ?? ''}`.trim() !== '') {
-        lastDeltaIndex = i;
+      const hasData = original.some(row =>
+        row[col] !== undefined &&
+        row[col] !== null &&
+        String(row[col]).trim() !== ''
+      );
+
+      if (hasData) {
+        lastWeek = col;
         break;
       }
     }
 
-    // Recuperar el nombre de la última jornada publicada
-    const lastWeek =
-      lastDeltaIndex >= 0 && headerRow[lastDeltaIndex]
-        ? ` | ${headerRow[lastDeltaIndex]}`
-        : '';
-
-    // Preparar ranking
-    const rankingLines = rows
-      .filter(row => row[0] && row[10])
-      .map((row, index) => {
-        const pos = `${index + 1}`.padStart(2, ' ');
-
-        const rawDriver = `${row[0]}`
-          .replace(/<@!?\d+>/g, '')
-          .trim();
-
-        const driver = rawDriver
-          .padEnd(20, ' ')
-          .substring(0, 20);
-
-        const eloPoints = `${row[10]}`.padStart(4, ' ');
-
-        return `${pos} | ${driver} | ${eloPoints}`;
-      });
-
-    if (rankingLines.length === 0) {
-      return await interaction.editReply(
-        'No se encontraron datos válidos en el ranking de ELO.'
+    if (lastWeek === -1) {
+      await interaction.editReply(
+        'No se ha encontrado ninguna jornada con variaciones.'
       );
+      return;
     }
 
-    // Crear Embed
-    const embed = new EmbedBuilder()
-      .setTitle(`🏆 RANKING ELO${lastWeek}`)
-      .setDescription(
-        `\`\`\`text\n${rankingLines.join('\n')}\n\`\`\``
-      )
-      .setColor(0xF1C40F);
+    const weekIndex = lastWeek - WEEK_START;
+    const weekName = String(headers[0][weekIndex]);
 
-    // La mención real debe ir fuera del Embed
+    // Variaciones de cada piloto en la última jornada
+    const variations = new Map<string, number>();
+
+    for (const row of original) {
+      const name = cleanName(row[PILOT_COL]);
+
+      if (!name) continue;
+
+      const raw = row[lastWeek];
+
+      if (
+        raw === undefined ||
+        raw === null ||
+        String(raw).trim() === ''
+      ) {
+        continue;
+      }
+
+      variations.set(name, numberValue(raw));
+    }
+
+    // Clasificación actual
+    const pilots = ranking
+      .filter(row => cleanName(row[RANK_NAME_COL]))
+      .map(row => {
+        const name = cleanName(row[RANK_NAME_COL]);
+        const elo = numberValue(row[RANK_TOTAL_COL]);
+
+        const participated = variations.has(name);
+        const variation = variations.get(name) ?? 0;
+
+        return {
+          name,
+          elo,
+          previousElo: elo - variation,
+          participated
+        };
+      });
+
+    // Reconstruir clasificación anterior
+    const previousRanking = [...pilots].sort(
+      (a, b) => b.previousElo - a.previousElo
+    );
+
+    const previousPositions = new Map<string, number>();
+
+    previousRanking.forEach((pilot, index) => {
+      previousPositions.set(pilot.name, index + 1);
+    });
+
+    // Crear líneas del ranking
+    const lines = pilots.map((pilot, index) => {
+      const position = index + 1;
+
+      const previousPosition =
+        previousPositions.get(pilot.name) ?? position;
+
+      let movement = '⏸';
+
+      if (pilot.participated) {
+        const difference = previousPosition - position;
+
+        if (difference > 0) {
+          movement = `▲${difference}`;
+        } else if (difference < 0) {
+          movement = `▼${Math.abs(difference)}`;
+        } else {
+          movement = '━';
+        }
+      }
+
+      const pos = String(position).padStart(2, ' ');
+      const name = shortName(pilot.name).padEnd(17, ' ');
+      const elo = String(pilot.elo).padStart(4, ' ');
+
+      return `${pos}  ${name} ${elo}  ${movement}`;
+    });
+
+    const description = [
+      '```text',
+      ' #  PILOTO             ELO  MOV',
+      ...lines,
+      '```',
+      '',
+      '▲ Sube  ▼ Baja  ━ Igual  ⏸ Sin participar'
+    ].join('\n');
+
+    const embed = new EmbedBuilder()
+      .setColor(0xD71920)
+      .setTitle(`🏆 RANKING ELO | ${weekName}`)
+      .setDescription(description)
+      .setFooter({
+        text: 'REDLINE GT • Clasificación ELO'
+      })
+      .setTimestamp();
+
     await interaction.editReply({
-      content: roleMention,
+      content: `<@&${ROLE_ID}>`,
       embeds: [embed],
       allowedMentions: {
-        roles: role ? [role.id] : []
+        roles: [ROLE_ID]
       }
     });
 
   } catch (error) {
-    console.error('Error al obtener los datos de ELO:', error);
+    console.error('[ELO] Error:', error);
 
     await interaction.editReply(
-      'Hubo un error al intentar consultar el ELO desde Google Sheets.'
+      '❌ Error al obtener el ranking ELO de Google Sheets.'
     );
   }
 }
