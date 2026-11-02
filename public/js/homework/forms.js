@@ -5,21 +5,17 @@ import {
   editarDeber
 } from "./api.js";
 
-import {
-  escaparHTML
-} from "./render.js";
-
 let deberEditando = null;
 
 /**
- * Prepara el formulario para crear o editar un deber.
+ * Muestra el formulario para crear o editar.
  */
 export function mostrarFormularioDeber(deber = null) {
   const formulario = document.getElementById("homework-form");
   const titulo = document.getElementById("homework-form-title");
 
   if (!formulario) {
-    console.error("[DEBERES] No se encuentra el formulario.");
+    console.error("[DEBERES] No se encuentra homework-form.");
     return;
   }
 
@@ -27,30 +23,33 @@ export function mostrarFormularioDeber(deber = null) {
 
   formulario.reset();
 
-  const campoTitulo = document.getElementById("homework-title");
+  const campoId = document.getElementById("homework-id");
+  const campoTitulo = document.getElementById("homework-title-input");
   const campoAsignatura = document.getElementById("homework-subject");
   const campoTipo = document.getElementById("homework-type");
-  const campoDestinatario = document.getElementById("homework-recipient");
   const campoContenido = document.getElementById("homework-content");
+  const campoDestinatario = document.getElementById("homework-recipient");
   const campoFecha = document.getElementById("homework-deadline");
 
   if (deber) {
     if (titulo) titulo.textContent = "Editar deber";
 
+    if (campoId) campoId.value = deber._id || "";
     if (campoTitulo) campoTitulo.value = deber.titulo || "";
     if (campoAsignatura) campoAsignatura.value = deber.asignatura || "";
     if (campoTipo) campoTipo.value = deber.tipo || "";
-    if (campoDestinatario) campoDestinatario.value = deber.destinatario || "";
     if (campoContenido) campoContenido.value = deber.contenido || "";
-    if (campoFecha) campoFecha.value = deber.fechaLimite
-      ? String(deber.fechaLimite).slice(0, 10)
-      : "";
+    if (campoDestinatario) campoDestinatario.value = deber.destinatario || "";
+
+    if (campoFecha) {
+      campoFecha.value = deber.fechaLimite
+        ? String(deber.fechaLimite).slice(0, 10)
+        : "";
+    }
   } else {
     if (titulo) titulo.textContent = "Nuevo deber";
-
-    if (campoDestinatario) {
-      campoDestinatario.value = "leo";
-    }
+    if (campoId) campoId.value = "";
+    if (campoDestinatario) campoDestinatario.value = "leo";
   }
 
   formulario.classList.remove("hidden");
@@ -62,7 +61,7 @@ export function mostrarFormularioDeber(deber = null) {
 }
 
 /**
- * Oculta el formulario y limpia sus datos.
+ * Oculta y limpia el formulario.
  */
 export function ocultarFormularioDeber() {
   const formulario = document.getElementById("homework-form");
@@ -76,24 +75,25 @@ export function ocultarFormularioDeber() {
 }
 
 /**
- * Guarda un deber nuevo o los cambios de uno existente.
+ * Guarda un deber nuevo o actualiza uno existente.
  */
 export async function guardarFormularioDeber() {
-  const mensaje = document.getElementById("homework-message");
+  const mensaje = document.getElementById("homework-form-message");
+  const boton = document.getElementById("homework-save-btn");
 
-  const campoTitulo = document.getElementById("homework-title");
+  const campoTitulo = document.getElementById("homework-title-input");
   const campoAsignatura = document.getElementById("homework-subject");
   const campoTipo = document.getElementById("homework-type");
-  const campoDestinatario = document.getElementById("homework-recipient");
   const campoContenido = document.getElementById("homework-content");
+  const campoDestinatario = document.getElementById("homework-recipient");
   const campoFecha = document.getElementById("homework-deadline");
 
   if (
     !campoTitulo ||
     !campoAsignatura ||
     !campoTipo ||
-    !campoDestinatario ||
-    !campoContenido
+    !campoContenido ||
+    !campoDestinatario
   ) {
     console.error("[DEBERES] Faltan campos del formulario.");
     return;
@@ -103,16 +103,18 @@ export async function guardarFormularioDeber() {
     titulo: campoTitulo.value.trim(),
     asignatura: campoAsignatura.value,
     tipo: campoTipo.value,
-    destinatario: campoDestinatario.value,
     contenido: campoContenido.value.trim(),
+    destinatario: campoDestinatario.value,
     fechaLimite: campoFecha?.value || null
   };
 
   try {
     if (mensaje) {
       mensaje.textContent = "Guardando deber...";
-      mensaje.className = "homework-message";
+      mensaje.className = "homework-form-message";
     }
+
+    if (boton) boton.disabled = true;
 
     if (deberEditando?._id) {
       await editarDeber(deberEditando._id, deber);
@@ -124,7 +126,7 @@ export async function guardarFormularioDeber() {
 
     if (mensaje) {
       mensaje.textContent = "Deber guardado correctamente.";
-      mensaje.className = "homework-message success";
+      mensaje.className = "homework-form-message success";
     }
 
     if (typeof window.cargarDeberes === "function") {
@@ -135,7 +137,9 @@ export async function guardarFormularioDeber() {
       mensaje.textContent =
         error.message || "No se ha podido guardar el deber.";
 
-      mensaje.className = "homework-message error";
+      mensaje.className = "homework-form-message error";
     }
+  } finally {
+    if (boton) boton.disabled = false;
   }
 }
