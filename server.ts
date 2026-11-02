@@ -6,6 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 import questionsRouter from "./routes/questions.ts";
+import homeworkRouter from "./routes/homework.ts";
 
 dotenv.config();
 
@@ -33,6 +34,18 @@ if (process.env.GEMINI_API_KEY) {
   console.log("[CONFIG] GEMINI_API_KEY: configurada");
 } else {
   console.warn("[CONFIG] GEMINI_API_KEY: NO CONFIGURADA");
+}
+
+if (process.env.MONGODB_URI) {
+  console.log("[CONFIG] MONGODB_URI: configurada");
+} else {
+  console.warn("[CONFIG] MONGODB_URI: NO CONFIGURADA");
+}
+
+if (process.env.PAPA_PIN && process.env.PAPA_SESSION_SECRET) {
+  console.log("[CONFIG] Acceso privado de Papá: configurado");
+} else {
+  console.warn("[CONFIG] Acceso privado de Papá: incompleto");
 }
 
 // ========================================
@@ -76,13 +89,23 @@ app.get("/api/academia/status", (_req, res) => {
   });
 });
 
-// Diagnóstico de configuración
+// ========================================
+// DIAGNÓSTICO DE CONFIGURACIÓN
+// ========================================
+
 app.get("/api/academia/diagnostico", (_req, res) => {
   res.json({
     servidor: "activo",
     gemini: process.env.GEMINI_API_KEY
       ? "configurada"
       : "falta_api_key",
+    mongodb: process.env.MONGODB_URI
+      ? "configurada"
+      : "falta_configuracion",
+    accesoPapa:
+      process.env.PAPA_PIN && process.env.PAPA_SESSION_SECRET
+        ? "configurado"
+        : "incompleto",
     puerto: PORT,
     node: process.version,
     memoria: {
@@ -114,6 +137,9 @@ app.get("/api/academia", (_req, res) => {
 
 // Preguntas y generación con Gemini
 app.use("/api/academia", questionsRouter);
+
+// Gestión de deberes
+app.use("/api/academia", homeworkRouter);
 
 // ========================================
 // RUTAS NO ENCONTRADAS
@@ -171,5 +197,7 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log("[OK] ACADEMIA CAMPOS ARRANCADA");
   console.log(`[OK] Puerto ${PORT}`);
   console.log("[OK] Servidor HTTP escuchando");
+  console.log("[OK] Rutas de preguntas registradas");
+  console.log("[OK] Rutas de deberes registradas");
   console.log("====================================");
 });
