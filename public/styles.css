@@ -29,18 +29,33 @@ body {
 }
 
 button,
+input,
+select,
 textarea {
   font-family: inherit;
 }
 
 button {
   -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 0.18s ease,
+    opacity 0.18s ease,
+    background 0.18s ease,
+    border-color 0.18s ease;
 }
 
 button:focus-visible,
+input:focus-visible,
+select:focus-visible,
 textarea:focus-visible {
   outline: 3px solid var(--primary);
   outline-offset: 3px;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none !important;
 }
 
 .container {
@@ -86,20 +101,17 @@ p {
   color: var(--muted);
 }
 
-/* SELECCIÓN DE PERFILES */
+/* ========================================
+   SELECCIÓN DE PERFILES
+======================================== */
 
 .profiles {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-top: 25px;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
   width: 100%;
-}
-
-.subjects {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 15px;
+  gap: 16px;
   margin-top: 25px;
 }
 
@@ -113,30 +125,37 @@ p {
   min-height: 100px;
   font-size: 1rem;
   cursor: pointer;
-  transition: transform 0.2s, border-color 0.2s,
-    background 0.2s;
 }
 
 .profile-card {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 22px;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
   width: 100%;
-  min-height: 90px;
+  max-width: 320px;
+  min-height: 75px;
+  gap: 18px;
   padding: 16px 24px;
   text-align: left;
 }
 
 .profile-card span {
-  font-size: 2.7rem;
+  display: inline-block;
   width: 55px;
   text-align: center;
+  font-size: 2.7rem;
 }
 
 .profile-card strong {
   font-size: 1.25rem;
+}
+
+.subjects {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 15px;
+  margin-top: 25px;
 }
 
 .profile-card:hover,
@@ -149,7 +168,9 @@ p {
   font-weight: bold;
 }
 
-/* PANTALLA DE RETOS */
+/* ========================================
+   PANTALLA DE RETOS
+======================================== */
 
 #challenge-screen > button {
   background: var(--panel-light);
@@ -160,6 +181,11 @@ p {
   font-weight: bold;
   cursor: pointer;
   margin-bottom: 15px;
+}
+
+#challenge-screen > button:hover {
+  border-color: var(--primary);
+  transform: translateY(-1px);
 }
 
 #challenge-prompt {
@@ -212,7 +238,6 @@ p {
   font-size: 0.95rem;
   font-weight: bold;
   cursor: pointer;
-  transition: opacity 0.2s, transform 0.2s;
 }
 
 #send-btn {
@@ -234,12 +259,6 @@ p {
   transform: translateY(-2px);
 }
 
-button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  transform: none;
-}
-
 #ai-feedback {
   margin-top: 20px;
   padding: 15px;
@@ -253,111 +272,9 @@ button:disabled {
   display: none;
 }
 
-/* MÓVILES */
-
-@media (max-width: 500px) {
-  .container {
-    width: min(100% - 20px, 850px);
-    padding-top: 20px;
-  }
-
-  .screen {
-    padding: 18px;
-  }
-
-  .header {
-    margin-bottom: 25px;
-  }
-
-  .header h1 {
-    font-size: 1.7rem;
-  }
-
-  /* Perfiles siempre en vertical */
-  .profiles {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .profile-card {
-    width: 100%;
-    min-height: 85px;
-    padding: 14px 18px;
-  }
-
-  .profile-card span {
-    font-size: 2.5rem;
-  }
-
-  .profile-card strong {
-    font-size: 1.2rem;
-  }
-
-  /* Las asignaturas mantienen su distribución */
-  .subjects {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .profile-card,
-  .subject-card {
-    padding-top: 18px;
-    padding-bottom: 18px;
-  }
-
-  .challenge-actions {
-    flex-direction: column;
-  }
-
-  .challenge-actions button {
-    width: 100%;
-    flex-basis: auto;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
 /* ========================================
-   PERFILES: COLUMNA VERTICAL CENTRADA
+   DEBERES: ENTRADA Y PANTALLA
 ======================================== */
-
-.profiles {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 100%;
-  gap: 16px;
-}
-
-.profile-card {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  justify-content: flex-start !important;
-  width: 100%;
-  max-width: 320px;
-  min-height: 75px;
-  gap: 18px;
-  text-align: left;
-}
-
-.profile-card span {
-  display: inline-block;
-}
-/* ========================================
-   DEBERES
-======================================== */
-
-/* Entrada a deberes */
 
 .homework-entry {
   width: 100%;
@@ -367,7 +284,7 @@ button:disabled {
 #open-homework-btn {
   display: block;
   width: 100%;
-  min-height: 50px;
+  min-height: 52px;
   padding: 13px 18px;
   background: var(--primary);
   color: #082033;
@@ -376,14 +293,12 @@ button:disabled {
   font-size: 1rem;
   font-weight: bold;
   cursor: pointer;
-  transition: transform 0.2s, opacity 0.2s;
 }
 
 #open-homework-btn:hover {
   transform: translateY(-2px);
+  filter: brightness(1.06);
 }
-
-/* Pantalla de deberes */
 
 #homework-screen {
   width: 100%;
@@ -394,8 +309,6 @@ button:disabled {
   margin-bottom: 18px;
 }
 
-/* Botones generales de deberes */
-
 #homework-screen button {
   font-family: inherit;
 }
@@ -404,17 +317,24 @@ button:disabled {
   cursor: pointer;
 }
 
-#homework-screen button:disabled {
-  cursor: not-allowed;
+#homework-screen button:hover:not(:disabled) {
+  filter: brightness(1.08);
 }
 
-/* Acceso de Papá */
+#homework-screen button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* ========================================
+   DEBERES: ACCESO DE PAPÁ
+======================================== */
 
 #homework-login {
   background: var(--panel-light);
   padding: 20px;
   border-radius: 14px;
   margin-bottom: 20px;
+  border: 1px solid var(--border);
 }
 
 #homework-login p {
@@ -453,7 +373,9 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
-/* Gestión y formulario */
+/* ========================================
+   DEBERES: GESTIÓN Y FORMULARIO
+======================================== */
 
 #homework-management {
   width: 100%;
@@ -461,7 +383,7 @@ button:disabled {
 
 #homework-new-btn {
   width: 100%;
-  min-height: 46px;
+  min-height: 48px;
   padding: 12px 16px;
   margin-bottom: 20px;
   border: 0;
@@ -493,7 +415,7 @@ button:disabled {
 #homework-form textarea {
   display: block;
   width: 100%;
-  min-height: 44px;
+  min-height: 46px;
   padding: 11px 12px;
   border: 1px solid var(--border);
   border-radius: 9px;
@@ -516,6 +438,29 @@ button:disabled {
 
 #homework-form select {
   color-scheme: dark;
+  cursor: pointer;
+}
+
+#homework-form input:focus,
+#homework-form select:focus,
+#homework-form textarea:focus {
+  border-color: var(--primary);
+}
+
+#homework-status-group {
+  padding: 12px;
+  margin-top: 16px;
+  background: rgba(16, 24, 39, 0.45);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+#homework-status-group label {
+  margin-top: 0;
+}
+
+#homework-status {
+  font-weight: bold;
 }
 
 .homework-form-actions {
@@ -527,7 +472,7 @@ button:disabled {
 
 .homework-form-actions button {
   flex: 1 1 130px;
-  min-height: 44px;
+  min-height: 46px;
   padding: 11px 14px;
   border: 0;
   border-radius: 9px;
@@ -546,7 +491,14 @@ button:disabled {
   border: 1px solid var(--border);
 }
 
-/* Filtros */
+#homework-form-message {
+  margin-top: 12px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+/* ========================================
+   DEBERES: FILTROS
+======================================== */
 
 .homework-filters {
   display: grid;
@@ -555,19 +507,22 @@ button:disabled {
   margin: 20px 0;
   padding: 14px;
   background: var(--panel-light);
+  border: 1px solid var(--border);
   border-radius: 12px;
 }
 
 .homework-filters select {
   width: 100%;
   min-width: 0;
-  min-height: 42px;
-  padding: 9px;
+  min-height: 44px;
+  padding: 9px 10px;
   background: var(--bg);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 0.9rem;
+  color-scheme: dark;
+  cursor: pointer;
 }
 
 #homework-screen #homework-filter-recipient,
@@ -576,7 +531,9 @@ button:disabled {
   color-scheme: dark;
 }
 
-/* Listado */
+/* ========================================
+   DEBERES: LISTADO Y TARJETAS
+======================================== */
 
 #homework-list {
   display: flex;
@@ -589,14 +546,13 @@ button:disabled {
   display: none;
 }
 
-/* Tarjetas de deberes */
-
 .homework-card {
   padding: 17px;
   background: var(--panel-light);
   border: 1px solid var(--border);
   border-radius: 13px;
   overflow-wrap: anywhere;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .homework-card h3 {
@@ -621,7 +577,9 @@ button:disabled {
   text-decoration: underline;
 }
 
-/* Información y estado */
+/* ========================================
+   DEBERES: INFORMACIÓN Y ESTADO
+======================================== */
 
 .homework-meta {
   display: flex;
@@ -633,8 +591,10 @@ button:disabled {
 }
 
 .homework-status {
-  display: inline-block;
-  padding: 5px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
   margin: 5px 0;
   border-radius: 20px;
   background: rgba(251, 191, 36, 0.15);
@@ -648,7 +608,9 @@ button:disabled {
   color: var(--success);
 }
 
-/* Acciones de cada deber */
+/* ========================================
+   DEBERES: BOTONES DE CADA TARJETA
+======================================== */
 
 .homework-actions {
   display: flex;
@@ -659,10 +621,10 @@ button:disabled {
 
 .homework-actions button {
   flex: 1 1 110px;
-  min-height: 40px;
+  min-height: 42px;
   padding: 9px 12px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 9px;
   font-size: 0.9rem;
   font-weight: bold;
 }
@@ -683,25 +645,104 @@ button:disabled {
   border: 1px solid var(--danger);
 }
 
-/* Mensajes */
+.homework-actions button:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+/* ========================================
+   DEBERES: MENSAJES
+======================================== */
 
 #homework-message:empty,
-#homework-login-message:empty {
+#homework-login-message:empty,
+#homework-form-message:empty {
   display: none;
 }
 
 /* ========================================
-   DEBERES: ADAPTACIÓN A MÓVILES
+   ADAPTACIÓN GENERAL A MÓVILES
 ======================================== */
 
 @media (max-width: 600px) {
+  .container {
+    width: min(100% - 20px, 850px);
+    padding-top: 20px;
+  }
+
+  .screen {
+    padding: 18px;
+  }
+
+  .header {
+    margin-bottom: 25px;
+  }
+
+  .header h1 {
+    font-size: 1.7rem;
+  }
+
+  /* Perfiles siempre en vertical */
+
+  .profiles {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px;
+  }
+
+  .profile-card {
+    width: 100%;
+    max-width: 320px;
+    min-height: 85px;
+    padding: 14px 18px;
+  }
+
+  .profile-card span {
+    font-size: 2.5rem;
+  }
+
+  .profile-card strong {
+    font-size: 1.2rem;
+  }
+
+  /* Asignaturas */
+
+  .subjects {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .profile-card,
+  .subject-card {
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+
+  /* Retos */
+
+  .challenge-actions {
+    flex-direction: column;
+  }
+
+  .challenge-actions button {
+    width: 100%;
+    flex-basis: auto;
+  }
+
+  /* Pantalla de deberes */
+
   #homework-screen {
     padding: 0;
+  }
+
+  #homework-login {
+    padding: 15px;
   }
 
   #homework-form {
     padding: 14px;
   }
+
+  /* Filtros en una columna */
 
   .homework-filters {
     grid-template-columns: 1fr;
@@ -710,9 +751,11 @@ button:disabled {
   }
 
   .homework-filters select {
-    min-height: 44px;
+    min-height: 46px;
     font-size: 0.95rem;
   }
+
+  /* Tarjetas */
 
   .homework-card {
     padding: 14px;
@@ -722,6 +765,8 @@ button:disabled {
     font-size: 1.05rem;
   }
 
+  /* Acciones en vertical */
+
   .homework-actions {
     flex-direction: column;
   }
@@ -729,7 +774,7 @@ button:disabled {
   .homework-actions button {
     width: 100%;
     flex-basis: auto;
-    min-height: 44px;
+    min-height: 46px;
   }
 
   .homework-form-actions {
@@ -739,6 +784,25 @@ button:disabled {
   .homework-form-actions button {
     width: 100%;
     flex-basis: auto;
-    min-height: 44px;
+    min-height: 46px;
+  }
+
+  #homework-new-btn,
+  #open-homework-btn {
+    min-height: 50px;
+  }
+}
+
+/* ========================================
+   ACCESIBILIDAD
+======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
   }
 }
