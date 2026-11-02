@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import { existsSync } from "fs";
 
 import questionsRouter from "./routes/questions.ts";
 import homeworkRouter from "./routes/homework.ts";
@@ -16,7 +17,23 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const inicio = Date.now();
-const publicPath = path.join(__dirname, "public");
+
+// ========================================
+// LOCALIZACIÓN DE ARCHIVOS WEB
+// ========================================
+
+const posiblesRutasPublicas = [
+  path.join(__dirname, "public"),
+  path.join(__dirname, "..", "public"),
+  path.join(process.cwd(), "public")
+];
+
+const publicPath =
+  posiblesRutasPublicas.find((ruta) =>
+    existsSync(path.join(ruta, "js", "homework", "form.js"))
+  ) ||
+  posiblesRutasPublicas.find((ruta) => existsSync(ruta)) ||
+  posiblesRutasPublicas[0];
 
 // ========================================
 // REGISTROS DE ARRANQUE
@@ -25,11 +42,22 @@ const publicPath = path.join(__dirname, "public");
 console.log("====================================");
 console.log("   ACADEMIA CAMPOS - INICIANDO");
 console.log("====================================");
+
 console.log("[ARRANQUE] Node:", process.version);
 console.log("[ARRANQUE] Puerto:", PORT);
 console.log("[ARRANQUE] Entorno:", process.env.NODE_ENV || "no definido");
 console.log("[ARRANQUE] Directorio:", __dirname);
+console.log("[ARRANQUE] Directorio actual:", process.cwd());
 console.log("[ARRANQUE] Archivos web:", publicPath);
+
+console.log(
+  "[ARCHIVOS] form.js:",
+  existsSync(path.join(publicPath, "js", "homework", "form.js"))
+    ? "ENCONTRADO"
+    : "NO ENCONTRADO"
+);
+
+console.log("[ARCHIVOS] Rutas examinadas:", posiblesRutasPublicas);
 
 if (process.env.GEMINI_API_KEY) {
   console.log("[CONFIG] GEMINI_API_KEY: configurada");
