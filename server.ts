@@ -1,4 +1,3 @@
-
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -55,7 +54,6 @@ if (process.env.PAPA_PIN && process.env.PAPA_SESSION_SECRET) {
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
-// Registrar peticiones HTTP
 app.use((req, res, next) => {
   const comienzo = Date.now();
 
@@ -71,8 +69,9 @@ app.use((req, res, next) => {
 // ========================================
 // ARCHIVOS DE LA WEB
 // ========================================
+// En producción el servidor vive en dist/, pero la web sigue en public/.
 
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "..", "public")));
 
 // ========================================
 // DIAGNÓSTICO GENERAL
@@ -135,10 +134,7 @@ app.get("/api/academia", (_req, res) => {
 // RUTAS DE FUNCIONALIDADES
 // ========================================
 
-// Preguntas y generación con Gemini
 app.use("/api/academia", questionsRouter);
-
-// Gestión de deberes
 app.use("/api/academia", homeworkRouter);
 
 // ========================================
