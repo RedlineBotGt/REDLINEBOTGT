@@ -4,7 +4,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import { generarPregunta } from "./services/aiService.ts";
+
+import questionsRouter from "./routes/questions.ts";
 
 dotenv.config();
 
@@ -54,7 +55,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// Servir archivos de la web
+// ========================================
+// ARCHIVOS DE LA WEB
+// ========================================
+
 app.use(express.static(path.join(__dirname, "public")));
 
 // ========================================
@@ -105,51 +109,11 @@ app.get("/api/academia", (_req, res) => {
 });
 
 // ========================================
-// GENERAR PREGUNTA CON GEMINI
+// RUTAS DE FUNCIONALIDADES
 // ========================================
 
-app.post("/api/academia/question", async (req, res) => {
-  const { perfil, asignatura, nivel } = req.body || {};
-
-  console.log("[GEMINI] Solicitud recibida");
-  console.log("[GEMINI] Perfil:", perfil);
-  console.log("[GEMINI] Asignatura:", asignatura);
-  console.log("[GEMINI] Nivel:", nivel);
-
-  if (!perfil || !asignatura || !nivel) {
-    console.warn("[VALIDACIÓN] Faltan datos para generar pregunta");
-
-    return res.status(400).json({
-      ok: false,
-      error: "Faltan perfil, asignatura o nivel"
-    });
-  }
-
-  try {
-    console.log("[GEMINI] Iniciando generación...");
-
-    const pregunta = await generarPregunta(
-      String(perfil),
-      String(asignatura),
-      String(nivel)
-    );
-
-    console.log("[GEMINI] Pregunta generada correctamente");
-
-    return res.json({
-      ok: true,
-      pregunta
-    });
-
-  } catch (error) {
-    console.error("[GEMINI] ERROR:", error);
-
-    return res.status(502).json({
-      ok: false,
-      error: "Gemini no ha podido generar la pregunta. Inténtalo de nuevo."
-    });
-  }
-});
+// Preguntas y generación con Gemini
+app.use("/api/academia", questionsRouter);
 
 // ========================================
 // RUTAS NO ENCONTRADAS
