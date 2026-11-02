@@ -1,11 +1,12 @@
+
 import { ObjectId } from 'mongodb';
-import { 
-    ButtonInteraction, 
-    ModalBuilder, 
-    TextInputBuilder, 
-    TextInputStyle, 
-    ActionRowBuilder, 
-    ModalSubmitInteraction, 
+import {
+    ButtonInteraction,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle,
+    ActionRowBuilder,
+    ModalSubmitInteraction,
     MessageFlags,
     ButtonStyle,
     ButtonBuilder,
@@ -21,10 +22,11 @@ export async function handleBdEventosButton(interaction: ButtonInteraction): Pro
     if (interaction.customId !== 'dash_btn_bd_eventos') return false;
 
     const col = await getEventsCollection();
+
     // 🔒 Blindaje multiserver: Solo muestra eventos del guild actual
-    const events = await col.find({ 
-        guildId: interaction.guildId, 
-        status: { $in: ['pending', 'sent', 'pending_publish'] } 
+    const events = await col.find({
+        guildId: interaction.guildId,
+        status: { $in: ['pending', 'sent', 'pending_publish'] }
     }).toArray();
 
     if (events.length === 0) {
@@ -39,17 +41,31 @@ export async function handleBdEventosButton(interaction: ButtonInteraction): Pro
         .setCustomId('bd_event_select_action')
         .setPlaceholder('Selecciona un evento para gestionar...')
         .addOptions(
-            events.slice(0, 25).map(ev => ({
-                label: ev.title.substring(0, 100),
-                description: `Fecha: ${ev.date} a las ${ev.time} (${ev.status})`,
-                value: ev._id.toString()
-            }))
+            events.slice(0, 25).map(ev => {
+                const channelInfo = ev.channelName
+                    || (ev.channelId ? `<#${ev.channelId}>` : 'Sin canal registrado');
+
+                const repetitions = ev.remainingRepetitions !== undefined
+                    ? Math.max(0, Number(ev.remainingRepetitions) || 0)
+                    : Math.max(0, (Number(ev.remainingTimes) || 1) - 1);
+
+                const description = `📢 ${channelInfo} · 🔁 ${repetitions} pendientes`;
+
+                return {
+                    label: String(ev.title || 'Evento sin título').substring(0, 100),
+                    description: description.substring(0, 100),
+                    value: ev._id.toString()
+                };
+            })
         );
 
     const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
 
     await interaction.reply({
-        content: '🗂️ **Gestión de Base de Datos de Eventos:** Selecciona el evento que deseas administrar:',
+        content:
+            '🗂️ **Gestión de Base de Datos de Eventos:**\n' +
+            'Selecciona el evento que deseas administrar.\n\n' +
+            '📢 Canal de publicación · 🔁 Repeticiones pendientes',
         components: [row],
         flags: [MessageFlags.Ephemeral]
     });
@@ -63,11 +79,18 @@ export async function handleBdEventosSelect(interaction: any): Promise<boolean> 
 
     const eventId = interaction.values[0];
     const col = await getEventsCollection();
+
     // 🔒 Verificación de seguridad por guildId
-    const ev = await col.findOne({ _id: new ObjectId(eventId), guildId: interaction.guildId });
+    const ev = await col.findOne({
+        _id: new ObjectId(eventId),
+        guildId: interaction.guildId
+    });
 
     if (!ev) {
-        await interaction.update({ content: '❌ El evento seleccionado ya no existe o no pertenece a este servidor.', components: [] });
+        await interaction.update({
+            content: '❌ El evento seleccionado ya no existe o no pertenece a este servidor.',
+            components: []
+        });
         return true;
     }
 
@@ -84,10 +107,26 @@ export async function handleBdEventosSelect(interaction: any): Promise<boolean> 
             .setEmoji('✖️')
     );
 
-    const pubInfo = ev.publishAt ? new Date(ev.publishAt).toLocaleString('es-ES', { timeZone: 'Europe/Madrid' }) : 'Inmediato';
+    const pubInfo = ev.publishAt
+        ? new Date(ev.publishAt).toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })
+        : 'Inmediato';
+
+    const channelInfo = ev.channelName
+        || (ev.channelId ? `<#${ev.channelId}>` : 'Sin canal registrado');
+
+    const repetitions = ev.remainingRepetitions !== undefined
+        ? Math.max(0, Number(ev.remainingRepetitions) || 0)
+        : Math.max(0, (Number(ev.remainingTimes) || 1) - 1);
 
     await interaction.update({
-        content: `⚙️ **Administrando Evento:**\n> **Título:** ${ev.title}\n> **Fecha del evento:**${ev.date} a las ${ev.time}\n> **Publicación:** ${pubInfo}\n> **Estado actual:** \`${ev.status}\``,
+        content:
+            `⚙️ **Administrando Evento:**\n` +
+            `> **Título:** ${ev.title}\n` +
+            `> **Fecha del evento:** ${ev.date} a las ${ev.time}\n` +
+            `> **Publicación:** ${pubInfo}\n` +
+            `> **Canal:** ${channelInfo}\n` +
+            `> **Repeticiones pendientes:** 🔁 ${repetitions}\n` +
+            `> **Estado actual:** \`${ev.status}\``,
         components: [rowActions]
     });
 
@@ -108,7 +147,10 @@ export async function handleBdEventosCancelAction(interaction: ButtonInteraction
     );
 
     if (updateResult.matchedCount === 0) {
-        await interaction.reply({ content: '❌ No se pudo encontrar el evento en este servidor.', flags: [MessageFlags.Ephemeral] });
+        await interaction.reply({
+            content: '❌ No se pudo encontrar el evento en este servidor.',
+            flags: [MessageFlags.Ephemeral]
+        });
         return true;
     }
 
@@ -126,17 +168,36 @@ export async function handleBdEventosEditButton(interaction: ButtonInteraction):
 
     const eventId = interaction.customId.replace('bd_event_edit_', '');
     const col = await getEventsCollection();
+
     // 🔒 Validación por guildId
-    const ev = await col.findOne({ _id: new ObjectId(eventId), guildId: interaction.guildId });
+    const ev = await col.findOne({
+        _id: new ObjectId(eventId),
+        guildId: interaction.guildId
+    });
 
     if (!ev) {
-        await interaction.reply({ content: '❌ El evento ya no existe en este servidor.', flags: [MessageFlags.Ephemeral] });
+        await interaction.reply({
+            content: '❌ El evento ya no existe en este servidor.',
+            flags: [MessageFlags.Ephemeral]
+        });
         return true;
     }
 
     const existingPub = ev.publishAt ? new Date(ev.publishAt) : new Date();
-    const pubDateStr = existingPub.toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid', day: '2-digit', month: '2-digit', year: 'numeric' });
-    const pubTimeStr = existingPub.toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false });
+
+    const pubDateStr = existingPub.toLocaleDateString('es-ES', {
+        timeZone: 'Europe/Madrid',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+
+    const pubTimeStr = existingPub.toLocaleTimeString('es-ES', {
+        timeZone: 'Europe/Madrid',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    });
 
     const modal = new ModalBuilder()
         .setCustomId(`modal_event_edit_${eventId}`)
@@ -195,11 +256,18 @@ export async function handleBdEventosEditModalSubmit(interaction: ModalSubmitInt
 
     const eventId = interaction.customId.replace('modal_event_edit_', '');
     const col = await getEventsCollection();
+
     // 🔒 Validación por guildId
-    const ev = await col.findOne({ _id: new ObjectId(eventId), guildId: interaction.guildId });
+    const ev = await col.findOne({
+        _id: new ObjectId(eventId),
+        guildId: interaction.guildId
+    });
 
     if (!ev) {
-        await interaction.reply({ content: '❌ El evento ya no existe en este servidor.', flags: [MessageFlags.Ephemeral] });
+        await interaction.reply({
+            content: '❌ El evento ya no existe en este servidor.',
+            flags: [MessageFlags.Ephemeral]
+        });
         return true;
     }
 
@@ -211,27 +279,36 @@ export async function handleBdEventosEditModalSubmit(interaction: ModalSubmitInt
 
     const [eventDateStr, eventTimeStr] = eventDtRaw.split(' ');
     const scheduledAt = parseMadridDateTime(eventDateStr, eventTimeStr);
+
     if (!scheduledAt) {
-        await interaction.reply({ content: '❌ Formato de fecha u hora del evento inválido (Usa DD/MM/YYYY HH:MM).', flags: [MessageFlags.Ephemeral] });
+        await interaction.reply({
+            content: '❌ Formato de fecha u hora del evento inválido (Usa DD/MM/YYYY HH:MM).',
+            flags: [MessageFlags.Ephemeral]
+        });
         return true;
     }
 
     const [pubDateStr, pubTimeStr] = pubDtRaw.split(' ');
     const publishAt = parseMadridDateTime(pubDateStr, pubTimeStr);
+
     if (!publishAt) {
-        await interaction.reply({ content: '❌ Formato de fecha u hora de publicación inválido (Usa DD/MM/YYYY HH:MM).', flags: [MessageFlags.Ephemeral] });
+        await interaction.reply({
+            content: '❌ Formato de fecha u hora de publicación inválido (Usa DD/MM/YYYY HH:MM).',
+            flags: [MessageFlags.Ephemeral]
+        });
         return true;
     }
 
     const intervalDays = intervalRaw ? parseInt(intervalRaw, 10) : 0;
     const totalTimes = timesRaw ? parseInt(timesRaw, 10) : 1;
+
     const repeats = intervalDays > 0 && totalTimes > 1;
     const intervalMs = intervalDays * 24 * 3600 * 1000;
 
     await col.updateOne(
         { _id: new ObjectId(eventId), guildId: interaction.guildId },
-        { 
-            $set: { 
+        {
+            $set: {
                 title,
                 date: eventDateStr,
                 time: eventTimeStr,
@@ -240,29 +317,39 @@ export async function handleBdEventosEditModalSubmit(interaction: ModalSubmitInt
                 repeats,
                 intervalMs,
                 remainingTimes: repeats ? totalTimes : 1,
+                remainingRepetitions: repeats ? totalTimes - 1 : 0,
                 reminderSent: false,
-                updatedAt: new Date() 
-            } 
+                updatedAt: new Date()
+            }
         }
     );
 
     if (ev.status === 'sent' && ev.channelId && ev.messageId) {
         const guild = interaction.guild;
+
         if (guild) {
             const channel = await guild.channels.fetch(ev.channelId).catch(() => null) as TextChannel;
+
             if (channel && channel.isTextBased()) {
                 const message = await channel.messages.fetch(ev.messageId).catch(() => null);
+
                 if (message) {
-                    const updatedEv = await col.findOne({ _id: new ObjectId(eventId), guildId: interaction.guildId });
-                    const { embed, components } = buildEventEmbedAndRows(updatedEv);
-                    await message.edit({ embeds: [embed], components }).catch(() => {});
+                    const updatedEv = await col.findOne({
+                        _id: new ObjectId(eventId),
+                        guildId: interaction.guildId
+                    });
+
+                    if (updatedEv) {
+                        const { embed, components } = buildEventEmbedAndRows(updatedEv);
+                        await message.edit({ embeds: [embed], components }).catch(() => {});
+                    }
                 }
             }
         }
     }
 
     await interaction.reply({
-        content: `✅ **¡Evento y programación actualizados con éxito de principio a fin!**`,
+        content: '✅ **¡Evento y programación actualizados con éxito de principio a fin!**',
         flags: [MessageFlags.Ephemeral]
     });
 
