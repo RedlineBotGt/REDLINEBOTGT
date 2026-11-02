@@ -16,6 +16,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const inicio = Date.now();
+const publicPath = path.join(__dirname, "public");
 
 // ========================================
 // REGISTROS DE ARRANQUE
@@ -28,6 +29,7 @@ console.log("[ARRANQUE] Node:", process.version);
 console.log("[ARRANQUE] Puerto:", PORT);
 console.log("[ARRANQUE] Entorno:", process.env.NODE_ENV || "no definido");
 console.log("[ARRANQUE] Directorio:", __dirname);
+console.log("[ARRANQUE] Archivos web:", publicPath);
 
 if (process.env.GEMINI_API_KEY) {
   console.log("[CONFIG] GEMINI_API_KEY: configurada");
@@ -69,9 +71,8 @@ app.use((req, res, next) => {
 // ========================================
 // ARCHIVOS DE LA WEB
 // ========================================
-// En producción el servidor vive en dist/, pero la web sigue en public/.
 
-app.use(express.static(path.join(__dirname, "..", "public")));
+app.use(express.static(publicPath));
 
 // ========================================
 // DIAGNÓSTICO GENERAL
@@ -193,6 +194,7 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log("[OK] ACADEMIA CAMPOS ARRANCADA");
   console.log(`[OK] Puerto ${PORT}`);
   console.log("[OK] Servidor HTTP escuchando");
+  console.log("[OK] Archivos web disponibles");
   console.log("[OK] Rutas de preguntas registradas");
   console.log("[OK] Rutas de deberes registradas");
   console.log("====================================");
