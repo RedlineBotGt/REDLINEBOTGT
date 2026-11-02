@@ -4,19 +4,22 @@
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "rootDir": ".",
+    "outDir": "dist",
     "strict": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "noEmit": true,
+    "rewriteRelativeImportExtensions": true,
     "types": [
       "node"
     ]
   },
   "include": [
     "server.ts",
+    "routes/**/*.ts",
     "services/**/*.ts"
   ],
   "exclude": [
