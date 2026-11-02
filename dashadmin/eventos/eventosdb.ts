@@ -17,6 +17,41 @@ import { getEventsCollection } from './eventosstorage';
 import { parseMadridDateTime } from './eventosutils';
 import { buildEventEmbedAndRows } from './eventosmanager';
 
+// --- OBTENER NOMBRE LEGIBLE DEL CANAL ---
+async function getChannelDisplayName(interaction: any, ev: any): Promise<string> {
+    if (ev.channelId && interaction.guild) {
+        const channel = await interaction.guild.channels.fetch(ev.channelId).catch(() => null);
+
+        if (channel) {
+            return `#${channel.name}`;
+        }
+    }
+
+    if (ev.channelName) {
+        const cleanName = String(ev.channelName)
+            .replace(/^<#|>$/g, '')
+            .replace(/^#/, '')
+            .trim();
+
+        // Si channelName contiene una mención o solo un ID,
+        // no lo mostramos como si fuera un nombre real.
+        if (cleanName && !/^\d{15,}$/.test(cleanName)) {
+            return `#${cleanName}`;
+        }
+    }
+
+    return 'Sin canal registrado';
+}
+
+// --- OBTENER REPETICIONES PENDIENTES ---
+function getPendingRepetitions(ev: any): number {
+    if (ev.remainingRepetitions !== undefined && ev.remainingRepetitions !== null) {
+        return Math.max(0, Number(ev.remainingRepetitions) || 0);
+    }
+
+    return Math.max(0, (Number(ev.remainingTimes) || 1) - 1);
+}
+
 // --- GESTIÓN DE BD EVENTOS (Listar eventos activos filtrados por servidor) ---
 export async function handleBdEventosButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_bd_eventos') return false;
@@ -37,27 +72,23 @@ export async function handleBdEventosButton(interaction: ButtonInteraction): Pro
         return true;
     }
 
+    const options = await Promise.all(
+        events.slice(0, 25).map(async ev => {
+            const channelInfo = await getChannelDisplayName(interaction, ev);
+            const repetitions = getPendingRepetitions(ev);
+
+            return {
+                label: String(ev.title || 'Evento sin título').substring(0, 100),
+                description: `📢 ${channelInfo} · 🔁 ${repetitions} pendientes`.substring(0, 100),
+                value: ev._id.toString()
+            };
+        })
+    );
+
     const selectMenu = new StringSelectMenuBuilder()
         .setCustomId('bd_event_select_action')
         .setPlaceholder('Selecciona un evento para gestionar...')
-        .addOptions(
-            events.slice(0, 25).map(ev => {
-                const channelInfo = ev.channelName
-                    || (ev.channelId ? `<#${ev.channelId}>` : 'Sin canal registrado');
-
-                const repetitions = ev.remainingRepetitions !== undefined
-                    ? Math.max(0, Number(ev.remainingRepetitions) || 0)
-                    : Math.max(0, (Number(ev.remainingTimes) || 1) - 1);
-
-                const description = `📢 ${channelInfo} · 🔁 ${repetitions} pendientes`;
-
-                return {
-                    label: String(ev.title || 'Evento sin título').substring(0, 100),
-                    description: description.substring(0, 100),
-                    value: ev._id.toString()
-                };
-            })
-        );
+        .addOptions(options);
 
     const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
 
@@ -111,12 +142,8 @@ export async function handleBdEventosSelect(interaction: any): Promise<boolean> 
         ? new Date(ev.publishAt).toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })
         : 'Inmediato';
 
-    const channelInfo = ev.channelName
-        || (ev.channelId ? `<#${ev.channelId}>` : 'Sin canal registrado');
-
-    const repetitions = ev.remainingRepetitions !== undefined
-        ? Math.max(0, Number(ev.remainingRepetitions) || 0)
-        : Math.max(0, (Number(ev.remainingTimes) || 1) - 1);
+    const channelInfo = await getChannelDisplayName(interaction, ev);
+    const repetitions = getPendingRepetitions(ev);
 
     await interaction.update({
         content:
