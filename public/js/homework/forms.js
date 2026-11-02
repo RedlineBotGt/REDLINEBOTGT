@@ -1,6 +1,4 @@
 import {
-  ASIGNATURAS,
-  TIPOS,
   crearDeber,
   editarDeber
 } from "./api.js";
@@ -8,7 +6,7 @@ import {
 let deberEditando = null;
 
 /**
- * Muestra el formulario para crear o editar.
+ * Muestra el formulario para crear o editar un deber.
  */
 export function mostrarFormularioDeber(deber = null) {
   const formulario = document.getElementById("homework-form");
@@ -39,7 +37,9 @@ export function mostrarFormularioDeber(deber = null) {
     if (campoAsignatura) campoAsignatura.value = deber.asignatura || "";
     if (campoTipo) campoTipo.value = deber.tipo || "";
     if (campoContenido) campoContenido.value = deber.contenido || "";
-    if (campoDestinatario) campoDestinatario.value = deber.destinatario || "";
+    if (campoDestinatario) {
+      campoDestinatario.value = deber.destinatario || "";
+    }
 
     if (campoFecha) {
       campoFecha.value = deber.fechaLimite
@@ -48,6 +48,7 @@ export function mostrarFormularioDeber(deber = null) {
     }
   } else {
     if (titulo) titulo.textContent = "Nuevo deber";
+
     if (campoId) campoId.value = "";
     if (campoDestinatario) campoDestinatario.value = "leo";
   }
@@ -65,20 +66,25 @@ export function mostrarFormularioDeber(deber = null) {
  */
 export function ocultarFormularioDeber() {
   const formulario = document.getElementById("homework-form");
+  const campoId = document.getElementById("homework-id");
 
   if (formulario) {
     formulario.reset();
     formulario.classList.add("hidden");
   }
 
+  if (campoId) {
+    campoId.value = "";
+  }
+
   deberEditando = null;
 }
 
 /**
- * Guarda un deber nuevo o actualiza uno existente.
+ * Guarda un deber nuevo o los cambios de uno existente.
  */
 export async function guardarFormularioDeber() {
-  const mensaje = document.getElementById("homework-form-message");
+  const mensaje = document.getElementById("homework-message");
   const boton = document.getElementById("homework-save-btn");
 
   const campoTitulo = document.getElementById("homework-title-input");
@@ -111,10 +117,12 @@ export async function guardarFormularioDeber() {
   try {
     if (mensaje) {
       mensaje.textContent = "Guardando deber...";
-      mensaje.className = "homework-form-message";
+      mensaje.className = "homework-message";
     }
 
-    if (boton) boton.disabled = true;
+    if (boton) {
+      boton.disabled = true;
+    }
 
     if (deberEditando?._id) {
       await editarDeber(deberEditando._id, deber);
@@ -126,7 +134,7 @@ export async function guardarFormularioDeber() {
 
     if (mensaje) {
       mensaje.textContent = "Deber guardado correctamente.";
-      mensaje.className = "homework-form-message success";
+      mensaje.className = "homework-message success";
     }
 
     if (typeof window.cargarDeberes === "function") {
@@ -137,9 +145,11 @@ export async function guardarFormularioDeber() {
       mensaje.textContent =
         error.message || "No se ha podido guardar el deber.";
 
-      mensaje.className = "homework-form-message error";
+      mensaje.className = "homework-message error";
     }
   } finally {
-    if (boton) boton.disabled = false;
+    if (boton) {
+      boton.disabled = false;
+    }
   }
 }
