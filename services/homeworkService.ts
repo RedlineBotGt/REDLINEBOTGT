@@ -1,4 +1,3 @@
-
 import {
   MongoClient,
   ObjectId,
@@ -161,6 +160,26 @@ export async function editarDeber(
   for (const campo of permitidos) {
     if (campo in cambios) {
       actualizaciones[campo] = cambios[campo as keyof Deber];
+    }
+  }
+
+  // Permitir cambiar el estado desde la edición de Papá.
+  if ("estado" in cambios) {
+    if (
+      cambios.estado !== "pendiente" &&
+      cambios.estado !== "completado"
+    ) {
+      throw new Error("Estado de deber no válido.");
+    }
+
+    actualizaciones.estado = cambios.estado;
+
+    if (cambios.estado === "pendiente") {
+      actualizaciones.completadoEn = null;
+      actualizaciones.completadoPor = null;
+    } else {
+      actualizaciones.completadoEn = new Date();
+      actualizaciones.completadoPor = "papa";
     }
   }
 
