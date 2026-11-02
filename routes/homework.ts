@@ -1,4 +1,3 @@
-
 import { Router, Request, Response, NextFunction } from "express";
 import crypto from "crypto";
 
@@ -157,6 +156,11 @@ const DESTINATARIOS: DestinatarioDeber[] = [
   "mama"
 ];
 
+const ESTADOS: EstadoDeber[] = [
+  "pendiente",
+  "completado"
+];
+
 function validarDatosDeber(datos: any): string | null {
   if (!datos || typeof datos !== "object") {
     return "Los datos del deber no son válidos.";
@@ -280,7 +284,7 @@ router.get(
       if (req.query.estado) {
         const estado = String(req.query.estado);
 
-        if (!["pendiente", "completado"].includes(estado)) {
+        if (!ESTADOS.includes(estado as EstadoDeber)) {
           return res.status(400).json({
             ok: false,
             error: "Estado no válido."
@@ -341,8 +345,6 @@ router.get(
 );
 
 // ===== FIN DE LA PARTE 1 =====
-
- 
 // ========================================
 // CREAR DEBER
 // ========================================
@@ -397,7 +399,8 @@ router.patch(
         "tipo",
         "contenido",
         "destinatario",
-        "fechaLimite"
+        "fechaLimite",
+        "estado"
       ];
 
       const datos: any = {};
@@ -456,6 +459,16 @@ router.patch(
         return res.status(400).json({
           ok: false,
           error: "El destinatario no es válido."
+        });
+      }
+
+      if (
+        datos.estado !== undefined &&
+        !ESTADOS.includes(datos.estado)
+      ) {
+        return res.status(400).json({
+          ok: false,
+          error: "El estado no es válido."
         });
       }
 
@@ -638,4 +651,3 @@ router.patch(
 );
 
 export default router;
-
