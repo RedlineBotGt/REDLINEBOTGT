@@ -10,10 +10,11 @@ let deberEditando = null;
  */
 export function mostrarFormularioDeber(deber = null) {
   const formulario = document.getElementById("homework-form");
+  const contenedor = document.getElementById("homework-form-container");
   const titulo = document.getElementById("homework-form-title");
 
-  if (!formulario) {
-    console.error("[DEBERES] No se encuentra homework-form.");
+  if (!formulario || !contenedor) {
+    console.error("[DEBERES] No se encuentra el formulario o su contenedor.");
     return;
   }
 
@@ -29,6 +30,7 @@ export function mostrarFormularioDeber(deber = null) {
   const campoDestinatario = document.getElementById("homework-recipient");
   const campoFecha = document.getElementById("homework-deadline");
   const campoEstado = document.getElementById("homework-status");
+  const grupoEstado = document.getElementById("homework-status-group");
 
   if (deber) {
     if (titulo) titulo.textContent = "Editar deber";
@@ -51,9 +53,12 @@ export function mostrarFormularioDeber(deber = null) {
 
     if (campoEstado) {
       campoEstado.value = deber.estado || "pendiente";
-      campoEstado.closest(".form-group")?.classList.remove("hidden");
-      campoEstado.parentElement?.classList.remove("hidden");
     }
+
+    if (grupoEstado) {
+      grupoEstado.classList.remove("hidden");
+    }
+
   } else {
     if (titulo) titulo.textContent = "Nuevo deber";
 
@@ -62,14 +67,17 @@ export function mostrarFormularioDeber(deber = null) {
 
     if (campoEstado) {
       campoEstado.value = "pendiente";
-      campoEstado.closest(".form-group")?.classList.add("hidden");
-      campoEstado.parentElement?.classList.add("hidden");
+    }
+
+    if (grupoEstado) {
+      grupoEstado.classList.add("hidden");
     }
   }
 
+  contenedor.classList.remove("hidden");
   formulario.classList.remove("hidden");
 
-  formulario.scrollIntoView({
+  contenedor.scrollIntoView({
     behavior: "smooth",
     block: "start"
   });
@@ -80,15 +88,25 @@ export function mostrarFormularioDeber(deber = null) {
  */
 export function ocultarFormularioDeber() {
   const formulario = document.getElementById("homework-form");
+  const contenedor = document.getElementById("homework-form-container");
   const campoId = document.getElementById("homework-id");
+  const grupoEstado = document.getElementById("homework-status-group");
 
   if (formulario) {
     formulario.reset();
     formulario.classList.add("hidden");
   }
 
+  if (contenedor) {
+    contenedor.classList.add("hidden");
+  }
+
   if (campoId) {
     campoId.value = "";
+  }
+
+  if (grupoEstado) {
+    grupoEstado.classList.add("hidden");
   }
 
   deberEditando = null;
@@ -99,6 +117,7 @@ export function ocultarFormularioDeber() {
  */
 export async function guardarFormularioDeber() {
   const mensaje = document.getElementById("homework-message");
+  const mensajeFormulario = document.getElementById("homework-form-message");
   const boton = document.getElementById("homework-save-btn");
 
   const campoTitulo = document.getElementById("homework-title-input");
@@ -134,9 +153,13 @@ export async function guardarFormularioDeber() {
   }
 
   try {
+    if (mensajeFormulario) {
+      mensajeFormulario.textContent = "Guardando deber...";
+      mensajeFormulario.className = "homework-message";
+    }
+
     if (mensaje) {
-      mensaje.textContent = "Guardando deber...";
-      mensaje.className = "homework-message";
+      mensaje.textContent = "";
     }
 
     if (boton) {
@@ -151,6 +174,11 @@ export async function guardarFormularioDeber() {
 
     ocultarFormularioDeber();
 
+    if (mensajeFormulario) {
+      mensajeFormulario.textContent = "Deber guardado correctamente.";
+      mensajeFormulario.className = "homework-message success";
+    }
+
     if (mensaje) {
       mensaje.textContent = "Deber guardado correctamente.";
       mensaje.className = "homework-message success";
@@ -159,13 +187,21 @@ export async function guardarFormularioDeber() {
     if (typeof window.cargarDeberes === "function") {
       await window.cargarDeberes();
     }
-  } catch (error) {
-    if (mensaje) {
-      mensaje.textContent =
-        error.message || "No se ha podido guardar el deber.";
 
+  } catch (error) {
+    const textoError =
+      error.message || "No se ha podido guardar el deber.";
+
+    if (mensajeFormulario) {
+      mensajeFormulario.textContent = textoError;
+      mensajeFormulario.className = "homework-message error";
+    }
+
+    if (mensaje) {
+      mensaje.textContent = textoError;
       mensaje.className = "homework-message error";
     }
+
   } finally {
     if (boton) {
       boton.disabled = false;
