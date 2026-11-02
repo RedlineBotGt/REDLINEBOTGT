@@ -324,3 +324,31 @@ button:disabled {
     transition-duration: 0.01ms !important;
   }
 }
+/* ========================================
+   PERFILES: COLUMNA VERTICAL CENTRADA
+======================================== */
+
+.profiles {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100%;
+  gap: 16px;
+}
+
+.profile-card {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  width: 100%;
+  max-width: 320px;
+  min-height: 75px;
+  gap: 18px;
+  text-align: left;
+}
+
+.profile-card span {
+  display: inline-block;
+}
