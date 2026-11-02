@@ -15,10 +15,12 @@ import { handleGlobalInteraction } from './generalinteraction';
 import { setupNicknameSystem } from './dashadmin/nickname/nicknamemanager';
 import { setupWelcomeSystem } from './dashadmin/welcome/welcomemanager';
 import { setupAvisosSystem } from './dashadmin/avisos/avisosmanager';
+
 import {
     setupPollSystem,
     handleEncuestaReactionAdd
 } from './dashadmin/encuestas/encuestasmanager';
+
 import { setupEventWorker } from './dashadmin/eventos/eventosworker';
 
 import express from 'express';
@@ -51,6 +53,12 @@ const app = express();
 
 const PORT = Number(process.env.PORT) || 10000;
 
+// Ruta principal para comprobar que REDLINE está activo.
+app.get('/', (req, res) => {
+    res.status(200).send('REDLINE Bot GT activo');
+});
+
+// Ruta de comprobación de salud.
 app.get('/health', (req, res) => {
     res.status(200).json({
         success: true,
@@ -58,9 +66,16 @@ app.get('/health', (req, res) => {
     });
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(
         `🌐 Servidor de salud HTTP activo en el puerto ${PORT}`
+    );
+});
+
+server.on('error', (error) => {
+    console.error(
+        '❌ Error en el servidor HTTP:',
+        error
     );
 });
 
@@ -88,8 +103,7 @@ import * as dashAdminCommand from './dashadmin/dashadmin';
 
 let cachedCollection: MongoCollection | null = null;
 
-let mongoConnectionPromise:
-    Promise<MongoCollection> | null = null;
+let mongoConnectionPromise: Promise<MongoCollection> | null = null;
 
 export async function getEventsCollection(): Promise<MongoCollection> {
     if (cachedCollection) {
@@ -279,15 +293,21 @@ console.log(
     '🔄 [Discord] Intentando conectar el cliente...'
 );
 
-client.login(process.env.DISCORD_TOKEN)
-    .then(() => {
-        console.log(
-            '✅ [Discord] Inicio de sesión completado.'
-        );
-    })
-    .catch((error) => {
-        console.error(
-            '❌ Error al iniciar sesión en Discord:',
-            error
-        );
-    });
+if (!process.env.DISCORD_TOKEN) {
+    console.error(
+        '❌ No se ha encontrado la variable DISCORD_TOKEN.'
+    );
+} else {
+    client.login(process.env.DISCORD_TOKEN)
+        .then(() => {
+            console.log(
+                '✅ [Discord] Inicio de sesión completado.'
+            );
+        })
+        .catch((error) => {
+            console.error(
+                '❌ Error al iniciar sesión en Discord:',
+                error
+            );
+        });
+}
