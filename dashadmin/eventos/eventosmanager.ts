@@ -1,8 +1,9 @@
-import { 
-    ActionRowBuilder, 
-    ButtonStyle, 
-    ButtonBuilder, 
-    EmbedBuilder 
+
+import {
+    ActionRowBuilder,
+    ButtonStyle,
+    ButtonBuilder,
+    EmbedBuilder
 } from 'discord.js';
 
 export function buildEventEmbedAndRows(ev: any) {
@@ -30,23 +31,69 @@ export function buildEventEmbedAndRows(ev: any) {
     }
 
     embed.addFields(
-        { name: `✅ Asistiré (${yesList.length}/15)`, value: formatVerticalList(yesList), inline: false }, // 👈 Cambiado a /15
-        { name: `🔃 Reserva (${reserveList.length})`, value: formatVerticalList(reserveList), inline: false },
-        { name: `❔ Duda (${maybeList.length})`, value: formatVerticalList(maybeList), inline: false },
-        { name: `❌ No puedo (${noList.length})`, value: formatVerticalList(noList), inline: false }
+        {
+            name: `✅ Titulares (${yesList.length}/15)`,
+            value: formatVerticalList(yesList),
+            inline: false
+        },
+        {
+            name: `🔃 Reservas (${reserveList.length}/11)`,
+            value: formatVerticalList(reserveList),
+            inline: false
+        },
+        {
+            name: `❔ Duda (${maybeList.length})`,
+            value: formatVerticalList(maybeList),
+            inline: false
+        },
+        {
+            name: `❌ No puedo (${noList.length})`,
+            value: formatVerticalList(noList),
+            inline: false
+        }
     );
 
-    // 🖲️ Botón con emoji '🔃' totalmente compatible con la API de Discord
     const rowRsvp = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('event_rsvp_yes').setLabel('Asistiré').setStyle(ButtonStyle.Success).setEmoji('✅').setDisabled(isClosed),
-        new ButtonBuilder().setCustomId('event_rsvp_reserve').setLabel('Reserva').setStyle(ButtonStyle.Primary).setEmoji('🔃').setDisabled(isClosed),
-        new ButtonBuilder().setCustomId('event_rsvp_maybe').setLabel('Duda').setStyle(ButtonStyle.Secondary).setEmoji('❓').setDisabled(isClosed),
-        new ButtonBuilder().setCustomId('event_rsvp_no').setLabel('No puedo').setStyle(ButtonStyle.Danger).setEmoji('✖️').setDisabled(isClosed)
+        new ButtonBuilder()
+            .setCustomId('event_rsvp_yes')
+            .setLabel('Titulares')
+            .setStyle(ButtonStyle.Success)
+            .setEmoji('✅')
+            .setDisabled(isClosed),
+
+        new ButtonBuilder()
+            .setCustomId('event_rsvp_reserve')
+            .setLabel('Reserva')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('🔃')
+            .setDisabled(isClosed),
+
+        new ButtonBuilder()
+            .setCustomId('event_rsvp_maybe')
+            .setLabel('Duda')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('❓')
+            .setDisabled(isClosed),
+
+        new ButtonBuilder()
+            .setCustomId('event_rsvp_no')
+            .setLabel('No puedo')
+            .setStyle(ButtonStyle.Danger)
+            .setEmoji('✖️')
+            .setDisabled(isClosed)
     );
 
     const rowAdmin = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('event_admin_manage').setLabel('Gestión Admin').setStyle(ButtonStyle.Secondary).setEmoji('⚙️').setDisabled(isClosed)
+        new ButtonBuilder()
+            .setCustomId('event_admin_manage')
+            .setLabel('Gestión Admin')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('⚙️')
+            .setDisabled(isClosed)
     );
 
-    return { embed, components: isClosed ? [rowRsvp] : [rowRsvp, rowAdmin] };
+    return {
+        embed,
+        components: isClosed ? [rowRsvp] : [rowRsvp, rowAdmin]
+    };
 }
