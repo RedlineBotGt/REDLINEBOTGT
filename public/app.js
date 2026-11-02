@@ -325,6 +325,19 @@ function volverAsignaturas() {
   mostrarPantalla("subjects-screen");
 }
 
+function volverPerfiles() {
+  peticionActual++;
+
+  perfilActual = null;
+  asignaturaActual = null;
+  preguntaActual = null;
+  preguntaLocal = false;
+
+  mostrarPantalla("profiles-screen");
+
+  console.log("[ACADEMIA] Volviendo a selección de perfil");
+}
+
 function siguientePregunta() {
   if (!asignaturaActual || !perfilActual) return;
 
@@ -336,9 +349,6 @@ function siguientePregunta() {
 // ========================================
 
 document.addEventListener("DOMContentLoaded", () => {
-
-  // Siempre comenzar mostrando la selección de perfil.
-  // El perfil anterior ya no se selecciona automáticamente.
   perfilActual = null;
   mostrarPantalla("profiles-screen");
 
@@ -359,5 +369,6 @@ window.seleccionarPerfil = seleccionarPerfil;
 window.abrirAsignatura = abrirAsignatura;
 window.enviarRespuesta = enviarRespuesta;
 window.volverAsignaturas = volverAsignaturas;
+window.volverPerfiles = volverPerfiles;
 window.siguientePregunta = siguientePregunta;
 window.mostrarPista = mostrarPista;
