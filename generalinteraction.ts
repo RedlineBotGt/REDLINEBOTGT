@@ -1,15 +1,16 @@
+
 import { Interaction, Client } from 'discord.js';
+
 import { handleDashAdminInteractions } from './dashadmin/interactiondashadmin';
 import { handleSheetsInteraction } from './dashsheet/sheetsInteraction';
 import { handleDadoModalSubmit } from './commands/dado';
 import { handleAvisosInteractions } from './dashadmin/avisos/interactionavisos';
-import { handleClubInteractions } from './dashadmin/club/clubactions';
 import { handlePQ2Interactions } from './dashsheet/PQ2/interactionPQ2';
-import { handleMenuInteraction } from './LCS/menu/menuactions';
-import { handleRetosInteraction } from './LCS/menu/retos/retosactions'; // 👈 Retos / Mates
-import { handleLenguaInteraction } from './LCS/menu/lengua/lenguaactions'; // 👈 Lengua
 
-export async function handleGlobalInteraction(interaction: Interaction, client: Client & { commands?: Map<string, any> }) {
+export async function handleGlobalInteraction(
+    interaction: Interaction,
+    client: Client & { commands?: Map<string, any> }
+) {
     try {
         // 1. Manejo de Comandos Slash generales o de PQ2
         if (interaction.isChatInputCommand()) {
@@ -19,10 +20,17 @@ export async function handleGlobalInteraction(interaction: Interaction, client: 
             const command = client.commands?.get(interaction.commandName);
 
             if (!command) {
-                console.warn(`⚠ Comando no encontrado en la colección: ${interaction.commandName}`);
+                console.warn(
+                    `⚠ Comando no encontrado en la colección: ${interaction.commandName}`
+                );
+
                 if (interaction.isRepliable()) {
-                    await interaction.reply({ content: '❌ Este comando no está disponible o no ha sido cargado.', ephemeral: true });
+                    await interaction.reply({
+                        content: '❌ Este comando no está disponible o no ha sido cargado.',
+                        ephemeral: true
+                    });
                 }
+
                 return;
             }
 
@@ -30,15 +38,14 @@ export async function handleGlobalInteraction(interaction: Interaction, client: 
             return;
         }
 
-        // 1.5. Manejo del Modal del Dado
-        if (interaction.isModalSubmit() && interaction.customId === 'modal_dado_lanza') {
+        // 2. Manejo del Modal del Dado
+        if (
+            interaction.isModalSubmit() &&
+            interaction.customId === 'modal_dado_lanza'
+        ) {
             const handledDado = await handleDadoModalSubmit(interaction);
             if (handledDado) return;
         }
-
-        // 2. Manejo de Interacciones de GT Club
-        const handledByClub = await handleClubInteractions(interaction);
-        if (handledByClub) return;
 
         // 3. Manejo de Interacciones del Panel Admin
         const handledByAdmin = await handleDashAdminInteractions(interaction);
@@ -52,28 +59,29 @@ export async function handleGlobalInteraction(interaction: Interaction, client: 
         const handledByAvisos = await handleAvisosInteractions(interaction);
         if (handledByAvisos) return;
 
-        // 6. Manejo de Interacciones del Menú Fijo de LCS
-        const handledByMenu = await handleMenuInteraction(interaction);
-        if (handledByMenu) return;
-
-        // 6.1 Manejo de Interacciones del Módulo de Retos (Mates / Ranking)
-        const handledByRetos = await handleRetosInteraction(interaction);
-        if (handledByRetos) return;
-
-        // 6.2 Manejo de Interacciones del Módulo de Lengua
-        const handledByLengua = await handleLenguaInteraction(interaction);
-        if (handledByLengua) return;
-
-        // 7. Si ningún router reclamó el componente
-        if (interaction.isButton() || interaction.isModalSubmit() || interaction.isAnySelectMenu()) {
-            console.warn(`⚠ Interacción no reclamada [CustomId: ${interaction.customId}]`);
+        // 6. Si ningún router reclamó el componente
+        if (
+            interaction.isButton() ||
+            interaction.isModalSubmit() ||
+            interaction.isAnySelectMenu()
+        ) {
+            console.warn(
+                `⚠ Interacción no reclamada [CustomId: ${interaction.customId}]`
+            );
         }
 
     } catch (error) {
-        console.error('❌ Error crítico en el enrutador global de interacciones:', error);
+        console.error(
+            '❌ Error crítico en el enrutador global de interacciones:',
+            error
+        );
 
         if (interaction.isRepliable()) {
-            const errorPayload = { content: '❌ Hubo un error interno al procesar esta acción.', ephemeral: true };
+            const errorPayload = {
+                content: '❌ Hubo un error interno al procesar esta acción.',
+                ephemeral: true
+            };
+
             if (interaction.deferred || interaction.replied) {
                 await interaction.followUp(errorPayload).catch(() => {});
             } else {
