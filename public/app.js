@@ -31,6 +31,7 @@ const preguntasLocales = {
       pista: "Es un número par."
     }
   ],
+
   matematicas: [
     {
       pregunta: "¿Cuánto es 8 × 7?",
@@ -39,6 +40,7 @@ const preguntasLocales = {
       pista: "Suma ocho veces el número siete."
     }
   ],
+
   geografia: [
     {
       pregunta: "¿Cuál es la capital de España?",
@@ -320,11 +322,13 @@ function mostrarPista() {
 // NAVEGACIÓN
 // ========================================
 
+// Volver desde un ejercicio a las asignaturas.
 function volverAsignaturas() {
   peticionActual++;
   mostrarPantalla("subjects-screen");
 }
 
+// Volver desde las asignaturas a la selección de perfiles.
 function volverPerfiles() {
   peticionActual++;
 
@@ -335,9 +339,10 @@ function volverPerfiles() {
 
   mostrarPantalla("profiles-screen");
 
-  console.log("[ACADEMIA] Volviendo a selección de perfil");
+  console.log("[ACADEMIA] Regreso al menú de perfiles");
 }
 
+// Siguiente pregunta.
 function siguientePregunta() {
   if (!asignaturaActual || !perfilActual) return;
 
@@ -350,13 +355,8 @@ function siguientePregunta() {
 
 document.addEventListener("DOMContentLoaded", () => {
   perfilActual = null;
+
   mostrarPantalla("profiles-screen");
-
-  const botonPista = obtenerElemento("hint-btn");
-
-  if (botonPista) {
-    botonPista.addEventListener("click", mostrarPista);
-  }
 
   console.log("[ACADEMIA] Interfaz iniciada correctamente");
 });
