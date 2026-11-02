@@ -221,7 +221,9 @@ export function setupEventWorker(client: Client) {
                     if (!ev.rsvps.reserve) ev.rsvps.reserve = [];
 
                     // 🔄 AUTOMATIZACIÓN T-30
-                    const MAX_TITULARES = 16;
+                    // Máximo de 15 titulares. Las reservas promocionadas
+                    // no aumentan el total de pilotos apuntados.
+                    const MAX_TITULARES = 15;
 
                     const huecosLibres = MAX_TITULARES - ev.rsvps.yes.length;
 
