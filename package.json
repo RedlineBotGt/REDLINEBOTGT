@@ -1,4 +1,3 @@
-
 {
   "name": "academia-campos",
   "version": "1.0.0",
@@ -8,7 +7,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node --input-type=module -e \"import { cpSync, mkdirSync } from 'node:fs'; mkdirSync('dist/public', { recursive: true }); cpSync('public', 'dist/public', { recursive: true });\"",
     "start": "node dist/server.js",
     "dev": "tsx watch server.ts"
   },
