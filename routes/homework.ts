@@ -1,3 +1,4 @@
+
 import { Router, Request, Response, NextFunction } from "express";
 import crypto from "crypto";
 
@@ -6,7 +7,8 @@ import {
   crearDeber,
   editarDeber,
   eliminarDeber,
-  completarDeber
+  completarDeber,
+  reabrirDeber
 } from "../services/homeworkService.ts";
 
 import type {
@@ -211,7 +213,9 @@ function validarDatosDeber(datos: any): string | null {
   return null;
 }
 
+// ========================================
 // ACCESO DE PAPÁ
+// ========================================
 
 router.post(
   "/homework/auth",
@@ -233,7 +237,9 @@ router.post(
   }
 );
 
+// ========================================
 // CONSULTAR DEBERES
+// ========================================
 
 router.get(
   "/homework",
@@ -286,14 +292,8 @@ router.get(
 
       if (perfil === "papa") {
         const [deberesLeo, deberesMama] = await Promise.all([
-          listarDeberes({
-            ...filtros,
-            perfil: "leo"
-          }),
-          listarDeberes({
-            ...filtros,
-            perfil: "mama"
-          })
+          listarDeberes({ ...filtros, perfil: "leo" }),
+          listarDeberes({ ...filtros, perfil: "mama" })
         ]);
 
         const deberes = [...deberesLeo, ...deberesMama]
@@ -320,10 +320,7 @@ router.get(
             );
           });
 
-        return res.json({
-          ok: true,
-          deberes
-        });
+        return res.json({ ok: true, deberes });
       }
 
       const deberes = await listarDeberes({
@@ -331,22 +328,10 @@ router.get(
         perfil
       });
 
-      return res.json({
-        ok: true,
-        deberes
-      });
-    } catch (error) {
-      console.error("[HOMEWORK] Error al consultar:", error);
-
-      return res.status(500).json({
-        ok: false,
-        error: "No se han podido consultar los deberes."
-      });
-    }
-  }
-);
-
+ 
+// ========================================
 // CREAR DEBER
+// ========================================
 
 router.post(
   "/homework",
@@ -371,10 +356,7 @@ router.post(
         fechaLimite: req.body.fechaLimite || null
       });
 
-      return res.status(201).json({
-        ok: true,
-        deber
-      });
+      return res.status(201).json({ ok: true, deber });
     } catch (error) {
       console.error("[HOMEWORK] Error al crear:", error);
 
@@ -386,7 +368,10 @@ router.post(
   }
 );
 
+// ========================================
 // EDITAR DEBER
+// ========================================
+
 router.patch(
   "/homework/:id",
   requierePapa,
@@ -490,32 +475,24 @@ router.patch(
         }
       }
 
-      if (datos.tipo === "enlace" || datos.contenido !== undefined) {
-        const tipoFinal = datos.tipo;
-        const contenidoFinal = datos.contenido;
+      if (datos.tipo === "enlace" && datos.contenido !== undefined) {
+        try {
+          const url = new URL(datos.contenido);
 
-        if (tipoFinal === "enlace" && contenidoFinal !== undefined) {
-          try {
-            const url = new URL(contenidoFinal);
-
-            if (!["http:", "https:"].includes(url.protocol)) {
-              throw new Error("Protocolo no permitido");
-            }
-          } catch {
-            return res.status(400).json({
-              ok: false,
-              error: "El enlace no tiene un formato válido."
-            });
+          if (!["http:", "https:"].includes(url.protocol)) {
+            throw new Error("Protocolo no permitido");
           }
+        } catch {
+          return res.status(400).json({
+            ok: false,
+            error: "El enlace no tiene un formato válido."
+          });
         }
       }
 
       const deber = await editarDeber(req.params.id, datos);
 
-      return res.json({
-        ok: true,
-        deber
-      });
+      return res.json({ ok: true, deber });
     } catch (error) {
       console.error("[HOMEWORK] Error al editar:", error);
 
@@ -527,7 +504,9 @@ router.patch(
   }
 );
 
+// ========================================
 // ELIMINAR DEBER
+// ========================================
 
 router.delete(
   "/homework/:id",
@@ -558,7 +537,9 @@ router.delete(
   }
 );
 
+// ========================================
 // COMPLETAR DEBER
+// ========================================
 
 router.patch(
   "/homework/:id/complete",
@@ -578,10 +559,7 @@ router.patch(
         perfil as DestinatarioDeber
       );
 
-      return res.json({
-        ok: true,
-        deber
-      });
+      return res.json({ ok: true, deber });
     } catch (error) {
       console.error("[HOMEWORK] Error al completar:", error);
 
@@ -593,4 +571,70 @@ router.patch(
   }
 );
 
+// ========================================
+// REABRIR DEBER
+// ========================================
+
+router.patch(
+  "/homework/:id/reopen",
+  async (req: Request, res: Response) => {
+    try {
+      const perfil = String(req.body?.perfil || "");
+
+      let deber;
+
+      if (perfil === "papa") {
+        const autorizacion = req.headers.authorization || "";
+        const token = autorizacion.startsWith("Bearer ")
+          ? autorizacion.slice(7)
+          : "";
+
+        if (!token || !comprobarToken(token)) {
+          return res.status(401).json({
+            ok: false,
+            error: "Necesitas iniciar sesión como Papá."
+          });
+        }
+
+        deber = await reabrirDeber(req.params.id);
+      } else if (
+        DESTINATARIOS.includes(perfil as DestinatarioDeber)
+      ) {
+        deber = await reabrirDeber(
+          req.params.id,
+          perfil as DestinatarioDeber
+        );
+      } else {
+        return res.status(400).json({
+          ok: false,
+          error: "Perfil no válido."
+        });
+      }
+
+      return res.json({ ok: true, deber });
+    } catch (error) {
+      console.error("[HOMEWORK] Error al reabrir:", error);
+
+      return res.status(404).json({
+        ok: false,
+        error: "No se ha encontrado un deber completado para este perfil."
+      });
+    }
+  }
+);
+
 export default router;
+
+      return res.json({ ok: true, deberes });
+    } catch (error) {
+      console.error("[HOMEWORK] Error al consultar:", error);
+
+      return res.status(500).json({
+        ok: false,
+        error: "No se han podido consultar los deberes."
+      });
+    }
+  }
+);
+
+// ===== FIN DE LA PARTE 1 =====
