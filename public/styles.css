@@ -324,6 +324,7 @@ button:disabled {
     transition-duration: 0.01ms !important;
   }
 }
+
 /* ========================================
    PERFILES: COLUMNA VERTICAL CENTRADA
 ======================================== */
@@ -351,4 +352,393 @@ button:disabled {
 
 .profile-card span {
   display: inline-block;
+}
+/* ========================================
+   DEBERES
+======================================== */
+
+/* Entrada a deberes */
+
+.homework-entry {
+  width: 100%;
+  margin-top: 22px;
+}
+
+#open-homework-btn {
+  display: block;
+  width: 100%;
+  min-height: 50px;
+  padding: 13px 18px;
+  background: var(--primary);
+  color: #082033;
+  border: 0;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+#open-homework-btn:hover {
+  transform: translateY(-2px);
+}
+
+/* Pantalla de deberes */
+
+#homework-screen {
+  width: 100%;
+}
+
+#homework-screen h2 {
+  color: var(--text);
+  margin-bottom: 18px;
+}
+
+/* Botones generales de deberes */
+
+#homework-screen button {
+  font-family: inherit;
+}
+
+#homework-screen button:not(:disabled) {
+  cursor: pointer;
+}
+
+#homework-screen button:disabled {
+  cursor: not-allowed;
+}
+
+/* Acceso de Papá */
+
+#homework-login {
+  background: var(--panel-light);
+  padding: 20px;
+  border-radius: 14px;
+  margin-bottom: 20px;
+}
+
+#homework-login p {
+  margin-top: 0;
+}
+
+#homework-pin {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  padding: 12px;
+  margin: 12px 0;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+#homework-login button {
+  width: 100%;
+  min-height: 46px;
+  padding: 12px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--primary);
+  color: #082033;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+#homework-login-message,
+#homework-message {
+  margin-top: 12px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+/* Gestión y formulario */
+
+#homework-management {
+  width: 100%;
+}
+
+#homework-new-btn {
+  width: 100%;
+  min-height: 46px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--success);
+  color: #052e24;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+#homework-form {
+  padding: 18px;
+  margin-bottom: 22px;
+  background: var(--panel-light);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+#homework-form label {
+  display: block;
+  margin: 14px 0 6px;
+  color: var(--text);
+  font-weight: bold;
+  font-size: 0.95rem;
+}
+
+#homework-form input,
+#homework-form select,
+#homework-form textarea {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+#homework-form textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+#homework-form input::placeholder,
+#homework-form textarea::placeholder {
+  color: var(--muted);
+  opacity: 0.8;
+}
+
+#homework-form select {
+  color-scheme: dark;
+}
+
+.homework-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.homework-form-actions button {
+  flex: 1 1 130px;
+  min-height: 44px;
+  padding: 11px 14px;
+  border: 0;
+  border-radius: 9px;
+  font-weight: bold;
+  font-size: 0.95rem;
+}
+
+#homework-save-btn {
+  background: var(--success);
+  color: #052e24;
+}
+
+.homework-form-actions button[type="button"] {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+/* Filtros */
+
+.homework-filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 20px 0;
+  padding: 14px;
+  background: var(--panel-light);
+  border-radius: 12px;
+}
+
+.homework-filters select {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 9px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+#homework-screen #homework-filter-recipient,
+#homework-screen #homework-filter-subject,
+#homework-screen #homework-filter-state {
+  color-scheme: dark;
+}
+
+/* Listado */
+
+#homework-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+#homework-list:empty {
+  display: none;
+}
+
+/* Tarjetas de deberes */
+
+.homework-card {
+  padding: 17px;
+  background: var(--panel-light);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  overflow-wrap: anywhere;
+}
+
+.homework-card h3 {
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: 1.1rem;
+  line-height: 1.4;
+}
+
+.homework-card p {
+  margin: 8px 0;
+  line-height: 1.5;
+}
+
+.homework-card a {
+  color: var(--primary);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.homework-card a:hover {
+  text-decoration: underline;
+}
+
+/* Información y estado */
+
+.homework-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 10px 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.homework-status {
+  display: inline-block;
+  padding: 5px 10px;
+  margin: 5px 0;
+  border-radius: 20px;
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  font-size: 0.82rem;
+  font-weight: bold;
+}
+
+.homework-status.completed {
+  background: rgba(52, 211, 153, 0.15);
+  color: var(--success);
+}
+
+/* Acciones de cada deber */
+
+.homework-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.homework-actions button {
+  flex: 1 1 110px;
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.homework-actions button:first-child {
+  background: var(--success);
+  color: #052e24;
+}
+
+.homework-actions button:nth-child(2) {
+  background: var(--primary);
+  color: #082033;
+}
+
+.homework-actions button:last-child {
+  background: rgba(251, 113, 133, 0.16);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+/* Mensajes */
+
+#homework-message:empty,
+#homework-login-message:empty {
+  display: none;
+}
+
+/* ========================================
+   DEBERES: ADAPTACIÓN A MÓVILES
+======================================== */
+
+@media (max-width: 600px) {
+  #homework-screen {
+    padding: 0;
+  }
+
+  #homework-form {
+    padding: 14px;
+  }
+
+  .homework-filters {
+    grid-template-columns: 1fr;
+    gap: 9px;
+    padding: 12px;
+  }
+
+  .homework-filters select {
+    min-height: 44px;
+    font-size: 0.95rem;
+  }
+
+  .homework-card {
+    padding: 14px;
+  }
+
+  .homework-card h3 {
+    font-size: 1.05rem;
+  }
+
+  .homework-actions {
+    flex-direction: column;
+  }
+
+  .homework-actions button {
+    width: 100%;
+    flex-basis: auto;
+    min-height: 44px;
+  }
+
+  .homework-form-actions {
+    flex-direction: column;
+  }
+
+  .homework-form-actions button {
+    width: 100%;
+    flex-basis: auto;
+    min-height: 44px;
+  }
 }
