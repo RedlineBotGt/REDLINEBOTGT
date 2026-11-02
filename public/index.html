@@ -118,6 +118,17 @@
         </button>
 
       </div>
+
+      <!-- ACCESO A DEBERES -->
+      <div class="homework-entry">
+        <button
+          type="button"
+          id="open-homework-btn"
+          onclick="abrirDeberes()"
+        >
+          📚 Consultar deberes
+        </button>
+      </div>
     </section>
 
     <!-- PANTALLA DE RETOS -->
@@ -188,6 +199,240 @@
         aria-live="polite"
         role="status"
       ></div>
+
+    </section>
+    <!-- PANTALLA DE DEBERES -->
+    <section
+      id="homework-screen"
+      class="screen hidden"
+      aria-labelledby="homework-title"
+    >
+
+      <button
+        type="button"
+        onclick="volverDesdeDeberes()"
+      >
+        ← Volver
+      </button>
+
+      <h2 id="homework-title">📚 Mis deberes</h2>
+
+      <p id="homework-description">
+        Aquí encontrarás tus tareas pendientes.
+      </p>
+
+      <!-- ACCESO DE PAPÁ -->
+      <div id="homework-login" class="hidden">
+
+        <h3>Acceso de Papá</h3>
+
+        <p>Introduce el PIN para gestionar los deberes.</p>
+
+        <label for="homework-pin">PIN</label>
+
+        <input
+          type="password"
+          id="homework-pin"
+          inputmode="numeric"
+          autocomplete="current-password"
+          placeholder="Introduce tu PIN"
+        >
+
+        <button
+          type="button"
+          id="homework-login-btn"
+          onclick="iniciarSesionDeberes()"
+        >
+          Entrar
+        </button>
+
+        <p
+          id="homework-login-message"
+          role="status"
+          aria-live="polite"
+        ></p>
+
+      </div>
+
+      <!-- GESTIÓN DE PAPÁ -->
+      <div id="homework-management" class="hidden">
+
+        <h3>Gestión de deberes</h3>
+
+        <button
+          type="button"
+          id="homework-new-btn"
+          onclick="mostrarFormularioDeber()"
+        >
+          ➕ Crear nuevo deber
+        </button>
+
+        <div id="homework-form-container" class="hidden">
+
+          <h3 id="homework-form-title">Nuevo deber</h3>
+
+          <form id="homework-form">
+
+            <input
+              type="hidden"
+              id="homework-id"
+            >
+
+            <label for="homework-title-input">
+              Título
+            </label>
+
+            <input
+              type="text"
+              id="homework-title-input"
+              maxlength="150"
+              required
+              placeholder="Ej. Leer el capítulo 3"
+            >
+
+            <label for="homework-subject">
+              Asignatura
+            </label>
+
+            <select id="homework-subject" required>
+              <option value="ciencias">Ciencias</option>
+              <option value="matematicas">Matemáticas</option>
+              <option value="lengua">Lengua</option>
+              <option value="geografia">Geografía</option>
+              <option value="historia">Historia</option>
+              <option value="ingles">Inglés</option>
+              <option value="cultura">Cultura general</option>
+              <option value="otras">Otras</option>
+            </select>
+
+            <label for="homework-type">
+              Tipo de deber
+            </label>
+
+            <select id="homework-type" required>
+              <option value="enlace">Enlace</option>
+              <option value="ejercicio">Ejercicio</option>
+              <option value="escrito">Trabajo escrito</option>
+            </select>
+
+            <label for="homework-content">
+              Contenido o instrucciones
+            </label>
+
+            <textarea
+              id="homework-content"
+              rows="5"
+              maxlength="10000"
+              required
+              placeholder="Escribe las instrucciones o pega el enlace..."
+            ></textarea>
+
+            <label for="homework-recipient">
+              Asignar a
+            </label>
+
+            <select id="homework-recipient" required>
+              <option value="leo">Leo</option>
+              <option value="mama">Mamá</option>
+            </select>
+
+            <label for="homework-deadline">
+              Fecha límite (opcional)
+            </label>
+
+            <input
+              type="date"
+              id="homework-deadline"
+            >
+
+            <div class="homework-form-actions">
+
+              <button type="submit" id="homework-save-btn">
+                Guardar deber
+              </button>
+
+              <button
+                type="button"
+                onclick="ocultarFormularioDeber()"
+              >
+                Cancelar
+              </button>
+
+            </div>
+
+            <p
+              id="homework-form-message"
+              role="status"
+              aria-live="polite"
+            ></p>
+
+          </form>
+
+        </div>
+
+        <!-- FILTROS DE PAPÁ -->
+        <div class="homework-filters">
+
+          <label for="homework-filter-recipient">
+            Destinatario
+          </label>
+
+          <select id="homework-filter-recipient">
+            <option value="">Todos</option>
+            <option value="leo">Leo</option>
+            <option value="mama">Mamá</option>
+          </select>
+
+          <label for="homework-filter-subject">
+            Asignatura
+          </label>
+
+          <select id="homework-filter-subject">
+            <option value="">Todas</option>
+            <option value="ciencias">Ciencias</option>
+            <option value="matematicas">Matemáticas</option>
+            <option value="lengua">Lengua</option>
+            <option value="geografia">Geografía</option>
+            <option value="historia">Historia</option>
+            <option value="ingles">Inglés</option>
+            <option value="cultura">Cultura general</option>
+            <option value="otras">Otras</option>
+          </select>
+
+          <label for="homework-filter-state">
+            Estado
+          </label>
+
+          <select id="homework-filter-state">
+            <option value="">Todos</option>
+            <option value="pendiente">Pendientes</option>
+            <option value="completado">Completados</option>
+          </select>
+
+          <button
+            type="button"
+            onclick="cargarDeberes()"
+          >
+            Aplicar filtros
+          </button>
+
+        </div>
+
+      </div>
+
+      <!-- LISTA DE DEBERES -->
+      <div
+        id="homework-list"
+        aria-live="polite"
+      >
+        <p>Cargando deberes...</p>
+      </div>
+
+      <p
+        id="homework-message"
+        role="status"
+        aria-live="polite"
+      ></p>
 
     </section>
 
