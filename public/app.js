@@ -9,23 +9,22 @@ import {
   abrirAsignatura,
   volverAsignaturas,
   volverPerfiles
-} from "./menu.js";
+} from "./js/menu.js";
 
 import {
-  cargarPregunta,
   enviarRespuesta,
   mostrarPista,
   siguientePregunta,
   cancelarPregunta
-} from "./challenges.js";
+} from "./js/challenges.js";
 
 import {
   iniciarRanking
-} from "./ranking.js";
+} from "./js/ranking.js";
 
 import {
   iniciarDeberes
-} from "./homework.js";
+} from "./js/homework.js";
 
 // ========================================
 // CONEXIÓN CON LOS BOTONES DEL HTML
