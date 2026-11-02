@@ -6,7 +6,7 @@ import {
 
 import {
   mostrarFormularioDeber
-} from "./form.js";
+} from "./forms.js";
 
 let deberesActuales = [];
 
