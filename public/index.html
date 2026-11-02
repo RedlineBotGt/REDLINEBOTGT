@@ -201,6 +201,7 @@
       ></div>
 
     </section>
+
     <!-- PANTALLA DE DEBERES -->
     <section
       id="homework-screen"
@@ -344,6 +345,23 @@
               type="date"
               id="homework-deadline"
             >
+
+            <!-- ESTADO DEL DEBER: SOLO AL EDITAR -->
+            <div
+              id="homework-status-group"
+              class="homework-form-group hidden"
+            >
+
+              <label for="homework-status">
+                Estado del deber
+              </label>
+
+              <select id="homework-status">
+                <option value="pendiente">⏳ Pendiente</option>
+                <option value="completado">✅ Completado</option>
+              </select>
+
+            </div>
 
             <div class="homework-form-actions">
 
