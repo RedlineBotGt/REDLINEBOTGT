@@ -47,9 +47,7 @@ async function obtenerColeccion(): Promise<Collection<Deber>> {
   const uri = process.env.MONGODB_URI;
 
   if (!uri) {
-    throw new Error(
-      "Falta configurar la variable MONGODB_URI."
-    );
+    throw new Error("Falta configurar la variable MONGODB_URI.");
   }
 
   if (!cliente) {
@@ -61,7 +59,6 @@ async function obtenerColeccion(): Promise<Collection<Deber>> {
     process.env.MONGODB_DB || "academia_campos";
 
   baseDatos = cliente.db(nombreBaseDatos);
-
   coleccion = baseDatos.collection<Deber>("homework");
 
   return coleccion;
@@ -119,7 +116,6 @@ export async function crearDeber(
   >
 ) {
   const db = await obtenerColeccion();
-
   const ahora = new Date();
 
   const nuevoDeber: Deber = {
@@ -164,9 +160,7 @@ export async function editarDeber(
 
   for (const campo of permitidos) {
     if (campo in cambios) {
-      actualizaciones[campo] = cambios[
-        campo as keyof Deber
-      ];
+      actualizaciones[campo] = cambios[campo as keyof Deber];
     }
   }
 
@@ -187,9 +181,7 @@ export async function editarDeber(
     throw new Error("No se ha encontrado el deber.");
   }
 
-  return db.findOne({
-    _id: new ObjectId(id)
-  });
+  return db.findOne({ _id: new ObjectId(id) });
 }
 
 // ========================================
@@ -211,9 +203,7 @@ export async function eliminarDeber(id: string) {
     throw new Error("No se ha encontrado el deber.");
   }
 
-  return {
-    eliminado: true
-  };
+  return { eliminado: true };
 }
 
 // ========================================
@@ -256,26 +246,31 @@ export async function completarDeber(
     );
   }
 
-  return db.findOne({
-    _id: new ObjectId(id)
-  });
+  return db.findOne({ _id: new ObjectId(id) });
 }
 
 // ========================================
 // REABRIR DEBER
 // ========================================
 
-export async function reabrirDeber(id: string) {
+export async function reabrirDeber(
+  id: string,
+  perfil?: DestinatarioDeber
+) {
   if (!ObjectId.isValid(id)) {
     throw new Error("Identificador de deber no válido.");
   }
 
   const db = await obtenerColeccion();
 
+  const filtro = {
+    _id: new ObjectId(id),
+    estado: "completado" as EstadoDeber,
+    ...(perfil ? { destinatario: perfil } : {})
+  };
+
   const resultado = await db.updateOne(
-    {
-      _id: new ObjectId(id)
-    },
+    filtro,
     {
       $set: {
         estado: "pendiente",
@@ -287,10 +282,10 @@ export async function reabrirDeber(id: string) {
   );
 
   if (resultado.matchedCount === 0) {
-    throw new Error("No se ha encontrado el deber.");
+    throw new Error(
+      "No se ha encontrado un deber completado para este perfil."
+    );
   }
 
-  return db.findOne({
-    _id: new ObjectId(id)
-  });
+  return db.findOne({ _id: new ObjectId(id) });
 }
