@@ -8,7 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "start": "tsx server.ts",
+    "start": "node --import tsx server.ts",
     "dev": "tsx watch server.ts"
   },
   "dependencies": {
