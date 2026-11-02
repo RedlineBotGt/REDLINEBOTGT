@@ -328,6 +328,20 @@ router.get(
         perfil
       });
 
+      return res.json({ ok: true, deberes });
+    } catch (error) {
+      console.error("[HOMEWORK] Error al consultar:", error);
+
+      return res.status(500).json({
+        ok: false,
+        error: "No se han podido consultar los deberes."
+      });
+    }
+  }
+);
+
+// ===== FIN DE LA PARTE 1 =====
+
  
 // ========================================
 // CREAR DEBER
@@ -625,16 +639,3 @@ router.patch(
 
 export default router;
 
-      return res.json({ ok: true, deberes });
-    } catch (error) {
-      console.error("[HOMEWORK] Error al consultar:", error);
-
-      return res.status(500).json({
-        ok: false,
-        error: "No se han podido consultar los deberes."
-      });
-    }
-  }
-);
-
-// ===== FIN DE LA PARTE 1 =====
