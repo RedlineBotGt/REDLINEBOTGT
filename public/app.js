@@ -1,4 +1,3 @@
-
 const perfiles = {
   leo: { nombre: "Leo", nivel: "Primaria" },
   papa: { nombre: "Papá", nivel: "Adulto" },
@@ -337,19 +336,11 @@ function siguientePregunta() {
 // ========================================
 
 document.addEventListener("DOMContentLoaded", () => {
-  let guardado = null;
 
-  try {
-    guardado = localStorage.getItem("academiaPerfil");
-  } catch (error) {
-    console.warn("[ACADEMIA] No se pudo leer el perfil guardado");
-  }
-
-  if (guardado && perfiles[guardado]) {
-    seleccionarPerfil(guardado);
-  } else {
-    mostrarPantalla("profiles-screen");
-  }
+  // Siempre comenzar mostrando la selección de perfil.
+  // El perfil anterior ya no se selecciona automáticamente.
+  perfilActual = null;
+  mostrarPantalla("profiles-screen");
 
   const botonPista = obtenerElemento("hint-btn");
 
