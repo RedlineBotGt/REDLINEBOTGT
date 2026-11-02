@@ -17,7 +17,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply();
 
   try {
-    // Buscar la última jornada con datos en todo el rango G2:N
+    // Buscar la última jornada con datos en G2:N
     const journeyData = await getSheetData('ELO!G2:N');
 
     let lastColumnIndex = -1;
@@ -34,7 +34,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       }
     }
 
-    // Obtener el encabezado correspondiente de G1:N1
+    // Obtener el nombre de la jornada desde la fila 1
     const headers = await getSheetData('ELO!G1:N1');
     const headerRow = headers?.[0] ?? [];
 
@@ -68,16 +68,19 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       return;
     }
 
-    // Crear las líneas del ranking
-    const lines = validPilots.map((row, index) => {
-      const position = String(index + 1).padStart(2, ' ');
-      const driver = String(row[0]).trim();
-      const elo = String(row[10]).trim().padStart(4, ' ');
+    // Crear ranking con columnas alineadas para móvil
+    const lines = [
+      `${'POS'.padEnd(4)}${'PILOTO'.padEnd(19)}${'ELO'.padStart(5)}`,
+      ...validPilots.map((row, index) => {
+        const position = String(index + 1).padStart(2, ' ');
+        const driver = String(row[0]).trim().slice(0, 18);
+        const elo = String(row[10]).trim();
 
-      return `${position} | ${driver} | ${elo}`;
-    });
+        return `${position.padEnd(4)}${driver.padEnd(19)}${elo.padStart(5)}`;
+      })
+    ];
 
-    // Crear Embed limpio, sin variaciones ni flechas
+    // Crear Embed limpio
     const embed = new EmbedBuilder()
       .setColor(0xD71920)
       .setTitle(`🏆 RANKING ELO | ${weekName}`)
