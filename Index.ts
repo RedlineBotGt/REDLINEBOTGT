@@ -3,8 +3,7 @@ import {
     Client,
     GatewayIntentBits,
     Collection,
-    Interaction,
-    Message
+    Interaction
 } from 'discord.js';
 
 import {
@@ -21,12 +20,8 @@ import {
     handleEncuestaReactionAdd
 } from './dashadmin/encuestas/encuestasmanager';
 import { setupEventWorker } from './dashadmin/eventos/eventosworker';
-import { handleClubMessage } from './dashadmin/club/clubactions';
-import { setupAlarmaWorker } from './LCS/alarma/alarmaworker';
-import academiaRouter from './academia/router';
 
 import express from 'express';
-import path from 'path';
 
 // =====================================================
 // REDES DE SEGURIDAD GLOBAL
@@ -48,39 +43,25 @@ process.on('uncaughtException', (error) => {
 
 // =====================================================
 // SERVIDOR WEB EXPRESS
+// Solo comprobación de salud para Render.
+// Academia ya no se sirve desde REDLINE.
 // =====================================================
 
 const app = express();
 
 const PORT = Number(process.env.PORT) || 10000;
 
-// Permite recibir JSON en las peticiones POST de la Academia.
-app.use(express.json({ limit: '1mb' }));
-
-// Archivos públicos: index.html, styles.css y app.js.
-app.use(
-    express.static(
-        path.join(__dirname, 'academia', 'public')
-    )
-);
-
-// API de Academia Campos.
-app.use(academiaRouter);
-
-// Comprobación de salud para Render.
 app.get('/health', (req, res) => {
     res.status(200).json({
         success: true,
-        service: 'REDLINE Bot GT',
-        academy: 'Academia Campos'
+        service: 'REDLINE Bot GT'
     });
 });
 
 app.listen(PORT, () => {
     console.log(
-        `🌐 Servidor web HTTP activo en el puerto ${PORT}`
+        `🌐 Servidor de salud HTTP activo en el puerto ${PORT}`
     );
-    console.log('🎓 Academia Campos preparada.');
 });
 
 // =====================================================
@@ -94,18 +75,12 @@ import * as borrarCommand from './commands/borrar';
 import * as msnCommand from './commands/msn';
 import * as draftCommand from './commands/draft';
 import * as listaCommand from './commands/lista';
-import * as clubCommand from './commands/club';
-import * as clubclasCommand from './commands/clubclas';
 import * as transCommand from './commands/trans';
 import * as titularesCommand from './commands/titulares';
 import * as reservasCommand from './commands/reservas';
 import * as eloCommand from './commands/elo';
 import * as dashSheetsCommand from './dashsheet/dashsheet';
 import * as dashAdminCommand from './dashadmin/dashadmin';
-
-// Comandos exclusivos de LCS.
-import * as alarmaCommand from './LCS/alarma/alarma';
-import * as menuCommand from './LCS/menu/menu';
 
 // =====================================================
 // CONEXIÓN CENTRALIZADA A MONGODB
@@ -192,16 +167,12 @@ const commandsList = [
     msnCommand,
     draftCommand,
     listaCommand,
-    clubCommand,
-    clubclasCommand,
     transCommand,
     titularesCommand,
     reservasCommand,
     eloCommand,
     dashSheetsCommand,
-    dashAdminCommand,
-    alarmaCommand,
-    menuCommand
+    dashAdminCommand
 ];
 
 for (const cmd of commandsList) {
@@ -248,7 +219,6 @@ client.once('ready', () => {
     setupAvisosSystem(client);
     setupPollSystem(client);
     setupEventWorker(client);
-    setupAlarmaWorker(client);
 });
 
 // =====================================================
@@ -296,21 +266,6 @@ client.on('messageReactionAdd', async (reaction, user) => {
     } catch (error) {
         console.error(
             'Error procesando reacción de encuesta:',
-            error
-        );
-    }
-});
-
-// =====================================================
-// MENSAJES DE GT CLUB
-// =====================================================
-
-client.on('messageCreate', async (message: Message) => {
-    try {
-        await handleClubMessage(message);
-    } catch (error) {
-        console.error(
-            'Error procesando mensaje de GT Club:',
             error
         );
     }
