@@ -12,13 +12,11 @@
 <body>
   <main class="container">
 
-    <!-- CABECERA -->
     <header class="header">
       <h1>Academia Campos</h1>
       <p>Aprender juntos, crecer juntos</p>
     </header>
 
-    <!-- SELECCIÓN DE PERFIL -->
     <section
       id="profiles-screen"
       class="screen"
@@ -27,38 +25,26 @@
       <h2 id="profiles-title">¿Quién va a aprender hoy?</h2>
 
       <div class="profiles">
-
-        <button
-          type="button"
-          class="profile-card"
-          onclick="seleccionarPerfil('leo')"
-        >
+        <button type="button" class="profile-card"
+          onclick="seleccionarPerfil('leo')">
           <span aria-hidden="true">🙇</span>
           <strong>Leo</strong>
         </button>
 
-        <button
-          type="button"
-          class="profile-card"
-          onclick="seleccionarPerfil('papa')"
-        >
+        <button type="button" class="profile-card"
+          onclick="seleccionarPerfil('papa')">
           <span aria-hidden="true">🧔</span>
           <strong>Papá</strong>
         </button>
 
-        <button
-          type="button"
-          class="profile-card"
-          onclick="seleccionarPerfil('mama')"
-        >
+        <button type="button" class="profile-card"
+          onclick="seleccionarPerfil('mama')">
           <span aria-hidden="true">👩🏾</span>
           <strong>Mamá</strong>
         </button>
-
       </div>
     </section>
 
-    <!-- SELECCIÓN DE ASIGNATURA -->
     <section
       id="subjects-screen"
       class="screen hidden"
@@ -68,60 +54,51 @@
         ¡Hola, <span id="profile-name"></span>!
       </h2>
 
+      <button
+        type="button"
+        class="subject-card"
+        style="min-height: auto; padding: 10px 16px; margin-bottom: 15px;"
+        onclick="volverPerfiles()"
+      >
+        ← Cambiar de perfil
+      </button>
+
       <p>Elige una asignatura para empezar.</p>
 
       <div class="subjects">
-        <button
-          type="button"
-          class="subject-card"
-          onclick="abrirAsignatura('lateral')"
-        >
+        <button type="button" class="subject-card"
+          onclick="abrirAsignatura('lateral')">
           🧠 Cultura general
         </button>
 
-        <button
-          type="button"
-          class="subject-card"
-          onclick="abrirAsignatura('matematicas')"
-        >
+        <button type="button" class="subject-card"
+          onclick="abrirAsignatura('matematicas')">
           ➗ Matemáticas
         </button>
 
-        <button
-          type="button"
-          class="subject-card"
-          onclick="abrirAsignatura('geografia')"
-        >
+        <button type="button" class="subject-card"
+          onclick="abrirAsignatura('geografia')">
           🌍 Geografía
         </button>
       </div>
     </section>
 
-    <!-- PANTALLA DE RETOS -->
     <section
       id="challenge-screen"
       class="screen hidden"
       aria-labelledby="challenge-title"
     >
-      <button
-        type="button"
-        onclick="volverAsignaturas()"
-      >
+      <button type="button" onclick="volverAsignaturas()">
         ← Volver
       </button>
 
       <h2 id="challenge-title">Reto</h2>
 
-      <p
-        id="challenge-prompt"
-        aria-live="polite"
-      >
+      <p id="challenge-prompt" aria-live="polite">
         Preparando pregunta...
       </p>
 
-      <label for="user-answer">
-        Tu respuesta
-      </label>
+      <label for="user-answer">Tu respuesta</label>
 
       <textarea
         id="user-answer"
@@ -131,37 +108,23 @@
       ></textarea>
 
       <div class="challenge-actions">
-        <button
-          type="button"
-          id="send-btn"
-          onclick="enviarRespuesta()"
-          disabled
-        >
+        <button type="button" id="send-btn"
+          onclick="enviarRespuesta()" disabled>
           Comprobar respuesta
         </button>
 
-        <button
-          type="button"
-          id="hint-btn"
-          onclick="mostrarPista()"
-        >
+        <button type="button" id="hint-btn"
+          onclick="mostrarPista()">
           💡 Pedir una pista
         </button>
 
-        <button
-          type="button"
-          id="next-btn"
-          onclick="siguientePregunta()"
-        >
+        <button type="button" id="next-btn"
+          onclick="siguientePregunta()">
           Siguiente pregunta →
         </button>
       </div>
 
-      <div
-        id="ai-feedback"
-        aria-live="polite"
-        role="status"
-      ></div>
+      <div id="ai-feedback" aria-live="polite" role="status"></div>
     </section>
 
   </main>
