@@ -9,9 +9,7 @@ import {
   obtenerToken
 } from "./homework/api.js";
 
-import {
-  pintarDeberes
-} from "./homework/render.js";
+import { pintarDeberes } from "./homework/render.js";
 
 import {
   mostrarFormularioDeber,
@@ -31,7 +29,7 @@ let deberesActuales = [];
 let inicializado = false;
 
 /**
- * Muestra la pantalla de deberes.
+ * Abre la pantalla de deberes.
  */
 export function abrirDeberes() {
   const pantalla = document.getElementById("homework-screen");
@@ -127,7 +125,6 @@ export async function iniciarSesionDeberes() {
     if (mensaje) mensaje.textContent = "";
 
     await cargarDeberes();
-
   } catch (error) {
     cerrarSesion();
 
@@ -150,7 +147,7 @@ export function cerrarSesionDeberes() {
 }
 
 /**
- * Obtiene los filtros seleccionados.
+ * Lee los filtros seleccionados.
  */
 function obtenerFiltros() {
   const destinatario = document.getElementById(
@@ -166,7 +163,6 @@ function obtenerFiltros() {
   );
 
   const filtros = {};
-
   const perfil = obtenerPerfilActual();
 
   if (perfil !== "papa") {
@@ -187,7 +183,7 @@ function obtenerFiltros() {
 }
 
 /**
- * Carga los deberes desde el servidor.
+ * Carga y pinta los deberes.
  */
 export async function cargarDeberes() {
   const lista = document.getElementById("homework-list");
@@ -214,20 +210,16 @@ export async function cargarDeberes() {
     if (mensaje) {
       mensaje.textContent = "";
     }
-
   } catch (error) {
     if (lista) {
-      lista.innerHTML = `
-        <p class="error">
-          ${error.message || "No se han podido cargar los deberes."}
-        </p>
-      `;
+      lista.textContent =
+        error.message || "No se han podido cargar los deberes.";
     }
   }
 }
 
 /**
- * Prepara los eventos de la pantalla.
+ * Inicializa los eventos de la pantalla.
  */
 export function iniciarDeberes() {
   if (inicializado) return;
@@ -242,29 +234,11 @@ export function iniciarDeberes() {
     });
   }
 
-  const botonGuardar = document.getElementById("homework-save-btn");
+  // El botón de guardar utiliza el envío normal del formulario.
+  // No añadimos otro listener de clic para evitar duplicados.
 
-  if (botonGuardar && formulario) {
-    botonGuardar.addEventListener("click", event => {
-      event.preventDefault();
-
-      if (typeof formulario.requestSubmit === "function") {
-        formulario.requestSubmit();
-      } else {
-        guardarFormularioDeber();
-      }
-    });
-  }
-
-  const botonLogin = document.getElementById("homework-login-btn");
-
-  if (botonLogin) {
-    botonLogin.addEventListener("click", event => {
-      event.preventDefault();
-      iniciarSesionDeberes();
-    });
-  }
-
+  // El botón de acceso conserva su onclick del HTML.
+  // Aquí solo gestionamos la tecla Enter.
   const campoPin = document.getElementById("homework-pin");
 
   if (campoPin) {
@@ -293,7 +267,7 @@ export function iniciarDeberes() {
     mostrarAccesoPapa
   );
 
-  // Funciones utilizadas por los onclick del HTML.
+  // Funciones utilizadas desde los onclick del HTML.
   window.abrirDeberes = abrirDeberes;
   window.volverDesdeDeberes = volverDesdeDeberes;
   window.iniciarSesionDeberes = iniciarSesionDeberes;
@@ -312,5 +286,4 @@ export function iniciarDeberes() {
   window.reabrirDeberPantalla = reabrirDeberPantalla;
 }
 
-// Inicialización pública.
 window.iniciarDeberes = iniciarDeberes;
