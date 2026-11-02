@@ -1,0 +1,54 @@
+
+import { Router } from "express";
+import { generarPregunta } from "../services/aiService.ts";
+
+const router = Router();
+
+// ========================================
+// GENERAR PREGUNTA CON GEMINI
+// ========================================
+
+router.post("/question", async (req, res) => {
+  const { perfil, asignatura, nivel } = req.body || {};
+
+  console.log("[GEMINI] Solicitud recibida");
+  console.log("[GEMINI] Perfil:", perfil);
+  console.log("[GEMINI] Asignatura:", asignatura);
+  console.log("[GEMINI] Nivel:", nivel);
+
+  if (!perfil || !asignatura || !nivel) {
+    console.warn("[VALIDACIÓN] Faltan datos para generar pregunta");
+
+    return res.status(400).json({
+      ok: false,
+      error: "Faltan perfil, asignatura o nivel"
+    });
+  }
+
+  try {
+    console.log("[GEMINI] Iniciando generación...");
+
+    const pregunta = await generarPregunta(
+      String(perfil),
+      String(asignatura),
+      String(nivel)
+    );
+
+    console.log("[GEMINI] Pregunta generada correctamente");
+
+    return res.json({
+      ok: true,
+      pregunta
+    });
+
+  } catch (error) {
+    console.error("[GEMINI] ERROR:", error);
+
+    return res.status(502).json({
+      ok: false,
+      error: "Gemini no ha podido generar la pregunta. Inténtalo de nuevo."
+    });
+  }
+});
+
+export default router;
