@@ -28,6 +28,7 @@ export function mostrarFormularioDeber(deber = null) {
   const campoContenido = document.getElementById("homework-content");
   const campoDestinatario = document.getElementById("homework-recipient");
   const campoFecha = document.getElementById("homework-deadline");
+  const campoEstado = document.getElementById("homework-status");
 
   if (deber) {
     if (titulo) titulo.textContent = "Editar deber";
@@ -37,6 +38,7 @@ export function mostrarFormularioDeber(deber = null) {
     if (campoAsignatura) campoAsignatura.value = deber.asignatura || "";
     if (campoTipo) campoTipo.value = deber.tipo || "";
     if (campoContenido) campoContenido.value = deber.contenido || "";
+
     if (campoDestinatario) {
       campoDestinatario.value = deber.destinatario || "";
     }
@@ -46,11 +48,23 @@ export function mostrarFormularioDeber(deber = null) {
         ? String(deber.fechaLimite).slice(0, 10)
         : "";
     }
+
+    if (campoEstado) {
+      campoEstado.value = deber.estado || "pendiente";
+      campoEstado.closest(".form-group")?.classList.remove("hidden");
+      campoEstado.parentElement?.classList.remove("hidden");
+    }
   } else {
     if (titulo) titulo.textContent = "Nuevo deber";
 
     if (campoId) campoId.value = "";
     if (campoDestinatario) campoDestinatario.value = "leo";
+
+    if (campoEstado) {
+      campoEstado.value = "pendiente";
+      campoEstado.closest(".form-group")?.classList.add("hidden");
+      campoEstado.parentElement?.classList.add("hidden");
+    }
   }
 
   formulario.classList.remove("hidden");
@@ -93,6 +107,7 @@ export async function guardarFormularioDeber() {
   const campoContenido = document.getElementById("homework-content");
   const campoDestinatario = document.getElementById("homework-recipient");
   const campoFecha = document.getElementById("homework-deadline");
+  const campoEstado = document.getElementById("homework-status");
 
   if (
     !campoTitulo ||
@@ -113,6 +128,10 @@ export async function guardarFormularioDeber() {
     destinatario: campoDestinatario.value,
     fechaLimite: campoFecha?.value || null
   };
+
+  if (deberEditando?._id && campoEstado) {
+    deber.estado = campoEstado.value;
+  }
 
   try {
     if (mensaje) {
