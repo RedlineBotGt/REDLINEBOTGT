@@ -1,18 +1,20 @@
-import { 
-    ButtonInteraction, 
-    ModalBuilder, 
-    TextInputBuilder, 
-    TextInputStyle, 
-    ActionRowBuilder, 
-    ChannelSelectMenuBuilder, 
-    ChannelType, 
-    ModalSubmitInteraction, 
+
+import {
+    ButtonInteraction,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle,
+    ActionRowBuilder,
+    ChannelSelectMenuBuilder,
+    ChannelType,
+    ModalSubmitInteraction,
     MessageFlags,
     RoleSelectMenuBuilder,
     ButtonStyle,
     ButtonBuilder,
     TextChannel
 } from 'discord.js';
+
 import { getEventsCollection } from './eventosstorage';
 import { parseMadridDateTime } from './eventosutils';
 import { buildEventEmbedAndRows } from './eventosmanager';
@@ -22,10 +24,24 @@ export async function handleDashEventButton(interaction: ButtonInteraction): Pro
     if (interaction.customId !== 'dash_btn_event_create') return false;
 
     const col = await getEventsCollection();
+
     await col.updateOne(
-        { userId: interaction.user.id, guildId: interaction.guildId, status: 'draft' },
-        { 
-            $set: { guildId: interaction.guildId, channelId: null, roleId: null, updatedAt: new Date() },$setOnInsert: { createdAt: new Date() }
+        {
+            userId: interaction.user.id,
+            guildId: interaction.guildId,
+            status: 'draft'
+        },
+        {
+            $set: {
+                guildId: interaction.guildId,
+                channelId: null,
+                channelName: null,
+                roleId: null,
+                updatedAt: new Date()
+            },
+            $setOnInsert: {
+                createdAt: new Date()
+            }
         },
         { upsert: true }
     );
@@ -39,15 +55,20 @@ export async function handleDashEventButton(interaction: ButtonInteraction): Pro
         .setCustomId('event_select_role')
         .setPlaceholder('🏷️ Selecciona el rol a mencionar...');
 
-    const rowChannel = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(selectChannel);
-    const rowRole = new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(selectRole);
-    const rowButton = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder()
-            .setCustomId('event_proceed_to_modal')
-            .setLabel('Continuar al Formulario')
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('➡️')
-    );
+    const rowChannel = new ActionRowBuilder<ChannelSelectMenuBuilder>()
+        .addComponents(selectChannel);
+
+    const rowRole = new ActionRowBuilder<RoleSelectMenuBuilder>()
+        .addComponents(selectRole);
+
+    const rowButton = new ActionRowBuilder<ButtonBuilder>()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId('event_proceed_to_modal')
+                .setLabel('Continuar al Formulario')
+                .setStyle(ButtonStyle.Primary)
+                .setEmoji('➡️')
+        );
 
     await interaction.reply({
         content: '📅 **Organizador de Eventos:** Selecciona el canal y el rol en los menús desplegables y pulsa **Continuar**:',
@@ -58,25 +79,56 @@ export async function handleDashEventButton(interaction: ButtonInteraction): Pro
     return true;
 }
 
+// --- Selección del canal ---
 export async function handleEventChannelSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'event_select_channel') return false;
+
     const col = await getEventsCollection();
+
+    const channelId = interaction.values[0];
+
+    const channel = await interaction.guild?.channels.fetch(channelId).catch(() => null);
+
     await col.updateOne(
-        { userId: interaction.user.id, guildId: interaction.guildId, status: 'draft' },
-        { $set: { channelId: interaction.values[0] } }
+        {
+            userId: interaction.user.id,
+            guildId: interaction.guildId,
+            status: 'draft'
+        },
+        {
+            $set: {
+                channelId,
+                channelName: channel?.name || 'Canal desconocido'
+            }
+        }
     );
+
     await interaction.deferUpdate();
+
     return true;
 }
 
+// --- Selección del rol ---
 export async function handleEventRoleSelect(interaction: any): Promise<boolean> {
     if (interaction.customId !== 'event_select_role') return false;
+
     const col = await getEventsCollection();
+
     await col.updateOne(
-        { userId: interaction.user.id, guildId: interaction.guildId, status: 'draft' },
-        { $set: { roleId: interaction.values[0] } }
+        {
+            userId: interaction.user.id,
+            guildId: interaction.guildId,
+            status: 'draft'
+        },
+        {
+            $set: {
+                roleId: interaction.values[0]
+            }
+        }
     );
+
     await interaction.deferUpdate();
+
     return true;
 }
 
@@ -85,12 +137,19 @@ export async function handleEventProceedToModal(interaction: ButtonInteraction):
     if (interaction.customId !== 'event_proceed_to_modal') return false;
 
     const col = await getEventsCollection();
-    const session = await col.findOne({ userId: interaction.user.id, guildId: interaction.guildId, status: 'draft' });
+
+    const session = await col.findOne({
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        status: 'draft'
+    });
+
     if (!session || !session.channelId || !session.roleId) {
-        await interaction.reply({ 
-            content: '❌ Debes seleccionar tanto un **canal** como un **rol** en los menús antes de continuar.', 
-            flags: [MessageFlags.Ephemeral] 
+        await interaction.reply({
+            content: '❌ Debes seleccionar tanto un **canal** como un **rol** en los menús antes de continuar.',
+            flags: [MessageFlags.Ephemeral]
         });
+
         return true;
     }
 
@@ -142,6 +201,7 @@ export async function handleEventProceedToModal(interaction: ButtonInteraction):
     );
 
     await interaction.showModal(modal);
+
     return true;
 }
 
@@ -150,39 +210,70 @@ export async function handleEventModalSubmit(interaction: ModalSubmitInteraction
     if (interaction.customId !== 'modal_event_create') return false;
 
     const col = await getEventsCollection();
-    const session = await col.findOne({ userId: interaction.user.id, guildId: interaction.guildId, status: 'draft' });
+
+    const session = await col.findOne({
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        status: 'draft'
+    });
+
     if (!session) {
-        await interaction.reply({ content: '❌ Sesión caducada.', flags: [MessageFlags.Ephemeral] });
+        await interaction.reply({
+            content: '❌ Sesión caducada.',
+            flags: [MessageFlags.Ephemeral]
+        });
+
         return true;
     }
 
     const date = interaction.fields.getTextInputValue('event_date').trim();
     const time = interaction.fields.getTextInputValue('event_time').trim();
     const title = interaction.fields.getTextInputValue('event_title').trim();
-    const description = interaction.fields.getTextInputValue('event_desc').trim() || 'Sin descripción detallada.';
-    const image = interaction.fields.getTextInputValue('event_image').trim() || null;
+
+    const description =
+        interaction.fields.getTextInputValue('event_desc').trim() ||
+        'Sin descripción detallada.';
+
+    const image =
+        interaction.fields.getTextInputValue('event_image').trim() || null;
 
     const scheduledAt = parseMadridDateTime(date, time);
+
     if (!scheduledAt) {
-        await interaction.reply({ content: '❌ Formato de fecha u hora inválido (Usa DD/MM/YYYY y HH:MM).', flags: [MessageFlags.Ephemeral] });
+        await interaction.reply({
+            content: '❌ Formato de fecha u hora inválido (Usa DD/MM/YYYY y HH:MM).',
+            flags: [MessageFlags.Ephemeral]
+        });
+
         return true;
     }
 
     await col.updateOne(
         { _id: session._id },
-        { $set: { date, time, scheduledAt, title, description, image } }
+        {
+            $set: {
+                date,
+                time,
+                scheduledAt,
+                title,
+                description,
+                image
+            }
+        }
     );
 
-    const rowFork = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder()
-            .setCustomId('event_publish_now')
-            .setLabel('🚀 Publicar Ya (Ipso Facto)')
-            .setStyle(ButtonStyle.Success),
-        new ButtonBuilder()
-            .setCustomId('event_config_repeat')
-            .setLabel('⚙️ Programar Publicación')
-            .setStyle(ButtonStyle.Secondary)
-    );
+    const rowFork = new ActionRowBuilder<ButtonBuilder>()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId('event_publish_now')
+                .setLabel('🚀 Publicar Ya (Ipso Facto)')
+                .setStyle(ButtonStyle.Success),
+
+            new ButtonBuilder()
+                .setCustomId('event_config_repeat')
+                .setLabel('⚙️ Programar Publicación')
+                .setStyle(ButtonStyle.Secondary)
+        );
 
     await interaction.reply({
         content: `📋 **Datos guardados.** ¿Cómo deseas proceder?\n• **Publicar Ya:** Se lanza al instante.\n• **Programar Publicación:** Permite fijar fecha/hora de envío y repeticiones opcionales.`,
@@ -198,23 +289,38 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
     if (interaction.customId !== 'event_publish_now') return false;
 
     const col = await getEventsCollection();
-    const session = await col.findOne({ userId: interaction.user.id, guildId: interaction.guildId, status: 'draft' });
+
+    const session = await col.findOne({
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        status: 'draft'
+    });
+
     if (!session || !session.channelId || !session.roleId || !session.title) {
-        await interaction.reply({ content: '❌ Sesión caducada o ya procesada.', flags: [MessageFlags.Ephemeral] });
+        await interaction.reply({
+            content: '❌ Sesión caducada o ya procesada.',
+            flags: [MessageFlags.Ephemeral]
+        });
+
         return true;
     }
 
     const guild = interaction.guild;
+
     if (!guild) return true;
 
     const channel = await guild.channels.fetch(session.channelId).catch(() => null) as TextChannel;
+
     if (!channel || !channel.isTextBased()) {
-        await interaction.reply({ content: '❌ Canal de destino no válido.', flags: [MessageFlags.Ephemeral] });
+        await interaction.reply({
+            content: '❌ Canal de destino no válido.',
+            flags: [MessageFlags.Ephemeral]
+        });
+
         return true;
     }
 
     try {
-        // 🔄 Actualizado objeto del evento para incluir la lista 'reserve'
         const dummyEventDoc = {
             title: session.title,
             date: session.date,
@@ -222,34 +328,56 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
             description: session.description,
             image: session.image,
             status: 'sent',
-            rsvps: { yes: [], maybe: [], no: [], reserve: [] }
+            rsvps: {
+                yes: [],
+                maybe: [],
+                no: [],
+                reserve: []
+            }
         };
 
         const { embed, components } = buildEventEmbedAndRows(dummyEventDoc);
 
-        const sentMessage = await channel.send({ 
-            content: `<@&${session.roleId}>`, 
-            embeds: [embed], 
-            components: components 
+        const sentMessage = await channel.send({
+            content: `<@&${session.roleId}>`,
+            embeds: [embed],
+            components
         });
 
         await col.updateOne(
             { _id: session._id },
-            { 
-                $set: { 
+            {
+                $set: {
                     messageId: sentMessage.id,
                     status: 'sent',
-                    rsvps: { yes: [], maybe: [], no: [], reserve: [] },
+                    channelName: channel.name,
+                    remainingRepetitions: 0,
+                    remainingTimes: 1,
+                    repeats: false,
+                    rsvps: {
+                        yes: [],
+                        maybe: [],
+                        no: [],
+                        reserve: []
+                    },
                     createdAt: new Date(),
                     scheduledAt: session.scheduledAt
-                } 
+                }
             }
         );
 
-        await interaction.update({ content: `🚀 **¡Evento publicado con éxito en <#${session.channelId}>!**`, components: [] });
+        await interaction.update({
+            content: `🚀 **¡Evento publicado con éxito en <#${session.channelId}>!**`,
+            components: []
+        });
+
     } catch (error) {
         console.error('❌ Error publicando evento:', error);
-        await interaction.update({ content: '❌ Error al publicar el evento.', components: [] }).catch(() => {});
+
+        await interaction.update({
+            content: '❌ Error al publicar el evento.',
+            components: []
+        }).catch(() => {});
     }
 
     return true;
@@ -297,7 +425,9 @@ export async function handleEventConfigRepeatButton(interaction: ButtonInteracti
         new ActionRowBuilder<TextInputBuilder>().addComponents(intervalInput),
         new ActionRowBuilder<TextInputBuilder>().addComponents(timesInput)
     );
+
     await interaction.showModal(modal);
+
     return true;
 }
 
@@ -306,28 +436,57 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
     if (interaction.customId !== 'modal_event_repeat') return false;
 
     const col = await getEventsCollection();
-    const session = await col.findOne({ userId: interaction.user.id, guildId: interaction.guildId, status: 'draft' });
+
+    const session = await col.findOne({
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        status: 'draft'
+    });
+
     if (!session) {
-        await interaction.reply({ content: '❌ Sesión caducada.', flags: [MessageFlags.Ephemeral] });
+        await interaction.reply({
+            content: '❌ Sesión caducada.',
+            flags: [MessageFlags.Ephemeral]
+        });
+
         return true;
     }
 
     const pubDate = interaction.fields.getTextInputValue('event_publish_date').trim();
     const pubTime = interaction.fields.getTextInputValue('event_publish_time').trim();
-    const intervalRaw = interaction.fields.getTextInputValue('event_interval_days')?.trim() || '';
-    const timesRaw = interaction.fields.getTextInputValue('event_repeat_times')?.trim() || '';
+
+    const intervalRaw =
+        interaction.fields.getTextInputValue('event_interval_days')?.trim() || '';
+
+    const timesRaw =
+        interaction.fields.getTextInputValue('event_repeat_times')?.trim() || '';
 
     const publishAt = parseMadridDateTime(pubDate, pubTime);
+
     if (!publishAt) {
-        await interaction.reply({ 
-            content: '❌ Formato de fecha u hora de publicación inválido (Usa DD/MM/YYYY y HH:MM).', 
-            flags: [MessageFlags.Ephemeral] 
+        await interaction.reply({
+            content: '❌ Formato de fecha u hora de publicación inválido (Usa DD/MM/YYYY y HH:MM).',
+            flags: [MessageFlags.Ephemeral]
         });
+
         return true;
     }
 
     const intervalDays = intervalRaw ? parseInt(intervalRaw, 10) : 0;
     const totalTimes = timesRaw ? parseInt(timesRaw, 10) : 1;
+
+    if (
+        (intervalRaw && (!Number.isInteger(intervalDays) || intervalDays <= 0)) ||
+        (timesRaw && (!Number.isInteger(totalTimes) || totalTimes < 1))
+    ) {
+        await interaction.reply({
+            content: '❌ El intervalo debe ser un número de días mayor que 0 y el total de envíos debe ser al menos 1.',
+            flags: [MessageFlags.Ephemeral]
+        });
+
+        return true;
+    }
+
     const repeats = intervalDays > 0 && totalTimes > 1;
     const intervalMs = intervalDays * 24 * 3600 * 1000;
 
@@ -339,16 +498,26 @@ export async function handleEventRepeatModalSubmit(interaction: ModalSubmitInter
                 repeats,
                 intervalMs,
                 remainingTimes: repeats ? totalTimes : 1,
+                remainingRepetitions: repeats ? totalTimes - 1 : 0,
+                channelName: session.channelName || 'Canal desconocido',
                 status: 'pending_publish',
-                // 🔄 Inicializamos 'reserve' también para eventos programados
-                rsvps: { yes: [], maybe: [], no: [], reserve: [] },
+                rsvps: {
+                    yes: [],
+                    maybe: [],
+                    no: [],
+                    reserve: []
+                },
                 createdAt: new Date()
             }
         }
     );
-    let responseText = `✅ **¡Publicación programada con éxito!** El mensaje del evento se publicará automáticamente el **${pubDate}** a las **${pubTime} CET**.`;
+
+    let responseText =
+        `✅ **¡Publicación programada con éxito!** El mensaje del evento se publicará automáticamente el **${pubDate}** a las **${pubTime} CET**.`;
+
     if (repeats) {
-        responseText += `\n🔄 Se repetirá cada **${intervalDays} días** (**${totalTimes} envíos** en total).`;
+        responseText +=
+            `\n🔄 Se repetirá cada **${intervalDays} días** (**${totalTimes} envíos** en total).`;
     }
 
     await interaction.reply({
