@@ -1,3 +1,4 @@
+
 import {
   MongoClient,
   ObjectId,
@@ -15,6 +16,12 @@ export type DestinatarioDeber = "leo" | "mama";
 
 export type EstadoDeber = "pendiente" | "completado";
 
+export interface PreguntaDeber {
+  id: string;
+  pregunta: string;
+  respuestaCorrecta: string;
+}
+
 export interface Deber {
   _id?: ObjectId;
   titulo: string;
@@ -23,6 +30,7 @@ export interface Deber {
   contenido: string;
   destinatario: DestinatarioDeber;
   fechaLimite?: string | null;
+  preguntas?: PreguntaDeber[];
   estado: EstadoDeber;
   completadoEn?: Date | null;
   completadoPor?: string | null;
@@ -152,7 +160,8 @@ export async function editarDeber(
     "tipo",
     "contenido",
     "destinatario",
-    "fechaLimite"
+    "fechaLimite",
+    "preguntas"
   ];
 
   const actualizaciones: Record<string, unknown> = {};
@@ -191,9 +200,23 @@ export async function editarDeber(
 
   const db = await obtenerColeccion();
 
+  const actualizacionMongo: any = {
+    $set: actualizaciones
+  };
+
+  // Si deja de ser un ejercicio, elimina sus preguntas.
+  if (
+    cambios.tipo !== undefined &&
+    cambios.tipo !== "ejercicio"
+  ) {
+    actualizacionMongo.$unset = {
+      preguntas: ""
+    };
+  }
+
   const resultado = await db.updateOne(
     { _id: new ObjectId(id) },
-    { $set: actualizaciones }
+    actualizacionMongo
   );
 
   if (resultado.matchedCount === 0) {
