@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -19,51 +20,29 @@
     </header>
 
     <!-- SELECCIÓN DE PERFIL -->
-    <section
-      id="profiles-screen"
-      class="screen"
-      aria-labelledby="profiles-title"
-    >
+    <section id="profiles-screen" class="screen" aria-labelledby="profiles-title">
       <h2 id="profiles-title">¿Quién va a aprender hoy?</h2>
 
       <div class="profiles">
-
-        <button
-          type="button"
-          class="profile-card"
-          onclick="seleccionarPerfil('leo')"
-        >
+        <button type="button" class="profile-card" onclick="seleccionarPerfil('leo')">
           <span aria-hidden="true">🙇</span>
           <strong>Leo</strong>
         </button>
 
-        <button
-          type="button"
-          class="profile-card"
-          onclick="seleccionarPerfil('papa')"
-        >
+        <button type="button" class="profile-card" onclick="seleccionarPerfil('papa')">
           <span aria-hidden="true">🧔</span>
           <strong>Papá</strong>
         </button>
 
-        <button
-          type="button"
-          class="profile-card"
-          onclick="seleccionarPerfil('mama')"
-        >
+        <button type="button" class="profile-card" onclick="seleccionarPerfil('mama')">
           <span aria-hidden="true">👩🏾</span>
           <strong>Mamá</strong>
         </button>
-
       </div>
     </section>
 
     <!-- SELECCIÓN DE ASIGNATURA -->
-    <section
-      id="subjects-screen"
-      class="screen hidden"
-      aria-labelledby="subjects-title"
-    >
+    <section id="subjects-screen" class="screen hidden" aria-labelledby="subjects-title">
       <h2 id="subjects-title">
         ¡Hola, <span id="profile-name"></span>!
       </h2>
@@ -72,18 +51,18 @@
         type="button"
         onclick="volverPerfiles()"
         style="
-          display: block;
-          width: 100%;
-          max-width: 180px;
-          padding: 12px 18px;
-          margin: 15px 0 20px;
-          background: var(--panel-light);
-          color: var(--text);
-          border: 1px solid var(--border);
-          border-radius: 10px;
-          font-size: 1rem;
-          font-weight: bold;
-          cursor: pointer;
+          display:block;
+          width:100%;
+          max-width:180px;
+          padding:12px 18px;
+          margin:15px 0 20px;
+          background:var(--panel-light);
+          color:var(--text);
+          border:1px solid var(--border);
+          border-radius:10px;
+          font-size:1rem;
+          font-weight:bold;
+          cursor:pointer;
         "
       >
         ← Atrás
@@ -92,34 +71,19 @@
       <p>Elige una asignatura para empezar.</p>
 
       <div class="subjects">
-
-        <button
-          type="button"
-          class="subject-card"
-          onclick="abrirAsignatura('lateral')"
-        >
+        <button type="button" class="subject-card" onclick="abrirAsignatura('lateral')">
           🧠 Cultura general
         </button>
 
-        <button
-          type="button"
-          class="subject-card"
-          onclick="abrirAsignatura('matematicas')"
-        >
+        <button type="button" class="subject-card" onclick="abrirAsignatura('matematicas')">
           ➗ Matemáticas
         </button>
 
-        <button
-          type="button"
-          class="subject-card"
-          onclick="abrirAsignatura('geografia')"
-        >
+        <button type="button" class="subject-card" onclick="abrirAsignatura('geografia')">
           🌍 Geografía
         </button>
-
       </div>
 
-      <!-- ACCESO A DEBERES -->
       <div class="homework-entry">
         <button
           type="button"
@@ -132,31 +96,19 @@
     </section>
 
     <!-- PANTALLA DE RETOS -->
-    <section
-      id="challenge-screen"
-      class="screen hidden"
-      aria-labelledby="challenge-title"
-    >
+    <section id="challenge-screen" class="screen hidden" aria-labelledby="challenge-title">
 
-      <button
-        type="button"
-        onclick="volverAsignaturas()"
-      >
+      <button type="button" onclick="volverAsignaturas()">
         ← Volver
       </button>
 
       <h2 id="challenge-title">Reto</h2>
 
-      <p
-        id="challenge-prompt"
-        aria-live="polite"
-      >
+      <p id="challenge-prompt" aria-live="polite">
         Preparando pregunta...
       </p>
 
-      <label for="user-answer">
-        Tu respuesta
-      </label>
+      <label for="user-answer">Tu respuesta</label>
 
       <textarea
         id="user-answer"
@@ -166,53 +118,26 @@
       ></textarea>
 
       <div class="challenge-actions">
-
-        <button
-          type="button"
-          id="send-btn"
-          onclick="enviarRespuesta()"
-          disabled
-        >
+        <button type="button" id="send-btn" onclick="enviarRespuesta()" disabled>
           Comprobar respuesta
         </button>
 
-        <button
-          type="button"
-          id="hint-btn"
-          onclick="mostrarPista()"
-        >
+        <button type="button" id="hint-btn" onclick="mostrarPista()">
           💡 Pedir una pista
         </button>
 
-        <button
-          type="button"
-          id="next-btn"
-          onclick="siguientePregunta()"
-        >
+        <button type="button" id="next-btn" onclick="siguientePregunta()">
           Siguiente pregunta →
         </button>
-
       </div>
 
-      <div
-        id="ai-feedback"
-        aria-live="polite"
-        role="status"
-      ></div>
-
+      <div id="ai-feedback" aria-live="polite" role="status"></div>
     </section>
 
     <!-- PANTALLA DE DEBERES -->
-    <section
-      id="homework-screen"
-      class="screen hidden"
-      aria-labelledby="homework-title"
-    >
+    <section id="homework-screen" class="screen hidden" aria-labelledby="homework-title">
 
-      <button
-        type="button"
-        onclick="volverDesdeDeberes()"
-      >
+      <button type="button" onclick="volverDesdeDeberes()">
         ← Volver
       </button>
 
@@ -226,7 +151,6 @@
       <div id="homework-login" class="hidden">
 
         <h3>Acceso de Papá</h3>
-
         <p>Introduce el PIN para gestionar los deberes.</p>
 
         <label for="homework-pin">PIN</label>
@@ -239,20 +163,11 @@
           placeholder="Introduce tu PIN"
         >
 
-        <button
-          type="button"
-          id="homework-login-btn"
-          onclick="iniciarSesionDeberes()"
-        >
+        <button type="button" id="homework-login-btn" onclick="iniciarSesionDeberes()">
           Entrar
         </button>
 
-        <p
-          id="homework-login-message"
-          role="status"
-          aria-live="polite"
-        ></p>
-
+        <p id="homework-login-message" role="status" aria-live="polite"></p>
       </div>
 
       <!-- GESTIÓN DE PAPÁ -->
@@ -274,26 +189,19 @@
 
           <form id="homework-form">
 
-            <input
-              type="hidden"
-              id="homework-id"
-            >
+            <input type="hidden" id="homework-id">
 
-            <label for="homework-title-input">
-              Título
-            </label>
+            <label for="homework-title-input">Título</label>
 
             <input
               type="text"
               id="homework-title-input"
               maxlength="150"
               required
-              placeholder="Ej. Leer el capítulo 3"
+              placeholder="Ej. Los animales vertebrados"
             >
 
-            <label for="homework-subject">
-              Asignatura
-            </label>
+            <label for="homework-subject">Asignatura</label>
 
             <select id="homework-subject" required>
               <option value="ciencias">Ciencias</option>
@@ -306,17 +214,14 @@
               <option value="otras">Otras</option>
             </select>
 
-            <label for="homework-type">
-              Tipo de deber
-            </label>
+            <label for="homework-type">Tipo de deber</label>
 
             <select id="homework-type" required>
               <option value="enlace">Enlace</option>
-              <option value="ejercicio">Ejercicio</option>
-              <option value="escrito">Trabajo escrito</option>
+              <option value="ejercicio">Ejercicio con preguntas</option>
             </select>
 
-            <label for="homework-content">
+            <label for="homework-content" id="homework-content-label">
               Contenido o instrucciones
             </label>
 
@@ -325,36 +230,46 @@
               rows="5"
               maxlength="10000"
               required
-              placeholder="Escribe las instrucciones o pega el enlace..."
+              placeholder="Escribe las instrucciones del ejercicio o pega el enlace..."
             ></textarea>
 
-            <label for="homework-recipient">
-              Asignar a
-            </label>
+            <!-- PREGUNTAS DEL EJERCICIO -->
+            <div id="homework-questions-container" class="hidden">
+
+              <h3>📝 Preguntas del ejercicio</h3>
+
+              <p>
+                Añade las preguntas y sus respuestas correctas.
+                Leo tendrá que escribir las respuestas para resolver el ejercicio.
+              </p>
+
+              <div id="homework-questions-list"></div>
+
+              <button
+                type="button"
+                id="homework-add-question-btn"
+                onclick="agregarPreguntaDeber()"
+              >
+                ➕ Añadir pregunta
+              </button>
+
+            </div>
+
+            <label for="homework-recipient">Asignar a</label>
 
             <select id="homework-recipient" required>
               <option value="leo">Leo</option>
               <option value="mama">Mamá</option>
             </select>
 
-            <label for="homework-deadline">
-              Fecha límite (opcional)
-            </label>
+            <label for="homework-deadline">Fecha límite (opcional)</label>
 
-            <input
-              type="date"
-              id="homework-deadline"
-            >
+            <input type="date" id="homework-deadline">
 
             <!-- ESTADO DEL DEBER: SOLO AL EDITAR -->
-            <div
-              id="homework-status-group"
-              class="homework-form-group hidden"
-            >
+            <div id="homework-status-group" class="homework-form-group hidden">
 
-              <label for="homework-status">
-                Estado del deber
-              </label>
+              <label for="homework-status">Estado del deber</label>
 
               <select id="homework-status">
                 <option value="pendiente">⏳ Pendiente</option>
@@ -378,22 +293,15 @@
 
             </div>
 
-            <p
-              id="homework-form-message"
-              role="status"
-              aria-live="polite"
-            ></p>
+            <p id="homework-form-message" role="status" aria-live="polite"></p>
 
           </form>
-
         </div>
 
         <!-- FILTROS DE PAPÁ -->
         <div class="homework-filters">
 
-          <label for="homework-filter-recipient">
-            Destinatario
-          </label>
+          <label for="homework-filter-recipient">Destinatario</label>
 
           <select id="homework-filter-recipient">
             <option value="">Todos</option>
@@ -401,9 +309,7 @@
             <option value="mama">Mamá</option>
           </select>
 
-          <label for="homework-filter-subject">
-            Asignatura
-          </label>
+          <label for="homework-filter-subject">Asignatura</label>
 
           <select id="homework-filter-subject">
             <option value="">Todas</option>
@@ -417,9 +323,7 @@
             <option value="otras">Otras</option>
           </select>
 
-          <label for="homework-filter-state">
-            Estado
-          </label>
+          <label for="homework-filter-state">Estado</label>
 
           <select id="homework-filter-state">
             <option value="">Todos</option>
@@ -427,36 +331,24 @@
             <option value="completado">Completados</option>
           </select>
 
-          <button
-            type="button"
-            onclick="cargarDeberes()"
-          >
+          <button type="button" onclick="cargarDeberes()">
             Aplicar filtros
           </button>
 
         </div>
-
       </div>
 
       <!-- LISTA DE DEBERES -->
-      <div
-        id="homework-list"
-        aria-live="polite"
-      >
+      <div id="homework-list" aria-live="polite">
         <p>Cargando deberes...</p>
       </div>
 
-      <p
-        id="homework-message"
-        role="status"
-        aria-live="polite"
-      ></p>
+      <p id="homework-message" role="status" aria-live="polite"></p>
 
     </section>
 
   </main>
 
-  <!-- APLICACIÓN PRINCIPAL -->
   <script type="module" src="/app.js?v=2"></script>
 
 </body>
