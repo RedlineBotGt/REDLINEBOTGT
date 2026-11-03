@@ -1,7 +1,5 @@
 import {
-  ASIGNATURAS,
-  TIPOS,
-  DESTINATARIOS
+  ASIGNATURAS
 } from "./api.js";
 
 /**
@@ -18,25 +16,6 @@ export function escaparHTML(valor) {
     };
 
     return entidades[caracter];
-  });
-}
-
-/**
- * Formatea una fecha para mostrarla en las tarjetas.
- */
-export function formatearFecha(fecha) {
-  if (!fecha) return "";
-
-  const valor = new Date(fecha);
-
-  if (Number.isNaN(valor.getTime())) {
-    return "";
-  }
-
-  return valor.toLocaleDateString("es-ES", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric"
   });
 }
 
@@ -61,7 +40,7 @@ function obtenerEnlaceSeguro(contenido) {
 }
 
 /**
- * Genera el botón para abrir un enlace.
+ * Genera el botón azul para abrir un enlace.
  */
 function pintarEnlace(deber) {
   if (deber.tipo !== "enlace") {
@@ -79,16 +58,28 @@ function pintarEnlace(deber) {
   }
 
   return `
-    <div class="homework-link-container">
-      <a
-        class="homework-link-button"
-        href="${escaparHTML(enlace)}"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        🔗 Abrir enlace
-      </a>
-    </div>
+    <a
+      class="homework-link-button"
+      href="${escaparHTML(enlace)}"
+      target="_blank"
+      rel="noopener noreferrer"
+      style="
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        min-height: 42px;
+        box-sizing: border-box;
+        background: #2563eb;
+        color: #ffffff;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 14px;
+      "
+    >
+      🔗 Abrir enlace
+    </a>
   `;
 }
 
@@ -99,6 +90,7 @@ function pintarAcciones(deber, perfil) {
   const id = escaparHTML(deber._id || "");
   const completado = deber.estado === "completado";
 
+  // Botones de administración de Papá.
   if (perfil === "papa") {
     return `
       <div class="homework-actions">
@@ -137,29 +129,47 @@ function pintarAcciones(deber, perfil) {
     `;
   }
 
-  if (completado) {
-    return `
-      <div class="homework-actions">
-        <button
-          type="button"
-          class="homework-action-button"
-          onclick="reabrirDeberPantalla('${id}')"
-        >
-          ↩️ Reabrir deber
-        </button>
-      </div>
-    `;
-  }
-
+  // Botones para Leo y Mamá.
   return `
-    <div class="homework-actions">
+    <div
+      class="homework-student-actions"
+      style="
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        width: 100%;
+        margin-top: 12px;
+      "
+    >
+
+      ${pintarEnlace(deber)}
+
       <button
         type="button"
-        class="homework-action-button"
-        onclick="completarDeberPantalla('${id}')"
+        class="homework-complete-button"
+        onclick="${
+          completado
+            ? ""
+            : `completarDeberPantalla('${id}')`
+        }"
+        ${completado ? "disabled" : ""}
+        style="
+          width: 100%;
+          min-height: 42px;
+          box-sizing: border-box;
+          background: #dc2626;
+          color: #ffffff;
+          border: none;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 13px;
+          opacity: ${completado ? "0.65" : "1"};
+          cursor: ${completado ? "not-allowed" : "pointer"};
+        "
       >
-        ✓ Marcar como completado
+        ${completado ? "Terminado ✓" : "Marcar como terminado"}
       </button>
+
     </div>
   `;
 }
@@ -183,20 +193,14 @@ export function pintarDeberes(deberes, perfil) {
 
   lista.innerHTML = deberes.map(deber => {
     const titulo = escaparHTML(deber.titulo);
+
     const asignatura = escaparHTML(
       ASIGNATURAS[deber.asignatura] || deber.asignatura
     );
-    const tipo = escaparHTML(
-      TIPOS[deber.tipo] || deber.tipo
-    );
-    const destinatario = escaparHTML(
-      DESTINATARIOS[deber.destinatario] ||
-      deber.destinatario
-    );
-    const contenido = escaparHTML(deber.contenido);
 
-    const fecha = formatearFecha(deber.fechaLimite);
     const completado = deber.estado === "completado";
+
+    const contenido = escaparHTML(deber.contenido);
 
     return `
       <article class="homework-card">
@@ -215,28 +219,16 @@ export function pintarDeberes(deberes, perfil) {
 
         <div class="homework-card-details">
           <span>${asignatura}</span>
-          <span>${tipo}</span>
-          <span>Para: ${destinatario}</span>
         </div>
 
         ${
-          fecha
+          deber.tipo !== "enlace"
             ? `
-              <p class="homework-deadline">
-                Fecha límite: ${escaparHTML(fecha)}
-              </p>
-            `
-            : ""
-        }
-
-        ${
-          deber.tipo === "enlace"
-            ? pintarEnlace(deber)
-            : `
               <div class="homework-content">
                 ${contenido.replace(/\n/g, "<br>")}
               </div>
             `
+            : ""
         }
 
         ${pintarAcciones(deber, perfil)}
