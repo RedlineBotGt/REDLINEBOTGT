@@ -85,6 +85,65 @@ function pintarEnlace(deber) {
 }
 
 /**
+ * Obtiene los identificadores de deberes nuevos
+ * durante la sesión actual.
+ */
+function obtenerDeberesNuevos(deberes, perfil) {
+  if (perfil === "papa") {
+    return [];
+  }
+
+  const claveSesion = `academiaHomeworkNewIds_${perfil}`;
+  const claveVisita = `academiaHomeworkLastVisit_${perfil}`;
+
+  try {
+    const guardados = sessionStorage.getItem(claveSesion);
+
+    // Ya se han identificado las novedades en esta sesión.
+    if (guardados !== null) {
+      return JSON.parse(guardados);
+    }
+
+    const ultimaVisita = Number(
+      localStorage.getItem(claveVisita) || 0
+    );
+
+    const nuevos = ultimaVisita > 0
+      ? deberes
+          .filter(deber => {
+            const fecha = new Date(deber.creadoEn).getTime();
+
+            return (
+              deber._id &&
+              !Number.isNaN(fecha) &&
+              fecha > ultimaVisita
+            );
+          })
+          .map(deber => String(deber._id))
+      : [];
+
+    sessionStorage.setItem(
+      claveSesion,
+      JSON.stringify(nuevos)
+    );
+
+    localStorage.setItem(
+      claveVisita,
+      String(Date.now())
+    );
+
+    return nuevos;
+  } catch (error) {
+    console.warn(
+      "[DEBERES] No se pudieron guardar las novedades:",
+      error
+    );
+
+    return [];
+  }
+}
+
+/**
  * Dibuja las preguntas de un ejercicio.
  *
  * Las respuestas correctas nunca se incluyen
@@ -292,7 +351,21 @@ export function pintarDeberes(deberes, perfil) {
     return;
   }
 
-  lista.innerHTML = deberes.map(deber => {
+  // Identificar novedades de esta sesión.
+  const deberesNuevos = obtenerDeberesNuevos(
+    deberes,
+    perfil
+  );
+
+  // Ordenar del más reciente al más antiguo.
+  const deberesOrdenados = [...deberes].sort((a, b) => {
+    const fechaA = new Date(a.creadoEn || 0).getTime();
+    const fechaB = new Date(b.creadoEn || 0).getTime();
+
+    return fechaB - fechaA;
+  });
+
+  lista.innerHTML = deberesOrdenados.map(deber => {
     const titulo = escaparHTML(deber.titulo);
 
     const asignatura = escaparHTML(
@@ -303,11 +376,38 @@ export function pintarDeberes(deberes, perfil) {
 
     const contenido = escaparHTML(deber.contenido);
 
+    const esNuevo = deberesNuevos.includes(
+      String(deber._id)
+    );
+
     return `
       <article class="homework-card">
 
         <div class="homework-card-header">
           <h3>${titulo}</h3>
+
+          ${
+            esNuevo
+              ? `
+                <span
+                  class="homework-new-badge"
+                  style="
+                    display: inline-block;
+                    background: #0ea5e9;
+                    color: #ffffff;
+                    padding: 4px 9px;
+                    border-radius: 20px;
+                    font-size: 11px;
+                    font-weight: 800;
+                    margin-left: 6px;
+                    white-space: nowrap;
+                  "
+                >
+                  🆕 NUEVO
+                </span>
+              `
+              : ""
+          }
 
           <span class="homework-status ${
             completado
