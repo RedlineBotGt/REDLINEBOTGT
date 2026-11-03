@@ -98,7 +98,10 @@ export async function comprobarEjercicioPantalla(id) {
   );
 
   if (!formulario) {
-    mostrarMensaje("No se encuentra el formulario del ejercicio.", "error");
+    mostrarMensaje(
+      "No se encuentra el formulario del ejercicio.",
+      "error"
+    );
     return;
   }
 
@@ -113,7 +116,7 @@ export async function comprobarEjercicioPantalla(id) {
 
   if (
     respuestas.length === 0 ||
-    respuestas.some(item => !item.respuesta)
+    respuestas.some(item => !item.respuesta || !item.preguntaId)
   ) {
     mostrarMensaje(
       "Contesta todas las preguntas antes de comprobar.",
@@ -124,6 +127,8 @@ export async function comprobarEjercicioPantalla(id) {
 
   const boton = formulario.querySelector(
     "[data-exercise-submit]"
+  ) || formulario.querySelector(
+    'button[type="submit"]'
   );
 
   try {
@@ -199,3 +204,12 @@ export async function reabrirDeberPantalla(id) {
     );
   }
 }
+
+// ========================================
+// FUNCIONES DISPONIBLES DESDE EL HTML
+// ========================================
+
+window.comprobarEjercicioPantalla = comprobarEjercicioPantalla;
+window.editarDeberPantalla = editarDeberPantalla;
+window.eliminarDeberPantalla = eliminarDeberPantalla;
+window.reabrirDeberPantalla = reabrirDeberPantalla;
