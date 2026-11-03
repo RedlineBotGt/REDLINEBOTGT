@@ -1,22 +1,22 @@
-import { 
-    ActionRowBuilder, 
-    ButtonBuilder, 
-    ButtonStyle, 
-    ChannelSelectMenuBuilder, 
-    RoleSelectMenuBuilder, 
-    StringSelectMenuBuilder, 
-    ChannelType, 
-    ModalBuilder, 
-    TextInputBuilder, 
-    TextInputStyle, 
-    EmbedBuilder, 
-    ButtonInteraction, 
-    StringSelectMenuInteraction, 
-    ChannelSelectMenuInteraction, 
-    RoleSelectMenuInteraction, 
-    ModalSubmitInteraction, 
-    MessageFlags 
+import {
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    ChannelSelectMenuBuilder,
+    RoleSelectMenuBuilder,
+    StringSelectMenuBuilder,
+    ChannelType,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle,
+    ButtonInteraction,
+    StringSelectMenuInteraction,
+    ChannelSelectMenuInteraction,
+    RoleSelectMenuInteraction,
+    ModalSubmitInteraction,
+    MessageFlags
 } from 'discord.js';
+
 import { getReactionCollection } from './reactionstorage';
 
 const rrSessions = new Map<string, {
@@ -24,7 +24,7 @@ const rrSessions = new Map<string, {
     roleId?: string;
 }>();
 
-// 1. Botón principal del Dashboard (/dash): Pregunta si Crear o Gestionar
+// 1. Botón principal del Dashboard
 export async function handleDashRrButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'rr_btn_create') return false;
 
@@ -46,10 +46,11 @@ export async function handleDashRrButton(interaction: ButtonInteraction): Promis
         components: [row],
         flags: [MessageFlags.Ephemeral]
     });
+
     return true;
 }
 
-// 2. Opción "Crear": Paso 1 - Seleccionar Canal mediante Desplegable
+// 2. Crear: seleccionar canal
 export async function handleRrStartCreate(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'rr_flow_create') return false;
 
@@ -58,16 +59,18 @@ export async function handleRrStartCreate(interaction: ButtonInteraction): Promi
         .setPlaceholder('Selecciona el canal donde se publicará')
         .addChannelTypes(ChannelType.GuildText);
 
-    const row = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(channelSelect);
+    const row = new ActionRowBuilder<ChannelSelectMenuBuilder>()
+        .addComponents(channelSelect);
 
     await interaction.update({
-        content: '📋 **Paso 1/3:** Selecciona el canal de texto donde irá publicado el mensaje de Reaction Role.',
+        content: '📋 **Paso 1/3:** Selecciona el canal de texto donde irá publicado el mensaje.',
         components: [row]
     });
+
     return true;
 }
 
-// Opción "Gestionar"
+// 3. Gestionar paneles existentes
 export async function handleRrManage(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'rr_flow_manage') return false;
 
@@ -76,7 +79,7 @@ export async function handleRrManage(interaction: ButtonInteraction): Promise<bo
 
     if (configs.length === 0) {
         await interaction.update({
-            content: '📂 No hay paneles de Reaction Roles activos almacenados en este servidor.',
+            content: '📂 No hay paneles de Reaction Roles activos en este servidor.',
             components: []
         });
         return true;
@@ -84,7 +87,7 @@ export async function handleRrManage(interaction: ButtonInteraction): Promise<bo
 
     const selectMenu = new StringSelectMenuBuilder()
         .setCustomId('rr_select_existing_message')
-        .setPlaceholder('🗑️ Selecciona un mensaje para eliminar su configuración...');
+        .setPlaceholder('Selecciona un mensaje para eliminar su configuración...');
 
     for (const cfg of configs.slice(0, 25)) {
         selectMenu.addOptions({
@@ -94,16 +97,18 @@ export async function handleRrManage(interaction: ButtonInteraction): Promise<bo
         });
     }
 
-    const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
+    const row = new ActionRowBuilder<StringSelectMenuBuilder>()
+        .addComponents(selectMenu);
 
     await interaction.update({
-        content: '📂 **Gestionar Reaction Roles:** Selecciona el panel que deseas eliminar de la base de datos:',
+        content: '📂 **Gestionar Reaction Roles:** Selecciona el panel que deseas eliminar:',
         components: [row]
     });
+
     return true;
 }
 
-// 3. Paso 2: Canal seleccionado -> Guardar canal y pedir Rol mediante Desplegable
+// 4. Seleccionar canal
 export async function handleRrChannelSelect(interaction: ChannelSelectMenuInteraction): Promise<boolean> {
     if (interaction.customId !== 'rr_step_channel') return false;
 
@@ -114,42 +119,37 @@ export async function handleRrChannelSelect(interaction: ChannelSelectMenuIntera
         .setCustomId(`rr_step_role_${channelId}`)
         .setPlaceholder('Selecciona el rol que se entregará');
 
-    const row = new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(roleSelect);
+    const row = new ActionRowBuilder<RoleSelectMenuBuilder>()
+        .addComponents(roleSelect);
 
     await interaction.update({
-        content: '📋 **Paso 2/3:** Selecciona el rol que se asignará al pulsar el botón/emoji.',
+        content: '📋 **Paso 2/3:** Selecciona el rol que se asignará al pulsar el botón.',
         components: [row]
     });
+
     return true;
 }
 
-// 4. Paso 3: Rol seleccionado -> Mostrar Modal para Título, Texto e Icono/Botón
+// 5. Seleccionar rol y abrir formulario
 export async function handleRrRoleSelect(interaction: RoleSelectMenuInteraction): Promise<boolean> {
     if (!interaction.customId.startsWith('rr_step_role_')) return false;
 
     const channelId = interaction.customId.replace('rr_step_role_', '');
     const roleId = interaction.values[0];
-    const session = rrSessions.get(interaction.user.id) || { channelId };
 
+    const session = rrSessions.get(interaction.user.id) || { channelId };
     session.roleId = roleId;
     rrSessions.set(interaction.user.id, session);
 
     const modal = new ModalBuilder()
         .setCustomId(`rr_step_modal_${channelId}_${roleId}`)
-        .setTitle('Configurar Mensaje de Reaction Role');
-
-    const titleInput = new TextInputBuilder()
-        .setCustomId('rr_input_title')
-        .setLabel('Título del Embed')
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ej: 🎭 Roles de Servidor')
-        .setRequired(true);
+        .setTitle('Configurar Reaction Role');
 
     const contentInput = new TextInputBuilder()
         .setCustomId('rr_input_content')
-        .setLabel('Texto del Mensaje (Soporta menciones)')
+        .setLabel('Texto del mensaje')
         .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('Ej: Pulsa el botón inferior para reclamar tu rol.')
+        .setPlaceholder('Ej: Pulsa el botón para reclamar tu rol.')
         .setRequired(true);
 
     const emojiInput = new TextInputBuilder()
@@ -160,16 +160,16 @@ export async function handleRrRoleSelect(interaction: RoleSelectMenuInteraction)
         .setRequired(true);
 
     modal.addComponents(
-        new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput),
         new ActionRowBuilder<TextInputBuilder>().addComponents(contentInput),
         new ActionRowBuilder<TextInputBuilder>().addComponents(emojiInput)
     );
 
     await interaction.showModal(modal);
+
     return true;
 }
 
-// 5. Procesar envío del Modal: Creación final, envío al canal y guardado en BD
+// 6. Publicar mensaje de texto normal con mención del rol
 export async function handleRrContentSubmit(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (!interaction.customId.startsWith('rr_step_modal_')) return false;
 
@@ -179,38 +179,37 @@ export async function handleRrContentSubmit(interaction: ModalSubmitInteraction)
     const channelId = parts[0];
     const roleId = parts[1];
 
-    const title = interaction.fields.getTextInputValue('rr_input_title');
     const messageText = interaction.fields.getTextInputValue('rr_input_content');
     const emoji = interaction.fields.getTextInputValue('rr_input_emoji');
 
     const guild = interaction.guild;
+
     if (!guild) {
-        await interaction.editReply({ content: '❌ Acción no válida fuera de un servidor.' });
-        return true;
-    }
-
-    const targetChannel = await guild.channels.fetch(channelId);
-    const role = await guild.roles.fetch(roleId);
-
-    if (!targetChannel || !targetChannel.isTextBased()) {
-        await interaction.editReply({ content: '❌ El canal seleccionado no es válido o ya no existe.' });
-        return true;
-    }
-
-    if (!role) {
-        await interaction.editReply({ content: '❌ El rol seleccionado no existe en el servidor.' });
+        await interaction.editReply({
+            content: '❌ Acción no válida fuera de un servidor.'
+        });
         return true;
     }
 
     try {
-        const customButtonId = `rr_action_role_${roleId}_${Date.now()}`;
+        const targetChannel = await guild.channels.fetch(channelId);
+        const role = await guild.roles.fetch(roleId);
 
-        const embed = new EmbedBuilder()
-            .setTitle(title)
-            .setDescription(messageText)
-            .setColor(0x0055FF)
-            .setFooter({ text: guild.name, iconURL: guild.iconURL() || undefined })
-            .setTimestamp();
+        if (!targetChannel || !targetChannel.isTextBased() || !('send' in targetChannel)) {
+            await interaction.editReply({
+                content: '❌ El canal seleccionado no es válido o ya no existe.'
+            });
+            return true;
+        }
+
+        if (!role) {
+            await interaction.editReply({
+                content: '❌ El rol seleccionado no existe en este servidor.'
+            });
+            return true;
+        }
+
+        const customButtonId = `rr_action_role_${roleId}_${Date.now()}`;
 
         const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder()
@@ -220,13 +219,17 @@ export async function handleRrContentSubmit(interaction: ModalSubmitInteraction)
                 .setEmoji(emoji)
         );
 
+        // Un único mensaje normal, con mención real del rol.
         const message = await targetChannel.send({
-            content: messageText,
-            embeds: [embed],
-            components: [actionRow]
+            content: `<@&${role.id}>\n\n${messageText}`,
+            components: [actionRow],
+            allowedMentions: {
+                roles: [role.id]
+            }
         });
 
         const col = await getReactionCollection();
+
         await col.insertOne({
             guildId: guild.id,
             channelId: targetChannel.id,
@@ -239,17 +242,21 @@ export async function handleRrContentSubmit(interaction: ModalSubmitInteraction)
         rrSessions.delete(interaction.user.id);
 
         await interaction.editReply({
-            content: `✅ ¡Reaction Role creado y publicado con éxito en <#${channelId}>!`
+            content: `✅ ¡Reaction Role creado y publicado correctamente en <#${channelId}>!`
         });
+
     } catch (error) {
         console.error('❌ Error al crear reaction role:', error);
-        await interaction.editReply({ content: '❌ Ocurrió un error al crear el reaction role.' });
+
+        await interaction.editReply({
+            content: '❌ Ocurrió un error al crear el Reaction Role. Comprueba los permisos del bot.'
+        });
     }
 
     return true;
 }
 
-// 6. Manejar la eliminación de un panel existente seleccionado desde el menú
+// 7. Eliminar configuración existente
 export async function handleRrExistingSelect(interaction: StringSelectMenuInteraction): Promise<boolean> {
     if (interaction.customId !== 'rr_select_existing_message') return false;
 
@@ -259,46 +266,66 @@ export async function handleRrExistingSelect(interaction: StringSelectMenuIntera
     await col.deleteOne({ messageId });
 
     await interaction.update({
-        content: '🗑️ **Configuración de autorol eliminada de la base de datos con éxito.**',
+        content: '🗑️ **Configuración de Reaction Role eliminada de la base de datos.**',
         components: []
     });
 
     return true;
 }
 
-// 7. Manejar el clic del usuario en el botón de Reaction Role (Dar/Quitar rol)
+// 8. Dar o retirar el rol al pulsar el botón
 export async function handleRrRoleAction(interaction: ButtonInteraction): Promise<boolean> {
     if (!interaction.customId.startsWith('rr_action_role_')) return false;
 
     const parts = interaction.customId.split('_');
-    const roleId = parts[3]; // Extraemos el roleId del customId dinámico
+    const roleId = parts[3];
 
     const guild = interaction.guild;
     if (!guild) return true;
 
     const member = await guild.members.fetch(interaction.user.id).catch(() => null);
+
     if (!member) {
-        await interaction.reply({ content: '❌ No se pudo verificar tu usuario en el servidor.', flags: [MessageFlags.Ephemeral] });
+        await interaction.reply({
+            content: '❌ No se pudo verificar tu usuario en el servidor.',
+            flags: [MessageFlags.Ephemeral]
+        });
         return true;
     }
 
-    const role = guild.roles.cache.get(roleId);
+    const role = await guild.roles.fetch(roleId);
+
     if (!role) {
-        await interaction.reply({ content: '❌ El rol asociado ya no existe en este servidor.', flags: [MessageFlags.Ephemeral] });
+        await interaction.reply({
+            content: '❌ El rol asociado ya no existe en este servidor.',
+            flags: [MessageFlags.Ephemeral]
+        });
         return true;
     }
 
     try {
         if (member.roles.cache.has(roleId)) {
             await member.roles.remove(role);
-            await interaction.reply({ content: `❌ Se te ha retirado el rol **${role.name}**.`, flags: [MessageFlags.Ephemeral] });
+
+            await interaction.reply({
+                content: `❌ Se te ha retirado el rol **${role.name}**.`,
+                flags: [MessageFlags.Ephemeral]
+            });
         } else {
             await member.roles.add(role);
-            await interaction.reply({ content: `✅ ¡Se te ha otorgado el rol **${role.name}**!`, flags: [MessageFlags.Ephemeral] });
+
+            await interaction.reply({
+                content: `✅ ¡Se te ha otorgado el rol **${role.name}**!`,
+                flags: [MessageFlags.Ephemeral]
+            });
         }
     } catch (error) {
-        console.error('❌ Error al gestionar el rol en reaction role:', error);
-        await interaction.reply({ content: '❌ Hubo un error al intentar modificar tus roles (comprueba que el bot tenga permisos superiores al rol).', flags: [MessageFlags.Ephemeral] });
+        console.error('❌ Error al gestionar el rol:', error);
+
+        await interaction.reply({
+            content: '❌ Hubo un error al modificar tus roles. Comprueba los permisos y la jerarquía de roles del bot.',
+            flags: [MessageFlags.Ephemeral]
+        });
     }
 
     return true;
