@@ -26,47 +26,12 @@ export const perfiles = {
 export let perfilActual = null;
 
 // ========================================
-// RECUPERAR PERFIL GUARDADO
-// ========================================
-
-function recuperarPerfilGuardado() {
-  try {
-    const perfilGuardado = localStorage.getItem("academiaPerfil");
-
-    if (perfilGuardado && perfiles[perfilGuardado]) {
-      perfilActual = perfilGuardado;
-
-      console.log(
-        "[ACADEMIA] Perfil recuperado:",
-        perfiles[perfilGuardado].nombre
-      );
-    } else {
-      perfilActual = null;
-    }
-  } catch (error) {
-    perfilActual = null;
-
-    console.warn(
-      "[ACADEMIA] No se pudo recuperar el perfil:",
-      error
-    );
-  }
-}
-
-// Recuperar el perfil al cargar el módulo.
-recuperarPerfilGuardado();
-
-// ========================================
 // SELECCIONAR PERFIL
 // ========================================
 
 export function seleccionarPerfil(perfil) {
   if (!perfiles[perfil]) {
-    console.warn(
-      "[ACADEMIA] Perfil desconocido:",
-      perfil
-    );
-
+    console.warn("[ACADEMIA] Perfil desconocido:", perfil);
     return false;
   }
 
@@ -109,15 +74,6 @@ export function obtenerPerfilActual() {
 
 export function cerrarPerfil() {
   perfilActual = null;
-
-  try {
-    localStorage.removeItem("academiaPerfil");
-  } catch (error) {
-    console.warn(
-      "[ACADEMIA] No se pudo borrar el perfil guardado:",
-      error
-    );
-  }
 
   console.log("[ACADEMIA] Perfil cerrado");
 }
