@@ -165,10 +165,12 @@ function obtenerFiltros() {
   const filtros = {};
   const perfil = obtenerPerfilActual();
 
-  if (perfil !== "papa") {
+  // Papá debe enviar siempre perfil=papa si no
+  // ha seleccionado un destinatario concreto.
+  if (perfil === "papa") {
+    filtros.perfil = destinatario?.value || "papa";
+  } else if (perfil === "leo" || perfil === "mama") {
     filtros.perfil = perfil;
-  } else if (destinatario?.value) {
-    filtros.perfil = destinatario.value;
   }
 
   if (asignatura?.value) {
@@ -234,11 +236,6 @@ export function iniciarDeberes() {
     });
   }
 
-  // El botón de guardar utiliza el envío normal del formulario.
-  // No añadimos otro listener de clic para evitar duplicados.
-
-  // El botón de acceso conserva su onclick del HTML.
-  // Aquí solo gestionamos la tecla Enter.
   const campoPin = document.getElementById("homework-pin");
 
   if (campoPin) {
@@ -267,7 +264,6 @@ export function iniciarDeberes() {
     mostrarAccesoPapa
   );
 
-  // Funciones utilizadas desde los onclick del HTML.
   window.abrirDeberes = abrirDeberes;
   window.volverDesdeDeberes = volverDesdeDeberes;
   window.iniciarSesionDeberes = iniciarSesionDeberes;
