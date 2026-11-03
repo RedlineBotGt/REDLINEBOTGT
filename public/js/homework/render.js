@@ -1,3 +1,4 @@
+
 import {
   ASIGNATURAS
 } from "./api.js";
@@ -84,6 +85,101 @@ function pintarEnlace(deber) {
 }
 
 /**
+ * Dibuja las preguntas de un ejercicio.
+ *
+ * Las respuestas correctas nunca se incluyen
+ * en el HTML que recibe el navegador.
+ */
+function pintarPreguntasEjercicio(deber, perfil) {
+  if (
+    deber.tipo !== "ejercicio" ||
+    perfil === "papa"
+  ) {
+    return "";
+  }
+
+  const preguntas = Array.isArray(deber.preguntas)
+    ? deber.preguntas
+    : [];
+
+  if (preguntas.length === 0) {
+    return `
+      <p class="homework-invalid-link">
+        Este ejercicio todavía no tiene preguntas.
+      </p>
+    `;
+  }
+
+  const id = escaparHTML(deber._id || "");
+  const completado = deber.estado === "completado";
+
+  return `
+    <div class="homework-exercise">
+
+      <h4>📝 Responde las preguntas</h4>
+
+      <form
+        id="exercise-form-${id}"
+        class="homework-exercise-form"
+        onsubmit="event.preventDefault(); comprobarEjercicioPantalla('${id}')"
+      >
+
+        ${preguntas.map((pregunta, indice) => {
+          const preguntaTexto = escaparHTML(
+            pregunta.pregunta
+          );
+
+          const preguntaId = escaparHTML(
+            pregunta.id || String(indice)
+          );
+
+          return `
+            <div class="homework-exercise-question">
+
+              <label for="answer-${id}-${indice}">
+                <strong>
+                  ${indice + 1}. ${preguntaTexto}
+                </strong>
+              </label>
+
+              <textarea
+                id="answer-${id}-${indice}"
+                rows="2"
+                maxlength="2000"
+                placeholder="Escribe tu respuesta..."
+                data-exercise-answer
+                data-question-id="${preguntaId}"
+                ${completado ? "disabled" : ""}
+                required
+              ></textarea>
+
+            </div>
+          `;
+        }).join("")}
+
+        <button
+          type="submit"
+          class="homework-exercise-submit"
+          data-exercise-submit
+          ${completado ? "disabled" : ""}
+        >
+          ${completado ? "Ejercicio terminado ✓" : "Comprobar respuestas"}
+        </button>
+
+        <p
+          class="homework-exercise-feedback"
+          data-exercise-feedback
+          role="status"
+          aria-live="polite"
+        ></p>
+
+      </form>
+
+    </div>
+  `;
+}
+
+/**
  * Genera las acciones disponibles para cada perfil.
  */
 function pintarAcciones(deber, perfil) {
@@ -129,7 +225,12 @@ function pintarAcciones(deber, perfil) {
     `;
   }
 
-  // Botones para Leo y Mamá.
+  // Los ejercicios se completan al acertar todas las preguntas.
+  if (deber.tipo === "ejercicio") {
+    return "";
+  }
+
+  // Botones para enlaces y otros deberes.
   return `
     <div
       class="homework-student-actions"
@@ -230,6 +331,8 @@ export function pintarDeberes(deberes, perfil) {
             `
             : ""
         }
+
+        ${pintarPreguntasEjercicio(deber, perfil)}
 
         ${pintarAcciones(deber, perfil)}
 
