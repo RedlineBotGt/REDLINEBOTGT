@@ -34,22 +34,35 @@ let inicializado = false;
 export function abrirDeberes() {
   const pantalla = document.getElementById("homework-screen");
   const asignaturas = document.getElementById("subjects-screen");
+  const gestion = document.getElementById("homework-management");
+  const acceso = document.getElementById("homework-login");
 
   if (asignaturas) asignaturas.classList.add("hidden");
   if (pantalla) pantalla.classList.remove("hidden");
 
   const perfil = obtenerPerfilActual();
 
-  if (perfil === "papa" && !obtenerToken()) {
-    mostrarAccesoPapa();
+  // PAPÁ: necesita iniciar sesión antes de ver la gestión.
+  if (perfil === "papa") {
+    if (!obtenerToken()) {
+      mostrarAccesoPapa();
+      return;
+    }
+
+    if (acceso) acceso.classList.add("hidden");
+    if (gestion) gestion.classList.remove("hidden");
+
+    cargarDeberes();
     return;
   }
 
-  const gestion = document.getElementById("homework-management");
-  const acceso = document.getElementById("homework-login");
+  // LEO Y MAMÁ: nunca deben conservar una sesión administrativa.
+  cerrarSesion();
 
-  if (gestion) gestion.classList.remove("hidden");
   if (acceso) acceso.classList.add("hidden");
+  if (gestion) gestion.classList.add("hidden");
+
+  ocultarFormularioDeber();
 
   cargarDeberes();
 }
@@ -74,14 +87,26 @@ export function mostrarAccesoPapa() {
   const acceso = document.getElementById("homework-login");
   const gestion = document.getElementById("homework-management");
 
+  if (obtenerPerfilActual() !== "papa") {
+    if (acceso) acceso.classList.add("hidden");
+    if (gestion) gestion.classList.add("hidden");
+    return;
+  }
+
   if (acceso) acceso.classList.remove("hidden");
   if (gestion) gestion.classList.add("hidden");
+
+  ocultarFormularioDeber();
 }
 
 /**
  * Inicia sesión de Papá mediante PIN.
  */
 export async function iniciarSesionDeberes() {
+  if (obtenerPerfilActual() !== "papa") {
+    return;
+  }
+
   const pin = document.getElementById("homework-pin");
   const mensaje = document.getElementById("homework-login-message");
   const boton = document.getElementById("homework-login-btn");
@@ -143,7 +168,16 @@ export async function iniciarSesionDeberes() {
  */
 export function cerrarSesionDeberes() {
   cerrarSesion();
-  mostrarAccesoPapa();
+
+  if (obtenerPerfilActual() === "papa") {
+    mostrarAccesoPapa();
+  } else {
+    const acceso = document.getElementById("homework-login");
+    const gestion = document.getElementById("homework-management");
+
+    if (acceso) acceso.classList.add("hidden");
+    if (gestion) gestion.classList.add("hidden");
+  }
 }
 
 /**
@@ -165,8 +199,6 @@ function obtenerFiltros() {
   const filtros = {};
   const perfil = obtenerPerfilActual();
 
-  // Papá debe enviar siempre perfil=papa si no
-  // ha seleccionado un destinatario concreto.
   if (perfil === "papa") {
     filtros.perfil = destinatario?.value || "papa";
   } else if (perfil === "leo" || perfil === "mama") {
@@ -190,6 +222,13 @@ function obtenerFiltros() {
 export async function cargarDeberes() {
   const lista = document.getElementById("homework-list");
   const mensaje = document.getElementById("homework-message");
+  const perfil = obtenerPerfilActual();
+
+  // Evita cargar la gestión de Papá sin autenticación.
+  if (perfil === "papa" && !obtenerToken()) {
+    mostrarAccesoPapa();
+    return;
+  }
 
   try {
     if (lista) {
@@ -206,7 +245,7 @@ export async function cargarDeberes() {
 
     pintarDeberes(
       deberesActuales,
-      obtenerPerfilActual()
+      perfil
     );
 
     if (mensaje) {
