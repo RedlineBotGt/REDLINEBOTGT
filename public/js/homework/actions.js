@@ -1,6 +1,7 @@
 
 import {
   eliminarDeber,
+  completarDeber,
   comprobarRespuestasEjercicio,
   reabrirDeber
 } from "./api.js";
@@ -36,6 +37,10 @@ async function actualizarDeberes() {
   }
 }
 
+// ========================================
+// EDITAR DEBER
+// ========================================
+
 export function editarDeberPantalla(id) {
   const deber = buscarDeber(id);
 
@@ -46,6 +51,10 @@ export function editarDeberPantalla(id) {
 
   mostrarFormularioDeber(deber);
 }
+
+// ========================================
+// ELIMINAR DEBER
+// ========================================
 
 export async function eliminarDeberPantalla(id) {
   const deber = buscarDeber(id);
@@ -76,10 +85,59 @@ export async function eliminarDeberPantalla(id) {
   }
 }
 
-/**
- * Comprueba las respuestas de un ejercicio.
- * Si todas son correctas, el servidor lo marca como completado.
- */
+// ========================================
+// COMPLETAR DEBER NORMAL
+// ========================================
+
+export async function completarDeberPantalla(id) {
+  const deber = buscarDeber(id);
+
+  if (!deber) {
+    mostrarMensaje("No se ha encontrado ese deber.", "error");
+    return;
+  }
+
+  if (deber.tipo === "ejercicio") {
+    mostrarMensaje(
+      "Los ejercicios se completan al acertar todas las respuestas.",
+      "error"
+    );
+    return;
+  }
+
+  if (deber.estado === "completado") {
+    mostrarMensaje("Este deber ya está terminado.", "success");
+    return;
+  }
+
+  const confirmar = window.confirm(
+    `¿Marcar "${deber.titulo}" como terminado?`
+  );
+
+  if (!confirmar) return;
+
+  try {
+    mostrarMensaje("Completando deber...");
+
+    await completarDeber(id);
+    await actualizarDeberes();
+
+    mostrarMensaje(
+      "¡Deber completado correctamente!",
+      "success"
+    );
+  } catch (error) {
+    mostrarMensaje(
+      error.message || "No se ha podido completar el deber.",
+      "error"
+    );
+  }
+}
+
+// ========================================
+// COMPROBAR RESPUESTAS DEL EJERCICIO
+// ========================================
+
 export async function comprobarEjercicioPantalla(id) {
   const deber = buscarDeber(id);
 
@@ -89,7 +147,10 @@ export async function comprobarEjercicioPantalla(id) {
   }
 
   if (deber.estado === "completado") {
-    mostrarMensaje("Este ejercicio ya está completado.", "success");
+    mostrarMensaje(
+      "Este ejercicio ya está completado.",
+      "success"
+    );
     return;
   }
 
@@ -116,7 +177,9 @@ export async function comprobarEjercicioPantalla(id) {
 
   if (
     respuestas.length === 0 ||
-    respuestas.some(item => !item.respuesta || !item.preguntaId)
+    respuestas.some(
+      item => !item.respuesta || !item.preguntaId
+    )
   ) {
     mostrarMensaje(
       "Contesta todas las preguntas antes de comprobar.",
@@ -165,9 +228,10 @@ export async function comprobarEjercicioPantalla(id) {
   }
 }
 
-/**
- * Permite reabrir un ejercicio o deber completado.
- */
+// ========================================
+// REABRIR DEBER
+// ========================================
+
 export async function reabrirDeberPantalla(id) {
   const deber = buscarDeber(id);
 
@@ -210,6 +274,7 @@ export async function reabrirDeberPantalla(id) {
 // ========================================
 
 window.comprobarEjercicioPantalla = comprobarEjercicioPantalla;
+window.completarDeberPantalla = completarDeberPantalla;
 window.editarDeberPantalla = editarDeberPantalla;
 window.eliminarDeberPantalla = eliminarDeberPantalla;
 window.reabrirDeberPantalla = reabrirDeberPantalla;
