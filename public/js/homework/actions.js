@@ -1,6 +1,7 @@
+
 import {
   eliminarDeber,
-  completarDeber,
+  comprobarRespuestasEjercicio,
   reabrirDeber
 } from "./api.js";
 
@@ -10,25 +11,16 @@ import {
 
 let deberesActuales = [];
 
-/**
- * Recibe la lista actual de deberes desde homework.js.
- */
 export function establecerDeberesActuales(deberes) {
   deberesActuales = Array.isArray(deberes) ? deberes : [];
 }
 
-/**
- * Busca un deber por su identificador.
- */
 function buscarDeber(id) {
   return deberesActuales.find(
     deber => String(deber._id) === String(id)
   );
 }
 
-/**
- * Muestra mensajes de resultado.
- */
 function mostrarMensaje(texto, tipo = "") {
   const mensaje = document.getElementById("homework-message");
 
@@ -38,18 +30,12 @@ function mostrarMensaje(texto, tipo = "") {
   mensaje.className = `homework-message ${tipo}`.trim();
 }
 
-/**
- * Recarga la lista de deberes.
- */
 async function actualizarDeberes() {
   if (typeof window.cargarDeberes === "function") {
     await window.cargarDeberes();
   }
 }
 
-/**
- * Abre el formulario para editar un deber.
- */
 export function editarDeberPantalla(id) {
   const deber = buscarDeber(id);
 
@@ -61,9 +47,6 @@ export function editarDeberPantalla(id) {
   mostrarFormularioDeber(deber);
 }
 
-/**
- * Elimina un deber.
- */
 export async function eliminarDeberPantalla(id) {
   const deber = buscarDeber(id);
 
@@ -94,38 +77,91 @@ export async function eliminarDeberPantalla(id) {
 }
 
 /**
- * Marca un deber como completado.
+ * Comprueba las respuestas de un ejercicio.
+ * Si todas son correctas, el servidor lo marca como completado.
  */
-export async function completarDeberPantalla(id) {
+export async function comprobarEjercicioPantalla(id) {
   const deber = buscarDeber(id);
 
   if (!deber) {
-    mostrarMensaje("No se ha encontrado ese deber.", "error");
+    mostrarMensaje("No se ha encontrado ese ejercicio.", "error");
     return;
   }
 
   if (deber.estado === "completado") {
-    mostrarMensaje("Este deber ya está completado.", "error");
+    mostrarMensaje("Este ejercicio ya está completado.", "success");
     return;
   }
 
-  try {
-    mostrarMensaje("Guardando progreso...");
+  const formulario = document.getElementById(
+    `exercise-form-${id}`
+  );
 
-    await completarDeber(id);
-    await actualizarDeberes();
+  if (!formulario) {
+    mostrarMensaje("No se encuentra el formulario del ejercicio.", "error");
+    return;
+  }
 
-    mostrarMensaje("¡Deber completado! ¡Buen trabajo!", "success");
-  } catch (error) {
+  const campos = formulario.querySelectorAll(
+    "[data-exercise-answer]"
+  );
+
+  const respuestas = Array.from(campos).map(campo => ({
+    preguntaId: campo.dataset.questionId,
+    respuesta: campo.value.trim()
+  }));
+
+  if (
+    respuestas.length === 0 ||
+    respuestas.some(item => !item.respuesta)
+  ) {
     mostrarMensaje(
-      error.message || "No se ha podido completar el deber.",
+      "Contesta todas las preguntas antes de comprobar.",
       "error"
     );
+    return;
+  }
+
+  const boton = formulario.querySelector(
+    "[data-exercise-submit]"
+  );
+
+  try {
+    if (boton) boton.disabled = true;
+
+    mostrarMensaje("Comprobando tus respuestas...");
+
+    const resultado = await comprobarRespuestasEjercicio(
+      id,
+      respuestas
+    );
+
+    if (resultado.completado) {
+      mostrarMensaje(
+        "¡Perfecto! Has acertado todas las respuestas. ¡Ejercicio terminado!",
+        "success"
+      );
+
+      await actualizarDeberes();
+    } else {
+      mostrarMensaje(
+        resultado.error ||
+        "Todavía hay alguna respuesta incorrecta. ¡Inténtalo de nuevo!",
+        "error"
+      );
+    }
+  } catch (error) {
+    mostrarMensaje(
+      error.message || "No se han podido comprobar las respuestas.",
+      "error"
+    );
+  } finally {
+    if (boton) boton.disabled = false;
   }
 }
 
 /**
- * Vuelve a abrir un deber completado.
+ * Permite reabrir un ejercicio o deber completado.
  */
 export async function reabrirDeberPantalla(id) {
   const deber = buscarDeber(id);
@@ -152,7 +188,10 @@ export async function reabrirDeberPantalla(id) {
     await reabrirDeber(id);
     await actualizarDeberes();
 
-    mostrarMensaje("El deber vuelve a estar pendiente.", "success");
+    mostrarMensaje(
+      "El deber vuelve a estar pendiente.",
+      "success"
+    );
   } catch (error) {
     mostrarMensaje(
       error.message || "No se ha podido reabrir el deber.",
