@@ -18,7 +18,7 @@ export const ASIGNATURAS = {
 export const TIPOS = {
   enlace: "Enlace externo",
   ejercicio: "Ejercicio de Academia",
-  escrito: "Tarea escrita"
+  escrito: "Tarea escrita (antigua)"
 };
 
 export const DESTINATARIOS = {
@@ -162,6 +162,8 @@ export async function editarDeber(id, cambios) {
     throw new Error("Falta el identificador del deber.");
   }
 
+  validarDeber(cambios);
+
   return solicitarAPI(
     `${API_URL}/${encodeURIComponent(id)}`,
     {
@@ -187,6 +189,39 @@ export async function eliminarDeber(id) {
   return solicitarAPI(
     `${API_URL}/${encodeURIComponent(id)}`,
     { method: "DELETE" }
+  );
+}
+
+// ========================================
+// COMPROBAR RESPUESTAS DEL EJERCICIO
+// ========================================
+
+export async function comprobarRespuestasEjercicio(id, respuestas) {
+  const perfil = obtenerPerfilActual();
+
+  if (!DESTINATARIOS[perfil]) {
+    throw new Error(
+      "Este perfil no puede responder ejercicios."
+    );
+  }
+
+  if (!id) {
+    throw new Error("Falta el identificador del ejercicio.");
+  }
+
+  if (!Array.isArray(respuestas) || respuestas.length === 0) {
+    throw new Error("Introduce las respuestas del ejercicio.");
+  }
+
+  return solicitarAPI(
+    `${API_URL}/${encodeURIComponent(id)}/answer`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        perfil,
+        respuestas
+      })
+    }
   );
 }
 
@@ -286,6 +321,33 @@ export function validarDeber(deber) {
     } catch {
       throw new Error(
         "El enlace debe ser una dirección web válida."
+      );
+    }
+  }
+
+  if (deber.tipo === "ejercicio") {
+    if (
+      !Array.isArray(deber.preguntas) ||
+      deber.preguntas.length === 0
+    ) {
+      throw new Error(
+        "El ejercicio necesita al menos una pregunta."
+      );
+    }
+
+    const incompleta = deber.preguntas.some((pregunta) => {
+      return (
+        !pregunta ||
+        typeof pregunta.pregunta !== "string" ||
+        !pregunta.pregunta.trim() ||
+        typeof pregunta.respuestaCorrecta !== "string" ||
+        !pregunta.respuestaCorrecta.trim()
+      );
+    });
+
+    if (incompleta) {
+      throw new Error(
+        "Todas las preguntas necesitan una respuesta correcta."
       );
     }
   }
