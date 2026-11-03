@@ -1,4 +1,3 @@
-
 import {
     ButtonInteraction,
     ActionRowBuilder,
@@ -166,28 +165,22 @@ export async function handleEventAdminConfirmButton(interaction: ButtonInteracti
     if (!Array.isArray(eventDoc.rsvps.maybe)) eventDoc.rsvps.maybe = [];
     if (!Array.isArray(eventDoc.rsvps.no)) eventDoc.rsvps.no = [];
 
-    const yaEstabaApuntado =
-        eventDoc.rsvps.yes.includes(targetUserId) ||
-        eventDoc.rsvps.reserve.includes(targetUserId);
+    // Solo cuentan los titulares para el límite de 15.
+    const yaEraTitular = eventDoc.rsvps.yes.includes(targetUserId);
 
-    const totalActual =
-        eventDoc.rsvps.yes.length + eventDoc.rsvps.reserve.length;
-
-    // No permitir una nueva inscripción si ya hay 15 pilotos.
-    // Los cambios de titular a reserva o viceversa sí están permitidos.
     if (
-        (targetStatus === 'yes' || targetStatus === 'reserve') &&
-        !yaEstabaApuntado &&
-        totalActual >= MAX_PILOTOS
+        targetStatus === 'yes' &&
+        !yaEraTitular &&
+        eventDoc.rsvps.yes.length >= MAX_PILOTOS
     ) {
         await interaction.update({
-            content: `❌ No se puede añadir a <@${targetUserId}>. El evento ya tiene las **${MAX_PILOTOS} plazas ocupadas** entre titulares y reservas.`,
+            content: `❌ No se puede añadir a <@${targetUserId}> como titular. Ya están ocupadas las **${MAX_PILOTOS} plazas de titulares**. Las reservas no cuentan para este límite.`,
             components: []
         });
         return true;
     }
 
-    // Limpieza estricta de todos los estados previos
+    // Limpieza estricta de todos los estados previos.
     eventDoc.rsvps.yes = eventDoc.rsvps.yes.filter((id: string) => id !== targetUserId);
     eventDoc.rsvps.reserve = eventDoc.rsvps.reserve.filter((id: string) => id !== targetUserId);
     eventDoc.rsvps.maybe = eventDoc.rsvps.maybe.filter((id: string) => id !== targetUserId);
@@ -257,7 +250,7 @@ export async function handleEventAdminConfirmButton(interaction: ButtonInteracti
     return true;
 }
 
-// --- 5. GESTIÓN DE RSVP Y RESTRICCIÓN ESTRICTA DE ROLES (TITULAR VS RESERVA) ---
+// --- 5. GESTIÓN DE RSVP Y RESTRICCIÓN ESTRICTA DE ROLES ---
 export async function handleEventRsvpButton(interaction: ButtonInteraction): Promise<boolean> {
     const customId = interaction.customId;
 
@@ -277,7 +270,7 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
     const member = interaction.member as GuildMember;
     if (!member) return true;
 
-    // Detectar roles por nombre
+    // Detectar roles por nombre.
     const isTitular = member.roles.cache.some(
         r => r.name.toLowerCase().includes('titular')
     );
@@ -286,7 +279,7 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
         r => r.name.toLowerCase().includes('reserva')
     );
 
-    // Restricción 1: Botón Reserva
+    // Restricción 1: Botón Reserva.
     if (customId === 'event_rsvp_reserve') {
         if (isTitular) {
             await interaction.reply({
@@ -305,7 +298,7 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
         }
     }
 
-    // Restricción 2: Botón Asistiré
+    // Restricción 2: Botón Asistiré.
     if (customId === 'event_rsvp_yes') {
         if (isReserva) {
             await interaction.reply({
@@ -347,28 +340,22 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
     if (!Array.isArray(eventDoc.rsvps.maybe)) eventDoc.rsvps.maybe = [];
     if (!Array.isArray(eventDoc.rsvps.no)) eventDoc.rsvps.no = [];
 
-    const yaEstabaApuntado =
-        eventDoc.rsvps.yes.includes(userId) ||
-        eventDoc.rsvps.reserve.includes(userId);
+    // Solo contamos titulares. Las reservas son independientes.
+    const yaEraTitular = eventDoc.rsvps.yes.includes(userId);
 
-    const totalActual =
-        eventDoc.rsvps.yes.length + eventDoc.rsvps.reserve.length;
-
-    // No permitir nuevas inscripciones por encima de 15.
-    // Los pilotos ya apuntados pueden cambiar de lista.
     if (
-        (customId === 'event_rsvp_yes' || customId === 'event_rsvp_reserve') &&
-        !yaEstabaApuntado &&
-        totalActual >= MAX_PILOTOS
+        customId === 'event_rsvp_yes' &&
+        !yaEraTitular &&
+        eventDoc.rsvps.yes.length >= MAX_PILOTOS
     ) {
         await interaction.reply({
-            content: `❌ El evento ya tiene las **${MAX_PILOTOS} plazas ocupadas** entre titulares y reservas. No se admiten más inscripciones.`,
+            content: `❌ Ya están ocupadas las **${MAX_PILOTOS} plazas de titulares**. Puedes seguir apuntándote como reserva si tienes el rol correspondiente.`,
             flags: [MessageFlags.Ephemeral]
         });
         return true;
     }
 
-    // Limpieza previa garantizada de todas las listas
+    // Limpieza previa garantizada de todas las listas.
     eventDoc.rsvps.yes = eventDoc.rsvps.yes.filter((id: string) => id !== userId);
     eventDoc.rsvps.reserve = eventDoc.rsvps.reserve.filter((id: string) => id !== userId);
     eventDoc.rsvps.maybe = eventDoc.rsvps.maybe.filter((id: string) => id !== userId);
@@ -383,6 +370,7 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
             asistenteRole = await guild.roles.create({
                 name: 'asistente',
                 color: 0x00FF00,
+                mentionable: true,
                 reason: 'Rol automático creado para gestión de asistencias.'
             });
         } catch (e) {
