@@ -1,3 +1,4 @@
+
 import {
   crearDeber,
   editarDeber,
@@ -7,6 +8,7 @@ import {
 import { obtenerPerfilActual } from "../users.js";
 
 let deberEditando = null;
+let contadorPreguntas = 0;
 
 /**
  * Comprueba que el usuario puede gestionar deberes.
@@ -39,10 +41,197 @@ function mostrarErrorPermisos(texto) {
 }
 
 /**
+ * Genera un identificador para cada pregunta.
+ */
+function generarIdPregunta() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+
+  return `pregunta-${Date.now()}-${contadorPreguntas++}`;
+}
+
+/**
+ * Muestra u oculta el apartado de preguntas.
+ */
+function actualizarApartadoPreguntas() {
+  const tipo = document.getElementById("homework-type");
+  const contenedor = document.getElementById(
+    "homework-questions-container"
+  );
+  const etiquetaContenido = document.getElementById(
+    "homework-content-label"
+  );
+  const contenido = document.getElementById("homework-content");
+
+  if (!tipo || !contenedor) return;
+
+  const esEjercicio = tipo.value === "ejercicio";
+
+  contenedor.classList.toggle("hidden", !esEjercicio);
+
+  if (etiquetaContenido) {
+    etiquetaContenido.textContent = esEjercicio
+      ? "Enunciado o instrucciones"
+      : "Enlace o instrucciones";
+  }
+
+  if (contenido) {
+    contenido.placeholder = esEjercicio
+      ? "Explica brevemente qué debe hacer..."
+      : "Pega aquí el enlace...";
+  }
+}
+
+/**
+ * Añade una pregunta al formulario.
+ */
+export function agregarPreguntaDeber(pregunta = null) {
+  const lista = document.getElementById("homework-questions-list");
+
+  if (!lista) return;
+
+  const id = pregunta?.id || generarIdPregunta();
+
+  const grupo = document.createElement("div");
+  grupo.className = "homework-question-item";
+  grupo.dataset.questionId = id;
+
+  const numero = lista.children.length + 1;
+
+  const encabezado = document.createElement("div");
+  encabezado.className = "homework-question-header";
+
+  const titulo = document.createElement("strong");
+  titulo.textContent = `Pregunta ${numero}`;
+
+  const eliminar = document.createElement("button");
+  eliminar.type = "button";
+  eliminar.textContent = "Eliminar";
+  eliminar.className = "homework-remove-question-btn";
+
+  eliminar.addEventListener("click", () => {
+    grupo.remove();
+    actualizarNumeracionPreguntas();
+  });
+
+  encabezado.appendChild(titulo);
+  encabezado.appendChild(eliminar);
+
+  const etiquetaPregunta = document.createElement("label");
+  etiquetaPregunta.textContent = "Pregunta";
+
+  const campoPregunta = document.createElement("textarea");
+  campoPregunta.rows = 2;
+  campoPregunta.required = true;
+  campoPregunta.maxLength = 2000;
+  campoPregunta.placeholder = "Escribe la pregunta...";
+  campoPregunta.dataset.homeworkQuestion = "true";
+  campoPregunta.value = pregunta?.pregunta || "";
+
+  const etiquetaRespuesta = document.createElement("label");
+  etiquetaRespuesta.textContent = "Respuesta correcta";
+
+  const campoRespuesta = document.createElement("input");
+  campoRespuesta.type = "text";
+  campoRespuesta.required = true;
+  campoRespuesta.maxLength = 1000;
+  campoRespuesta.placeholder = "Escribe la respuesta esperada...";
+  campoRespuesta.dataset.homeworkCorrectAnswer = "true";
+  campoRespuesta.value = pregunta?.respuestaCorrecta || "";
+
+  grupo.appendChild(encabezado);
+  grupo.appendChild(etiquetaPregunta);
+  grupo.appendChild(campoPregunta);
+  grupo.appendChild(etiquetaRespuesta);
+  grupo.appendChild(campoRespuesta);
+
+  lista.appendChild(grupo);
+
+  actualizarNumeracionPreguntas();
+}
+
+/**
+ * Actualiza los números después de eliminar preguntas.
+ */
+function actualizarNumeracionPreguntas() {
+  const lista = document.getElementById("homework-questions-list");
+
+  if (!lista) return;
+
+  Array.from(lista.children).forEach((grupo, indice) => {
+    const titulo = grupo.querySelector(
+      ".homework-question-header strong"
+    );
+
+    if (titulo) {
+      titulo.textContent = `Pregunta ${indice + 1}`;
+    }
+  });
+}
+
+/**
+ * Recupera las preguntas del formulario.
+ */
+function obtenerPreguntasFormulario() {
+  const lista = document.getElementById("homework-questions-list");
+
+  if (!lista) return [];
+
+  return Array.from(lista.children).map((grupo) => {
+    const pregunta = grupo.querySelector(
+      '[data-homework-question="true"]'
+    );
+
+    const respuesta = grupo.querySelector(
+      '[data-homework-correct-answer="true"]'
+    );
+
+    return {
+      id: grupo.dataset.questionId || generarIdPregunta(),
+      pregunta: pregunta?.value.trim() || "",
+      respuestaCorrecta: respuesta?.value.trim() || ""
+    };
+  });
+}
+
+/**
+ * Limpia las preguntas del formulario.
+ */
+function limpiarPreguntasFormulario() {
+  const lista = document.getElementById("homework-questions-list");
+
+  if (lista) {
+    lista.replaceChildren();
+  }
+
+  contadorPreguntas = 0;
+}
+
+/**
+ * Inicializa los controles del formulario.
+ */
+function inicializarFormulario() {
+  const tipo = document.getElementById("homework-type");
+  const botonAgregar = document.getElementById(
+    "homework-add-question-btn"
+  );
+
+  if (tipo && !tipo.dataset.listenerAdded) {
+    tipo.addEventListener("change", actualizarApartadoPreguntas);
+    tipo.dataset.listenerAdded = "true";
+  }
+
+  if (botonAgregar && !botonAgregar.dataset.listenerAdded) {
+    botonAgregar.addEventListener("click", agregarPreguntaDeber);
+    botonAgregar.dataset.listenerAdded = "true";
+  }
+}
+
+/**
  * Muestra el formulario para crear o editar un deber.
  */
 export function mostrarFormularioDeber(deber = null) {
-  // Protección: solamente Papá autenticado puede abrirlo.
   if (!puedeGestionarDeberes()) {
     ocultarFormularioDeber();
 
@@ -52,6 +241,8 @@ export function mostrarFormularioDeber(deber = null) {
 
     return;
   }
+
+  inicializarFormulario();
 
   const formulario = document.getElementById("homework-form");
   const contenedor = document.getElementById("homework-form-container");
@@ -67,6 +258,7 @@ export function mostrarFormularioDeber(deber = null) {
   deberEditando = deber;
 
   formulario.reset();
+  limpiarPreguntasFormulario();
 
   const campoId = document.getElementById("homework-id");
   const campoTitulo = document.getElementById("homework-title-input");
@@ -84,11 +276,11 @@ export function mostrarFormularioDeber(deber = null) {
     if (campoId) campoId.value = deber._id || "";
     if (campoTitulo) campoTitulo.value = deber.titulo || "";
     if (campoAsignatura) campoAsignatura.value = deber.asignatura || "";
-    if (campoTipo) campoTipo.value = deber.tipo || "";
+    if (campoTipo) campoTipo.value = deber.tipo || "enlace";
     if (campoContenido) campoContenido.value = deber.contenido || "";
 
     if (campoDestinatario) {
-      campoDestinatario.value = deber.destinatario || "";
+      campoDestinatario.value = deber.destinatario || "leo";
     }
 
     if (campoFecha) {
@@ -105,6 +297,15 @@ export function mostrarFormularioDeber(deber = null) {
       grupoEstado.classList.remove("hidden");
     }
 
+    if (
+      deber.tipo === "ejercicio" &&
+      Array.isArray(deber.preguntas)
+    ) {
+      deber.preguntas.forEach((pregunta) => {
+        agregarPreguntaDeber(pregunta);
+      });
+    }
+
   } else {
     if (titulo) titulo.textContent = "Nuevo deber";
 
@@ -119,6 +320,8 @@ export function mostrarFormularioDeber(deber = null) {
       grupoEstado.classList.add("hidden");
     }
   }
+
+  actualizarApartadoPreguntas();
 
   contenedor.classList.remove("hidden");
   formulario.classList.remove("hidden");
@@ -155,6 +358,8 @@ export function ocultarFormularioDeber() {
     grupoEstado.classList.add("hidden");
   }
 
+  limpiarPreguntasFormulario();
+
   deberEditando = null;
 }
 
@@ -162,8 +367,6 @@ export function ocultarFormularioDeber() {
  * Guarda un deber nuevo o los cambios de uno existente.
  */
 export async function guardarFormularioDeber() {
-  // Segunda protección: impide guardar aunque se intente
-  // ejecutar directamente la función desde otro perfil.
   if (!puedeGestionarDeberes()) {
     ocultarFormularioDeber();
 
@@ -207,6 +410,37 @@ export async function guardarFormularioDeber() {
     destinatario: campoDestinatario.value,
     fechaLimite: campoFecha?.value || null
   };
+
+  if (deber.tipo === "ejercicio") {
+    const preguntas = obtenerPreguntasFormulario();
+
+    if (preguntas.length === 0) {
+      if (mensajeFormulario) {
+        mensajeFormulario.textContent =
+          "Añade al menos una pregunta al ejercicio.";
+        mensajeFormulario.className = "homework-message error";
+      }
+      return;
+    }
+
+    const preguntaIncompleta = preguntas.some(
+      (item) => !item.pregunta || !item.respuestaCorrecta
+    );
+
+    if (preguntaIncompleta) {
+      if (mensajeFormulario) {
+        mensajeFormulario.textContent =
+          "Completa todas las preguntas y sus respuestas correctas.";
+        mensajeFormulario.className = "homework-message error";
+      }
+      return;
+    }
+
+    deber.preguntas = preguntas;
+
+  } else {
+    deber.preguntas = [];
+  }
 
   if (deberEditando?._id && campoEstado) {
     deber.estado = campoEstado.value;
@@ -268,3 +502,6 @@ export async function guardarFormularioDeber() {
     }
   }
 }
+
+// Compatibilidad con el botón del HTML.
+window.agregarPreguntaDeber = agregarPreguntaDeber;
