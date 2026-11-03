@@ -1,3 +1,4 @@
+
 import { Router, Request, Response, NextFunction } from "express";
 import crypto from "crypto";
 
@@ -23,6 +24,12 @@ const DURACION_SESION = 8 * 60 * 60 * 1000;
 interface DatosToken {
   perfil: "papa";
   exp: number;
+}
+
+interface PreguntaEjercicio {
+  id: string;
+  pregunta: string;
+  respuestaCorrecta: string;
 }
 
 function obtenerSecreto(): string {
@@ -161,6 +168,80 @@ const ESTADOS: EstadoDeber[] = [
   "completado"
 ];
 
+/**
+ * Valida las preguntas y respuestas de un ejercicio.
+ */
+function validarPreguntas(
+  preguntas: any
+): string | null {
+  if (!Array.isArray(preguntas) || preguntas.length === 0) {
+    return "El ejercicio necesita al menos una pregunta.";
+  }
+
+  if (preguntas.length > 50) {
+    return "Un ejercicio no puede tener más de 50 preguntas.";
+  }
+
+  for (const pregunta of preguntas) {
+    if (
+      !pregunta ||
+      typeof pregunta !== "object" ||
+      typeof pregunta.pregunta !== "string" ||
+      !pregunta.pregunta.trim() ||
+      pregunta.pregunta.length > 2000 ||
+      typeof pregunta.respuestaCorrecta !== "string" ||
+      !pregunta.respuestaCorrecta.trim() ||
+      pregunta.respuestaCorrecta.length > 1000
+    ) {
+      return "Cada pregunta necesita un enunciado y una respuesta correcta.";
+    }
+
+    if (
+      pregunta.id !== undefined &&
+      (
+        typeof pregunta.id !== "string" ||
+        pregunta.id.length > 100
+      )
+    ) {
+      return "El identificador de una pregunta no es válido.";
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Normaliza las respuestas para compararlas.
+ */
+function normalizarRespuesta(respuesta: string): string {
+  return respuesta
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLocaleLowerCase("es")
+    .replace(/\s+/g, " ");
+}
+
+/**
+ * Elimina las respuestas correctas antes de enviar
+ * los ejercicios a Leo o Mamá.
+ */
+function ocultarRespuestasCorrectas(deber: any) {
+  if (!deber || deber.tipo !== "ejercicio") {
+    return deber;
+  }
+
+  return {
+    ...deber,
+    preguntas: Array.isArray(deber.preguntas)
+      ? deber.preguntas.map((pregunta: any) => ({
+          id: pregunta.id,
+          pregunta: pregunta.pregunta
+        }))
+      : []
+  };
+}
+
 function validarDatosDeber(datos: any): string | null {
   if (!datos || typeof datos !== "object") {
     return "Los datos del deber no son válidos.";
@@ -203,6 +284,14 @@ function validarDatosDeber(datos: any): string | null {
       }
     } catch {
       return "El enlace no tiene un formato válido.";
+    }
+  }
+
+  if (datos.tipo === "ejercicio") {
+    const errorPreguntas = validarPreguntas(datos.preguntas);
+
+    if (errorPreguntas) {
+      return errorPreguntas;
     }
   }
 
@@ -332,7 +421,11 @@ router.get(
         perfil
       });
 
-      return res.json({ ok: true, deberes });
+      return res.json({
+        ok: true,
+        deberes: deberes.map(ocultarRespuestasCorrectas)
+      });
+
     } catch (error) {
       console.error("[HOMEWORK] Error al consultar:", error);
 
@@ -345,6 +438,7 @@ router.get(
 );
 
 // ===== FIN DE LA PARTE 1 =====
+
 // ========================================
 // CREAR DEBER
 // ========================================
@@ -369,10 +463,14 @@ router.post(
         tipo: req.body.tipo,
         contenido: req.body.contenido.trim(),
         destinatario: req.body.destinatario,
-        fechaLimite: req.body.fechaLimite || null
+        fechaLimite: req.body.fechaLimite || null,
+        ...(req.body.tipo === "ejercicio"
+          ? { preguntas: req.body.preguntas }
+          : {})
       });
 
       return res.status(201).json({ ok: true, deber });
+
     } catch (error) {
       console.error("[HOMEWORK] Error al crear:", error);
 
@@ -400,7 +498,8 @@ router.patch(
         "contenido",
         "destinatario",
         "fechaLimite",
-        "estado"
+        "estado",
+        "preguntas"
       ];
 
       const datos: any = {};
@@ -491,6 +590,27 @@ router.patch(
         datos.titulo = datos.titulo.trim();
       }
 
+      if (datos.preguntas !== undefined) {
+        const errorPreguntas = validarPreguntas(datos.preguntas);
+
+        if (errorPreguntas) {
+          return res.status(400).json({
+            ok: false,
+            error: errorPreguntas
+          });
+        }
+      }
+
+      if (
+        datos.tipo === "ejercicio" &&
+        datos.preguntas === undefined
+      ) {
+        return res.status(400).json({
+          ok: false,
+          error: "El ejercicio necesita sus preguntas y respuestas."
+        });
+      }
+
       if (datos.fechaLimite !== undefined && datos.fechaLimite) {
         const fecha = new Date(datos.fechaLimite);
 
@@ -520,6 +640,7 @@ router.patch(
       const deber = await editarDeber(req.params.id, datos);
 
       return res.json({ ok: true, deber });
+
     } catch (error) {
       console.error("[HOMEWORK] Error al editar:", error);
 
@@ -553,12 +674,145 @@ router.delete(
         ok: true,
         eliminado: true
       });
+
     } catch (error) {
       console.error("[HOMEWORK] Error al eliminar:", error);
 
       return res.status(500).json({
         ok: false,
         error: "No se ha podido eliminar el deber."
+      });
+    }
+  }
+);
+
+// ========================================
+// COMPROBAR RESPUESTAS DE UN EJERCICIO
+// ========================================
+
+router.post(
+  "/homework/:id/answer",
+  async (req: Request, res: Response) => {
+    try {
+      const perfil = String(req.body?.perfil || "");
+
+      if (!DESTINATARIOS.includes(perfil as DestinatarioDeber)) {
+        return res.status(400).json({
+          ok: false,
+          error: "Perfil no válido."
+        });
+      }
+
+      const respuestas = req.body?.respuestas;
+
+      if (!Array.isArray(respuestas) || respuestas.length === 0) {
+        return res.status(400).json({
+          ok: false,
+          error: "Debes responder todas las preguntas."
+        });
+      }
+
+      const deberes = await listarDeberes({
+        perfil: perfil as DestinatarioDeber
+      });
+
+      const deber = deberes.find(
+        (item: any) => String(item._id) === String(req.params.id)
+      );
+
+      if (!deber) {
+        return res.status(404).json({
+          ok: false,
+          error: "No se ha encontrado este ejercicio."
+        });
+      }
+
+      if (deber.tipo !== "ejercicio") {
+        return res.status(400).json({
+          ok: false,
+          error: "Este deber no es un ejercicio."
+        });
+      }
+
+      if (deber.estado === "completado") {
+        return res.json({
+          ok: true,
+          completado: true,
+          mensaje: "Este ejercicio ya está terminado."
+        });
+      }
+
+      const preguntas = Array.isArray(deber.preguntas)
+        ? deber.preguntas
+        : [];
+
+      if (
+        preguntas.length === 0 ||
+        respuestas.length !== preguntas.length
+      ) {
+        return res.status(400).json({
+          ok: false,
+          error: "Debes responder todas las preguntas."
+        });
+      }
+
+      let todasCorrectas = true;
+
+      for (const pregunta of preguntas) {
+        const respuestaUsuario = respuestas.find(
+          (item: any) =>
+            String(item.preguntaId) === String(pregunta.id)
+        );
+
+        if (
+          !respuestaUsuario ||
+          typeof respuestaUsuario.respuesta !== "string" ||
+          !respuestaUsuario.respuesta.trim()
+        ) {
+          todasCorrectas = false;
+          break;
+        }
+
+        const respuestaCorrecta = normalizarRespuesta(
+          pregunta.respuestaCorrecta
+        );
+
+        const respuestaRecibida = normalizarRespuesta(
+          respuestaUsuario.respuesta
+        );
+
+        if (respuestaRecibida !== respuestaCorrecta) {
+          todasCorrectas = false;
+          break;
+        }
+      }
+
+      if (!todasCorrectas) {
+        return res.json({
+          ok: true,
+          completado: false,
+          error: "Todavía hay respuestas incorrectas. ¡Inténtalo de nuevo!"
+        });
+      }
+
+      const deberCompletado = await completarDeber(
+        req.params.id,
+        perfil as DestinatarioDeber
+      );
+
+      return res.json({
+        ok: true,
+        completado: true,
+        mensaje: "¡Enhorabuena! Has acertado todas las respuestas.",
+        deber: deberCompletado
+      });
+
+    } catch (error) {
+      console.error("[HOMEWORK] Error al comprobar respuestas:", error);
+
+      return res.status(500).json({
+        ok: false,
+        error: "No se han podido comprobar las respuestas."
       });
     }
   }
@@ -581,12 +835,38 @@ router.patch(
         });
       }
 
-      const deber = await completarDeber(
+      const deberes = await listarDeberes({
+        perfil: perfil as DestinatarioDeber
+      });
+
+      const deber = deberes.find(
+        (item: any) => String(item._id) === String(req.params.id)
+      );
+
+      if (!deber) {
+        return res.status(404).json({
+          ok: false,
+          error: "No se ha encontrado el deber."
+        });
+      }
+
+      if (deber.tipo === "ejercicio") {
+        return res.status(400).json({
+          ok: false,
+          error: "Los ejercicios se completan al acertar todas las respuestas."
+        });
+      }
+
+      const deberCompletado = await completarDeber(
         req.params.id,
         perfil as DestinatarioDeber
       );
 
-      return res.json({ ok: true, deber });
+      return res.json({
+        ok: true,
+        deber: deberCompletado
+      });
+
     } catch (error) {
       console.error("[HOMEWORK] Error al completar:", error);
 
@@ -624,6 +904,7 @@ router.patch(
         }
 
         deber = await reabrirDeber(req.params.id);
+
       } else if (
         DESTINATARIOS.includes(perfil as DestinatarioDeber)
       ) {
@@ -631,6 +912,7 @@ router.patch(
           req.params.id,
           perfil as DestinatarioDeber
         );
+
       } else {
         return res.status(400).json({
           ok: false,
@@ -639,6 +921,7 @@ router.patch(
       }
 
       return res.json({ ok: true, deber });
+
     } catch (error) {
       console.error("[HOMEWORK] Error al reabrir:", error);
 
