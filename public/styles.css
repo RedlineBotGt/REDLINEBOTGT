@@ -102,6 +102,36 @@ p {
 }
 
 /* ========================================
+   BOTONES DE VOLVER: ESTILO UNIFICADO
+======================================== */
+
+.screen > button:first-child {
+  display: block;
+  width: auto;
+  min-width: 115px;
+  min-height: 44px;
+  padding: 10px 20px;
+  margin: 0 0 20px auto;
+  background: var(--primary);
+  color: #ffffff;
+  border: 0;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: bold;
+  text-align: center;
+  cursor: pointer;
+}
+
+.screen > button:first-child:hover {
+  background: #0ea5e9;
+  transform: translateY(-2px);
+}
+
+.screen > button:first-child:active {
+  transform: scale(0.98);
+}
+
+/* ========================================
    SELECCIÓN DE PERFILES
 ======================================== */
 
@@ -173,19 +203,23 @@ p {
 ======================================== */
 
 #challenge-screen > button {
-  background: var(--panel-light);
-  color: var(--text);
-  border: 1px solid var(--border);
+  background: var(--primary);
+  color: #ffffff;
+  border: 0;
   border-radius: 10px;
-  padding: 10px 16px;
+  min-width: 115px;
+  min-height: 44px;
+  padding: 10px 20px;
+  font-size: 0.95rem;
   font-weight: bold;
   cursor: pointer;
-  margin-bottom: 15px;
+  display: block;
+  margin: 0 0 20px auto;
 }
 
 #challenge-screen > button:hover {
-  border-color: var(--primary);
-  transform: translateY(-1px);
+  background: #0ea5e9;
+  transform: translateY(-2px);
 }
 
 #challenge-prompt {
@@ -259,6 +293,10 @@ p {
   transform: translateY(-2px);
 }
 
+/* ========================================
+   RETROALIMENTACIÓN DE IA
+======================================== */
+
 #ai-feedback {
   margin-top: 20px;
   padding: 15px;
@@ -319,10 +357,6 @@ p {
 
 #homework-screen button:hover:not(:disabled) {
   filter: brightness(1.08);
-}
-
-#homework-screen button:active:not(:disabled) {
-  transform: scale(0.98);
 }
 
 /* ========================================
@@ -715,6 +749,18 @@ p {
   .subject-card {
     padding-top: 18px;
     padding-bottom: 18px;
+  }
+
+  /* Botones de volver en móvil */
+
+  .screen > button:first-child,
+  #challenge-screen > button {
+    min-width: 115px;
+    min-height: 44px;
+    padding: 10px 20px;
+    margin-left: auto;
+    margin-right: 0;
+    font-size: 0.95rem;
   }
 
   /* Retos */
