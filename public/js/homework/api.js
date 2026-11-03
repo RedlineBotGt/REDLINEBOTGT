@@ -226,7 +226,7 @@ export async function comprobarRespuestasEjercicio(id, respuestas) {
 }
 
 // ========================================
-// COMPLETAR DEBER
+// COMPLETAR DEBER NORMAL
 // ========================================
 
 export async function completarDeber(id) {
@@ -335,9 +335,11 @@ export function validarDeber(deber) {
       );
     }
 
-    const incompleta = deber.preguntas.some((pregunta) => {
+    const incompleta = deber.preguntas.some(pregunta => {
       return (
         !pregunta ||
+        typeof pregunta.id !== "string" ||
+        !pregunta.id.trim() ||
         typeof pregunta.pregunta !== "string" ||
         !pregunta.pregunta.trim() ||
         typeof pregunta.respuestaCorrecta !== "string" ||
@@ -347,7 +349,7 @@ export function validarDeber(deber) {
 
     if (incompleta) {
       throw new Error(
-        "Todas las preguntas necesitan una respuesta correcta."
+        "Todas las preguntas necesitan identificador, enunciado y respuesta correcta."
       );
     }
   }
