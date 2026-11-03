@@ -1,20 +1,66 @@
 import {
   crearDeber,
-  editarDeber
+  editarDeber,
+  obtenerToken
 } from "./api.js";
 
+import { obtenerPerfilActual } from "../users.js";
+
 let deberEditando = null;
+
+/**
+ * Comprueba que el usuario puede gestionar deberes.
+ */
+function puedeGestionarDeberes() {
+  return (
+    obtenerPerfilActual() === "papa" &&
+    Boolean(obtenerToken())
+  );
+}
+
+/**
+ * Muestra un mensaje de error.
+ */
+function mostrarErrorPermisos(texto) {
+  const mensaje = document.getElementById("homework-message");
+  const mensajeFormulario = document.getElementById(
+    "homework-form-message"
+  );
+
+  if (mensajeFormulario) {
+    mensajeFormulario.textContent = texto;
+    mensajeFormulario.className = "homework-message error";
+  }
+
+  if (mensaje) {
+    mensaje.textContent = texto;
+    mensaje.className = "homework-message error";
+  }
+}
 
 /**
  * Muestra el formulario para crear o editar un deber.
  */
 export function mostrarFormularioDeber(deber = null) {
+  // Protección: solamente Papá autenticado puede abrirlo.
+  if (!puedeGestionarDeberes()) {
+    ocultarFormularioDeber();
+
+    mostrarErrorPermisos(
+      "No tienes permiso para crear o editar deberes."
+    );
+
+    return;
+  }
+
   const formulario = document.getElementById("homework-form");
   const contenedor = document.getElementById("homework-form-container");
   const titulo = document.getElementById("homework-form-title");
 
   if (!formulario || !contenedor) {
-    console.error("[DEBERES] No se encuentra el formulario o su contenedor.");
+    console.error(
+      "[DEBERES] No se encuentra el formulario o su contenedor."
+    );
     return;
   }
 
@@ -116,8 +162,22 @@ export function ocultarFormularioDeber() {
  * Guarda un deber nuevo o los cambios de uno existente.
  */
 export async function guardarFormularioDeber() {
+  // Segunda protección: impide guardar aunque se intente
+  // ejecutar directamente la función desde otro perfil.
+  if (!puedeGestionarDeberes()) {
+    ocultarFormularioDeber();
+
+    mostrarErrorPermisos(
+      "No tienes permiso para crear o editar deberes."
+    );
+
+    return;
+  }
+
   const mensaje = document.getElementById("homework-message");
-  const mensajeFormulario = document.getElementById("homework-form-message");
+  const mensajeFormulario = document.getElementById(
+    "homework-form-message"
+  );
   const boton = document.getElementById("homework-save-btn");
 
   const campoTitulo = document.getElementById("homework-title-input");
