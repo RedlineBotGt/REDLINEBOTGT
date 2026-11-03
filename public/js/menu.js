@@ -3,7 +3,7 @@
 // ========================================
 
 import {
-  perfilActual,
+  obtenerPerfilActual,
   seleccionarPerfil,
   cerrarPerfil
 } from "./users.js";
@@ -53,11 +53,14 @@ export function abrirPerfil(perfil) {
 // ========================================
 
 export function abrirAsignatura(asignatura) {
-  if (!perfilActual) {
+  const perfil = obtenerPerfilActual();
+
+  if (!perfil) {
     console.warn(
       "[ACADEMIA] Debes seleccionar un perfil primero"
     );
 
+    mostrarPantalla("profiles-screen");
     return;
   }
 
@@ -69,7 +72,6 @@ export function abrirAsignatura(asignatura) {
 
   mostrarPantalla("challenge-screen");
 
-  // La carga de preguntas se conectará desde challenges.js.
   document.dispatchEvent(
     new CustomEvent("academia:cargar-pregunta")
   );
@@ -80,6 +82,11 @@ export function abrirAsignatura(asignatura) {
 // ========================================
 
 export function volverAsignaturas() {
+  if (!obtenerPerfilActual()) {
+    mostrarPantalla("profiles-screen");
+    return;
+  }
+
   mostrarPantalla("subjects-screen");
 }
 
