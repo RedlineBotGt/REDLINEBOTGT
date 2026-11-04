@@ -43,7 +43,10 @@ if (!DISCORD_TOKEN) {
   throw new Error("Falta la variable DISCORD_TOKEN.");
 }
 
-// CACHE DE NOMBRES DE DISCORD
+// ======================================
+// SISTEMA DE CACHÉ DE NOMBRES DE DISCORD
+// ======================================
+
 const discordNameCache = new Map<
   string,
   {
@@ -52,80 +55,233 @@ const discordNameCache = new Map<
   }
 >();
 
-const CACHE_DURATION = 10 * 60 * 1000;
-const ERROR_CACHE_DURATION = 30 * 1000;
+// Los nombres correctos se guardan durante una hora.
+const CACHE_DURATION = 60 * 60 * 1000;
 
-// OBTENER NOMBRE REAL DE UN MIEMBRO
-async function getDiscordMemberName(
+// Los errores se guardan durante un minuto.
+const ERROR_CACHE_DURATION = 60 * 1000;
+
+// Evita consultar dos veces al mismo usuario
+// mientras su primera consulta sigue pendiente.
+const discordNamePending = new Map<
+  string,
+  Promise<string>
+>();
+
+// ======================================
+// COLA DE PETICIONES A DISCORD
+// ======================================
+
+// Solo se realiza una consulta a la vez.
+// Dejamos un intervalo entre peticiones.
+let discordRequestQueue: Promise<void> = Promise.resolve();
+
+let lastDiscordRequestAt = 0;
+
+const MIN_REQUEST_INTERVAL = 1100;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function runDiscordRequest<T>(
+  task: () => Promise<T>
+): Promise<T> {
+
+  const result = discordRequestQueue.then(async () => {
+
+    const elapsed = Date.now() - lastDiscordRequestAt;
+
+    const wait = MIN_REQUEST_INTERVAL - elapsed;
+
+    if (wait > 0) {
+      await sleep(wait);
+    }
+
+    return task();
+  });
+
+  discordRequestQueue = result.then(
+    () => undefined,
+    () => undefined
+  );
+
+  return result;
+}
+
+// ======================================
+// CONSULTAR NOMBRE DE UN MIEMBRO
+// ======================================
+
+function getDiscordMemberName(
   guildId: string,
   userId: string
 ): Promise<string> {
+
   const cacheKey = `${guildId}:${userId}`;
 
+  // Comprobar caché.
   const cached = discordNameCache.get(cacheKey);
 
   if (cached && cached.expiresAt > Date.now()) {
-    return cached.name;
+    return Promise.resolve(cached.name);
   }
 
-  try {
-    const response = await fetch(
-      `https://discord.com/api/v10/guilds/${guildId}/members/${userId}`,
-      {
-        headers: {
-          Authorization: `Bot ${DISCORD_TOKEN}`
+  // Si ya se está consultando, reutilizar esa petición.
+  const pending = discordNamePending.get(cacheKey);
+
+  if (pending) {
+    return pending;
+  }
+
+  const requestPromise = runDiscordRequest(async () => {
+
+    // Reintentar si Discord responde con límite de peticiones.
+    const MAX_ATTEMPTS = 5;
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+
+      try {
+
+        lastDiscordRequestAt = Date.now();
+
+        const response = await fetch(
+          `https://discord.com/api/v10/guilds/${guildId}/members/${userId}`,
+          {
+            headers: {
+              Authorization: `Bot ${DISCORD_TOKEN}`
+            }
+          }
+        );
+
+        // Discord está limitando las consultas.
+        if (response.status === 429) {
+
+          const responseText = await response.text();
+
+          let retryAfter = 2;
+
+          try {
+            const data = JSON.parse(responseText);
+
+            if (typeof data.retry_after === "number") {
+              retryAfter = data.retry_after;
+            }
+          } catch {
+            // Si no hay JSON, utilizamos la cabecera.
+          }
+
+          const headerRetry = Number(
+            response.headers.get("retry-after")
+          );
+
+          if (Number.isFinite(headerRetry) && headerRetry > 0) {
+            retryAfter = Math.max(retryAfter, headerRetry);
+          }
+
+          const waitMs = Math.ceil(retryAfter * 1000) + 300;
+
+          console.warn(
+            `Discord limita las consultas. Esperando ${Math.ceil(waitMs / 1000)} segundos. Usuario: ${userId}`
+          );
+
+          if (attempt < MAX_ATTEMPTS) {
+            await sleep(waitMs);
+            lastDiscordRequestAt = Date.now();
+            continue;
+          }
+
+          console.error(
+            `Discord mantuvo el límite de peticiones para ${userId} después de ${MAX_ATTEMPTS} intentos.`
+          );
+
+          return userId;
         }
+
+        // Otros errores de Discord.
+        if (!response.ok) {
+
+          console.error(
+            `Discord no pudo resolver el usuario ${userId}. Estado: ${response.status}`
+          );
+
+          return userId;
+        }
+
+        const member = await response.json() as {
+          nick?: string | null;
+          user?: {
+            username?: string;
+            global_name?: string | null;
+          };
+        };
+
+        const name =
+          member.nick ||
+          member.user?.global_name ||
+          member.user?.username ||
+          userId;
+
+        return name;
+
+      } catch (error) {
+
+        console.error(
+          `Error consultando el nombre de Discord ${userId}:`,
+          error
+        );
+
+        return userId;
       }
-    );
-
-    if (!response.ok) {
-      console.error(
-        `Discord no pudo resolver el usuario ${userId}. Estado: ${response.status}`
-      );
-
-      discordNameCache.set(cacheKey, {
-        name: userId,
-        expiresAt: Date.now() + ERROR_CACHE_DURATION
-      });
-
-      return userId;
     }
 
-    const member = await response.json() as {
-      nick?: string | null;
-      user?: {
-        username?: string;
-        global_name?: string | null;
-      };
-    };
+    return userId;
 
-    const name =
-      member.nick ||
-      member.user?.global_name ||
-      member.user?.username ||
-      userId;
+  }).then(name => {
 
+    // Guardar nombre o ID en caché.
     discordNameCache.set(cacheKey, {
       name,
-      expiresAt: Date.now() + CACHE_DURATION
+      expiresAt: Date.now() + (
+        name === userId
+          ? ERROR_CACHE_DURATION
+          : CACHE_DURATION
+      )
     });
 
     return name;
 
-  } catch (error) {
+  }).catch(error => {
+
     console.error(
-      `Error consultando el nombre de Discord ${userId}:`,
+      `Error en la cola de Discord para ${userId}:`,
       error
     );
 
+    discordNameCache.set(cacheKey, {
+      name: userId,
+      expiresAt: Date.now() + ERROR_CACHE_DURATION
+    });
+
     return userId;
-  }
+
+  }).finally(() => {
+
+    discordNamePending.delete(cacheKey);
+
+  });
+
+  discordNamePending.set(cacheKey, requestPromise);
+
+  return requestPromise;
 }
 
-// RESOLVER LOS NOMBRES DE TODAS LAS LISTAS
-async function resolveEventPilotNames(
-  evento: any
-) {
+// ======================================
+// RESOLVER NOMBRES DE LAS LISTAS
+// ======================================
+
+async function resolveEventPilotNames(evento: any) {
+
   const rsvps = evento.rsvps || {};
 
   const yes = Array.isArray(rsvps.yes)
@@ -155,8 +311,11 @@ async function resolveEventPilotNames(
 
   const names = new Map<string, string>();
 
+  // Aunque se use Promise.all, las consultas reales
+  // pasan por la cola y se ejecutan de una en una.
   await Promise.all(
     allIds.map(async (userId) => {
+
       const name = await getDiscordMemberName(
         String(evento.guildId),
         userId
@@ -185,6 +344,10 @@ async function resolveEventPilotNames(
   };
 }
 
+// ======================================
+// CONFIGURACIÓN DE EXPRESS
+// ======================================
+
 app.set("trust proxy", 1);
 
 app.use(express.json());
@@ -211,12 +374,20 @@ app.use(
   })
 );
 
+// ======================================
 // RUTAS DE AUTENTICACIÓN
+// ======================================
+
 app.use("/auth", authRoutes);
 
+// ======================================
 // API DEL EVENTO ACTUAL
+// ======================================
+
 app.get("/api/evento", async (req, res) => {
+
   try {
+
     const sessionData = req.session as any;
 
     if (!sessionData.user?.id) {
@@ -225,7 +396,6 @@ app.get("/api/evento", async (req, res) => {
       });
     }
 
-    // OBTENER EVENTO ACTUAL
     const evento = await getCurrentEvent();
 
     if (!evento) {
@@ -238,6 +408,7 @@ app.get("/api/evento", async (req, res) => {
     }
 
     if (!evento.guildId) {
+
       console.error(
         "El evento no contiene guildId."
       );
@@ -247,7 +418,7 @@ app.get("/api/evento", async (req, res) => {
       });
     }
 
-    // CONSULTAR LOS ROLES REALES DEL USUARIO
+    // Consultar roles reales del usuario.
     const userRoles = await getDiscordUserRoles(
       req,
       evento.guildId
@@ -256,7 +427,6 @@ app.get("/api/evento", async (req, res) => {
     const esTitular = userRoles.includes(ROLE_TITULAR);
     const esReserva = userRoles.includes(ROLE_RESERVA);
 
-    // APLICAR LAS RESTRICCIONES DE TITULAR Y RESERVA
     const permisos = {
       esTitular,
       esReserva,
@@ -268,7 +438,7 @@ app.get("/api/evento", async (req, res) => {
         esReserva && !esTitular
     };
 
-    // RESOLVER NOMBRES DE LOS PILOTOS
+    // Resolver nombres de los pilotos.
     const rsvpNames = await resolveEventPilotNames(
       evento
     );
@@ -281,6 +451,7 @@ app.get("/api/evento", async (req, res) => {
     });
 
   } catch (error) {
+
     console.error(
       "Error obteniendo evento y permisos:",
       error
@@ -294,11 +465,18 @@ app.get("/api/evento", async (req, res) => {
   }
 });
 
+// ======================================
 // ARCHIVOS PÚBLICOS
+// ======================================
+
 app.use(express.static(publicPath));
 
+// ======================================
 // PÁGINA PRINCIPAL
+// ======================================
+
 app.get("/", (req, res) => {
+
   const sessionData = req.session as any;
 
   if (sessionData.user) {
@@ -312,21 +490,33 @@ app.get("/", (req, res) => {
   );
 });
 
+// ======================================
 // COMPROBACIÓN DEL SERVIDOR
+// ======================================
+
 app.get("/health", (_req, res) => {
+
   return res.json({
     status: "ok",
     service: "WEBLINEGT"
   });
 });
 
+// ======================================
 // INICIAR SERVIDOR
+// ======================================
+
 app.listen(PORT, () => {
+
   console.log(
     `WEBLINEGT activo en el puerto ${PORT}`
   );
 
   console.log(
     "Resolución de nombres de Discord activada."
+  );
+
+  console.log(
+    "Cola de consultas de Discord activada."
   );
 });
