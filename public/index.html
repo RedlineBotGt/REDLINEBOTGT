@@ -533,14 +533,15 @@
             }).format(date);
         }
 
+        // MOSTRAR NOMBRES REALES DE DISCORD
         function renderPilotList(items) {
             if (!Array.isArray(items) || items.length === 0) {
                 return '<div class="empty-list">Ningún piloto todavía</div>';
             }
 
-            return items.map(id => {
-                const safeId = escapeHTML(id);
-                return `<div class="pilot">${safeId}</div>`;
+            return items.map(name => {
+                const safeName = escapeHTML(name);
+                return `<div class="pilot">${safeName}</div>`;
             }).join("");
         }
 
@@ -559,8 +560,13 @@
             `;
         }
 
-        function renderEvent(event, permisos) {
-            const rsvps = event.rsvps || {};
+        function renderEvent(event, permisos, rsvpNames) {
+            const rsvps = rsvpNames || {
+                yes: event.rsvps?.yes || [],
+                reserve: event.rsvps?.reserve || [],
+                maybe: event.rsvps?.maybe || [],
+                no: event.rsvps?.no || []
+            };
 
             const puedeSerTitular =
                 permisos?.puedeSerTitular === true;
@@ -739,7 +745,11 @@
                     return;
                 }
 
-                renderEvent(data.evento, data.permisos || {});
+                renderEvent(
+                    data.evento,
+                    data.permisos || {},
+                    data.rsvpNames || {}
+                );
 
             } catch (error) {
                 console.error("Error cargando el evento:", error);
