@@ -4,13 +4,13 @@ import { google } from "googleapis";
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
 const CLIENT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 
-// RECUPERAR Y NORMALIZAR LA CLAVE PRIVADA
+// Recuperar y normalizar la clave privada
 function getPrivateKey(): string {
   let key = process.env.GOOGLE_PRIVATE_KEY || "";
 
   key = key.trim().replace(/^["']|["']$/g, "");
 
-  // Detectar si la clave está codificada en Base64
+  // Detectar si está codificada en Base64
   if (!key.includes("-----BEGIN PRIVATE KEY-----")) {
     key = Buffer.from(
       key.replace(/\s/g, ""),
@@ -19,9 +19,7 @@ function getPrivateKey(): string {
   }
 
   // Normalizar saltos de línea
-  key = key
-    .replace(/\\n/g, "\n")
-    .trim();
+  key = key.replace(/\\n/g, "\n").trim();
 
   if (
     !key.includes("-----BEGIN PRIVATE KEY-----") ||
@@ -41,7 +39,7 @@ const USER_ID_RANGE = "B2:B";
 function getSheetsClient() {
   if (!SHEET_ID || !CLIENT_EMAIL) {
     throw new Error(
-      "Faltan credenciales de Google Sheets."
+      "Faltan GOOGLE_SHEET_ID o GOOGLE_SERVICE_ACCOUNT_EMAIL."
     );
   }
 
@@ -65,23 +63,49 @@ export async function isAuthorizedDiscordUser(
   discordId: string
 ): Promise<boolean> {
   if (!discordId) {
+    console.warn("[WEBLINEGT] Discord ID vacío.");
     return false;
   }
 
-  const sheets = getSheetsClient();
+  try {
+    const sheets = getSheetsClient();
 
-  const range = `'${SHEET_TAB}'!${USER_ID_RANGE}`;
+    const range = `'${SHEET_TAB}'!${USER_ID_RANGE}`;
 
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: SHEET_ID,
-    range,
-    majorDimension: "COLUMNS"
-  });
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID!,
+      range,
+      majorDimension: "COLUMNS"
+    });
 
-  const values = response.data.values?.[0] ?? [];
+    const values = response.data.values?.[0] ?? [];
 
-  return values.some(
-    value =>
-      String(value).trim() === String(discordId).trim()
-  );
+    const normalizedDiscordId = String(discordId).trim();
+
+    const normalizedValues = values.map(value =>
+      String(value).trim()
+    );
+
+    const authorized = normalizedValues.includes(
+      normalizedDiscordId
+    );
+
+    console.log("[WEBLINEGT] Comprobación de inscripción:", {
+      discordId: normalizedDiscordId,
+      filasLeidas: values.length,
+      idEncontrado: authorized,
+      hoja: SHEET_TAB,
+      rango: USER_ID_RANGE
+    });
+
+    return authorized;
+
+  } catch (error: any) {
+    console.error(
+      "[WEBLINEGT] Error consultando Google Sheets:",
+      error?.message || error
+    );
+
+    throw error;
+  }
 }
