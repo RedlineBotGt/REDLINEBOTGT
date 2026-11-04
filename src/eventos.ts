@@ -67,6 +67,11 @@ export async function getCurrentEvent() {
   return {
     id: event._id.toString(),
 
+    // Identificador del mensaje original de Discord.
+    messageId: event.messageId
+      ? String(event.messageId)
+      : "",
+
     guildId: event.guildId
       ? String(event.guildId)
       : "",
@@ -76,7 +81,8 @@ export async function getCurrentEvent() {
     description: event.description || "",
 
     scheduledAt:
-      scheduledDate && !Number.isNaN(scheduledDate.getTime())
+      scheduledDate &&
+      !Number.isNaN(scheduledDate.getTime())
         ? scheduledDate.toISOString()
         : null,
 
@@ -95,10 +101,21 @@ export async function getCurrentEvent() {
     reminderSent: Boolean(event.reminderSent),
 
     rsvps: {
-      yes: Array.isArray(rsvps.yes) ? rsvps.yes : [],
-      reserve: Array.isArray(rsvps.reserve) ? rsvps.reserve : [],
-      maybe: Array.isArray(rsvps.maybe) ? rsvps.maybe : [],
-      no: Array.isArray(rsvps.no) ? rsvps.no : []
+      yes: Array.isArray(rsvps.yes)
+        ? rsvps.yes
+        : [],
+
+      reserve: Array.isArray(rsvps.reserve)
+        ? rsvps.reserve
+        : [],
+
+      maybe: Array.isArray(rsvps.maybe)
+        ? rsvps.maybe
+        : [],
+
+      no: Array.isArray(rsvps.no)
+        ? rsvps.no
+        : []
     },
 
     limits: {
