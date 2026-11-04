@@ -9,7 +9,6 @@
 
     <meta property="og:title" content="WEBLINE GT">
     <meta property="og:description" content="Plataforma oficial de REDLINE GT">
-    <meta property="og:image" content="https://cdn.discordapp.com/attachments/1483247050429567087/1567540257740558366/1793749060837_1.png">
 
     <link rel="icon" href="https://cdn.discordapp.com/attachments/1483247050429567087/1567540257740558366/1793749060837_1.png">
     <link rel="apple-touch-icon" href="https://cdn.discordapp.com/attachments/1483247050429567087/1567540257740558366/1793749060837_1.png">
@@ -83,7 +82,7 @@
             width: 52px;
             height: 52px;
             border-radius: 50%;
-            object-fit: cover;
+            object-fit: contain;
             border: 2px solid var(--red);
             margin-bottom: 12px;
         }
@@ -332,6 +331,11 @@
             color: #ffb0b0;
         }
 
+        .message.warning {
+            border-color: #75500e;
+            color: #f0cf91;
+        }
+
         .footer {
             color: #666;
             text-align: center;
@@ -422,11 +426,11 @@
         }
     </style>
 </head>
-
 <body>
 
     <header class="topbar">
         <img
+            id="horizontal-logo"
             src="https://cdn.discordapp.com/attachments/1483247050429567087/1567540249570185236/1793749060837.png"
             alt="REDLINE GT"
         >
@@ -434,6 +438,7 @@
 
     <aside class="sidebar">
         <img
+            id="round-logo"
             class="round-logo"
             src="https://cdn.discordapp.com/attachments/1483247050429567087/1567540257740558366/1793749060837_1.png"
             alt="REDLINE GT"
@@ -549,23 +554,32 @@
         function renderEvent(event, permisos) {
             const rsvps = event.rsvps || {};
 
-            const puedeSerTitular = permisos?.puedeSerTitular === true;
-            const puedeSerReserva = permisos?.puedeSerReserva === true;
+            const puedeSerTitular =
+                permisos?.puedeSerTitular === true;
+
+            const puedeSerReserva =
+                permisos?.puedeSerReserva === true;
 
             const imageHTML = event.image
-                ? `<img class="event-image" id="event-image" src="${escapeHTML(event.image)}" alt="Imagen del evento">`
+                ? `<img class="event-image" id="event-image"
+                    src="${escapeHTML(event.image)}"
+                    alt="Imagen del evento">`
                 : "";
 
             let permisoMensaje = "";
 
             if (puedeSerTitular) {
-                permisoMensaje = "Tu rol de Discord te permite seleccionar TITULAR.";
+                permisoMensaje =
+                    "Tu rol de Discord te permite seleccionar TITULAR.";
             } else if (puedeSerReserva) {
-                permisoMensaje = "Tu rol de Discord te permite seleccionar RESERVA.";
+                permisoMensaje =
+                    "Tu rol de Discord te permite seleccionar RESERVA.";
             } else if (permisos?.esTitular && permisos?.esReserva) {
-                permisoMensaje = "Tienes los roles de titular y reserva. El bot deberá validar tu respuesta.";
+                permisoMensaje =
+                    "Tienes los roles de titular y reserva. El bot deberá validar tu respuesta.";
             } else {
-                permisoMensaje = "Tu usuario no tiene actualmente un rol de titular o reserva.";
+                permisoMensaje =
+                    "No tienes actualmente un rol de titular o reserva.";
             }
 
             eventContainer.innerHTML = `
@@ -592,9 +606,12 @@
 
                     <div class="event-content">
 
-                        <h3 class="section-heading">CONFIRMA TU ASISTENCIA</h3>
+                        <h3 class="section-heading">
+                            CONFIRMA TU ASISTENCIA
+                        </h3>
 
                         <div class="rsvp-buttons">
+
                             <button
                                 class="rsvp-button yes ${puedeSerTitular ? "available" : ""}"
                                 type="button"
@@ -611,21 +628,32 @@
                                 🔃 RESERVA
                             </button>
 
-                            <button class="rsvp-button maybe" type="button" disabled>
+                            <button
+                                class="rsvp-button maybe"
+                                type="button"
+                                disabled
+                            >
                                 ❔ DUDA
                             </button>
 
-                            <button class="rsvp-button no" type="button" disabled>
+                            <button
+                                class="rsvp-button no"
+                                type="button"
+                                disabled
+                            >
                                 ❌ NO PUEDO
                             </button>
+
                         </div>
 
                         <p class="rsvp-note">
                             ${escapeHTML(permisoMensaje)}
-                            Los botones se conectarán al sistema de asistencia de Discord en el siguiente paso.
+                            La conexión para registrar respuestas todavía está pendiente.
                         </p>
 
-                        <h3 class="section-heading">LISTA DE PARTICIPANTES</h3>
+                        <h3 class="section-heading">
+                            LISTA DE PARTICIPANTES
+                        </h3>
 
                         <div class="lists-grid">
                             ${renderList("✅ TITULARES", rsvps.yes, "yes")}
@@ -652,23 +680,44 @@
         }
 
         async function loadEvent() {
+            eventContainer.innerHTML = `
+                <div class="message">
+                    Cargando evento de REDLINE GT...
+                </div>
+            `;
+
             try {
                 const response = await fetch("/api/evento", {
                     method: "GET",
                     credentials: "same-origin",
+                    cache: "no-store",
                     headers: {
                         "Accept": "application/json"
                     }
                 });
 
+                // IMPORTANTE:
+                // No redirigir automáticamente a "/" cuando falla
+                // la sesión. Evita el bucle de recargas.
+
                 if (response.status === 401 || response.status === 403) {
-                    window.location.href = "/";
+                    eventContainer.innerHTML = `
+                        <div class="message warning">
+                            Tu sesión no está autorizada para consultar
+                            los datos del evento.
+                            <br><br>
+                            <a href="/auth/discord" style="color:#fff;">
+                                Volver a iniciar sesión con Discord
+                            </a>
+                        </div>
+                    `;
                     return;
                 }
 
                 if (!response.ok) {
                     throw new Error(
-                        "El servidor ha respondido con error " + response.status
+                        "El servidor ha respondido con error " +
+                        response.status
                     );
                 }
 
@@ -694,12 +743,41 @@
                 eventContainer.innerHTML = `
                     <div class="message error">
                         No se ha podido cargar el evento.
-                        <br>
-                        Comprueba la conexión con el servidor e inténtalo de nuevo.
+                        <br><br>
+                        ${escapeHTML(error.message)}
+                        <br><br>
+                        Puedes volver a intentarlo sin recargar la página.
+                        <br><br>
+                        <button
+                            type="button"
+                            onclick="loadEvent()"
+                            style="
+                                padding:10px 18px;
+                                border:1px solid #777;
+                                border-radius:7px;
+                                background:#292929;
+                                color:white;
+                                cursor:pointer;
+                            "
+                        >
+                            Reintentar
+                        </button>
                     </div>
                 `;
             }
         }
+
+        // Si Discord no carga una imagen, no sustituimos el logo
+        // por ninguna imagen inventada.
+        document.getElementById("horizontal-logo")
+            .addEventListener("error", function () {
+                this.style.display = "none";
+            });
+
+        document.getElementById("round-logo")
+            .addEventListener("error", function () {
+                this.style.display = "none";
+            });
 
         loadEvent();
     </script>
