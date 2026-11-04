@@ -1,0 +1,20 @@
+{
+"name": "weblinegt",
+"version": "1.0.0",
+"private": true,
+"type": "module",
+"scripts": {
+"start": "tsx src/server.ts"
+},
+"dependencies": {
+"connect-mongo": "^5.1.0",
+"dotenv": "^16.4.5",
+"express": "^4.19.2",
+"express-session": "^1.18.1",
+"googleapis": "^144.0.0"
+},
+"devDependencies": {
+"tsx": "^4.19.2",
+"typescript": "^5.7.2"
+}
+}
