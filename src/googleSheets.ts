@@ -4,13 +4,11 @@ import { google } from "googleapis";
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
 const CLIENT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 
-// Recuperar y normalizar la clave privada
 function getPrivateKey(): string {
   let key = process.env.GOOGLE_PRIVATE_KEY || "";
 
   key = key.trim().replace(/^["']|["']$/g, "");
 
-  // Detectar si está codificada en Base64
   if (!key.includes("-----BEGIN PRIVATE KEY-----")) {
     key = Buffer.from(
       key.replace(/\s/g, ""),
@@ -18,7 +16,6 @@ function getPrivateKey(): string {
     ).toString("utf8");
   }
 
-  // Normalizar saltos de línea
   key = key.replace(/\\n/g, "\n").trim();
 
   if (
@@ -36,6 +33,13 @@ function getPrivateKey(): string {
 const SHEET_TAB = "Inscripción";
 const USER_ID_RANGE = "B2:B";
 
+// Normalizar IDs de Discord
+function normalizeDiscordId(value: unknown): string {
+  return String(value ?? "")
+    .trim()
+    .replace(/^<@!?(\d+)>$/, "$1");
+}
+
 function getSheetsClient() {
   if (!SHEET_ID || !CLIENT_EMAIL) {
     throw new Error(
@@ -43,11 +47,9 @@ function getSheetsClient() {
     );
   }
 
-  const privateKey = getPrivateKey();
-
   const auth = new google.auth.JWT({
     email: CLIENT_EMAIL,
-    key: privateKey,
+    key: getPrivateKey(),
     scopes: [
       "https://www.googleapis.com/auth/spreadsheets.readonly"
     ]
@@ -63,39 +65,32 @@ export async function isAuthorizedDiscordUser(
   discordId: string
 ): Promise<boolean> {
   if (!discordId) {
-    console.warn("[WEBLINEGT] Discord ID vacío.");
     return false;
   }
 
   try {
     const sheets = getSheetsClient();
 
-    const range = `'${SHEET_TAB}'!${USER_ID_RANGE}`;
-
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID!,
-      range,
+      range: `'${SHEET_TAB}'!${USER_ID_RANGE}`,
       majorDimension: "COLUMNS"
     });
 
     const values = response.data.values?.[0] ?? [];
 
-    const normalizedDiscordId = String(discordId).trim();
+    const normalizedDiscordId =
+      normalizeDiscordId(discordId);
 
-    const normalizedValues = values.map(value =>
-      String(value).trim()
-    );
-
-    const authorized = normalizedValues.includes(
-      normalizedDiscordId
+    const authorized = values.some(
+      value =>
+        normalizeDiscordId(value) === normalizedDiscordId
     );
 
     console.log("[WEBLINEGT] Comprobación de inscripción:", {
       discordId: normalizedDiscordId,
       filasLeidas: values.length,
-      idEncontrado: authorized,
-      hoja: SHEET_TAB,
-      rango: USER_ID_RANGE
+      idEncontrado: authorized
     });
 
     return authorized;
