@@ -4,47 +4,52 @@ import { google } from "googleapis";
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
 const CLIENT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 
-const PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY
-  ?.replace(/\\n/g, "\n")
-  .replace(/^["']|["']$/g, "")
-  .trim();
+// RECUPERAR Y NORMALIZAR LA CLAVE PRIVADA
+function getPrivateKey(): string {
+  let key = process.env.GOOGLE_PRIVATE_KEY || "";
 
-// DIAGNÓSTICO TEMPORAL DE LA CLAVE
-console.log("COMPROBACIÓN PRIVATE KEY:", {
-  existe: !!PRIVATE_KEY,
-  longitud: PRIVATE_KEY?.length,
-  empiezaCorrectamente: PRIVATE_KEY?.startsWith(
-    "-----BEGIN PRIVATE KEY-----"
-  ),
-  terminaCorrectamente: PRIVATE_KEY?.endsWith(
-    "-----END PRIVATE KEY-----"
-  ),
-  tieneLiteralBarraN: PRIVATE_KEY?.includes("\\n"),
-  tieneSaltosReales: PRIVATE_KEY?.includes("\n")
-});
+  key = key.trim().replace(/^["']|["']$/g, "");
+
+  // Detectar si la clave está codificada en Base64
+  if (!key.includes("-----BEGIN PRIVATE KEY-----")) {
+    key = Buffer.from(
+      key.replace(/\s/g, ""),
+      "base64"
+    ).toString("utf8");
+  }
+
+  // Normalizar saltos de línea
+  key = key
+    .replace(/\\n/g, "\n")
+    .trim();
+
+  if (
+    !key.includes("-----BEGIN PRIVATE KEY-----") ||
+    !key.includes("-----END PRIVATE KEY-----")
+  ) {
+    throw new Error(
+      "GOOGLE_PRIVATE_KEY no se ha podido convertir a formato PEM."
+    );
+  }
+
+  return key;
+}
 
 const SHEET_TAB = "Inscripción";
 const USER_ID_RANGE = "B2:B";
 
 function getSheetsClient() {
-  if (!SHEET_ID || !CLIENT_EMAIL || !PRIVATE_KEY) {
+  if (!SHEET_ID || !CLIENT_EMAIL) {
     throw new Error(
       "Faltan credenciales de Google Sheets."
     );
   }
 
-  if (
-    !PRIVATE_KEY.includes("-----BEGIN PRIVATE KEY-----") ||
-    !PRIVATE_KEY.includes("-----END PRIVATE KEY-----")
-  ) {
-    throw new Error(
-      "GOOGLE_PRIVATE_KEY no tiene un formato PEM válido."
-    );
-  }
+  const privateKey = getPrivateKey();
 
   const auth = new google.auth.JWT({
     email: CLIENT_EMAIL,
-    key: PRIVATE_KEY,
+    key: privateKey,
     scopes: [
       "https://www.googleapis.com/auth/spreadsheets.readonly"
     ]
