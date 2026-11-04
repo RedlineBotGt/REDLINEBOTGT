@@ -1,16 +1,400 @@
-<!DOCTYPE html><html lang="es">
+
+<!DOCTYPE html>
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WEBLINEGT</title>
+
+  <title>WEBLINEGT | Eventos</title>
+
+  <meta name="theme-color" content="#080808">
+  <meta name="description" content="WEBLINEGT - Comunidad de competición GT">
+
+  <!-- Logo circular: icono e imagen al compartir -->
+  <link rel="icon" type="image/png"
+    href="https://cdn.discordapp.com/attachments/1483247050429567087/1567540257740558366/1793749060837_1.png?ex=6aec8d20&amp;is=6aeb3ba0&amp;hm=8ffcbff5f8c9750e76cbe6b07d4d57392cd52bbbfdbd0b9eb2d0e24b08473d88">
+
+  <link rel="apple-touch-icon"
+    href="https://cdn.discordapp.com/attachments/1483247050429567087/1567540257740558366/1793749060837_1.png?ex=6aec8d20&amp;is=6aeb3ba0&amp;hm=8ffcbff5f8c9750e76cbe6b07d4d57392cd52bbbfdbd0b9eb2d0e24b08473d88">
+
+  <meta property="og:title" content="WEBLINEGT">
+  <meta property="og:description" content="Comunidad de competición GT">
+  <meta property="og:image"
+    content="https://cdn.discordapp.com/attachments/1483247050429567087/1567540257740558366/1793749060837_1.png?ex=6aec8d20&amp;is=6aeb3ba0&amp;hm=8ffcbff5f8c9750e76cbe6b07d4d57392cd52bbbfdbd0b9eb2d0e24b08473d88">
+
+  <style>
+    :root {
+      --bg: #080808;
+      --panel: #141414;
+      --panel2: #1b1b1b;
+      --border: #303030;
+      --red: #e50914;
+      --text: #f5f5f5;
+      --muted: #999999;
+      --sidebar-width: 220px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* CABECERA */
+
+    .header {
+      min-height: 105px;
+      margin-right: var(--sidebar-width);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      background: #050505;
+    }
+
+    .header-logo {
+      display: block;
+      width: min(100%, 560px);
+      max-height: 90px;
+      object-fit: contain;
+    }
+
+    /* MENÚ DERECHO */
+
+    .sidebar {
+      position: fixed;
+      z-index: 10;
+      top: 0;
+      right: 0;
+      width: var(--sidebar-width);
+      height: 100vh;
+      background: #101010;
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      padding: 20px 12px;
+    }
+
+    .sidebar-logo {
+      width: 145px;
+      height: 145px;
+      object-fit: contain;
+      align-self: center;
+      margin: 0 auto 28px;
+    }
+
+    .menu {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .menu-item {
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      padding: 10px 13px;
+      color: #c9c9c9;
+      text-decoration: none;
+      border-radius: 9px;
+      font-size: 14px;
+      transition: background .2s, color .2s;
+    }
+
+    .menu-item .menu-icon {
+      width: 25px;
+      flex-shrink: 0;
+      text-align: center;
+      font-size: 21px;
+    }
+
+    .menu-item.active {
+      color: white;
+      background: #321315;
+      border-left: 4px solid var(--red);
+    }
+
+    .menu-item:hover {
+      background: #242424;
+      color: white;
+    }
+
+    .menu-item.disabled {
+      opacity: .45;
+      cursor: default;
+    }
+
+    .logout {
+      margin-top: auto;
+      border-top: 1px solid var(--border);
+      padding-top: 15px;
+    }
+
+    .logout button {
+      width: 100%;
+      min-height: 48px;
+      background: transparent;
+      border: 0;
+      color: #ccc;
+      font-size: 14px;
+      text-align: left;
+      padding: 10px;
+      cursor: pointer;
+    }
+
+    .logout button:hover {
+      color: white;
+    }
+
+    /* CONTENIDO */
+
+    .main {
+      margin-right: var(--sidebar-width);
+      padding: 30px;
+      max-width: 1500px;
+    }
+
+    .page-title {
+      margin: 0 0 8px;
+      font-size: 32px;
+      font-weight: 800;
+    }
+
+    .page-subtitle {
+      color: var(--muted);
+      margin: 0 0 28px;
+      font-size: 15px;
+    }
+
+    .event-panel {
+      background: linear-gradient(145deg, #191919, #101010);
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      padding: 24px;
+      min-height: 220px;
+    }
+
+    .event-label {
+      display: inline-block;
+      color: white;
+      background: #292929;
+      border: 1px solid #444;
+      border-radius: 20px;
+      padding: 7px 13px;
+      font-size: 12px;
+      font-weight: bold;
+      margin-bottom: 18px;
+    }
+
+    .event-loading {
+      text-align: center;
+      padding: 35px 10px;
+    }
+
+    .event-loading h2 {
+      font-size: 20px;
+      margin: 0 0 12px;
+    }
+
+    .event-loading p {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* MÓVILES */
+
+    @media (max-width: 700px) {
+      :root {
+        --sidebar-width: 68px;
+      }
+
+      .header {
+        min-height: 76px;
+        padding: 8px;
+      }
+
+      .header-logo {
+        max-width: 95%;
+        max-height: 58px;
+      }
+
+      .sidebar {
+        padding: 12px 7px;
+      }
+
+      .sidebar-logo {
+        width: 52px;
+        height: 52px;
+        margin: 3px auto 25px;
+      }
+
+      .menu {
+        gap: 10px;
+      }
+
+      .menu-item {
+        min-height: 48px;
+        justify-content: center;
+        padding: 8px 3px;
+        gap: 0;
+      }
+
+      .menu-item .menu-icon {
+        font-size: 22px;
+        width: auto;
+      }
+
+      .menu-label {
+        display: none;
+      }
+
+      .menu-item.active {
+        border-left: 3px solid var(--red);
+      }
+
+      .logout button {
+        text-align: center;
+        padding: 10px 0;
+        font-size: 20px;
+      }
+
+      .logout .logout-label {
+        display: none;
+      }
+
+      .main {
+        padding: 22px 12px;
+      }
+
+      .page-title {
+        font-size: 25px;
+      }
+
+      .page-subtitle {
+        font-size: 13px;
+        line-height: 1.5;
+        margin-bottom: 20px;
+      }
+
+      .event-panel {
+        padding: 16px 12px;
+        border-radius: 12px;
+      }
+
+      .event-loading {
+        padding: 25px 5px;
+      }
+
+      .event-loading h2 {
+        font-size: 18px;
+      }
+    }
+
+    @media (max-width: 360px) {
+      :root {
+        --sidebar-width: 60px;
+      }
+
+      .main {
+        padding-left: 9px;
+        padding-right: 9px;
+      }
+    }
+  </style>
 </head>
+
 <body>
-  <main>
-    <h1>WEBLINEGT</h1>
-    <p>Bienvenido.</p><form action="/auth/logout" method="POST">
-  <button type="submit">Cerrar sesión</button>
-</form>
+
+  <!-- CABECERA -->
+  <header class="header">
+    <img
+      class="header-logo"
+      src="https://cdn.discordapp.com/attachments/1483247050429567087/1567540249570185236/1793749060837.png?ex=6aec8d1e&amp;is=6aeb3b9e&amp;hm=0d3fc3d7d05583c986903390e2840148333771bdd0fa7060e6d36168edb2afd5"
+      alt="WEBLINEGT">
+  </header>
+
+  <!-- MENÚ DERECHO -->
+  <aside class="sidebar">
+
+    <img
+      class="sidebar-logo"
+      src="https://cdn.discordapp.com/attachments/1483247050429567087/1567540257740558366/1793749060837_1.png?ex=6aec8d20&amp;is=6aeb3ba0&amp;hm=8ffcbff5f8c9750e76cbe6b07d4d57392cd52bbbfdbd0b9eb2d0e24b08473d88"
+      alt="WEBLINEGT">
+
+    <nav class="menu" aria-label="Menú principal">
+
+      <a class="menu-item active" href="#evento" aria-current="page">
+        <span class="menu-icon">🏁</span>
+        <span class="menu-label">Evento</span>
+      </a>
+
+      <span class="menu-item disabled" aria-disabled="true">
+        <span class="menu-icon">📜</span>
+        <span class="menu-label">Reglamento</span>
+      </span>
+
+      <span class="menu-item disabled" aria-disabled="true">
+        <span class="menu-icon">ℹ️</span>
+        <span class="menu-label">Info</span>
+      </span>
+
+      <span class="menu-item disabled" aria-disabled="true">
+        <span class="menu-icon">🏆</span>
+        <span class="menu-label">Clasificación</span>
+      </span>
+
+      <span class="menu-item disabled" aria-disabled="true">
+        <span class="menu-icon">💬</span>
+        <span class="menu-label">Chat</span>
+      </span>
+
+    </nav>
+
+    <div class="logout">
+      <form action="/auth/logout" method="POST">
+        <button type="submit">
+          🚪 <span class="logout-label">Cerrar sesión</span>
+        </button>
+      </form>
+    </div>
+
+  </aside>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="main" id="evento">
+
+    <h1 class="page-title">🏁 Evento</h1>
+
+    <p class="page-subtitle">
+      Convocatoria y asistencia de la comunidad REDLINE GT.
+    </p>
+
+    <section class="event-panel">
+
+      <span class="event-label">EVENTO ACTUAL</span>
+
+      <div class="event-loading">
+        <h2>Preparando evento...</h2>
+        <p>
+          Aquí aparecerá la convocatoria actual de REDLINE GT,
+          con sus titulares, reservas y respuestas.
+        </p>
+      </div>
+
+    </section>
 
   </main>
+
 </body>
 </html>
