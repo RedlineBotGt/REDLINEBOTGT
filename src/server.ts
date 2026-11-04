@@ -716,7 +716,7 @@ app.use(
 // AUTENTICACIÓN DISCORD
 // ======================================
 
-app.use(authRoutes);
+app.use("/auth", authRoutes);
 
 // ======================================
 // COMPROBAR SESIÓN
