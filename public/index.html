@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -179,8 +180,6 @@
             line-height: 1.8;
         }
 
-        /* Solo reducimos la letra de la descripción.
-           La caja conserva el ancho y el espacio originales. */
         .event-description {
             display: block;
             width: 100%;
@@ -193,6 +192,37 @@
             word-break: break-word;
             box-sizing: border-box;
             color: #ddd;
+        }
+
+        .event-description strong {
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .event-description em {
+            font-style: italic;
+        }
+
+        .event-description u {
+            text-decoration: underline;
+        }
+
+        .event-description del {
+            text-decoration: line-through;
+        }
+
+        .event-description code {
+            background: #303030;
+            color: #f0c674;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        .event-description a {
+            color: #70b7ff;
+            text-decoration: underline;
+            overflow-wrap: anywhere;
         }
 
         .event-image {
@@ -497,6 +527,7 @@
     </main>
 
     <script>
+
         const eventContainer = document.getElementById("event-container");
 
         function escapeHTML(value) {
@@ -511,6 +542,73 @@
 
                 return entities[character];
             });
+        }
+
+        // CONVERTIR MARKDOWN DE DISCORD A HTML SEGURO
+        function formatDiscordText(value) {
+            let text = escapeHTML(value ?? "");
+
+            // Enlaces Markdown: [texto](https://...)
+            text = text.replace(
+                /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+                (match, label, url) => {
+                    return `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+                }
+            );
+
+            // Enlaces directos.
+            text = text.replace(
+                /(^|[\s(])(https?:\/\/[^\s<]+)/g,
+                (match, prefix, url) => {
+                    const cleanUrl = url.replace(/[.,!?;:]+$/, "");
+                    const ending = url.slice(cleanUrl.length);
+
+                    return `${prefix}<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">${cleanUrl}</a>${ending}`;
+                }
+            );
+
+            // Código en línea.
+            text = text.replace(
+                /`([^`\n]+)`/g,
+                "<code>$1</code>"
+            );
+
+            // Negrita y cursiva combinadas.
+            text = text.replace(
+                /\*\*\*([\s\S]+?)\*\*\*/g,
+                "<strong><em>$1</em></strong>"
+            );
+
+            // Negrita.
+            text = text.replace(
+                /\*\*([\s\S]+?)\*\*/g,
+                "<strong>$1</strong>"
+            );
+
+            // Subrayado.
+            text = text.replace(
+                /__([\s\S]+?)__/g,
+                "<u>$1</u>"
+            );
+
+            // Tachado.
+            text = text.replace(
+                /~~([\s\S]+?)~~/g,
+                "<del>$1</del>"
+            );
+
+            // Cursiva.
+            text = text.replace(
+                /(^|[^*])\*([^*\n]+)\*(?!\*)/g,
+                "$1<em>$2</em>"
+            );
+
+            text = text.replace(
+                /(^|[^_])_([^_\n]+)_(?!_)/g,
+                "$1<em>$2</em>"
+            );
+
+            return text;
         }
 
         function formatDate(value) {
@@ -614,9 +712,9 @@
 
                     ${imageHTML}
 
-                    <div class="event-description">
-                        ${escapeHTML(event.description || "Sin descripción adicional.")}
-                    </div>
+                    <div class="event-description">${formatDiscordText(
+                        event.description || "Sin descripción adicional."
+                    )}</div>
 
                     <div class="event-content">
 
