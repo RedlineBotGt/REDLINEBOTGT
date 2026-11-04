@@ -3,10 +3,25 @@ import { google } from "googleapis";
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
 const CLIENT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+
 const PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY
   ?.replace(/\\n/g, "\n")
   .replace(/^["']|["']$/g, "")
   .trim();
+
+// DIAGNÓSTICO TEMPORAL DE LA CLAVE
+console.log("COMPROBACIÓN PRIVATE KEY:", {
+  existe: !!PRIVATE_KEY,
+  longitud: PRIVATE_KEY?.length,
+  empiezaCorrectamente: PRIVATE_KEY?.startsWith(
+    "-----BEGIN PRIVATE KEY-----"
+  ),
+  terminaCorrectamente: PRIVATE_KEY?.endsWith(
+    "-----END PRIVATE KEY-----"
+  ),
+  tieneLiteralBarraN: PRIVATE_KEY?.includes("\\n"),
+  tieneSaltosReales: PRIVATE_KEY?.includes("\n")
+});
 
 const SHEET_TAB = "Inscripción";
 const USER_ID_RANGE = "B2:B";
@@ -18,7 +33,6 @@ function getSheetsClient() {
     );
   }
 
-  // Comprobar que la clave tenga formato PEM
   if (
     !PRIVATE_KEY.includes("-----BEGIN PRIVATE KEY-----") ||
     !PRIVATE_KEY.includes("-----END PRIVATE KEY-----")
