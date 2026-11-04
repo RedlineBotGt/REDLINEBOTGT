@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -212,7 +211,7 @@
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 10px;
-            margin-bottom: 24px;
+            margin-bottom: 15px;
         }
 
         .rsvp-button {
@@ -223,7 +222,7 @@
             font-weight: bold;
             font-size: 13px;
             background: #292929;
-            opacity: 0.65;
+            opacity: 0.45;
             cursor: not-allowed;
         }
 
@@ -243,10 +242,20 @@
             background: #762222;
         }
 
+        .rsvp-button.available {
+            opacity: 1;
+            cursor: pointer;
+            border-color: #aaa;
+        }
+
+        .rsvp-button.available:hover {
+            filter: brightness(1.2);
+        }
+
         .rsvp-note {
             color: var(--muted);
             font-size: 12px;
-            margin: -12px 0 24px;
+            margin: 0 0 24px;
             line-height: 1.5;
         }
 
@@ -537,12 +546,27 @@
             `;
         }
 
-        function renderEvent(event) {
+        function renderEvent(event, permisos) {
             const rsvps = event.rsvps || {};
+
+            const puedeSerTitular = permisos?.puedeSerTitular === true;
+            const puedeSerReserva = permisos?.puedeSerReserva === true;
 
             const imageHTML = event.image
                 ? `<img class="event-image" id="event-image" src="${escapeHTML(event.image)}" alt="Imagen del evento">`
                 : "";
+
+            let permisoMensaje = "";
+
+            if (puedeSerTitular) {
+                permisoMensaje = "Tu rol de Discord te permite seleccionar TITULAR.";
+            } else if (puedeSerReserva) {
+                permisoMensaje = "Tu rol de Discord te permite seleccionar RESERVA.";
+            } else if (permisos?.esTitular && permisos?.esReserva) {
+                permisoMensaje = "Tienes los roles de titular y reserva. El bot deberá validar tu respuesta.";
+            } else {
+                permisoMensaje = "Tu usuario no tiene actualmente un rol de titular o reserva.";
+            }
 
             eventContainer.innerHTML = `
                 <article class="event-card">
@@ -571,11 +595,19 @@
                         <h3 class="section-heading">CONFIRMA TU ASISTENCIA</h3>
 
                         <div class="rsvp-buttons">
-                            <button class="rsvp-button yes" type="button" disabled>
+                            <button
+                                class="rsvp-button yes ${puedeSerTitular ? "available" : ""}"
+                                type="button"
+                                ${puedeSerTitular ? "" : "disabled"}
+                            >
                                 ✅ TITULAR
                             </button>
 
-                            <button class="rsvp-button reserve" type="button" disabled>
+                            <button
+                                class="rsvp-button reserve ${puedeSerReserva ? "available" : ""}"
+                                type="button"
+                                ${puedeSerReserva ? "" : "disabled"}
+                            >
                                 🔃 RESERVA
                             </button>
 
@@ -589,8 +621,8 @@
                         </div>
 
                         <p class="rsvp-note">
-                            La confirmación desde la web se activará al conectar
-                            los botones con el sistema de asistencia de Discord.
+                            ${escapeHTML(permisoMensaje)}
+                            Los botones se conectarán al sistema de asistencia de Discord en el siguiente paso.
                         </p>
 
                         <h3 class="section-heading">LISTA DE PARTICIPANTES</h3>
@@ -612,6 +644,7 @@
                 image.addEventListener("error", () => {
                     image.style.display = "none";
                 });
+
                 image.addEventListener("load", () => {
                     image.style.display = "block";
                 });
@@ -634,7 +667,9 @@
                 }
 
                 if (!response.ok) {
-                    throw new Error("El servidor ha respondido con error " + response.status);
+                    throw new Error(
+                        "El servidor ha respondido con error " + response.status
+                    );
                 }
 
                 const data = await response.json();
@@ -651,7 +686,7 @@
                     return;
                 }
 
-                renderEvent(data.evento);
+                renderEvent(data.evento, data.permisos || {});
 
             } catch (error) {
                 console.error("Error cargando el evento:", error);
