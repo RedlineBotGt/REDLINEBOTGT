@@ -26,22 +26,23 @@ interface DiscordMember {
   roles?: string[];
 }
 
-// OBTENER UN TOKEN VÁLIDO, RENOVÁNDOLO SI HA CADUCADO
-async function getValidDiscordToken(req: Request): Promise<string | null> {
+async function getValidDiscordToken(req: Request): Promise<string> {
   const session = req.session as any;
   const oauth = session.discordOAuth;
 
   if (!oauth?.accessToken) {
-    return null;
+    throw new Error("No hay autorización OAuth de Discord en la sesión.");
   }
 
-  // Si todavía tiene más de un minuto de validez, reutilizarlo.
-  if (oauth.expiresAt && Date.now() < oauth.expiresAt - 60000) {
+  if (
+    oauth.expiresAt &&
+    Date.now() < oauth.expiresAt - 60000
+  ) {
     return oauth.accessToken;
   }
 
   if (!oauth.refreshToken || !CLIENT_ID || !CLIENT_SECRET) {
-    return null;
+    throw new Error("No se puede renovar el token de Discord.");
   }
 
   const refreshResponse = await fetch(
@@ -61,26 +62,23 @@ async function getValidDiscordToken(req: Request): Promise<string | null> {
   );
 
   if (!refreshResponse.ok) {
-    console.error(
-      "No se pudo renovar el token de Discord:",
-      refreshResponse.status
+    throw new Error(
+      `Discord rechazó la renovación del token: ${refreshResponse.status}`
     );
-
-    return null;
   }
 
   const refreshed = await refreshResponse.json() as DiscordTokenData;
 
   if (!refreshed.access_token) {
-    return null;
+    throw new Error("Discord no devolvió el nuevo token.");
   }
 
-  // Discord puede devolver un nuevo refresh token.
   session.discordOAuth = {
     accessToken: refreshed.access_token,
     tokenType: refreshed.token_type || "Bearer",
     refreshToken: refreshed.refresh_token || oauth.refreshToken,
-    expiresAt: Date.now() + (Number(refreshed.expires_in) || 604800) * 1000
+    expiresAt:
+      Date.now() + (Number(refreshed.expires_in) || 604800) * 1000
   };
 
   await new Promise<void>((resolve, reject) => {
@@ -91,6 +89,53 @@ async function getValidDiscordToken(req: Request): Promise<string | null> {
   });
 
   return refreshed.access_token;
+}
+
+/**
+ * Consulta los roles reales del usuario autenticado
+ * en un servidor de Discord.
+ */
+export async function getDiscordUserRoles(
+  req: Request,
+  guildId: string
+): Promise<string[]> {
+  const session = req.session as any;
+
+  if (!session.user?.id) {
+    throw new Error("El usuario no ha iniciado sesión.");
+  }
+
+  const accessToken = await getValidDiscordToken(req);
+
+  const memberResponse = await fetch(
+    `${DISCORD_API}/users/@me/guilds/${guildId}/member`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    }
+  );
+
+  if (memberResponse.status === 404) {
+    throw new Error("El usuario no pertenece al servidor REDLINE GT.");
+  }
+
+  if (!memberResponse.ok) {
+    throw new Error(
+      `Error consultando los roles de Discord: ${memberResponse.status}`
+    );
+  }
+
+  const member = await memberResponse.json() as DiscordMember;
+
+  if (
+    member.user?.id &&
+    member.user.id !== session.user.id
+  ) {
+    throw new Error("La identidad de Discord no coincide.");
+  }
+
+  return Array.isArray(member.roles) ? member.roles : [];
 }
 
 // INICIAR AUTENTICACIÓN CON DISCORD
@@ -144,8 +189,6 @@ router.get("/discord/callback", async (req: Request, res: Response) => {
       typeof receivedState !== "string" ||
       typeof savedState !== "string"
     ) {
-      console.error("Callback OAuth incompleto.");
-
       return res.status(400).send(
         "Autorización incompleta."
       );
@@ -165,7 +208,6 @@ router.get("/discord/callback", async (req: Request, res: Response) => {
 
     delete (req.session as any).oauthState;
 
-    // INTERCAMBIAR EL CÓDIGO POR UN TOKEN
     const tokenResponse = await fetch(
       `${DISCORD_API}/oauth2/token`,
       {
@@ -184,11 +226,11 @@ router.get("/discord/callback", async (req: Request, res: Response) => {
     );
 
     if (!tokenResponse.ok) {
-      const errorDetails = await tokenResponse.text();
+      const details = await tokenResponse.text();
 
       console.error("Error solicitando token:", {
         status: tokenResponse.status,
-        response: errorDetails
+        response: details
       });
 
       throw new Error(
@@ -199,12 +241,9 @@ router.get("/discord/callback", async (req: Request, res: Response) => {
     const tokenData = await tokenResponse.json() as DiscordTokenData;
 
     if (!tokenData.access_token) {
-      throw new Error(
-        "Discord no devolvió un token de acceso."
-      );
+      throw new Error("Discord no devolvió un token de acceso.");
     }
 
-    // OBTENER LOS DATOS DEL USUARIO
     const userResponse = await fetch(
       `${DISCORD_API}/users/@me`,
       {
@@ -229,23 +268,15 @@ router.get("/discord/callback", async (req: Request, res: Response) => {
     };
 
     if (!discordUser.id) {
-      throw new Error(
-        "Discord no devolvió un ID de usuario."
-      );
+      throw new Error("Discord no devolvió un ID de usuario.");
     }
 
-    console.log("Usuario de Discord identificado.");
-
-    // COMPROBAR AUTORIZACIÓN EN GOOGLE SHEETS
+    // SEGUIR COMPROBANDO LA AUTORIZACIÓN EN GOOGLE SHEETS
     const authorized = await isAuthorizedDiscordUser(
       discordUser.id
     );
 
     if (!authorized) {
-      console.log(
-        "Usuario sin autorización en Google Sheets."
-      );
-
       return res.status(403).send(
         "Tu cuenta de Discord no está autorizada para acceder a WEBLINEGT."
       );
@@ -270,7 +301,7 @@ router.get("/discord/callback", async (req: Request, res: Response) => {
         avatar: discordUser.avatar
       };
 
-      // TOKEN PRIVADO: SOLO SE GUARDA EN EL SERVIDOR
+      // TOKEN PRIVADO: NO SE ENVÍA AL NAVEGADOR
       session.discordOAuth = {
         accessToken: tokenData.access_token,
         tokenType: tokenData.token_type || "Bearer",
@@ -284,10 +315,7 @@ router.get("/discord/callback", async (req: Request, res: Response) => {
 
       req.session.save((saveError) => {
         if (saveError) {
-          console.error(
-            "Error guardando sesión:",
-            saveError
-          );
+          console.error("Error guardando sesión:", saveError);
 
           return res.status(500).send(
             "No se pudo guardar la sesión."
@@ -301,10 +329,7 @@ router.get("/discord/callback", async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error(
-      "Error en autenticación Discord:",
-      error
-    );
+    console.error("Error en autenticación Discord:", error);
 
     return res.status(500).send(
       "Error durante la autenticación."
@@ -312,7 +337,7 @@ router.get("/discord/callback", async (req: Request, res: Response) => {
   }
 });
 
-// CONSULTAR LOS ROLES DEL USUARIO EN UN SERVIDOR
+// CONSULTAR LOS ROLES DEL USUARIO
 router.get(
   "/discord/roles/:guildId",
   async (req: Request, res: Response) => {
@@ -333,64 +358,20 @@ router.get(
         });
       }
 
-      const accessToken = await getValidDiscordToken(req);
-
-      if (!accessToken) {
-        return res.status(401).json({
-          error: "La autorización de Discord ha caducado. Inicia sesión de nuevo."
-        });
-      }
-
-      const memberResponse = await fetch(
-        `${DISCORD_API}/users/@me/guilds/${guildId}/member`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`
-          }
-        }
-      );
-
-      if (memberResponse.status === 404) {
-        return res.status(403).json({
-          error: "No perteneces a este servidor de Discord."
-        });
-      }
-
-      if (!memberResponse.ok) {
-        const details = await memberResponse.text();
-
-        console.error("Error consultando roles:", {
-          status: memberResponse.status,
-          response: details
-        });
-
-        return res.status(502).json({
-          error: "No se pudieron consultar los roles de Discord."
-        });
-      }
-
-      const member = await memberResponse.json() as DiscordMember;
-
-      // Comprobar que Discord devuelve al mismo usuario de la sesión.
-      if (member.user?.id && member.user.id !== session.user.id) {
-        return res.status(403).json({
-          error: "La identidad de Discord no coincide."
-        });
-      }
+      const roles = await getDiscordUserRoles(req, guildId);
 
       return res.json({
         userId: session.user.id,
-        roles: Array.isArray(member.roles) ? member.roles : []
+        roles
       });
 
     } catch (error) {
-      console.error(
-        "Error consultando roles de Discord:",
-        error
-      );
+      console.error("Error consultando roles:", error);
 
-      return res.status(500).json({
-        error: "Error interno consultando los roles."
+      return res.status(502).json({
+        error: error instanceof Error
+          ? error.message
+          : "No se pudieron consultar los roles."
       });
     }
   }
@@ -400,10 +381,7 @@ router.get(
 router.post("/logout", (req: Request, res: Response) => {
   req.session.destroy((error) => {
     if (error) {
-      console.error(
-        "Error cerrando sesión:",
-        error
-      );
+      console.error("Error cerrando sesión:", error);
 
       return res.status(500).send(
         "No se pudo cerrar la sesión."
