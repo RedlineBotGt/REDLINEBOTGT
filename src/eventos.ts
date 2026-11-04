@@ -1,4 +1,3 @@
-
 import { MongoClient, Collection } from "mongodb";
 
 const CHANNEL_ID = "1563193909381693580";
@@ -11,7 +10,8 @@ export const ROLE_RESERVA = "1561843486129528913";
 let mongoClient: MongoClient | null = null;
 let eventsCollection: Collection | null = null;
 
-async function getEventsCollection(): Promise<Collection> {
+// CONEXIÓN A MONGODB
+export async function getEventsCollection(): Promise<Collection> {
   if (eventsCollection) {
     return eventsCollection;
   }
@@ -39,6 +39,7 @@ async function getEventsCollection(): Promise<Collection> {
   return eventsCollection;
 }
 
+// OBTENER EVENTO ACTUAL
 export async function getCurrentEvent() {
   const collection = await getEventsCollection();
 
@@ -89,7 +90,6 @@ export async function getCurrentEvent() {
     publishAt: event.publishAt
       ? new Date(event.publishAt).toISOString()
       : null,
-
     channelId: event.channelId,
 
     channelName: event.channelName || "",
