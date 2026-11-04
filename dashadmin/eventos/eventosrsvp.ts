@@ -231,3 +231,343 @@ export async function handleEventAdminStatusSelect(interaction: any): Promise<bo
 
     return true;
 }
+// --- 4. CONFIRMAR Y APLICAR CAMBIOS EN LA BD Y EL MENSAJE PRINCIPAL ---
+export async function handleEventAdminConfirmButton(interaction: ButtonInteraction): Promise<boolean> {
+    if (!interaction.customId.startsWith('admin_confirm_')) return false;
+
+    const sessionId = interaction.customId.replace('admin_confirm_', '');
+    const session = adminAdminSessions.get(sessionId);
+
+    if (!session || !session.targetUserId || !session.status) {
+        await interaction.reply({
+            content: '❌ Debes seleccionar tanto un **usuario** como un **estado** antes de confirmar.',
+            flags: [MessageFlags.Ephemeral]
+        });
+        return true;
+    }
+
+    const targetUserId = session.targetUserId;
+    const targetStatus = session.status;
+    const messageId = session.eventMessageId;
+
+    adminAdminSessions.delete(sessionId);
+
+    const guild = interaction.guild;
+    if (!guild) return true;
+
+    const col = await getEventsCollection();
+    const eventDoc = await col.findOne({
+        messageId,
+        guildId: interaction.guildId
+    });
+
+    if (!eventDoc || eventDoc.status === 'completed' || eventDoc.status === 'cancelled') {
+        await interaction.update({
+            content: '❌ Este evento ya no está activo en este servidor.',
+            components: []
+        });
+        return true;
+    }
+
+    if (!eventDoc.rsvps) {
+        eventDoc.rsvps = { yes: [], reserve: [], maybe: [], no: [] };
+    }
+
+    if (!Array.isArray(eventDoc.rsvps.yes)) eventDoc.rsvps.yes = [];
+    if (!Array.isArray(eventDoc.rsvps.reserve)) eventDoc.rsvps.reserve = [];
+    if (!Array.isArray(eventDoc.rsvps.maybe)) eventDoc.rsvps.maybe = [];
+    if (!Array.isArray(eventDoc.rsvps.no)) eventDoc.rsvps.no = [];
+
+    const yaEraTitular = eventDoc.rsvps.yes.includes(targetUserId);
+
+    if (
+        targetStatus === 'yes' &&
+        !yaEraTitular &&
+        eventDoc.rsvps.yes.length >= MAX_PILOTOS
+    ) {
+        await interaction.update({
+            content: `❌ No se puede añadir a <@${targetUserId}> como titular. Ya están ocupadas las **${MAX_PILOTOS} plazas de titulares**. Las reservas no cuentan para este límite.`,
+            components: []
+        });
+        return true;
+    }
+
+    // Limpiar todos los estados anteriores.
+    eventDoc.rsvps.yes = eventDoc.rsvps.yes.filter((id: string) => id !== targetUserId);
+    eventDoc.rsvps.reserve = eventDoc.rsvps.reserve.filter((id: string) => id !== targetUserId);
+    eventDoc.rsvps.maybe = eventDoc.rsvps.maybe.filter((id: string) => id !== targetUserId);
+    eventDoc.rsvps.no = eventDoc.rsvps.no.filter((id: string) => id !== targetUserId);
+
+    let asistenteRole = guild.roles.cache.find(
+        r => r.name.toLowerCase() === 'asistente'
+    );
+
+    if (!asistenteRole) {
+        try {
+            asistenteRole = await guild.roles.create({
+                name: 'asistente',
+                color: 0x00FF00,
+                mentionable: true,
+                reason: 'Rol automático creado para gestión de asistencias.'
+            });
+        } catch (e) {
+            console.error('❌ Error creando rol asistente:', e);
+        }
+    }
+
+    const member = await guild.members.fetch(targetUserId).catch(() => null);
+
+    if (targetStatus === 'yes') {
+        eventDoc.rsvps.yes.push(targetUserId);
+        if (asistenteRole && member) {
+            await member.roles.add(asistenteRole).catch(() => {});
+        }
+    } else if (targetStatus === 'reserve') {
+        eventDoc.rsvps.reserve.push(targetUserId);
+        if (asistenteRole && member) {
+            await member.roles.add(asistenteRole).catch(() => {});
+        }
+    } else if (targetStatus === 'maybe') {
+        eventDoc.rsvps.maybe.push(targetUserId);
+        if (asistenteRole && member) {
+            await member.roles.add(asistenteRole).catch(() => {});
+        }
+    } else if (targetStatus === 'no') {
+        eventDoc.rsvps.no.push(targetUserId);
+
+        if (asistenteRole && member && member.roles.cache.has(asistenteRole.id)) {
+            await member.roles.remove(asistenteRole).catch(() => {});
+        }
+    }
+
+    // Si el administrador da de baja a un titular, cubrir la plaza.
+    let promotedUserId: string | null = null;
+
+    if (targetStatus === 'no' && yaEraTitular) {
+        promotedUserId = await promocionarPrimerReserva(eventDoc, guild);
+    }
+
+    await col.updateOne(
+        { messageId, guildId: interaction.guildId },
+        { $set: { rsvps: eventDoc.rsvps } }
+    );
+
+    const channel = await guild.channels.fetch(eventDoc.channelId).catch(() => null) as TextChannel;
+
+    if (channel) {
+        const message = await channel.messages.fetch(messageId).catch(() => null);
+
+        if (message) {
+            const { embed, components } = buildEventEmbedAndRows(eventDoc);
+            await message.edit({ embeds: [embed], components }).catch(() => {});
+        }
+    }
+
+    if (promotedUserId) {
+        await avisarReservaPromocionada(eventDoc, guild, promotedUserId);
+    }
+
+    let confirmation =
+        `✅ Asistencia actualizada correctamente para el usuario <@${targetUserId}> como **${targetStatus}**.`;
+
+    if (promotedUserId) {
+        confirmation += `\n🔃 <@${promotedUserId}> ha sido promocionado automáticamente de reserva a titular.`;
+    }
+
+    await interaction.update({
+        content: confirmation,
+        components: []
+    });
+
+    return true;
+}
+
+// --- 5. GESTIÓN DE RSVP Y RESTRICCIÓN ESTRICTA DE ROLES ---
+export async function handleEventRsvpButton(interaction: ButtonInteraction): Promise<boolean> {
+    const customId = interaction.customId;
+
+    if (![
+        'event_rsvp_yes',
+        'event_rsvp_reserve',
+        'event_rsvp_maybe',
+        'event_rsvp_no'
+    ].includes(customId)) return false;
+
+    const userId = interaction.user.id;
+    const messageId = interaction.message.id;
+    const guild = interaction.guild;
+
+    if (!guild) return true;
+
+    const member = interaction.member as GuildMember;
+    if (!member) return true;
+
+    // Detectar roles por nombre.
+    const isTitular = member.roles.cache.some(
+        r => r.name.toLowerCase().includes('titular')
+    );
+
+    const isReserva = member.roles.cache.some(
+        r => r.name.toLowerCase().includes('reserva')
+    );
+
+    // Restricción 1: Botón Reserva.
+    if (customId === 'event_rsvp_reserve') {
+        if (isTitular) {
+            await interaction.reply({
+                content: '❌ Como **Piloto Titular**, no puedes apuntarte en la lista de reservas.',
+                flags: [MessageFlags.Ephemeral]
+            });
+            return true;
+        }
+
+        if (!isReserva) {
+            await interaction.reply({
+                content: '❌ Necesitas tener el rol de **Reserva** para poder apuntarte en esta lista.',
+                flags: [MessageFlags.Ephemeral]
+            });
+            return true;
+        }
+    }
+
+    // Restricción 2: Botón Asistiré.
+    if (customId === 'event_rsvp_yes') {
+        if (isReserva) {
+            await interaction.reply({
+                content: '❌ Como **Piloto Reserva**, no puedes confirmarte directamente en verde. Pulsa el botón 🔃 **Reserva**.',
+                flags: [MessageFlags.Ephemeral]
+            });
+            return true;
+        }
+
+        if (!isTitular) {
+            await interaction.reply({
+                content: '❌ Necesitas tener el rol de **Titular** para confirmar asistencia en verde.',
+                flags: [MessageFlags.Ephemeral]
+            });
+            return true;
+        }
+    }
+
+    const col = await getEventsCollection();
+    const eventDoc = await col.findOne({
+        messageId,
+        guildId: interaction.guildId
+    });
+
+    if (!eventDoc || eventDoc.status === 'completed' || eventDoc.status === 'cancelled') {
+        await interaction.reply({
+            content: '❌ Este evento ya ha finalizado o no está activo. No se aceptan más cambios de asistencia.',
+            flags: [MessageFlags.Ephemeral]
+        });
+        return true;
+    }
+
+    if (!eventDoc.rsvps) {
+        eventDoc.rsvps = { yes: [], reserve: [], maybe: [], no: [] };
+    }
+
+    if (!Array.isArray(eventDoc.rsvps.yes)) eventDoc.rsvps.yes = [];
+    if (!Array.isArray(eventDoc.rsvps.reserve)) eventDoc.rsvps.reserve = [];
+    if (!Array.isArray(eventDoc.rsvps.maybe)) eventDoc.rsvps.maybe = [];
+    if (!Array.isArray(eventDoc.rsvps.no)) eventDoc.rsvps.no = [];
+
+    const yaEraTitular = eventDoc.rsvps.yes.includes(userId);
+
+    if (
+        customId === 'event_rsvp_yes' &&
+        !yaEraTitular &&
+        eventDoc.rsvps.yes.length >= MAX_PILOTOS
+    ) {
+        await interaction.reply({
+            content: `❌ Ya están ocupadas las **${MAX_PILOTOS} plazas de titulares**. Puedes seguir apuntándote como reserva si tienes el rol correspondiente.`,
+            flags: [MessageFlags.Ephemeral]
+        });
+        return true;
+    }
+
+    // Limpiar todos los estados anteriores.
+    eventDoc.rsvps.yes = eventDoc.rsvps.yes.filter((id: string) => id !== userId);
+    eventDoc.rsvps.reserve = eventDoc.rsvps.reserve.filter((id: string) => id !== userId);
+    eventDoc.rsvps.maybe = eventDoc.rsvps.maybe.filter((id: string) => id !== userId);
+    eventDoc.rsvps.no = eventDoc.rsvps.no.filter((id: string) => id !== userId);
+
+    let asistenteRole = guild.roles.cache.find(
+        r => r.name.toLowerCase() === 'asistente'
+    );
+
+    if (!asistenteRole) {
+        try {
+            asistenteRole = await guild.roles.create({
+                name: 'asistente',
+                color: 0x00FF00,
+                mentionable: true,
+                reason: 'Rol automático creado para gestión de asistencias.'
+            });
+        } catch (e) {
+            console.error('❌ Error creando rol asistente:', e);
+        }
+    }
+
+    let responseContent = '';
+
+    if (customId === 'event_rsvp_yes') {
+        eventDoc.rsvps.yes.push(userId);
+        responseContent = '✅ ¡Tu asistencia (**Asistiré**) ha quedado registrada!';
+
+        if (asistenteRole && !member.roles.cache.has(asistenteRole.id)) {
+            await member.roles.add(asistenteRole).catch(() => {});
+        }
+
+    } else if (customId === 'event_rsvp_reserve') {
+        eventDoc.rsvps.reserve.push(userId);
+        responseContent = '🔃 ¡Te has registrado correctamente en la lista de **Reservas**!';
+
+        if (asistenteRole && !member.roles.cache.has(asistenteRole.id)) {
+            await member.roles.add(asistenteRole).catch(() => {});
+        }
+
+    } else if (customId === 'event_rsvp_maybe') {
+        eventDoc.rsvps.maybe.push(userId);
+        responseContent = '❓ Tu estado (**Duda**) ha quedado registrado.';
+
+        if (asistenteRole && !member.roles.cache.has(asistenteRole.id)) {
+            await member.roles.add(asistenteRole).catch(() => {});
+        }
+
+    } else if (customId === 'event_rsvp_no') {
+        eventDoc.rsvps.no.push(userId);
+        responseContent = '❌ Tu asistencia ha sido marcada como **No puedo**.';
+
+        if (asistenteRole && member.roles.cache.has(asistenteRole.id)) {
+            await member.roles.remove(asistenteRole).catch(() => {});
+        }
+    }
+
+    // Si un titular causa baja después de T-30, promocionar al primero de la reserva.
+    let promotedUserId: string | null = null;
+
+    if (customId === 'event_rsvp_no' && yaEraTitular) {
+        promotedUserId = await promocionarPrimerReserva(eventDoc, guild);
+    }
+
+    await col.updateOne(
+        { messageId, guildId: interaction.guildId },
+        { $set: { rsvps: eventDoc.rsvps } }
+    );
+
+    const { embed, components } = buildEventEmbedAndRows(eventDoc);
+    await interaction.message.edit({ embeds: [embed], components }).catch(() => {});
+
+    if (promotedUserId) {
+        await avisarReservaPromocionada(eventDoc, guild, promotedUserId);
+        responseContent += `\n🔃 <@${promotedUserId}> ha entrado automáticamente como titular.`;
+    }
+
+    await interaction.reply({
+        content: responseContent,
+        flags: [MessageFlags.Ephemeral]
+    });
+
+    return true;
+}
