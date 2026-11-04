@@ -1,4 +1,3 @@
-
 import {
     Client,
     TextChannel,
@@ -39,6 +38,17 @@ async function getOrCreateAsistenteRole(guild: any): Promise<Role | null> {
         console.error('❌ Error gestionando rol asistente en el worker:', err);
         return null;
     }
+}
+
+/**
+ * Genera menciones individuales de los pilotos de una lista.
+ * No utiliza @asistente, para poder separar titulares y reservas.
+ */
+function crearMencionesPilotos(userIds: string[]): string {
+    return userIds
+        .filter((id: string) => typeof id === 'string' && id.length > 0)
+        .map((id: string) => `<@${id}>`)
+        .join(', ');
 }
 
 export function setupEventWorker(client: Client) {
@@ -177,7 +187,6 @@ export function setupEventWorker(client: Client) {
                     );
                 }
             }
-
             // -------------------------------------------------------------
             // TAREA 2: Recordatorio T-30 + Promoción Automática de Reservas
             // -------------------------------------------------------------
@@ -221,11 +230,14 @@ export function setupEventWorker(client: Client) {
                     if (!ev.rsvps.reserve) ev.rsvps.reserve = [];
 
                     // 🔄 AUTOMATIZACIÓN T-30
-                    // Máximo de 15 titulares. Las reservas promocionadas
-                    // no aumentan el total de pilotos apuntados.
+                    // Máximo de 15 titulares.
+                    // Las reservas que no entran permanecen en reserva.
                     const MAX_TITULARES = 15;
 
-                    const huecosLibres = MAX_TITULARES - ev.rsvps.yes.length;
+                    const huecosLibres = Math.max(
+                        MAX_TITULARES - ev.rsvps.yes.length,
+                        0
+                    );
 
                     let promovidosCount = 0;
 
@@ -241,6 +253,7 @@ export function setupEventWorker(client: Client) {
                         );
                     }
 
+                    // Guardar las listas definitivas antes de enviar los avisos.
                     await col.updateOne(
                         { _id: ev._id },
                         {
@@ -252,7 +265,7 @@ export function setupEventWorker(client: Client) {
                         }
                     );
 
-                    // Actualizar visualmente la tarjeta en Discord
+                    // Actualizar visualmente la tarjeta en Discord.
                     if (ev.messageId) {
                         const message = await channel.messages.fetch(ev.messageId).catch(() => null);
 
@@ -266,29 +279,45 @@ export function setupEventWorker(client: Client) {
                         }
                     }
 
-                    const asistenteRole = await getOrCreateAsistenteRole(guild);
+                    // -----------------------------------------------------
+                    // AVISO 1: TITULARES CONFIRMADOS
+                    // Incluye los titulares originales y los promocionados.
+                    // -----------------------------------------------------
+                    const titulares = crearMencionesPilotos(ev.rsvps.yes);
 
-                    const roleMention = asistenteRole
-                        ? `<@&${asistenteRole.id}>`
-                        : '@asistente';
-
-                    let avisoTexto =
-                        `⏰ **¡Atención!** El evento **"${ev.title}"** comienza en **30 minutos**. ${roleMention}`;
-
-                    if (promovidosCount > 0) {
-                        avisoTexto +=
-                            `\n🔃 *Se han promocionado automáticamente plazas libres de reservas a titulares.*`;
+                    if (titulares) {
+                        await channel.send({
+                            content:
+                                `⏰ **¡Confirmación de titulares!**\n` +
+                                `El evento **"${ev.title}"** comienza en **30 minutos**.\n\n` +
+                                `🏁 Estos son los pilotos que tienen plaza y correrán:\n${titulares}`,
+                            allowedMentions: {
+                                users: ev.rsvps.yes
+                            }
+                        });
                     }
 
-                    await channel.send({
-                        content: avisoTexto,
-                        allowedMentions: {
-                            roles: asistenteRole ? [asistenteRole.id] : []
-                        }
-                    });
+                    // -----------------------------------------------------
+                    // AVISO 2: RESERVAS QUE SIGUEN EN ESPERA
+                    // Permanecen en reserva por si se produce una baja.
+                    // -----------------------------------------------------
+                    const reservas = crearMencionesPilotos(ev.rsvps.reserve);
+
+                    if (reservas) {
+                        await channel.send({
+                            content:
+                                `📋 **Lista de reservas - "${ev.title}"**\n` +
+                                `El evento comienza en **30 minutos**.\n\n` +
+                                `Estos pilotos continúan en reserva y todavía no tienen plaza:\n${reservas}\n\n` +
+                                `⚠️ **Permaneced atentos:** si se produce una baja de última hora, podréis entrar por orden de inscripción.`,
+                            allowedMentions: {
+                                users: ev.rsvps.reserve
+                            }
+                        });
+                    }
 
                     console.log(
-                        `⏰ [Worker] Recordatorio de 30 min y revisión de reservas completado para: "${ev.title}"`
+                        `⏰ [Worker] T-30 completado para "${ev.title}". Titulares: ${ev.rsvps.yes.length}. Reservas pendientes: ${ev.rsvps.reserve.length}. Promocionados: ${promovidosCount}.`
                     );
 
                 } catch (remErr) {
@@ -319,20 +348,14 @@ export function setupEventWorker(client: Client) {
 
                         const asistenteRole = await getOrCreateAsistenteRole(guild);
 
-                        const roleMention = asistenteRole
-                            ? `<@&${asistenteRole.id}>`
-                            : '@asistente';
-
                         if (channel && channel.isTextBased()) {
                             await channel.send({
-                                content: `🏁 **¡El evento "${ev.title}" COMIENZA AHORA!** ${roleMention}`,
-                                allowedMentions: {
-                                    roles: asistenteRole ? [asistenteRole.id] : []
-                                }
+                                content: `🏁 **¡El evento "${ev.title}" COMIENZA AHORA!**`
                             }).catch(() => {});
                         }
 
-                        // 🧹 Limpieza completa del rol asistente
+                        // 🧹 Limpieza completa del rol asistente.
+                        // Se mantiene el comportamiento actual.
                         if (asistenteRole) {
                             const members = await guild.members.fetch().catch(() => null);
 
@@ -349,7 +372,7 @@ export function setupEventWorker(client: Client) {
                             );
                         }
 
-                        // 🔒 Bloquear botones y cerrar tarjeta visual en Discord
+                        // 🔒 Bloquear botones y cerrar tarjeta visual en Discord.
                         if (ev.channelId && ev.messageId) {
                             const channelEdit = await guild.channels.fetch(ev.channelId).catch(() => null) as TextChannel;
 
