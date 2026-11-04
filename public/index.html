@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -193,7 +192,6 @@
             box-sizing: border-box;
             color: #ddd;
         }
-
         .event-description strong {
             color: #fff;
             font-weight: 700;
@@ -289,11 +287,28 @@
             filter: brightness(1.2);
         }
 
+        .rsvp-button:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
         .rsvp-note {
             color: var(--muted);
             font-size: 12px;
+            margin: 0 0 12px;
+            line-height: 1.5;
+        }
+
+        .rsvp-status {
+            min-height: 18px;
+            color: #9bd6a9;
+            font-size: 12px;
             margin: 0 0 24px;
             line-height: 1.5;
+        }
+
+        .rsvp-status.error {
+            color: #ffaaaa;
         }
 
         .lists-grid {
@@ -527,7 +542,6 @@
     </main>
 
     <script>
-
         const eventContainer = document.getElementById("event-container");
 
         function escapeHTML(value) {
@@ -548,7 +562,7 @@
         function formatDiscordText(value) {
             let text = escapeHTML(value ?? "");
 
-            // Enlaces Markdown: [texto](https://...)
+            // Enlaces Markdown.
             text = text.replace(
                 /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
                 (match, label, url) => {
@@ -658,6 +672,10 @@
             `;
         }
 
+        // ======================================
+        // MOSTRAR EVENTO Y BOTONES
+        // ======================================
+
         function renderEvent(event, permisos, rsvpNames) {
             const rsvps = rsvpNames || {
                 yes: event.rsvps?.yes || [],
@@ -686,12 +704,9 @@
             } else if (puedeSerReserva) {
                 permisoMensaje =
                     "Tu rol de Discord te permite seleccionar RESERVA.";
-            } else if (permisos?.esTitular && permisos?.esReserva) {
-                permisoMensaje =
-                    "Tienes los roles de titular y reserva. El bot deberá validar tu respuesta.";
             } else {
                 permisoMensaje =
-                    "No tienes actualmente un rol de titular o reserva.";
+                    "TITULAR y RESERVA requieren sus roles correspondientes.";
             }
 
             eventContainer.innerHTML = `
@@ -726,6 +741,7 @@
 
                             <button
                                 class="rsvp-button yes ${puedeSerTitular ? "available" : ""}"
+                                data-respuesta="yes"
                                 type="button"
                                 ${puedeSerTitular ? "" : "disabled"}
                             >
@@ -734,6 +750,7 @@
 
                             <button
                                 class="rsvp-button reserve ${puedeSerReserva ? "available" : ""}"
+                                data-respuesta="reserve"
                                 type="button"
                                 ${puedeSerReserva ? "" : "disabled"}
                             >
@@ -741,17 +758,17 @@
                             </button>
 
                             <button
-                                class="rsvp-button maybe"
+                                class="rsvp-button maybe available"
+                                data-respuesta="maybe"
                                 type="button"
-                                disabled
                             >
                                 ❔ DUDA
                             </button>
 
                             <button
-                                class="rsvp-button no"
+                                class="rsvp-button no available"
+                                data-respuesta="no"
                                 type="button"
-                                disabled
                             >
                                 ❌ NO PUEDO
                             </button>
@@ -760,8 +777,14 @@
 
                         <p class="rsvp-note">
                             ${escapeHTML(permisoMensaje)}
-                            La conexión para registrar respuestas todavía está pendiente.
+                            DUDA y NO PUEDO están disponibles para cualquier usuario que haya iniciado sesión.
                         </p>
+
+                        <p
+                            class="rsvp-status"
+                            id="rsvp-status"
+                            aria-live="polite"
+                        ></p>
 
                         <h3 class="section-heading">
                             LISTA DE PARTICIPANTES
@@ -789,105 +812,145 @@
                     image.style.display = "block";
                 });
             }
+
+            // Conectar los botones.
+            const responseButtons =
+                eventContainer.querySelectorAll("[data-respuesta]");
+
+            responseButtons.forEach(button => {
+                button.addEventListener("click", () => {
+                    sendRsvp(button.dataset.respuesta);
+                });
+            });
+        }
+        // ======================================
+        // ENVIAR RESPUESTA AL SERVIDOR
+        // ======================================
+
+        async function sendRsvp(respuesta) {
+            const status = document.getElementById("rsvp-status");
+
+            if (!respuesta || !status) return;
+
+            const buttons =
+                eventContainer.querySelectorAll("[data-respuesta]");
+
+            const previousStates = [];
+
+            buttons.forEach(button => {
+                previousStates.push({
+                    button,
+                    disabled: button.disabled
+                });
+
+                button.disabled = true;
+            });
+
+            status.className = "rsvp-status";
+            status.textContent = "Registrando tu respuesta...";
+
+            try {
+                const response = await fetch("/api/evento/responder", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    credentials: "same-origin",
+                    body: JSON.stringify({ respuesta })
+                });
+
+                const result = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(
+                        result.error || result.message ||
+                        "No se pudo registrar tu respuesta."
+                    );
+                }
+
+                await loadEvent();
+
+                const newStatus =
+                    document.getElementById("rsvp-status");
+
+                if (newStatus) {
+                    newStatus.className = "rsvp-status";
+                    newStatus.textContent =
+                        result.message || "Respuesta registrada correctamente.";
+                }
+
+            } catch (error) {
+                const currentStatus =
+                    document.getElementById("rsvp-status");
+
+                if (currentStatus) {
+                    currentStatus.className = "rsvp-status error";
+                    currentStatus.textContent =
+                        error.message || "Ha ocurrido un error.";
+                }
+
+                previousStates.forEach(item => {
+                    item.button.disabled = item.disabled;
+                });
+            }
         }
 
-        async function loadEvent() {
-            eventContainer.innerHTML = `
-                <div class="message">
-                    Cargando evento de REDLINE GT...
-                </div>
-            `;
+        // ======================================
+        // CARGAR EVENTO
+        // ======================================
 
+        async function loadEvent() {
             try {
                 const response = await fetch("/api/evento", {
                     method: "GET",
                     credentials: "same-origin",
-                    cache: "no-store",
-                    headers: {
-                        "Accept": "application/json"
-                    }
+                    cache: "no-store"
                 });
 
-                if (response.status === 401 || response.status === 403) {
-                    eventContainer.innerHTML = `
-                        <div class="message warning">
-                            Tu sesión no está autorizada para consultar
-                            los datos del evento.
-                            <br><br>
-                            <a href="/auth/discord" style="color:#fff;">
-                                Volver a iniciar sesión con Discord
-                            </a>
-                        </div>
-                    `;
+                if (response.status === 401 ||
+                    response.status === 403) {
+                    window.location.href = "/auth/discord";
                     return;
                 }
 
+                const result = await response.json().catch(() => ({}));
+
                 if (!response.ok) {
                     throw new Error(
-                        "El servidor ha respondido con error " +
-                        response.status
+                        result.error || "No se pudo cargar el evento."
                     );
                 }
 
-                const data = await response.json();
-
-                if (!data.activo || !data.evento) {
+                if (!result.evento) {
                     eventContainer.innerHTML = `
                         <div class="message">
-                            No hay ningún evento publicado actualmente.
-                            <br>
-                            Cuando REDLINE GT publique el próximo evento,
-                            aparecerá aquí automáticamente.
+                            Actualmente no hay ningún evento publicado.
                         </div>
                     `;
                     return;
                 }
 
                 renderEvent(
-                    data.evento,
-                    data.permisos || {},
-                    data.rsvpNames || {}
+                    result.evento,
+                    result.permisos || {},
+                    result.rsvpNames || null
                 );
 
             } catch (error) {
-                console.error("Error cargando el evento:", error);
+                console.error("Error cargando evento:", error);
 
                 eventContainer.innerHTML = `
                     <div class="message error">
-                        No se ha podido cargar el evento.
-                        <br><br>
+                        No se ha podido cargar el evento.<br>
                         ${escapeHTML(error.message)}
-                        <br><br>
-                        Puedes volver a intentarlo sin recargar la página.
-                        <br><br>
-                        <button
-                            type="button"
-                            onclick="loadEvent()"
-                            style="
-                                padding:10px 18px;
-                                border:1px solid #777;
-                                border-radius:7px;
-                                background:#292929;
-                                color:white;
-                                cursor:pointer;
-                            "
-                        >
-                            Reintentar
-                        </button>
                     </div>
                 `;
             }
         }
 
-        document.getElementById("horizontal-logo")
-            .addEventListener("error", function () {
-                this.style.display = "none";
-            });
-
-        document.getElementById("round-logo")
-            .addEventListener("error", function () {
-                this.style.display = "none";
-            });
+        // ======================================
+        // INICIO
+        // ======================================
 
         loadEvent();
     </script>
