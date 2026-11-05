@@ -1,4 +1,3 @@
-
 import { Router, Request } from "express";
 
 import { getDiscordUserRoles } from "../auth.js";
@@ -44,6 +43,19 @@ function getSessionUser(req: Request): any {
 }
 
 // ======================================
+// DETECTAR LÍMITE DE PETICIONES DE DISCORD
+// ======================================
+
+function isDiscordRateLimitError(error: unknown): boolean {
+  const message = error instanceof Error
+    ? error.message
+    : String(error);
+
+  return message.includes("429") ||
+    message.toLowerCase().includes("too many requests");
+}
+
+// ======================================
 // PERMISOS DEL USUARIO
 // ======================================
 
@@ -82,14 +94,35 @@ router.get("/evento", async (req, res) => {
 
     if (!evento) {
       return res.json({
-        activo: false
+        activo: false,
+        evento: null
       });
     }
 
-    const permisos = await getUserPermissions(
-      req,
-      String(evento.guildId)
-    );
+    let permisos = {
+      esTitular: false,
+      esReserva: false,
+      puedeSerTitular: false,
+      puedeSerReserva: false
+    };
+
+    let permisosNoDisponibles = false;
+
+    // Si Discord limita las consultas, seguimos mostrando
+    // el evento y sus listas de participantes.
+    try {
+      permisos = await getUserPermissions(
+        req,
+        String(evento.guildId)
+      );
+    } catch (error) {
+      permisosNoDisponibles = true;
+
+      console.error(
+        "No se pudieron comprobar los permisos de Discord. Se mostrarán las listas igualmente:",
+        error
+      );
+    }
 
     const rsvpNames = await resolveEventPilotNames(evento);
 
@@ -97,7 +130,8 @@ router.get("/evento", async (req, res) => {
       activo: true,
       evento,
       rsvpNames,
-      permisos
+      permisos,
+      permisosNoDisponibles
     });
 
   } catch (error) {
@@ -162,29 +196,57 @@ router.post("/evento/responder", async (req, res) => {
     const messageId = String(eventoActual.messageId);
     const userId = String(user.id);
 
-    const permisos = await getUserPermissions(
-      req,
-      guildId
-    );
-
+    // DUDA y NO PUEDO no necesitan consultar los roles.
+    // Solo TITULAR y RESERVA requieren comprobar permisos.
     if (
-      respuesta === "yes" &&
-      !permisos.puedeSerTitular
+      respuesta === "yes" ||
+      respuesta === "reserve"
     ) {
-      return res.status(403).json({
-        success: false,
-        error: "Necesitas el rol TITULAR para apuntarte como titular."
-      });
-    }
+      let permisos;
 
-    if (
-      respuesta === "reserve" &&
-      !permisos.puedeSerReserva
-    ) {
-      return res.status(403).json({
-        success: false,
-        error: "Necesitas el rol RESERVA para apuntarte como reserva."
-      });
+      try {
+        permisos = await getUserPermissions(
+          req,
+          guildId
+        );
+      } catch (error) {
+        console.error(
+          "No se pudieron comprobar los permisos para responder al evento:",
+          error
+        );
+
+        if (isDiscordRateLimitError(error)) {
+          return res.status(503).json({
+            success: false,
+            error: "Discord está limitando temporalmente las consultas. Puedes intentarlo de nuevo dentro de un momento."
+          });
+        }
+
+        return res.status(502).json({
+          success: false,
+          error: "No se han podido comprobar tus roles de Discord."
+        });
+      }
+
+      if (
+        respuesta === "yes" &&
+        !permisos.puedeSerTitular
+      ) {
+        return res.status(403).json({
+          success: false,
+          error: "Necesitas el rol TITULAR para apuntarte como titular."
+        });
+      }
+
+      if (
+        respuesta === "reserve" &&
+        !permisos.puedeSerReserva
+      ) {
+        return res.status(403).json({
+          success: false,
+          error: "Necesitas el rol RESERVA para apuntarte como reserva."
+        });
+      }
     }
 
     const collection = await getEventsCollection();
@@ -241,6 +303,7 @@ router.post("/evento/responder", async (req, res) => {
           };
         }
 
+        // El usuario solo puede estar en una lista.
         rsvps.yes = rsvps.yes.filter(
           (id: string) => id !== userId
         );
