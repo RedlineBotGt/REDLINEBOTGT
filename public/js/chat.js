@@ -9,6 +9,7 @@ let chatInput;
 let chatSendButton;
 let chatForm;
 let chatMentionsList;
+let sendingMessage = false;
 
 let mentionResults = [];
 let selectedMentionIndex = 0;
@@ -44,6 +45,13 @@ export function initializeChat() {
 
     chatMentionsList.hidden = true;
 
+    // Envío directo al pulsar la flecha azul.
+    chatSendButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        sendMessage();
+    });
+
+    // Mantener también el envío del formulario.
     chatForm.addEventListener("submit", (event) => {
         event.preventDefault();
         sendMessage();
@@ -313,14 +321,13 @@ function renderMessageText(element, message) {
 
     }
 }
-
 // ======================================
 // ENVIAR MENSAJE
 // ======================================
 
 async function sendMessage() {
 
-    if (!chatInput) return;
+    if (!chatInput || !chatSendButton || sendingMessage) return;
 
     const content = chatInput.value.trim();
 
@@ -331,6 +338,8 @@ async function sendMessage() {
         return;
     }
 
+    // Evitar envíos duplicados.
+    sendingMessage = true;
     chatSendButton.disabled = true;
 
     try {
@@ -374,6 +383,7 @@ async function sendMessage() {
 
     } finally {
 
+        sendingMessage = false;
         chatSendButton.disabled = false;
         chatInput.focus();
 
@@ -436,6 +446,7 @@ function handleInputKeydown(event) {
 
     }
 }
+
 // ======================================
 // DETECTAR MENCIONES
 // ======================================
