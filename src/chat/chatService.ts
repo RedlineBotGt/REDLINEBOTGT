@@ -142,6 +142,42 @@ function getAvatarUrl(author: any): string {
 }
 
 // ======================================
+// EXTRAER IDS DE LAS MENCIONES DEL TEXTO
+// ======================================
+
+function extractMentionIds(content: string) {
+
+  const users = new Set<string>();
+  const roles = new Set<string>();
+  const channels = new Set<string>();
+
+  const regex = /<@!?(\d+)>|<@&(\d+)>|<#(\d+)>/g;
+
+  let match;
+
+  while ((match = regex.exec(content)) !== null) {
+
+    if (match[1]) {
+      users.add(match[1]);
+    }
+
+    if (match[2]) {
+      roles.add(match[2]);
+    }
+
+    if (match[3]) {
+      channels.add(match[3]);
+    }
+  }
+
+  return {
+    users: [...users],
+    roles: [...roles],
+    channels: [...channels]
+  };
+}
+
+// ======================================
 // CONVERTIR MENSAJE DE DISCORD
 // ======================================
 
@@ -152,32 +188,56 @@ function convertDiscordMessage(
 ): ChatMessage {
 
   const author = message.author;
+  const content = message.content || "";
 
-  const mentionedUsers = (message.mentions || [])
-    .filter((user: any) => user?.id)
-    .map((user: any) => ({
-      id: String(user.id),
+  // IDs encontrados directamente en el texto.
+  const textMentions = extractMentionIds(content);
+
+  // Usuarios devueltos por Discord.
+  const discordUsers = (message.mentions || [])
+    .filter((user: any) => user?.id);
+
+  // Combinar IDs del texto y datos de Discord.
+  const userIds = new Set<string>([
+    ...textMentions.users,
+    ...discordUsers.map((user: any) => String(user.id))
+  ]);
+
+  const mentionedUsers = [...userIds].map((id) => {
+
+    const user = discordUsers.find(
+      (item: any) => String(item.id) === id
+    );
+
+    const member = (message.mention_members || []).find(
+      (item: any) => String(item.user?.id) === id
+    );
+
+    return {
+      id,
       name:
-        message.mention_members?.find(
-          (member: any) => member.user?.id === user.id
-        )?.nick ||
-        user.global_name ||
-        user.username ||
+        member?.nick ||
+        member?.user?.global_name ||
+        user?.global_name ||
+        user?.username ||
         "usuario"
-    }));
+    };
+  });
 
-  const mentionedRoleIds: string[] =
-    (message.mention_roles || []).map(String);
+  // ROLES
 
-  const mentionedChannelObjects =
-    message.mention_channels || [];
+  const discordRoleIds: string[] =
+    (message.mention_roles || []).map(
+      (id: any) => String(id)
+    );
 
-  const mentionedChannelIds: string[] =
-    mentionedChannelObjects
-      .filter((channel: any) => channel?.id)
-      .map((channel: any) => String(channel.id));
+  const roleIds = new Set<string>([
+    ...textMentions.roles,
+    ...discordRoleIds
+  ]);
 
-  const roles = mentionedRoleIds.map((id) => {
+  const roles = [...roleIds].map((id) => {
+
     const role = directory?.roles.find(
       (item) => item.id === id
     );
@@ -188,23 +248,33 @@ function convertDiscordMessage(
     };
   });
 
-  const channels = mentionedChannelIds.map((id) => {
+  // CANALES
+
+  const embeddedChannels = message.mention_channels || [];
+
+  const channelIds = new Set<string>([
+    ...textMentions.channels,
+    ...embeddedChannels
+      .filter((channel: any) => channel?.id)
+      .map((channel: any) => String(channel.id))
+  ]);
+
+  const channels = [...channelIds].map((id) => {
+
     const channel = directory?.channels.find(
       (item) => item.id === id
     );
 
-    const embeddedChannel = mentionedChannelObjects.find(
+    const embeddedChannel = embeddedChannels.find(
       (item: any) => String(item.id) === id
     );
 
-    const name =
-      channel?.name ||
-      embeddedChannel?.name ||
-      "canal";
-
     return {
       id,
-      name,
+      name:
+        channel?.name ||
+        embeddedChannel?.name ||
+        "canal",
       url: guildId
         ? `https://discord.com/channels/${guildId}/${id}`
         : undefined
@@ -213,7 +283,7 @@ function convertDiscordMessage(
 
   return {
     id: message.id,
-    content: message.content || "",
+    content,
     authorId: author.id,
     authorName:
       message.member?.nick ||
@@ -225,9 +295,9 @@ function convertDiscordMessage(
     replyTo: null,
 
     mentions: {
-      users: mentionedUsers.map((user) => user.id),
-      roles: mentionedRoleIds,
-      channels: mentionedChannelIds
+      users: [...userIds],
+      roles: [...roleIds],
+      channels: [...channelIds]
     },
 
     mentionData: {
@@ -445,7 +515,6 @@ export async function getChatMembers(
 export async function getChatRoles(): Promise<any[]> {
 
   const guildId = await getChatGuildId();
-  const directory = await getGuildDirectory(guildId);
 
   const discordRoles = await discordRequest(
     `/guilds/${guildId}/roles`
