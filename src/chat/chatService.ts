@@ -16,7 +16,7 @@ import {
 const DISCORD_API = "https://discord.com/api/v10";
 
 // ======================================
-// PETICIONES A DISCORD
+// PETICIONES A DISCORD CON EL BOT
 // ======================================
 
 async function discordRequest(
@@ -57,6 +57,22 @@ async function discordRequest(
 }
 
 // ======================================
+// AVATAR DE DISCORD
+// ======================================
+
+function getAvatarUrl(author: any): string {
+  if (author.avatar && author.id) {
+    const extension = author.avatar.startsWith("a_")
+      ? "gif"
+      : "png";
+
+    return `https://cdn.discordapp.com/avatars/${author.id}/${author.avatar}.${extension}?size=256`;
+  }
+
+  return "https://cdn.discordapp.com/embed/avatars/0.png";
+}
+
+// ======================================
 // CONVERTIR MENSAJE DE DISCORD
 // ======================================
 
@@ -65,16 +81,15 @@ function convertDiscordMessage(
 ): ChatMessage {
   const author = message.author;
 
-  const avatar = author.avatar
-    ? `https://cdn.discordapp.com/avatars/${author.id}/${author.avatar}.png`
-    : `https://cdn.discordapp.com/embed/avatars/0.png`;
-
   return {
     id: message.id,
     content: message.content || "",
     authorId: author.id,
-    authorName: message.member?.nick || author.global_name || author.username,
-    authorAvatar: avatar,
+    authorName:
+      message.member?.nick ||
+      author.global_name ||
+      author.username,
+    authorAvatar: getAvatarUrl(author),
     createdAt: message.timestamp,
     source: "discord",
     replyTo: null,
@@ -102,11 +117,19 @@ export async function getChatHistory(): Promise<ChatMessage[]> {
 }
 
 // ======================================
-// ENVIAR MENSAJE
+// ENVIAR MENSAJE COMO USUARIO WEB
 // ======================================
 
+interface ChatWebUser {
+  id: string;
+  username?: string;
+  globalName?: string;
+  avatar?: string | null;
+}
+
 export async function sendChatMessage(
-  content: string
+  content: string,
+  user: ChatWebUser
 ): Promise<ChatMessage> {
   const cleanContent = content.trim();
 
@@ -114,22 +137,104 @@ export async function sendChatMessage(
     throw new Error("El mensaje no puede estar vacío.");
   }
 
-  if (cleanContent.length > 2000) {
-    throw new Error("El mensaje supera los 2000 caracteres.");
+  // Reservamos espacio para el prefijo 🌐
+  if (cleanContent.length > 1997) {
+    throw new Error("El mensaje supera el límite permitido.");
   }
 
-  const message = await discordRequest(
-    `/channels/${CHAT_CHANNEL_ID}/messages`,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        content: cleanContent,
-        allowed_mentions: {
-          parse: ["users", "roles"]
-        }
-      })
-    }
+  if (!user?.id) {
+    throw new Error("No se ha podido identificar al usuario.");
+  }
+
+  const webhookUrl = process.env.DISCORD_CHAT_WEBHOOK_URL;
+
+  if (!webhookUrl) {
+    throw new Error(
+      "Falta configurar DISCORD_CHAT_WEBHOOK_URL en Render."
+    );
+  }
+
+  let parsedUrl: URL;
+
+  try {
+    parsedUrl = new URL(webhookUrl);
+  } catch {
+    throw new Error("La URL del webhook de Discord no es válida.");
+  }
+
+  const validHost = [
+    "discord.com",
+    "discordapp.com"
+  ].includes(parsedUrl.hostname);
+
+  const validPath = /^\/api\/webhooks\/\d+\/[^/]+\/?$/.test(
+    parsedUrl.pathname
   );
+
+  if (
+    parsedUrl.protocol !== "https:" ||
+    !validHost ||
+    !validPath
+  ) {
+    throw new Error("La URL del webhook de Discord no es válida.");
+  }
+
+  parsedUrl.searchParams.set("wait", "true");
+
+  const displayName = (
+    user.globalName ||
+    user.username ||
+    "Usuario"
+  ).slice(0, 80);
+
+  let avatarUrl: string;
+
+  if (user.avatar) {
+    const extension = user.avatar.startsWith("a_")
+      ? "gif"
+      : "png";
+
+    avatarUrl =
+      `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${extension}?size=256`;
+  } else {
+    const defaultAvatar = Number(
+      (BigInt(user.id) >> 22n) % 6n
+    );
+
+    avatarUrl =
+      `https://cdn.discordapp.com/embed/avatars/${defaultAvatar}.png`;
+  }
+
+  const response = await fetch(parsedUrl.toString(), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      username: displayName,
+      avatar_url: avatarUrl,
+      content: `🌐 ${cleanContent}`,
+      allowed_mentions: {
+        parse: ["users", "roles"]
+      }
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+
+    console.error(
+      "[CHAT] Error del webhook:",
+      response.status,
+      error
+    );
+
+    throw new Error(
+      `Discord no pudo publicar el mensaje (HTTP ${response.status}).`
+    );
+  }
+
+  const message = await response.json();
 
   return convertDiscordMessage(message);
 }
