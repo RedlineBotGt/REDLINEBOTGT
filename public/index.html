@@ -32,11 +32,89 @@
         >
     </header>
 
+    <!-- PANTALLA DE BIENVENIDA -->
+    <section
+        id="welcome-screen"
+        class="welcome-screen"
+        aria-label="Bienvenida a REDLINE GTCUP"
+    >
+        <div class="welcome-content">
+
+            <div class="welcome-logo">
+                <img
+                    src="https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110577"
+                    alt="REDLINE GT"
+                >
+            </div>
+
+            <div class="welcome-season">
+                2.ª TEMPORADA
+            </div>
+
+            <h1>
+                ¡BIENVENIDO A<br>
+                REDLINE GTCUP!
+            </h1>
+
+            <p class="welcome-subtitle">
+                Tu centro de control de la competición.
+            </p>
+
+            <div class="welcome-divider"></div>
+
+            <div class="welcome-options">
+
+                <div>
+                    🏎️
+                    <strong>EVENTOS</strong>
+                    <span>
+                        Confirma tu participación, reserva plaza,
+                        plantea dudas o avisa de que no puedes asistir.
+                    </span>
+                </div>
+
+                <div>
+                    💬
+                    <strong>CHAT</strong>
+                    <span>
+                        Comunícate con la comunidad y comparte
+                        todo lo relacionado con la competición.
+                    </span>
+                </div>
+
+                <div>
+                    🏆
+                    <strong>MUCHO MÁS</strong>
+                    <span>
+                        Accede a la información y a las novedades
+                        de REDLINE GTCUP.
+                    </span>
+                </div>
+
+            </div>
+
+            <p class="welcome-closing">
+                Todo lo que necesitas para vivir la competición,
+                en un solo lugar.
+            </p>
+
+            <div class="welcome-racing">
+                ¡NOS VEMOS EN PISTA!
+            </div>
+
+        </div>
+
+        <div class="welcome-menu-hint">
+            <span>ABRE EL MENÚ PARA COMENZAR</span>
+            <span class="welcome-arrow">↘</span>
+        </div>
+    </section>
+
     <!-- CONTENIDO PRINCIPAL -->
     <main class="main">
 
         <!-- APARTADO EVENTO -->
-        <section id="event-section">
+        <section id="event-section" hidden>
             <h1 class="page-title">EVENTO</h1>
 
             <div id="event-container">
@@ -135,7 +213,7 @@
 
             <button
                 type="button"
-                class="menu-button active"
+                class="menu-button"
                 data-section="event"
             >
                 🏁 EVENTO
