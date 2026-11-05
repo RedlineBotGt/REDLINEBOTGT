@@ -1,0 +1,288 @@
+/* =========================================
+   WEBLINE GT - ESTILOS DEL EVENTO
+   ========================================= */
+
+/* =========================================
+   TARJETA DEL EVENTO
+   ========================================= */
+
+.event-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* =========================================
+   CABECERA DEL EVENTO
+   ========================================= */
+
+.event-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.event-tag {
+    display: inline-block;
+    color: #fff;
+    background: var(--red);
+    border-radius: 4px;
+    padding: 5px 9px;
+    font-size: 11px;
+    font-weight: bold;
+    margin-bottom: 12px;
+}
+
+.event-title {
+    font-size: 25px;
+    font-weight: bold;
+    margin: 0 0 12px;
+    overflow-wrap: anywhere;
+}
+
+.event-meta {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.8;
+}
+
+/* =========================================
+   DESCRIPCIÓN DEL EVENTO
+   ========================================= */
+
+.event-description {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    padding: 18px 20px;
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    box-sizing: border-box;
+    color: #ddd;
+}
+
+.event-description strong {
+    color: #fff;
+    font-weight: 700;
+}
+
+.event-description em {
+    font-style: italic;
+}
+
+.event-description u {
+    text-decoration: underline;
+}
+
+.event-description del {
+    text-decoration: line-through;
+}
+
+.event-description code {
+    background: #303030;
+    color: #f0c674;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+.event-description a {
+    color: #70b7ff;
+    text-decoration: underline;
+    overflow-wrap: anywhere;
+}
+
+/* =========================================
+   IMAGEN DEL EVENTO
+   ========================================= */
+
+.event-image {
+    display: none;
+    width: 100%;
+    max-height: 420px;
+    object-fit: contain;
+    background: #050505;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+
+/* =========================================
+   CONTENIDO INTERIOR
+   ========================================= */
+
+.event-content {
+    padding: 20px;
+}
+
+.section-heading {
+    font-size: 17px;
+    margin: 0 0 14px;
+}
+
+/* =========================================
+   BOTONES DE ASISTENCIA
+   ========================================= */
+
+.rsvp-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.rsvp-button {
+    min-height: 48px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: white;
+    font-weight: bold;
+    font-size: 13px;
+    background: #292929;
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.rsvp-button.yes {
+    background: #155b32;
+}
+
+.rsvp-button.reserve {
+    background: #75500e;
+}
+
+.rsvp-button.maybe {
+    background: #174c80;
+}
+
+.rsvp-button.no {
+    background: #762222;
+}
+
+.rsvp-button.available {
+    opacity: 1;
+    cursor: pointer;
+    border-color: #aaa;
+}
+
+.rsvp-button.available:hover {
+    filter: brightness(1.2);
+}
+
+.rsvp-button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* =========================================
+   MENSAJES DE ASISTENCIA
+   ========================================= */
+
+.rsvp-note {
+    color: var(--muted);
+    font-size: 12px;
+    margin: 0 0 12px;
+    line-height: 1.5;
+}
+
+.rsvp-status {
+    min-height: 18px;
+    color: #9bd6a9;
+    font-size: 12px;
+    margin: 0 0 24px;
+    line-height: 1.5;
+}
+
+.rsvp-status.error {
+    color: #ffaaaa;
+}
+
+/* =========================================
+   LISTAS DE PARTICIPANTES
+   ========================================= */
+
+.lists-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.list-card {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    overflow: hidden;
+}
+
+.list-title {
+    padding: 12px;
+    font-size: 13px;
+    font-weight: bold;
+    border-bottom: 1px solid var(--border);
+}
+
+.list-title.yes {
+    border-left: 4px solid var(--green);
+}
+
+.list-title.reserve {
+    border-left: 4px solid var(--orange);
+}
+
+.list-title.maybe {
+    border-left: 4px solid var(--blue);
+}
+
+.list-title.no {
+    border-left: 4px solid var(--red);
+}
+
+.list-body {
+    padding: 12px;
+    min-height: 48px;
+    font-size: 12px;
+    color: #ddd;
+}
+
+.pilot {
+    padding: 7px 0;
+    border-bottom: 1px solid #383838;
+    overflow-wrap: anywhere;
+}
+
+.pilot:last-child {
+    border-bottom: 0;
+}
+
+.empty-list {
+    color: var(--muted);
+    font-style: italic;
+}
+
+/* =========================================
+   ADAPTACIÓN A MÓVILES
+   ========================================= */
+
+@media (max-width: 480px) {
+    .event-header {
+        padding: 16px;
+    }
+
+    .event-title {
+        font-size: 21px;
+    }
+
+    .event-content {
+        padding: 14px;
+    }
+
+    .lists-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .rsvp-button {
+        font-size: 11px;
+    }
+}
