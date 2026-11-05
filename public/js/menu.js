@@ -1,17 +1,34 @@
+
 // ======================================
-// WEBLINE GT - MENÚ FLOTANTE
+// WEBLINE GT - MENÚ FLOTANTE Y NAVEGACIÓN
 // ======================================
 
+import { initializeChat, closeChat } from "./chat.js";
+
 export function initializeMenu() {
+
     const menu = document.getElementById("floating-menu");
     const toggle = document.getElementById("menu-toggle");
     const panel = document.getElementById("menu-panel");
     const backdrop = document.getElementById("menu-backdrop");
 
-    if (!menu || !toggle || !panel || !backdrop) {
-        console.error("No se ha podido inicializar el menú.");
+    const eventSection = document.getElementById("event-section");
+    const chatSection = document.getElementById("chat-section");
+
+    if (
+        !menu ||
+        !toggle ||
+        !panel ||
+        !backdrop ||
+        !eventSection ||
+        !chatSection
+    ) {
+        console.error("[MENU] No se encontraron los elementos.");
         return;
     }
+
+    let currentSection = "event";
+    let chatInitialized = false;
 
     // ======================================
     // ABRIR MENÚ
@@ -38,24 +55,65 @@ export function initializeMenu() {
     }
 
     // ======================================
-    // CAMBIAR ESTADO
+    // CAMBIAR APARTADO
     // ======================================
 
-    function toggleMenu() {
-        const isOpen = menu.classList.contains("open");
+    function changeSection(section) {
 
-        if (isOpen) {
+        if (section !== "event" && section !== "chat") {
+            return;
+        }
+
+        currentSection = section;
+
+        eventSection.hidden = section !== "event";
+        chatSection.hidden = section !== "chat";
+
+        // Actualizar botón activo.
+
+        panel.querySelectorAll(".menu-button[data-section]")
+            .forEach(button => {
+
+                const active =
+                    button.dataset.section === section;
+
+                button.classList.toggle("active", active);
+                button.setAttribute(
+                    "aria-current",
+                    active ? "page" : "false"
+                );
+
+            });
+
+        // Inicializar el chat únicamente la primera vez.
+
+        if (section === "chat" && !chatInitialized) {
+            initializeChat();
+            chatInitialized = true;
+        }
+
+        // Cerrar conexión al salir del chat.
+
+        if (section !== "chat" && chatInitialized) {
+            closeChat();
+        }
+
+        closeMenu();
+    }
+
+    // ======================================
+    // BOTÓN DEL MENÚ
+    // ======================================
+
+    toggle.addEventListener("click", () => {
+
+        if (menu.classList.contains("open")) {
             closeMenu();
         } else {
             openMenu();
         }
-    }
 
-    // ======================================
-    // BOTÓN DEL LOGO
-    // ======================================
-
-    toggle.addEventListener("click", toggleMenu);
+    });
 
     // ======================================
     // CERRAR AL TOCAR FUERA
@@ -68,26 +126,34 @@ export function initializeMenu() {
     // ======================================
 
     document.addEventListener("keydown", event => {
+
         if (event.key === "Escape") {
             closeMenu();
         }
+
     });
 
     // ======================================
-    // CERRAR AL SELECCIONAR UNA OPCIÓN
+    // SELECCIONAR APARTADO
     // ======================================
 
-    const menuButtons = panel.querySelectorAll(".menu-button");
+    panel.querySelectorAll(".menu-button[data-section]")
+        .forEach(button => {
 
-    menuButtons.forEach(button => {
-        button.addEventListener("click", () => {
-            closeMenu();
+            button.addEventListener("click", () => {
+
+                changeSection(button.dataset.section);
+
+            });
+
         });
-    });
 
     // ======================================
     // ESTADO INICIAL
     // ======================================
 
-    closeMenu();
+    changeSection(currentSection);
+
+    console.log("[MENU] Navegación inicializada.");
+
 }
