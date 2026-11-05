@@ -8,7 +8,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 import authRoutes from "./auth.js";
-import eventRoutes from "./routes/eventRoutes.js";
+import eventRoutes from "./Routes/eventRoutes.js";
 
 // ======================================
 // CONFIGURACIÓN GENERAL
@@ -103,7 +103,7 @@ app.get("/", (req, res) => {
   }
 
   return res.sendFile(
-    path.join(publicPath, "index.html")
+    path.join(publicPath, "Index.html")
   );
 });
 
