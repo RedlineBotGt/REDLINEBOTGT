@@ -162,8 +162,6 @@ router.post("/evento/responder", async (req, res) => {
     const messageId = String(eventoActual.messageId);
     const userId = String(user.id);
 
-    // TITULAR y RESERVA necesitan su rol correspondiente.
-
     const permisos = await getUserPermissions(
       req,
       guildId
@@ -232,7 +230,6 @@ router.post("/evento/responder", async (req, res) => {
         const previousWasYes =
           rsvps.yes.includes(userId);
 
-        // Límite de 15 titulares.
         if (
           respuesta === "yes" &&
           !previousWasYes &&
@@ -244,7 +241,6 @@ router.post("/evento/responder", async (req, res) => {
           };
         }
 
-        // El usuario solo puede aparecer en una lista.
         rsvps.yes = rsvps.yes.filter(
           (id: string) => id !== userId
         );
@@ -261,7 +257,6 @@ router.post("/evento/responder", async (req, res) => {
           (id: string) => id !== userId
         );
 
-        // Añadir a la lista elegida.
         if (respuesta === "yes") {
           rsvps.yes.push(userId);
         }
@@ -280,8 +275,6 @@ router.post("/evento/responder", async (req, res) => {
 
         let promotedUserId: string | null = null;
 
-        // Si un titular se da de baja, se promociona
-        // la primera reserva cuando corresponde.
         if (
           respuesta === "no" &&
           previousWasYes
@@ -311,14 +304,14 @@ router.post("/evento/responder", async (req, res) => {
           };
         }
 
-        // Actualizar el rol asistente.
         await setAssistantRole(
           guildId,
           userId,
           respuesta !== "no"
         );
 
-        // Actualizar el mensaje original de Discord.
+        let warning: string | null = null;
+
         try {
           await updateDiscordEventEmbedOnly(eventDoc);
         } catch (error) {
@@ -327,14 +320,10 @@ router.post("/evento/responder", async (req, res) => {
             error
           );
 
-          return {
-            success: true,
-            warning: "La respuesta se guardó, pero no se pudo actualizar el mensaje de Discord.",
-            promotedUserId
-          };
+          warning =
+            "La respuesta se guardó, pero no se pudo actualizar el mensaje de Discord.";
         }
 
-        // Avisar al reserva si ha sido promocionado.
         if (promotedUserId) {
           await notifyPromotedReserve(
             eventDoc,
@@ -344,7 +333,8 @@ router.post("/evento/responder", async (req, res) => {
 
         return {
           success: true,
-          promotedUserId
+          promotedUserId,
+          warning
         };
       }
     );
