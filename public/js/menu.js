@@ -5,7 +5,9 @@
 
 import { initializeChat, closeChat } from "./chat.js";
 
-export function initializeMenu() {
+export function initializeMenu({
+    chatAlreadyInitialized = false
+} = {}) {
 
     const menu = document.getElementById("floating-menu");
     const toggle = document.getElementById("menu-toggle");
@@ -14,6 +16,7 @@ export function initializeMenu() {
 
     const eventSection = document.getElementById("event-section");
     const chatSection = document.getElementById("chat-section");
+    const welcomeScreen = document.getElementById("welcome-screen");
 
     if (
         !menu ||
@@ -28,7 +31,7 @@ export function initializeMenu() {
     }
 
     let currentSection = "event";
-    let chatInitialized = false;
+    let chatInitialized = chatAlreadyInitialized;
 
     // ======================================
     // ABRIR MENÚ
@@ -58,7 +61,7 @@ export function initializeMenu() {
     // CAMBIAR APARTADO
     // ======================================
 
-    function changeSection(section) {
+    function changeSection(section, fromUser = false) {
 
         if (section !== "event" && section !== "chat") {
             return;
@@ -68,6 +71,13 @@ export function initializeMenu() {
 
         eventSection.hidden = section !== "event";
         chatSection.hidden = section !== "chat";
+
+        // La bienvenida solo desaparece cuando
+        // el usuario selecciona un apartado.
+
+        if (fromUser && welcomeScreen) {
+            welcomeScreen.hidden = true;
+        }
 
         // Actualizar botón activo.
 
@@ -85,14 +95,16 @@ export function initializeMenu() {
 
             });
 
-        // Inicializar el chat únicamente la primera vez.
+        // Inicializar el chat únicamente si todavía
+        // no se había iniciado en segundo plano.
 
         if (section === "chat" && !chatInitialized) {
             initializeChat();
             chatInitialized = true;
         }
 
-        // Cerrar conexión al salir del chat.
+        // Mantener el comportamiento anterior
+        // al salir del apartado Chat.
 
         if (section !== "chat" && chatInitialized) {
             closeChat();
@@ -142,7 +154,7 @@ export function initializeMenu() {
 
             button.addEventListener("click", () => {
 
-                changeSection(button.dataset.section);
+                changeSection(button.dataset.section, true);
 
             });
 
@@ -152,7 +164,10 @@ export function initializeMenu() {
     // ESTADO INICIAL
     // ======================================
 
-    changeSection(currentSection);
+    // Mostrar Evento detrás de la bienvenida,
+    // sin ocultar todavía la pantalla inicial.
+
+    changeSection(currentSection, false);
 
     console.log("[MENU] Navegación inicializada.");
 
