@@ -9,7 +9,7 @@ let chatMessages;
 let chatInput;
 let chatSendButton;
 let chatMentionsList;
-
+let chatForm;
 let mentionResults = [];
 let selectedMentionIndex = 0;
 let currentMention = null;
