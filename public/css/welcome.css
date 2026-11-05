@@ -1,32 +1,62 @@
+
 /* =========================================
    REDLINE GTCUP - PANTALLA DE BIENVENIDA
    ========================================= */
 
+/* La bienvenida funciona como una capa
+   que cubre la aplicación mientras carga. */
+
 .welcome-screen {
-    min-height: calc(100vh - 125px);
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+
     width: 100%;
-    max-width: 850px;
-    margin: 0 auto;
-    padding: 20px 24px 95px;
+    height: 100vh;
+    height: 100dvh;
+    box-sizing: border-box;
+
+    padding: 24px 20px 105px;
+
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+
+    overflow-y: auto;
     text-align: center;
-    position: relative;
+
+    background: #080808;
 }
+
+/* Al seleccionar Evento o Chat desaparece. */
+
+.welcome-screen[hidden] {
+    display: none !important;
+}
+
+/* =========================================
+   TARJETA PRINCIPAL
+   ========================================= */
 
 .welcome-content {
     width: 100%;
     max-width: 620px;
-    background:
-        linear-gradient(145deg, #191919, #090909);
+    box-sizing: border-box;
+
+    background: linear-gradient(145deg, #191919, #090909);
     border: 1px solid #343434;
     border-top: 3px solid #d71920;
     border-radius: 15px;
+
     padding: 25px 24px;
+
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.55);
 }
+
+/* =========================================
+   LOGO
+   ========================================= */
 
 .welcome-logo {
     display: flex;
@@ -41,23 +71,34 @@
     object-fit: contain;
 }
 
+/* =========================================
+   TEMPORADA Y TÍTULOS
+   ========================================= */
+
 .welcome-season {
     display: inline-block;
+
     color: #fff;
     background: #b71920;
+
     padding: 6px 15px;
     border-radius: 4px;
+
     font-size: 12px;
     font-weight: bold;
     letter-spacing: 2px;
+
     margin: 5px 0 13px;
 }
 
 .welcome-content h1 {
     color: #fff;
+
     font-size: clamp(23px, 5vw, 34px);
     line-height: 1.15;
+
     margin: 0 0 9px;
+
     font-weight: 900;
     letter-spacing: 1px;
 }
@@ -68,16 +109,26 @@
     margin: 0;
 }
 
+/* =========================================
+   SEPARADOR
+   ========================================= */
+
 .welcome-divider {
     height: 1px;
+
     background: linear-gradient(
         to right,
         transparent,
         #555,
         transparent
     );
+
     margin: 19px 0;
 }
+
+/* =========================================
+   APARTADOS
+   ========================================= */
 
 .welcome-options {
     display: flex;
@@ -91,6 +142,7 @@
     grid-template-columns: 34px 1fr;
     column-gap: 9px;
     align-items: center;
+
     color: #fff;
     font-size: 23px;
 }
@@ -102,24 +154,34 @@
 
 .welcome-options span {
     grid-column: 2;
+
     color: #aaa;
     font-size: 12px;
     line-height: 1.4;
+
     margin-top: 2px;
 }
 
+/* =========================================
+   CIERRE
+   ========================================= */
+
 .welcome-closing {
     color: #ddd;
+
     font-size: 12px;
     line-height: 1.5;
+
     margin: 19px 0 12px;
 }
 
 .welcome-racing {
     color: #4bc879;
+
     font-size: 15px;
     font-weight: 900;
     letter-spacing: 1.5px;
+
     margin-top: 8px;
 }
 
@@ -128,17 +190,22 @@
    ========================================= */
 
 .welcome-menu-hint {
-    position: fixed;
+    position: absolute;
     right: 88px;
     bottom: 27px;
-    z-index: 1001;
+
+    z-index: 1;
+
     display: flex;
     align-items: center;
     gap: 9px;
+
     color: #4bc879;
+
     font-size: 11px;
     font-weight: bold;
     letter-spacing: 0.8px;
+
     pointer-events: none;
     text-shadow: 0 2px 5px #000;
 }
@@ -146,6 +213,7 @@
 .welcome-arrow {
     font-size: 36px;
     line-height: 1;
+
     animation: welcome-arrow-move 1s infinite alternate;
 }
 
@@ -164,9 +232,9 @@
    ========================================= */
 
 @media (max-width: 480px) {
+
     .welcome-screen {
-        min-height: calc(100vh - 100px);
-        padding: 12px 12px 85px;
+        padding: 15px 12px 90px;
     }
 
     .welcome-content {
@@ -197,6 +265,7 @@
     .welcome-menu-hint {
         right: 78px;
         bottom: 22px;
+
         font-size: 9px;
         gap: 5px;
     }
@@ -211,9 +280,10 @@
    ========================================= */
 
 @media (max-height: 700px) {
+
     .welcome-screen {
         padding-top: 8px;
-        padding-bottom: 75px;
+        padding-bottom: 80px;
     }
 
     .welcome-content {
@@ -243,6 +313,7 @@
    ========================================= */
 
 @media (prefers-reduced-motion: reduce) {
+
     .welcome-arrow {
         animation: none;
     }
