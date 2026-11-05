@@ -103,7 +103,7 @@ app.get("/", (req, res) => {
   }
 
   return res.sendFile(
-    path.join(publicPath, "Index.html")
+    path.join(publicPath, "index.html")
   );
 });
 
