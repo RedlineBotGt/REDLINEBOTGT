@@ -14,6 +14,7 @@ let mentionResults = [];
 let selectedMentionIndex = 0;
 let currentMention = null;
 let searchTimeout = null;
+let mentionSearchId = 0;
 let chatStream = null;
 
 const renderedMessageIds = new Set();
@@ -354,9 +355,6 @@ async function sendMessage() {
 
         chatInput.value = "";
 
-        // El mensaje también llegará por Gateway.
-        // renderMessage evita duplicados.
-
         if (data.message) {
             renderMessage(data.message);
             scrollToBottom();
@@ -444,12 +442,16 @@ function handleInputChange() {
 
     const beforeCursor = text.slice(0, cursor);
 
+    // Detecta @ al principio, después de un espacio
+    // o después de un paréntesis/corchete.
     const match = beforeCursor.match(
-        /(?:^|\s)@([^\s@]*)$/
+        /(?:^|[\s([{])@([^\s@]*)$/
     );
 
     if (!match) {
 
+        mentionSearchId++;
+        clearTimeout(searchTimeout);
         closeMentionList();
         return;
     }
@@ -463,16 +465,18 @@ function handleInputChange() {
 
     clearTimeout(searchTimeout);
 
+    const searchId = ++mentionSearchId;
+
     searchTimeout = setTimeout(() => {
-        searchMentions(query);
-    }, 200);
+        searchMentions(query, searchId);
+    }, 150);
 }
 
 // ======================================
 // BUSCAR USUARIOS Y ROLES
 // ======================================
 
-async function searchMentions(query) {
+async function searchMentions(query, searchId) {
 
     try {
 
@@ -493,12 +497,22 @@ async function searchMentions(query) {
             throw new Error(data.message);
         }
 
+        // Ignorar respuestas antiguas si el usuario
+        // ya ha seguido escribiendo.
+        if (searchId !== mentionSearchId) {
+            return;
+        }
+
         mentionResults = data.results || [];
         selectedMentionIndex = 0;
 
         renderMentionOptions();
 
     } catch (error) {
+
+        if (searchId !== mentionSearchId) {
+            return;
+        }
 
         console.error("[CHAT] Error en menciones:", error);
 
@@ -659,4 +673,5 @@ export function closeChat() {
     }
 
     clearTimeout(searchTimeout);
+    mentionSearchId++;
 }
