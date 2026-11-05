@@ -1,3 +1,4 @@
+
 /* =========================================
    WEBLINE GT - ESTILOS GENERALES
    ========================================= */
@@ -45,7 +46,7 @@ button {
    ========================================= */
 
 .topbar {
-    min-height: 85px;
+    min-height: 125px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -56,8 +57,8 @@ button {
 
 .topbar img {
     display: block;
-    max-width: 260px;
-    max-height: 58px;
+    max-width: 520px;
+    max-height: 116px;
     width: auto;
     height: auto;
     object-fit: contain;
@@ -121,13 +122,13 @@ button {
 
 @media (max-width: 480px) {
     .topbar {
-        min-height: 72px;
+        min-height: 100px;
         padding: 12px 10px;
     }
 
     .topbar img {
-        max-width: 190px;
-        max-height: 48px;
+        max-width: 380px;
+        max-height: 96px;
     }
 
     .main {
