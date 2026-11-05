@@ -1,9 +1,11 @@
+
 // ======================================
 // WEBLINE GT - INICIO PRINCIPAL
 // ======================================
 
 import { initializeMenu } from "./menu.js";
 import { initializeEvent } from "./event.js";
+import { initializeChat } from "./chat.js";
 
 // ======================================
 // INICIAR APLICACIÓN
@@ -11,10 +13,17 @@ import { initializeEvent } from "./event.js";
 
 document.addEventListener("DOMContentLoaded", () => {
 
-    // Inicializar menú flotante.
-    initializeMenu();
+    // Iniciar Chat en segundo plano.
+    initializeChat();
 
-    // Inicializar apartado de eventos.
+    // Iniciar el menú.
+    // El Chat ya está inicializado y no debe repetirse
+    // cuando el usuario entre en ese apartado.
+    initializeMenu({
+        chatAlreadyInitialized: true
+    });
+
+    // Cargar Eventos en segundo plano.
     initializeEvent();
 
 });
