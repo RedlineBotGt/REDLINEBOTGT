@@ -1,4 +1,3 @@
-
 import {
   Client,
   GatewayIntentBits
@@ -28,6 +27,40 @@ function convertMessage(message: any): ChatMessage {
 
   const author = message.author;
 
+  const mentionedUsers = message.mentions.users.map(
+    (user: any) => {
+
+      const member =
+        message.guild?.members?.cache?.get(user.id);
+
+      return {
+        id: user.id,
+        name:
+          member?.displayName ||
+          user.globalName ||
+          user.username ||
+          "usuario"
+      };
+    }
+  );
+
+  const mentionedRoles = message.mentions.roles.map(
+    (role: any) => ({
+      id: role.id,
+      name: role.name || "rol"
+    })
+  );
+
+  const mentionedChannels = message.mentions.channels.map(
+    (channel: any) => ({
+      id: channel.id,
+      name: channel.name || "canal",
+      url: message.guildId
+        ? `https://discord.com/channels/${message.guildId}/${channel.id}`
+        : undefined
+    })
+  );
+
   return {
     id: message.id,
     content: message.content || "",
@@ -53,13 +86,23 @@ function convertMessage(message: any): ChatMessage {
     replyTo: null,
 
     mentions: {
-      users: message.mentions.users.map(
+      users: mentionedUsers.map(
         (user: any) => user.id
       ),
 
-      roles: message.mentions.roles.map(
+      roles: mentionedRoles.map(
         (role: any) => role.id
+      ),
+
+      channels: mentionedChannels.map(
+        (channel: any) => channel.id
       )
+    },
+
+    mentionData: {
+      users: mentionedUsers,
+      roles: mentionedRoles,
+      channels: mentionedChannels
     }
   };
 }
