@@ -1,0 +1,140 @@
+/* =========================================
+   WEBLINE GT - ESTILOS GENERALES
+   ========================================= */
+
+:root {
+    --bg: #080808;
+    --panel: #151515;
+    --panel2: #202020;
+    --border: #303030;
+    --text: #f5f5f5;
+    --muted: #999;
+    --red: #d71920;
+    --green: #168a45;
+    --blue: #2369bd;
+    --orange: #bd781b;
+}
+
+/* =========================================
+   CONFIGURACIÓN GENERAL
+   ========================================= */
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    min-height: 100%;
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+button {
+    font: inherit;
+}
+
+/* =========================================
+   CABECERA
+   ========================================= */
+
+.topbar {
+    min-height: 85px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--border);
+    background: #050505;
+}
+
+.topbar img {
+    display: block;
+    max-width: 260px;
+    max-height: 58px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+/* =========================================
+   CONTENIDO PRINCIPAL
+   ========================================= */
+
+.main {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 22px;
+}
+
+.page-title {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 5px 0 20px;
+}
+
+/* =========================================
+   MENSAJES GENERALES
+   ========================================= */
+
+.message {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 25px 18px;
+    text-align: center;
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+.message.error {
+    border-color: #792929;
+    color: #ffb0b0;
+}
+
+.message.warning {
+    border-color: #75500e;
+    color: #f0cf91;
+}
+
+/* =========================================
+   PIE DE PÁGINA
+   ========================================= */
+
+.footer {
+    color: #666;
+    text-align: center;
+    font-size: 11px;
+    padding: 25px 10px;
+}
+
+/* =========================================
+   ADAPTACIÓN A MÓVILES
+   ========================================= */
+
+@media (max-width: 480px) {
+    .topbar {
+        min-height: 72px;
+        padding: 12px 10px;
+    }
+
+    .topbar img {
+        max-width: 190px;
+        max-height: 48px;
+    }
+
+    .main {
+        padding: 16px 12px;
+    }
+
+    .page-title {
+        font-size: 21px;
+    }
+}
