@@ -1,6 +1,6 @@
 const IMAGENES = {
-    reglamento1: "URL_IMAGEN_1",
-    reglamento2: "URL_IMAGEN_2",
+        reglamento1: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110632",
+    ,
     reglamento3: "URL_IMAGEN_3",
     reglamento4: "URL_IMAGEN_4",
     reglamento5: "URL_IMAGEN_5",
