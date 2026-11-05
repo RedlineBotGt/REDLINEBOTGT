@@ -5,10 +5,6 @@
 
 const CHAT_API = "/api/chat";
 
-// ======================================
-// ELEMENTOS
-// ======================================
-
 let chatMessages;
 let chatInput;
 let chatSendButton;
@@ -18,9 +14,12 @@ let mentionResults = [];
 let selectedMentionIndex = 0;
 let currentMention = null;
 let searchTimeout = null;
+let chatStream = null;
+
+const renderedMessageIds = new Set();
 
 // ======================================
-// INICIALIZAR CHAT
+// INICIALIZAR
 // ======================================
 
 export function initializeChat() {
@@ -36,17 +35,18 @@ export function initializeChat() {
         !chatSendButton ||
         !chatMentionsList
     ) {
-        console.warn("[CHAT] No se encontraron los elementos del chat.");
+        console.warn("[CHAT] No se encontraron los elementos.");
         return;
     }
 
+    chatMentionsList.hidden = true;
+
     chatSendButton.addEventListener("click", sendMessage);
-
     chatInput.addEventListener("keydown", handleInputKeydown);
-
     chatInput.addEventListener("input", handleInputChange);
 
     loadMessages();
+    connectChatStream();
 
     console.log("[CHAT] Interfaz inicializada.");
 }
@@ -89,7 +89,6 @@ async function loadMessages() {
                     Todavía no hay mensajes.
                 </div>
             `;
-            return;
         }
 
         messages.forEach(renderMessage);
@@ -109,12 +108,79 @@ async function loadMessages() {
 }
 
 // ======================================
+// CONEXIÓN EN DIRECTO
+// ======================================
+
+function connectChatStream() {
+
+    if (chatStream) {
+        chatStream.close();
+    }
+
+    chatStream = new EventSource(
+        `${CHAT_API}/stream`,
+        { withCredentials: true }
+    );
+
+    chatStream.addEventListener("connected", () => {
+        console.log("[CHAT] Conexión en directo establecida.");
+    });
+
+    chatStream.addEventListener("chatMessage", (event) => {
+
+        try {
+
+            const message = JSON.parse(event.data);
+
+            renderMessage(message);
+            scrollToBottom();
+
+        } catch (error) {
+
+            console.error(
+                "[CHAT] Error leyendo mensaje en directo:",
+                error
+            );
+
+        }
+
+    });
+
+    chatStream.onerror = () => {
+        console.warn(
+            "[CHAT] Conexión interrumpida. Reconectando..."
+        );
+    };
+}
+
+// ======================================
 // MOSTRAR MENSAJE
 // ======================================
 
 function renderMessage(message) {
 
+    if (!message || !message.id) return;
+
+    if (renderedMessageIds.has(message.id)) {
+        return;
+    }
+
+    renderedMessageIds.add(message.id);
+
+    const empty = chatMessages.querySelector(".chat-empty");
+
+    if (empty) {
+        empty.remove();
+    }
+
+    const loading = chatMessages.querySelector(".chat-loading");
+
+    if (loading) {
+        loading.remove();
+    }
+
     const messageElement = document.createElement("div");
+
     messageElement.className = "chat-message";
     messageElement.dataset.messageId = message.id;
 
@@ -123,12 +189,16 @@ function renderMessage(message) {
     const avatar = document.createElement("img");
 
     avatar.className = "chat-avatar";
-    avatar.src = message.authorAvatar || "/images/default-avatar.png";
+    avatar.src =
+        message.authorAvatar ||
+        "https://cdn.discordapp.com/embed/avatars/0.png";
+
     avatar.alt = "";
     avatar.loading = "lazy";
 
     avatar.onerror = () => {
-        avatar.src = "https://cdn.discordapp.com/embed/avatars/0.png";
+        avatar.src =
+            "https://cdn.discordapp.com/embed/avatars/0.png";
     };
 
     // CONTENIDO
@@ -167,10 +237,12 @@ function renderMessage(message) {
     const date = new Date(message.createdAt);
 
     if (!Number.isNaN(date.getTime())) {
+
         time.textContent = date.toLocaleTimeString("es-ES", {
             hour: "2-digit",
             minute: "2-digit"
         });
+
     }
 
     header.appendChild(time);
@@ -192,7 +264,7 @@ function renderMessage(message) {
 }
 
 // ======================================
-// MOSTRAR TEXTO Y MENCIONES
+// TEXTO Y MENCIONES
 // ======================================
 
 function renderMessageText(element, message) {
@@ -205,20 +277,19 @@ function renderMessageText(element, message) {
     while ((match = regex.exec(message)) !== null) {
 
         if (match.index > lastIndex) {
+
             element.appendChild(
                 document.createTextNode(
                     message.slice(lastIndex, match.index)
                 )
             );
+
         }
 
         const mention = document.createElement("span");
 
         mention.className = "chat-mention";
-
-        mention.textContent = match[1]
-            ? "@usuario"
-            : "@rol";
+        mention.textContent = match[1] ? "@usuario" : "@rol";
 
         element.appendChild(mention);
 
@@ -226,9 +297,13 @@ function renderMessageText(element, message) {
     }
 
     if (lastIndex < message.length) {
+
         element.appendChild(
-            document.createTextNode(message.slice(lastIndex))
+            document.createTextNode(
+                message.slice(lastIndex)
+            )
         );
+
     }
 }
 
@@ -254,6 +329,7 @@ async function sendMessage() {
     try {
 
         const response = await fetch(`${CHAT_API}/messages`, {
+
             method: "POST",
 
             credentials: "same-origin",
@@ -265,6 +341,7 @@ async function sendMessage() {
             body: JSON.stringify({
                 content
             })
+
         });
 
         const data = await response.json();
@@ -277,6 +354,9 @@ async function sendMessage() {
 
         chatInput.value = "";
 
+        // El mensaje también llegará por Gateway.
+        // renderMessage evita duplicados.
+
         if (data.message) {
             renderMessage(data.message);
             scrollToBottom();
@@ -287,11 +367,13 @@ async function sendMessage() {
         console.error("[CHAT] Error enviando mensaje:", error);
 
         alert(error.message || "Error enviando el mensaje.");
+
+    } finally {
+
+        chatSendButton.disabled = false;
+        chatInput.focus();
+
     }
-
-    chatSendButton.disabled = false;
-
-    chatInput.focus();
 }
 
 // ======================================
@@ -303,6 +385,7 @@ function handleInputKeydown(event) {
     if (mentionResults.length > 0) {
 
         if (event.key === "ArrowDown") {
+
             event.preventDefault();
 
             selectedMentionIndex =
@@ -313,6 +396,7 @@ function handleInputKeydown(event) {
         }
 
         if (event.key === "ArrowUp") {
+
             event.preventDefault();
 
             selectedMentionIndex =
@@ -324,6 +408,7 @@ function handleInputKeydown(event) {
         }
 
         if (event.key === "Enter" && currentMention) {
+
             event.preventDefault();
 
             selectMention(
@@ -334,19 +419,22 @@ function handleInputKeydown(event) {
         }
 
         if (event.key === "Escape") {
+
             closeMentionList();
             return;
         }
     }
 
     if (event.key === "Enter" && !event.shiftKey) {
+
         event.preventDefault();
         sendMessage();
+
     }
 }
 
 // ======================================
-// DETECTAR ARROBA Y BÚSQUEDA
+// DETECTAR MENCIONES
 // ======================================
 
 function handleInputChange() {
@@ -361,6 +449,7 @@ function handleInputChange() {
     );
 
     if (!match) {
+
         closeMentionList();
         return;
     }
@@ -405,7 +494,6 @@ async function searchMentions(query) {
         }
 
         mentionResults = data.results || [];
-
         selectedMentionIndex = 0;
 
         renderMentionOptions();
@@ -415,6 +503,7 @@ async function searchMentions(query) {
         console.error("[CHAT] Error en menciones:", error);
 
         closeMentionList();
+
     }
 }
 
@@ -434,7 +523,6 @@ function renderMentionOptions() {
         empty.textContent = "No hay coincidencias.";
 
         chatMentionsList.appendChild(empty);
-
         chatMentionsList.hidden = false;
 
         return;
@@ -445,7 +533,6 @@ function renderMentionOptions() {
         const option = document.createElement("button");
 
         option.type = "button";
-
         option.className = "chat-mention-option";
 
         if (index === selectedMentionIndex) {
@@ -458,7 +545,6 @@ function renderMentionOptions() {
 
             avatar.src = item.avatar;
             avatar.alt = "";
-            avatar.onerror = () => avatar.remove();
 
             option.appendChild(avatar);
 
@@ -469,6 +555,7 @@ function renderMentionOptions() {
             icon.textContent = "👥";
 
             option.appendChild(icon);
+
         }
 
         const name = document.createElement("span");
@@ -479,9 +566,8 @@ function renderMentionOptions() {
         const type = document.createElement("span");
 
         type.className = "chat-mention-option-type";
-        type.textContent = item.type === "role"
-            ? "ROL"
-            : "USUARIO";
+        type.textContent =
+            item.type === "role" ? "ROL" : "USUARIO";
 
         option.appendChild(name);
         option.appendChild(type);
@@ -491,6 +577,7 @@ function renderMentionOptions() {
         });
 
         chatMentionsList.appendChild(option);
+
     });
 
     chatMentionsList.hidden = false;
@@ -507,7 +594,6 @@ function selectMention(item) {
     const text = chatInput.value;
 
     const before = text.slice(0, currentMention.start);
-
     const after = text.slice(currentMention.end);
 
     const mentionText = item.type === "role"
@@ -537,17 +623,18 @@ function selectMention(item) {
 function closeMentionList() {
 
     mentionResults = [];
-
     currentMention = null;
 
     if (chatMentionsList) {
+
         chatMentionsList.innerHTML = "";
         chatMentionsList.hidden = true;
+
     }
 }
 
 // ======================================
-// BAJAR AL ÚLTIMO MENSAJE
+// SCROLL
 // ======================================
 
 function scrollToBottom() {
@@ -556,4 +643,20 @@ function scrollToBottom() {
 
     chatMessages.scrollTop =
         chatMessages.scrollHeight;
+}
+
+// ======================================
+// CERRAR CHAT
+// ======================================
+
+export function closeChat() {
+
+    if (chatStream) {
+
+        chatStream.close();
+        chatStream = null;
+
+    }
+
+    clearTimeout(searchTimeout);
 }
