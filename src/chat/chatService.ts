@@ -250,8 +250,6 @@ export async function getChatMembers(query = ""): Promise<any[]> {
     throw new Error("Falta la variable DISCORD_GUILD_ID.");
   }
 
-  // Si hay texto, Discord busca directamente entre
-  // los miembros del servidor.
   const endpoint = query.trim()
     ? `/guilds/${guildId}/members/search?query=${encodeURIComponent(query.trim())}&limit=100`
     : `/guilds/${guildId}/members?limit=1000`;
@@ -312,10 +310,35 @@ export async function searchChatMentions(
 ): Promise<any[]> {
   const cleanQuery = query.trim().toLowerCase();
 
-  const [members, roles] = await Promise.all([
+  // Buscamos usuarios y roles por separado.
+  // Si Discord rechaza una búsqueda, la otra
+  // puede seguir funcionando con normalidad.
+
+  const [membersResult, rolesResult] = await Promise.allSettled([
     getChatMembers(cleanQuery),
     getChatRoles()
   ]);
+
+  let members: any[] = [];
+  let roles: any[] = [];
+
+  if (membersResult.status === "fulfilled") {
+    members = membersResult.value;
+  } else {
+    console.warn(
+      "[CHAT] No se pudieron consultar algunos usuarios:",
+      membersResult.reason
+    );
+  }
+
+  if (rolesResult.status === "fulfilled") {
+    roles = rolesResult.value;
+  } else {
+    console.warn(
+      "[CHAT] No se pudieron consultar los roles:",
+      rolesResult.reason
+    );
+  }
 
   const filteredMembers = members
     .filter((member: any) =>
@@ -329,6 +352,7 @@ export async function searchChatMentions(
 
   // Primero aparecen los nombres que empiezan
   // exactamente por lo que se ha escrito.
+
   const sortMatches = (a: any, b: any) => {
     const aStarts = a.name.toLowerCase().startsWith(cleanQuery);
     const bStarts = b.name.toLowerCase().startsWith(cleanQuery);
