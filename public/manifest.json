@@ -1,0 +1,25 @@
+
+{
+  "name": "WEBLINE GT",
+  "short_name": "WEBLINE GT",
+  "description": "Portal oficial de WEBLINE GT",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#080808",
+  "theme_color": "#080808",
+  "icons": [
+    {
+      "src": "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110545",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110545",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
