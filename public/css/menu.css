@@ -11,6 +11,9 @@
     flex-direction: column;
     align-items: flex-end;
     gap: 12px;
+
+    /* El contenedor no debe bloquear los toques */
+    pointer-events: none;
 }
 
 /* =========================================
@@ -33,6 +36,9 @@
     transition:
         transform 0.2s ease,
         border-color 0.2s ease;
+
+    /* El botón redondo sí recibe toques */
+    pointer-events: auto;
 }
 
 .menu-toggle:hover {
@@ -174,10 +180,12 @@
     z-index: 999;
     background: transparent;
     display: none;
+    pointer-events: none;
 }
 
 .menu-backdrop.visible {
     display: block;
+    pointer-events: auto;
 }
 
 /* =========================================
