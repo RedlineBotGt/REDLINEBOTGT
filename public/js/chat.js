@@ -46,7 +46,6 @@ export function initializeChat() {
 
     chatMentionsList.hidden = true;
 
-    // Envío directo para pantallas táctiles.
     chatSendButton.addEventListener("pointerdown", (event) => {
 
         if (
@@ -54,20 +53,16 @@ export function initializeChat() {
             event.pointerType === "pen"
         ) {
             event.preventDefault();
-
             lastPointerSendAt = Date.now();
-
             sendMessage();
         }
 
     });
 
-    // Respaldo para ratón y otros dispositivos.
     chatSendButton.addEventListener("click", (event) => {
 
         event.preventDefault();
 
-        // Evitar que el mismo toque envíe dos veces.
         if (Date.now() - lastPointerSendAt < 800) {
             return;
         }
@@ -76,12 +71,9 @@ export function initializeChat() {
 
     });
 
-    // Mantener también el envío del formulario.
     chatForm.addEventListener("submit", (event) => {
-
         event.preventDefault();
         sendMessage();
-
     });
 
     chatInput.addEventListener("keydown", handleInputKeydown);
@@ -122,6 +114,7 @@ async function loadMessages() {
         }
 
         chatMessages.innerHTML = "";
+        renderedMessageIds.clear();
 
         const messages = data.messages || [];
 
@@ -180,7 +173,7 @@ function connectChatStream() {
         } catch (error) {
 
             console.error(
-                "[CHAT] Error leyendo mensaje en directo:",
+                "[CHAT] Error leyendo mensaje:",
                 error
             );
 
@@ -189,9 +182,7 @@ function connectChatStream() {
     });
 
     chatStream.onerror = () => {
-        console.warn(
-            "[CHAT] Conexión interrumpida. Reconectando..."
-        );
+        console.warn("[CHAT] Conexión interrumpida. Reconectando...");
     };
 }
 
@@ -210,16 +201,10 @@ function renderMessage(message) {
     renderedMessageIds.add(message.id);
 
     const empty = chatMessages.querySelector(".chat-empty");
-
-    if (empty) {
-        empty.remove();
-    }
-
     const loading = chatMessages.querySelector(".chat-loading");
 
-    if (loading) {
-        loading.remove();
-    }
+    if (empty) empty.remove();
+    if (loading) loading.remove();
 
     const messageElement = document.createElement("div");
 
@@ -259,18 +244,6 @@ function renderMessage(message) {
 
     header.appendChild(author);
 
-    // DISTINTIVO WEBLINE
-
-    if (message.source === "webline") {
-
-        const badge = document.createElement("span");
-
-        badge.className = "chat-webline-badge";
-        badge.textContent = "WEBLINEGT";
-
-        header.appendChild(badge);
-    }
-
     // HORA
 
     const time = document.createElement("span");
@@ -289,12 +262,16 @@ function renderMessage(message) {
 
     header.appendChild(time);
 
-    // TEXTO
+    // TEXTO Y MENCIONES
 
     const text = document.createElement("div");
     text.className = "chat-message-text";
 
-    renderMessageText(text, message.content || "");
+    renderMessageText(
+        text,
+        message.content || "",
+        message.mentionData || {}
+    );
 
     content.appendChild(header);
     content.appendChild(text);
@@ -306,12 +283,16 @@ function renderMessage(message) {
 }
 
 // ======================================
-// TEXTO Y MENCIONES
+// INTERPRETAR MENCIONES DE DISCORD
 // ======================================
 
-function renderMessageText(element, message) {
+function renderMessageText(element, message, mentionData = {}) {
 
-    const regex = /<@!?(\\d+)>|<@&(\\d+)>/g;
+    const regex = /<@!?(\d+)>|<@&(\d+)>|<#(\d+)>/g;
+
+    const users = mentionData.users || [];
+    const roles = mentionData.roles || [];
+    const channels = mentionData.channels || [];
 
     let lastIndex = 0;
     let match;
@@ -328,12 +309,75 @@ function renderMessageText(element, message) {
 
         }
 
-        const mention = document.createElement("span");
+        let mentionElement;
 
-        mention.className = "chat-mention";
-        mention.textContent = match[1] ? "@usuario" : "@rol";
+        // USUARIO
 
-        element.appendChild(mention);
+        if (match[1]) {
+
+            const id = match[1];
+
+            const user = users.find(
+                item => String(item.id) === id
+            );
+
+            const name = user?.name || "usuario";
+
+            mentionElement = document.createElement("a");
+            mentionElement.className = "chat-mention chat-mention-user";
+            mentionElement.href = `https://discord.com/users/${id}`;
+            mentionElement.target = "_blank";
+            mentionElement.rel = "noopener noreferrer";
+            mentionElement.textContent = `@${name}`;
+            mentionElement.title = `Abrir perfil de ${name}`;
+
+        }
+
+        // ROL
+
+        else if (match[2]) {
+
+            const id = match[2];
+
+            const role = roles.find(
+                item => String(item.id) === id
+            );
+
+            const name = role?.name || "rol";
+
+            mentionElement = document.createElement("span");
+            mentionElement.className = "chat-mention chat-mention-role";
+            mentionElement.textContent = `@${name}`;
+            mentionElement.title = `Rol: ${name}`;
+
+        }
+
+        // CANAL
+
+        else {
+
+            const id = match[3];
+
+            const channel = channels.find(
+                item => String(item.id) === id
+            );
+
+            const name = channel?.name || "canal";
+
+            mentionElement = document.createElement("a");
+            mentionElement.className = "chat-mention chat-mention-channel";
+            mentionElement.href =
+                channel?.url ||
+                `https://discord.com/channels/@me/${id}`;
+
+            mentionElement.target = "_blank";
+            mentionElement.rel = "noopener noreferrer";
+            mentionElement.textContent = `#${name}`;
+            mentionElement.title = `Abrir canal ${name}`;
+
+        }
+
+        element.appendChild(mentionElement);
 
         lastIndex = regex.lastIndex;
     }
@@ -360,6 +404,11 @@ async function sendMessage() {
 
     if (!content) return;
 
+    if (content.length > 1997) {
+        alert("El mensaje supera el límite permitido.");
+        return;
+    }
+
     sendingMessage = true;
     chatSendButton.disabled = true;
 
@@ -371,23 +420,21 @@ async function sendMessage() {
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({
-                content
-            })
+            body: JSON.stringify({ content })
         });
 
         const data = await response.json();
 
         if (!response.ok || !data.success) {
-
             throw new Error(
                 data.message || "No se pudo enviar el mensaje."
             );
-
         }
 
         chatInput.value = "";
-        hideMentions();
+        chatInput.style.height = "auto";
+
+        hideMentionSuggestions();
 
         if (data.message) {
             renderMessage(data.message);
@@ -397,7 +444,7 @@ async function sendMessage() {
 
     } catch (error) {
 
-        console.error("[CHAT] Error enviando mensaje:", error);
+        console.error("[CHAT] Error enviando:", error);
 
         alert(
             error.message || "No se pudo enviar el mensaje."
@@ -418,41 +465,43 @@ async function sendMessage() {
 
 function handleInputKeydown(event) {
 
-    if (chatMentionsList && !chatMentionsList.hidden) {
+    if (currentMention && mentionResults.length > 0) {
 
         if (event.key === "ArrowDown") {
 
             event.preventDefault();
-            moveMentionSelection(1);
-            return;
 
+            selectedMentionIndex =
+                (selectedMentionIndex + 1) % mentionResults.length;
+
+            renderMentionSuggestions();
+            return;
         }
 
         if (event.key === "ArrowUp") {
 
             event.preventDefault();
-            moveMentionSelection(-1);
-            return;
 
+            selectedMentionIndex =
+                (selectedMentionIndex - 1 + mentionResults.length) %
+                mentionResults.length;
+
+            renderMentionSuggestions();
+            return;
         }
 
-        if (event.key === "Enter" && !event.shiftKey) {
+        if (event.key === "Enter" || event.key === "Tab") {
 
             event.preventDefault();
 
-            if (mentionResults.length > 0) {
-                selectMention(selectedMentionIndex);
-            }
-
+            selectMention(mentionResults[selectedMentionIndex]);
             return;
-
         }
 
         if (event.key === "Escape") {
 
-            hideMentions();
+            hideMentionSuggestions();
             return;
-
         }
     }
 
@@ -465,101 +514,109 @@ function handleInputKeydown(event) {
 }
 
 // ======================================
-// DETECTAR MENCIONES
+// DETECTAR @USUARIOS, @ROLES Y #CANALES
 // ======================================
 
 function handleInputChange() {
 
-    const value = chatInput.value;
     const cursor = chatInput.selectionStart;
-
-    const textBeforeCursor = value.slice(0, cursor);
-
-    const match = textBeforeCursor.match(
-        /(^|\s)@([^\s@]*)$/
-    );
-
-    if (!match) {
-
-        hideMentions();
-        return;
-
-    }
-
-    const query = match[2] || "";
-
-    currentMention = {
-        start: cursor - query.length - 1,
-        end: cursor
-    };
-
-    searchMentions(query);
-}
-
-// ======================================
-// BUSCAR USUARIOS Y ROLES
-// ======================================
-
-async function searchMentions(query) {
-
-    const requestId = ++mentionSearchId;
+    const textBeforeCursor = chatInput.value.slice(0, cursor);
 
     clearTimeout(searchTimeout);
 
-    searchTimeout = setTimeout(async () => {
+    // Buscar el último @ o # escrito.
+    const match = textBeforeCursor.match(/(^|\s)([@#])([^\s@#]*)$/);
 
-        try {
+    if (!match) {
 
-            const response = await fetch(
-                `${CHAT_API}/mentions?q=${encodeURIComponent(query)}`,
-                {
-                    credentials: "same-origin"
-                }
-            );
+        hideMentionSuggestions();
+        return;
+    }
 
-            if (!response.ok) {
-                throw new Error("Error buscando menciones.");
-            }
+    const trigger = match[2];
+    const query = match[3];
 
-            const data = await response.json();
+    if (!query || query.length < 1) {
 
-            if (requestId !== mentionSearchId) {
-                return;
-            }
+        hideMentionSuggestions();
+        return;
+    }
 
-            mentionResults = data.results || [];
+    const start = cursor - query.length - 1;
 
-            selectedMentionIndex = 0;
+    currentMention = {
+        trigger,
+        query,
+        start,
+        end: cursor,
+        type: trigger === "#" ? "channel" : "user"
+    };
 
-            renderMentions();
-
-        } catch (error) {
-
-            console.error(
-                "[CHAT] Error buscando menciones:",
-                error
-            );
-
-            hideMentions();
-
-        }
-
+    searchTimeout = setTimeout(() => {
+        searchMentions(query, currentMention.type);
     }, 250);
 }
 
 // ======================================
-// MOSTRAR RESULTADOS DE MENCIONES
+// BUSCAR MENCIONES
 // ======================================
 
-function renderMentions() {
+async function searchMentions(query, type) {
+
+    const searchId = ++mentionSearchId;
+
+    try {
+
+        const response = await fetch(
+            `${CHAT_API}/mentions?q=${encodeURIComponent(query)}&type=${encodeURIComponent(type)}`,
+            {
+                credentials: "same-origin"
+            }
+        );
+
+        const data = await response.json();
+
+        if (searchId !== mentionSearchId) return;
+
+        if (!response.ok || !data.success) {
+            throw new Error(
+                data.message || "Error buscando menciones."
+            );
+        }
+
+        mentionResults = data.results || [];
+        selectedMentionIndex = 0;
+
+        renderMentionSuggestions();
+
+    } catch (error) {
+
+        console.error("[CHAT] Error buscando menciones:", error);
+
+        mentionResults = [];
+        renderMentionSuggestions();
+
+    }
+}
+
+// ======================================
+// MOSTRAR SUGERENCIAS
+// ======================================
+
+function renderMentionSuggestions() {
 
     chatMentionsList.innerHTML = "";
 
-    if (mentionResults.length === 0) {
+    if (!mentionResults.length) {
 
-        hideMentions();
+        chatMentionsList.innerHTML = `
+            <div class="chat-mention-empty">
+                No hay coincidencias
+            </div>
+        `;
+
+        chatMentionsList.hidden = false;
         return;
-
     }
 
     mentionResults.forEach((item, index) => {
@@ -570,30 +627,46 @@ function renderMentions() {
         option.className = "chat-mention-option";
 
         if (index === selectedMentionIndex) {
-            option.classList.add("selected");
+            option.classList.add("active");
+        }
+
+        if (item.avatar) {
+
+            const avatar = document.createElement("img");
+
+            avatar.src = item.avatar;
+            avatar.alt = "";
+            avatar.onerror = () => avatar.remove();
+
+            option.appendChild(avatar);
+
         }
 
         const name = document.createElement("span");
 
-        name.textContent = item.name || "Usuario";
+        name.className = "chat-mention-option-name";
+        name.textContent = item.name;
 
-        const type = document.createElement("small");
+        const type = document.createElement("span");
+
+        type.className = "chat-mention-option-type";
 
         type.textContent =
-            item.type === "role" ? "Rol" : "Usuario";
+            item.type === "role"
+                ? "ROL"
+                : item.type === "channel"
+                    ? "CANAL"
+                    : "USUARIO";
 
         option.appendChild(name);
         option.appendChild(type);
 
-        option.addEventListener("mousedown", (event) => {
-            event.preventDefault();
-            selectMention(index);
-        });
+        option.addEventListener("pointerdown", (event) => {
 
-        option.addEventListener("touchstart", (event) => {
             event.preventDefault();
-            selectMention(index);
-        }, { passive: false });
+            selectMention(item);
+
+        });
 
         chatMentionsList.appendChild(option);
 
@@ -603,56 +676,45 @@ function renderMentions() {
 }
 
 // ======================================
-// MOVER SELECCIÓN
+// INSERTAR MENCIÓN SELECCIONADA
 // ======================================
 
-function moveMentionSelection(direction) {
+function selectMention(item) {
 
-    if (mentionResults.length === 0) return;
-
-    selectedMentionIndex += direction;
-
-    if (selectedMentionIndex < 0) {
-        selectedMentionIndex = mentionResults.length - 1;
-    }
-
-    if (selectedMentionIndex >= mentionResults.length) {
-        selectedMentionIndex = 0;
-    }
-
-    renderMentions();
-}
-
-// ======================================
-// INSERTAR MENCIÓN
-// ======================================
-
-function selectMention(index) {
-
-    const item = mentionResults[index];
-
-    if (!item || !currentMention) return;
-
-    const value = chatInput.value;
-
-    const before = value.slice(0, currentMention.start);
-    const after = value.slice(currentMention.end);
+    if (!currentMention || !item) return;
 
     let mentionText;
 
     if (item.type === "role") {
+
         mentionText = `<@&${item.id}>`;
+
+    } else if (item.type === "channel") {
+
+        mentionText = `<#${item.id}>`;
+
     } else {
+
         mentionText = `<@${item.id}>`;
+
     }
 
-    const newValue =
-        before + mentionText + " " + after;
+    const before = chatInput.value.slice(
+        0,
+        currentMention.start
+    );
 
-    chatInput.value = newValue;
+    const after = chatInput.value.slice(
+        currentMention.end
+    );
+
+    const separator = after.startsWith(" ") ? "" : " ";
+
+    chatInput.value =
+        before + mentionText + separator + after;
 
     const newCursor =
-        before.length + mentionText.length + 1;
+        before.length + mentionText.length + separator.length;
 
     chatInput.focus();
 
@@ -661,19 +723,21 @@ function selectMention(index) {
         newCursor
     );
 
-    hideMentions();
+    hideMentionSuggestions();
 }
 
 // ======================================
-// OCULTAR MENCIONES
+// OCULTAR SUGERENCIAS
 // ======================================
 
-function hideMentions() {
+function hideMentionSuggestions() {
 
-    if (!chatMentionsList) return;
+    if (chatMentionsList) {
 
-    chatMentionsList.hidden = true;
-    chatMentionsList.innerHTML = "";
+        chatMentionsList.hidden = true;
+        chatMentionsList.innerHTML = "";
+
+    }
 
     mentionResults = [];
     selectedMentionIndex = 0;
@@ -699,26 +763,18 @@ function scrollToBottom() {
 }
 
 // ======================================
-// CERRAR CHAT
+// INICIALIZACIÓN AUTOMÁTICA
 // ======================================
 
-export function closeChat() {
+if (document.readyState === "loading") {
 
-    if (chatStream) {
+    document.addEventListener(
+        "DOMContentLoaded",
+        initializeChat
+    );
 
-        chatStream.close();
-        chatStream = null;
+} else {
 
-    }
+    initializeChat();
 
-    if (searchTimeout) {
-
-        clearTimeout(searchTimeout);
-        searchTimeout = null;
-
-    }
-
-    hideMentions();
-
-    console.log("[CHAT] Chat cerrado.");
 }
