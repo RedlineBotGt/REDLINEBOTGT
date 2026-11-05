@@ -1,3 +1,4 @@
+
 // ======================================
 // WEBLINE GT - SERVICIO DEL CHAT
 // ======================================
@@ -178,6 +179,30 @@ function extractMentionIds(content: string) {
 }
 
 // ======================================
+// EXTRAER ENLACES A MENSAJES DE DISCORD
+// ======================================
+
+function extractDiscordMessageLinks(content: string) {
+
+  const links = new Map<string, string>();
+
+  const regex =
+    /https?:\/\/(?:www\.)?discord(?:app)?\.com\/channels\/(\d+)\/(\d+)\/(\d+)/gi;
+
+  let match;
+
+  while ((match = regex.exec(content)) !== null) {
+
+    const channelId = match[2];
+    const messageUrl = match[0];
+
+    links.set(channelId, messageUrl);
+  }
+
+  return links;
+}
+
+// ======================================
 // CONVERTIR MENSAJE DE DISCORD
 // ======================================
 
@@ -192,6 +217,10 @@ function convertDiscordMessage(
 
   // IDs encontrados directamente en el texto.
   const textMentions = extractMentionIds(content);
+
+  // Enlaces a mensajes de Discord.
+  const discordMessageLinks =
+    extractDiscordMessageLinks(content);
 
   // Usuarios devueltos por Discord.
   const discordUsers = (message.mentions || [])
@@ -256,7 +285,8 @@ function convertDiscordMessage(
     ...textMentions.channels,
     ...embeddedChannels
       .filter((channel: any) => channel?.id)
-      .map((channel: any) => String(channel.id))
+      .map((channel: any) => String(channel.id)),
+    ...discordMessageLinks.keys()
   ]);
 
   const channels = [...channelIds].map((id) => {
@@ -269,15 +299,19 @@ function convertDiscordMessage(
       (item: any) => String(item.id) === id
     );
 
+    const messageUrl = discordMessageLinks.get(id);
+
     return {
       id,
       name:
         channel?.name ||
         embeddedChannel?.name ||
         "canal",
-      url: guildId
-        ? `https://discord.com/channels/${guildId}/${id}`
-        : undefined
+      url:
+        messageUrl ||
+        (guildId
+          ? `https://discord.com/channels/${guildId}/${id}`
+          : undefined)
     };
   });
 
