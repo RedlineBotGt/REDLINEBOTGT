@@ -9,6 +9,7 @@ import { fileURLToPath } from "url";
 
 import authRoutes from "./auth.js";
 import eventRoutes from "./routes/eventRoutes.js";
+import chatRoutes from "./routes/chatRoutes.js";
 
 // ======================================
 // CONFIGURACIÓN GENERAL
@@ -91,6 +92,8 @@ app.use("/auth", authRoutes);
 
 app.use("/api", eventRoutes);
 
+app.use("/api", chatRoutes);
+
 // ======================================
 // PÁGINA PRINCIPAL
 // ======================================
@@ -129,4 +132,5 @@ app.listen(PORT, () => {
   console.log(`WEBLINEGT activo en el puerto ${PORT}`);
   console.log("Sistema de autenticación conectado.");
   console.log("Sistema de eventos conectado.");
+  console.log("Sistema de chat conectado.");
 });
