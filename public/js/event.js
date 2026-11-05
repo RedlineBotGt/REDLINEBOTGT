@@ -11,6 +11,17 @@ import {
 const eventContainer = document.getElementById("event-container");
 
 // ======================================
+// ETIQUETAS DE LAS LISTAS
+// ======================================
+
+const LIST_LABELS = {
+    yes: "✅ TITULARES",
+    reserve: "🔃 RESERVAS",
+    maybe: "❔ DUDAS",
+    no: "❌ NO PUEDEN"
+};
+
+// ======================================
 // MOSTRAR NOMBRES REALES DE DISCORD
 // ======================================
 
@@ -45,10 +56,60 @@ function renderList(title, items, type) {
 }
 
 // ======================================
+// ACTUALIZAR LAS CUATRO LISTAS
+// SIN RECARGAR EL EVENTO
+// ======================================
+
+function updateParticipantLists(rsvpNames) {
+    if (!rsvpNames || !eventContainer) {
+        return false;
+    }
+
+    const listsGrid = eventContainer.querySelector(".lists-grid");
+
+    if (!listsGrid) {
+        return false;
+    }
+
+    Object.keys(LIST_LABELS).forEach(type => {
+        const card = listsGrid.querySelector(
+            `.list-card .list-title.${type}`
+        )?.closest(".list-card");
+
+        if (!card) {
+            return;
+        }
+
+        const items = Array.isArray(rsvpNames[type])
+            ? rsvpNames[type]
+            : [];
+
+        const title = card.querySelector(".list-title");
+        const body = card.querySelector(".list-body");
+
+        if (title) {
+            title.textContent =
+                `${LIST_LABELS[type]} (${items.length})`;
+        }
+
+        if (body) {
+            body.innerHTML = renderPilotList(items);
+        }
+    });
+
+    return true;
+}
+
+// ======================================
 // MOSTRAR EVENTO Y BOTONES
 // ======================================
 
-function renderEvent(event, permisos, rsvpNames) {
+function renderEvent(
+    event,
+    permisos,
+    rsvpNames,
+    permisosNoDisponibles = false
+) {
     const rsvps = rsvpNames || {
         yes: event.rsvps?.yes || [],
         reserve: event.rsvps?.reserve || [],
@@ -70,7 +131,10 @@ function renderEvent(event, permisos, rsvpNames) {
 
     let permisoMensaje = "";
 
-    if (puedeSerTitular) {
+    if (permisosNoDisponibles) {
+        permisoMensaje =
+            "Discord no permite comprobar tus roles temporalmente. TITULAR y RESERVA están desactivados hasta poder verificarlos.";
+    } else if (puedeSerTitular) {
         permisoMensaje =
             "Tu rol de Discord te permite seleccionar TITULAR.";
     } else if (puedeSerReserva) {
@@ -250,15 +314,39 @@ async function sendRsvp(respuesta) {
             );
         }
 
-        await loadEvent();
+        // Actualizar las listas con los datos devueltos
+        // por el servidor, sin volver a cargar el evento.
+        const listsUpdated = updateParticipantLists(
+            result.rsvpNames
+        );
+
+        // Recuperar el estado original de los botones.
+        previousStates.forEach(item => {
+            const button = eventContainer.querySelector(
+                `[data-respuesta="${item.respuesta}"]`
+            );
+
+            if (button) {
+                button.disabled = item.disabled;
+            }
+        });
+
+        // Si el servidor no ha devuelto las listas,
+        // recurrimos a la carga normal como alternativa.
+        if (!listsUpdated) {
+            await loadEvent();
+        }
 
         const newStatus =
             document.getElementById("rsvp-status");
 
         if (newStatus) {
             newStatus.className = "rsvp-status";
+
             newStatus.textContent =
-                result.message || "Respuesta registrada correctamente.";
+                result.warning
+                    ? `${result.message || "Respuesta registrada correctamente."} ${result.warning}`
+                    : result.message || "Respuesta registrada correctamente.";
         }
 
     } catch (error) {
@@ -324,7 +412,8 @@ async function loadEvent() {
         renderEvent(
             result.evento,
             result.permisos || {},
-            result.rsvpNames || null
+            result.rsvpNames || null,
+            result.permisosNoDisponibles === true
         );
 
     } catch (error) {
