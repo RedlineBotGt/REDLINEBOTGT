@@ -1,0 +1,212 @@
+/* =========================================
+   WEBLINE GT - MENÚ FLOTANTE
+   ========================================= */
+
+.floating-menu {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+/* =========================================
+   BOTÓN CIRCULAR
+   ========================================= */
+
+.menu-toggle {
+    width: 62px;
+    height: 62px;
+    padding: 0;
+    border: 2px solid var(--red);
+    border-radius: 50%;
+    background: #101010;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
+    transition:
+        transform 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.menu-toggle:hover {
+    transform: scale(1.05);
+    border-color: #ff353b;
+}
+
+.menu-toggle:focus-visible {
+    outline: 3px solid white;
+    outline-offset: 4px;
+}
+
+.menu-toggle img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* =========================================
+   PANEL DESPLEGABLE
+   ========================================= */
+
+.menu-panel {
+    width: 220px;
+    padding: 12px;
+    background: #101010;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    box-shadow: 0 5px 22px rgba(0, 0, 0, 0.8);
+
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(12px) scale(0.96);
+    transform-origin: bottom right;
+
+    transition:
+        opacity 0.2s ease,
+        transform 0.2s ease,
+        visibility 0.2s ease;
+}
+
+/* =========================================
+   ESTADO ABIERTO
+   ========================================= */
+
+.floating-menu.open .menu-panel {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
+}
+
+/* =========================================
+   OPCIONES DEL MENÚ
+   ========================================= */
+
+.menu-button {
+    width: 100%;
+    min-height: 48px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--muted);
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 13px;
+
+    padding: 10px 14px;
+    cursor: default;
+}
+
+.menu-button.active {
+    color: white;
+    background: #292929;
+    border-color: var(--red);
+}
+
+.menu-button:disabled {
+    opacity: 0.5;
+}
+
+.menu-icon {
+    width: 25px;
+    text-align: center;
+    font-size: 21px;
+    flex-shrink: 0;
+}
+
+.menu-label {
+    font-size: 13px;
+    font-weight: bold;
+}
+
+/* =========================================
+   CERRAR SESIÓN
+   ========================================= */
+
+.menu-logout-form {
+    width: 100%;
+    margin-top: 5px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+}
+
+.menu-logout {
+    width: 100%;
+    min-height: 44px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #202020;
+    color: #ddd;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.menu-logout:hover {
+    background: #303030;
+    color: white;
+}
+
+/* =========================================
+   FONDO PARA CERRAR AL TOCAR FUERA
+   ========================================= */
+
+.menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    background: transparent;
+    display: none;
+}
+
+.menu-backdrop.visible {
+    display: block;
+}
+
+/* =========================================
+   MÓVILES
+   ========================================= */
+
+@media (max-width: 480px) {
+    .floating-menu {
+        right: 12px;
+        bottom: 12px;
+    }
+
+    .menu-toggle {
+        width: 58px;
+        height: 58px;
+    }
+
+    .menu-panel {
+        width: 210px;
+    }
+}
+
+/* =========================================
+   RESPETO A REDUCCIÓN DE MOVIMIENTO
+   ========================================= */
+
+@media (prefers-reduced-motion: reduce) {
+    .menu-panel,
+    .menu-toggle {
+        transition: none;
+    }
+}
