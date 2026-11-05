@@ -7,6 +7,10 @@ import {
   searchChatMentions
 } from "../chat/chatService.js";
 
+import {
+  onChatMessage
+} from "../chat/chatEvents.js";
+
 // ======================================
 // WEBLINE GT - RUTAS DEL CHAT
 // ======================================
@@ -45,10 +49,7 @@ router.get(
       });
 
     } catch (error) {
-      console.error(
-        "[CHAT] Error obteniendo mensajes:",
-        error
-      );
+      console.error("[CHAT] Error obteniendo mensajes:", error);
 
       return res.status(500).json({
         success: false,
@@ -101,10 +102,7 @@ router.post(
       });
 
     } catch (error) {
-      console.error(
-        "[CHAT] Error enviando mensaje:",
-        error
-      );
+      console.error("[CHAT] Error enviando mensaje:", error);
 
       return res.status(500).json({
         success: false,
@@ -116,7 +114,6 @@ router.post(
 
 // ======================================
 // BUSCAR USUARIOS Y ROLES
-// PARA AUTOCOMPLETADO DE MENCIONES
 // ======================================
 
 router.get(
@@ -144,16 +141,83 @@ router.get(
       });
 
     } catch (error) {
-      console.error(
-        "[CHAT] Error buscando menciones:",
-        error
-      );
+      console.error("[CHAT] Error buscando menciones:", error);
 
       return res.status(500).json({
         success: false,
         message: "No se pudieron buscar usuarios y roles."
       });
     }
+  }
+);
+
+// ======================================
+// MENSAJES EN DIRECTO - SSE
+// ======================================
+
+router.get(
+  "/chat/stream",
+  (req: Request, res: Response) => {
+
+    if (!isAuthenticated(req)) {
+      return res.status(401).end();
+    }
+
+    res.setHeader(
+      "Content-Type",
+      "text/event-stream"
+    );
+
+    res.setHeader(
+      "Cache-Control",
+      "no-cache, no-transform"
+    );
+
+    res.setHeader(
+      "Connection",
+      "keep-alive"
+    );
+
+    res.flushHeaders?.();
+
+    // Confirmar conexión
+    res.write(
+      `event: connected\ndata: ${JSON.stringify({
+        success: true
+      })}\n\n`
+    );
+
+    // Escuchar mensajes nuevos
+    const unsubscribe = onChatMessage((message) => {
+
+      if (res.writableEnded) {
+        return;
+      }
+
+      res.write(
+        `event: chatMessage\ndata: ${JSON.stringify(message)}\n\n`
+      );
+
+    });
+
+    // Mantener viva la conexión
+    const heartbeat = setInterval(() => {
+
+      if (!res.writableEnded) {
+        res.write(": keep-alive\n\n");
+      }
+
+    }, 25000);
+
+    // Limpiar al cerrar navegador o conexión
+    req.on("close", () => {
+
+      clearInterval(heartbeat);
+
+      unsubscribe();
+
+    });
+
   }
 );
 
