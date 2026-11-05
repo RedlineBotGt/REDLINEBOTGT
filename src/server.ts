@@ -8,7 +8,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 import authRoutes from "./auth.js";
-import eventRoutes from "./Routes/eventRoutes.js";
+import eventRoutes from "./routes/eventRoutes.js";
 
 // ======================================
 // CONFIGURACIÓN GENERAL
