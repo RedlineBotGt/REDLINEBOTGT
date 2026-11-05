@@ -87,14 +87,19 @@ router.post(
         });
       }
 
-      if (content.length > 2000) {
+      if (content.trim().length > 1997) {
         return res.status(400).json({
           success: false,
-          message: "El mensaje supera los 2000 caracteres."
+          message: "El mensaje supera el límite permitido."
         });
       }
 
-      const message = await sendChatMessage(content);
+      const user = (req.session as any).user;
+
+      const message = await sendChatMessage(
+        content,
+        user
+      );
 
       return res.json({
         success: true,
@@ -106,7 +111,10 @@ router.post(
 
       return res.status(500).json({
         success: false,
-        message: "No se pudo enviar el mensaje."
+        message:
+          error instanceof Error
+            ? error.message
+            : "No se pudo enviar el mensaje."
       });
     }
   }
