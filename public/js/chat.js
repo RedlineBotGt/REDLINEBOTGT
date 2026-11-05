@@ -307,7 +307,7 @@ function renderMessage(message) {
 
 function renderMessageText(element, message, mentionData = {}) {
 
-    const regex = /<@!?(\\d+)>|<@&(\\d+)>|<#(\\d+)>/g;
+    const regex = /<@!?(\d+)>|<@&(\d+)>|<#(\d+)>/g;
 
     const users = mentionData.users || [];
     const roles = mentionData.roles || [];
