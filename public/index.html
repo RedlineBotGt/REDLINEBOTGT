@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -13,521 +14,32 @@
     <link rel="icon" href="https://cdn.discordapp.com/attachments/1483247050429567087/1567540257740558366/1793749060837_1.png">
     <link rel="apple-touch-icon" href="https://cdn.discordapp.com/attachments/1483247050429567087/1567540257740558366/1793749060837_1.png">
 
-    <style>
-        :root {
-            --bg: #080808;
-            --panel: #151515;
-            --panel2: #202020;
-            --border: #303030;
-            --text: #f5f5f5;
-            --muted: #999;
-            --red: #d71920;
-            --green: #168a45;
-            --blue: #2369bd;
-            --orange: #bd781b;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            background: var(--bg);
-            color: var(--text);
-            font-family: Arial, Helvetica, sans-serif;
-            min-height: 100vh;
-        }
-
-        button {
-            font: inherit;
-        }
-
-        .topbar {
-            min-height: 85px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 12px 90px 12px 15px;
-            border-bottom: 1px solid var(--border);
-            background: #050505;
-        }
-
-        .topbar img {
-            display: block;
-            max-width: 260px;
-            max-height: 58px;
-            width: auto;
-            height: auto;
-            object-fit: contain;
-        }
-
-        .sidebar {
-            position: fixed;
-            top: 0;
-            right: 0;
-            width: 76px;
-            height: 100vh;
-            background: #101010;
-            border-left: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 14px 6px;
-            gap: 12px;
-            z-index: 10;
-        }
-
-        .round-logo {
-            width: 52px;
-            height: 52px;
-            border-radius: 50%;
-            object-fit: contain;
-            border: 2px solid var(--red);
-            margin-bottom: 12px;
-        }
-
-        .menu-button {
-            width: 62px;
-            min-height: 58px;
-            border: 1px solid transparent;
-            border-radius: 9px;
-            background: transparent;
-            color: var(--muted);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-            cursor: default;
-            padding: 5px 2px;
-        }
-
-        .menu-button.active {
-            color: white;
-            background: #292929;
-            border-color: var(--red);
-        }
-
-        .menu-icon {
-            font-size: 21px;
-        }
-
-        .menu-label {
-            font-size: 10px;
-            font-weight: bold;
-        }
-
-        .logout {
-            margin-top: auto;
-            width: 62px;
-            min-height: 45px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            background: #202020;
-            color: #ddd;
-            cursor: pointer;
-            font-size: 11px;
-        }
-
-        .main {
-            width: calc(100% - 76px);
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 22px;
-        }
-
-        .page-title {
-            font-size: 24px;
-            font-weight: bold;
-            margin: 5px 0 20px;
-        }
-
-        .event-card {
-            background: var(--panel);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            overflow: hidden;
-        }
-
-        .event-header {
-            padding: 20px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .event-tag {
-            display: inline-block;
-            color: #fff;
-            background: var(--red);
-            border-radius: 4px;
-            padding: 5px 9px;
-            font-size: 11px;
-            font-weight: bold;
-            margin-bottom: 12px;
-        }
-
-        .event-title {
-            font-size: 25px;
-            font-weight: bold;
-            margin: 0 0 12px;
-            overflow-wrap: anywhere;
-        }
-
-        .event-meta {
-            color: var(--muted);
-            font-size: 13px;
-            line-height: 1.8;
-        }
-
-        .event-description {
-            display: block;
-            width: 100%;
-            min-width: 0;
-            padding: 18px 20px;
-            font-size: 12px;
-            line-height: 1.6;
-            white-space: pre-wrap;
-            overflow-wrap: anywhere;
-            word-break: break-word;
-            box-sizing: border-box;
-            color: #ddd;
-        }
-        .event-description strong {
-            color: #fff;
-            font-weight: 700;
-        }
-
-        .event-description em {
-            font-style: italic;
-        }
-
-        .event-description u {
-            text-decoration: underline;
-        }
-
-        .event-description del {
-            text-decoration: line-through;
-        }
-
-        .event-description code {
-            background: #303030;
-            color: #f0c674;
-            padding: 2px 4px;
-            border-radius: 4px;
-            font-family: monospace;
-        }
-
-        .event-description a {
-            color: #70b7ff;
-            text-decoration: underline;
-            overflow-wrap: anywhere;
-        }
-
-        .event-image {
-            display: none;
-            width: 100%;
-            max-height: 420px;
-            object-fit: contain;
-            background: #050505;
-            border-top: 1px solid var(--border);
-            border-bottom: 1px solid var(--border);
-        }
-
-        .event-content {
-            padding: 20px;
-        }
-
-        .section-heading {
-            font-size: 17px;
-            margin: 0 0 14px;
-        }
-
-        .rsvp-buttons {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .rsvp-button {
-            min-height: 48px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            color: white;
-            font-weight: bold;
-            font-size: 13px;
-            background: #292929;
-            opacity: 0.45;
-            cursor: not-allowed;
-        }
-
-        .rsvp-button.yes {
-            background: #155b32;
-        }
-
-        .rsvp-button.reserve {
-            background: #75500e;
-        }
-
-        .rsvp-button.maybe {
-            background: #174c80;
-        }
-
-        .rsvp-button.no {
-            background: #762222;
-        }
-
-        .rsvp-button.available {
-            opacity: 1;
-            cursor: pointer;
-            border-color: #aaa;
-        }
-
-        .rsvp-button.available:hover {
-            filter: brightness(1.2);
-        }
-
-        .rsvp-button:disabled {
-            opacity: 0.45;
-            cursor: not-allowed;
-        }
-
-        .rsvp-note {
-            color: var(--muted);
-            font-size: 12px;
-            margin: 0 0 12px;
-            line-height: 1.5;
-        }
-
-        .rsvp-status {
-            min-height: 18px;
-            color: #9bd6a9;
-            font-size: 12px;
-            margin: 0 0 24px;
-            line-height: 1.5;
-        }
-
-        .rsvp-status.error {
-            color: #ffaaaa;
-        }
-
-        .lists-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px;
-        }
-
-        .list-card {
-            background: var(--panel2);
-            border: 1px solid var(--border);
-            border-radius: 9px;
-            overflow: hidden;
-        }
-
-        .list-title {
-            padding: 12px;
-            font-size: 13px;
-            font-weight: bold;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .list-title.yes {
-            border-left: 4px solid var(--green);
-        }
-
-        .list-title.reserve {
-            border-left: 4px solid var(--orange);
-        }
-
-        .list-title.maybe {
-            border-left: 4px solid var(--blue);
-        }
-
-        .list-title.no {
-            border-left: 4px solid var(--red);
-        }
-
-        .list-body {
-            padding: 12px;
-            min-height: 48px;
-            font-size: 12px;
-            color: #ddd;
-        }
-
-        .pilot {
-            padding: 7px 0;
-            border-bottom: 1px solid #383838;
-            overflow-wrap: anywhere;
-        }
-
-        .pilot:last-child {
-            border-bottom: 0;
-        }
-
-        .empty-list {
-            color: var(--muted);
-            font-style: italic;
-        }
-
-        .message {
-            background: var(--panel);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 25px 18px;
-            text-align: center;
-            color: var(--muted);
-            line-height: 1.6;
-        }
-
-        .message.error {
-            border-color: #792929;
-            color: #ffb0b0;
-        }
-
-        .message.warning {
-            border-color: #75500e;
-            color: #f0cf91;
-        }
-
-        .footer {
-            color: #666;
-            text-align: center;
-            font-size: 11px;
-            padding: 25px 10px;
-        }
-
-        @media (min-width: 850px) {
-            .sidebar {
-                width: 220px;
-                align-items: stretch;
-                padding: 22px 14px;
-            }
-
-            .round-logo {
-                width: 105px;
-                height: 105px;
-                margin: 0 auto 25px;
-            }
-
-            .menu-button {
-                width: 100%;
-                min-height: 48px;
-                flex-direction: row;
-                justify-content: flex-start;
-                gap: 13px;
-                padding: 10px 14px;
-            }
-
-            .menu-icon {
-                width: 25px;
-                text-align: center;
-            }
-
-            .menu-label {
-                font-size: 13px;
-            }
-
-            .logout {
-                width: 100%;
-                min-height: 42px;
-            }
-
-            .main {
-                width: calc(100% - 220px);
-                padding: 30px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .topbar {
-                min-height: 72px;
-                padding-right: 82px;
-            }
-
-            .topbar img {
-                max-width: 190px;
-                max-height: 48px;
-            }
-
-            .main {
-                padding: 16px 12px;
-            }
-
-            .page-title {
-                font-size: 21px;
-            }
-
-            .event-header {
-                padding: 16px;
-            }
-
-            .event-title {
-                font-size: 21px;
-            }
-
-            .event-content {
-                padding: 14px;
-            }
-
-            .lists-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .rsvp-button {
-                font-size: 11px;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/event.css">
+    <link rel="stylesheet" href="/css/menu.css">
 </head>
+
 <body>
 
+    <!-- ==================================
+         CABECERA
+         ================================== -->
+
     <header class="topbar">
-    <img
-        id="horizontal-logo"
-        src="https://cdn.discordapp.com/attachments/1483247050429567087/1567540249570185236/1793749060837.png?ex=6aec8d1e&is=6aeb3b9e&hm=0d3fc3d7d05583c986903390e2840148333771bdd0fa7060e6d36168edb2afd5&"
-        alt="REDLINE GT"
-    >
-</header>
-
-    <aside class="sidebar">
         <img
-    id="round-logo"
-    class="round-logo"
-    src="https://cdn.discordapp.com/attachments/1483247050429567087/1567540257740558366/1793749060837_1.png?ex=6aec8d20&is=6aeb3ba0&hm=8ffcbff5f8c9750e76cbe6b07d4d57392cd52bbbfdbd0b9eb2d0e24b08473d88&"
-    alt="REDLINE GT"
->
+            id="horizontal-logo"
+            src="https://cdn.discordapp.com/attachments/1483247050429567087/1567540249570185236/1793749060837.png?ex=6aec8d1e&is=6aeb3b9e&hm=0d3fc3d7d05583c986903390e2840148333771bdd0fa7060e6d36168edb2afd5&"
+            alt="REDLINE GT"
+        >
+    </header>
 
-        <button class="menu-button active" type="button">
-            <span class="menu-icon">🏁</span>
-            <span class="menu-label">EVENTO</span>
-        </button>
 
-        <button class="menu-button" type="button" disabled>
-            <span class="menu-icon">📜</span>
-            <span class="menu-label">REGLAMENTO</span>
-        </button>
-
-        <button class="menu-button" type="button" disabled>
-            <span class="menu-icon">ℹ️</span>
-            <span class="menu-label">INFO</span>
-        </button>
-
-        <button class="menu-button" type="button" disabled>
-            <span class="menu-icon">🏆</span>
-            <span class="menu-label">CLASIFICACIÓN</span>
-        </button>
-
-        <button class="menu-button" type="button" disabled>
-            <span class="menu-icon">💬</span>
-            <span class="menu-label">CHAT</span>
-        </button>
-
-        <form action="/auth/logout" method="POST" style="margin-top:auto;width:100%;">
-            <button class="logout" type="submit">Cerrar sesión</button>
-        </form>
-    </aside>
+    <!-- ==================================
+         CONTENIDO PRINCIPAL
+         ================================== -->
 
     <main class="main">
+
         <h1 class="page-title">EVENTO</h1>
 
         <div id="event-container">
@@ -539,421 +51,128 @@
         <div class="footer">
             REDLINE GT · WEBLINEGT
         </div>
+
     </main>
 
-    <script>
-        const eventContainer = document.getElementById("event-container");
-
-        function escapeHTML(value) {
-            return String(value ?? "").replace(/[&<>"']/g, character => {
-                const entities = {
-                    "&": "&amp;",
-                    "<": "&lt;",
-                    ">": "&gt;",
-                    '"': "&quot;",
-                    "'": "&#039;"
-                };
-
-                return entities[character];
-            });
-        }
-
-        // CONVERTIR MARKDOWN DE DISCORD A HTML SEGURO
-        function formatDiscordText(value) {
-            let text = escapeHTML(value ?? "");
-
-            // Enlaces Markdown.
-            text = text.replace(
-                /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-                (match, label, url) => {
-                    return `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`;
-                }
-            );
-
-            // Enlaces directos.
-            text = text.replace(
-                /(^|[\s(])(https?:\/\/[^\s<]+)/g,
-                (match, prefix, url) => {
-                    const cleanUrl = url.replace(/[.,!?;:]+$/, "");
-                    const ending = url.slice(cleanUrl.length);
-
-                    return `${prefix}<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">${cleanUrl}</a>${ending}`;
-                }
-            );
-
-            // Código en línea.
-            text = text.replace(
-                /`([^`\n]+)`/g,
-                "<code>$1</code>"
-            );
-
-            // Negrita y cursiva combinadas.
-            text = text.replace(
-                /\*\*\*([\s\S]+?)\*\*\*/g,
-                "<strong><em>$1</em></strong>"
-            );
-
-            // Negrita.
-            text = text.replace(
-                /\*\*([\s\S]+?)\*\*/g,
-                "<strong>$1</strong>"
-            );
-
-            // Subrayado.
-            text = text.replace(
-                /__([\s\S]+?)__/g,
-                "<u>$1</u>"
-            );
-
-            // Tachado.
-            text = text.replace(
-                /~~([\s\S]+?)~~/g,
-                "<del>$1</del>"
-            );
-
-            // Cursiva.
-            text = text.replace(
-                /(^|[^*])\*([^*\n]+)\*(?!\*)/g,
-                "$1<em>$2</em>"
-            );
-
-            text = text.replace(
-                /(^|[^_])_([^_\n]+)_(?!_)/g,
-                "$1<em>$2</em>"
-            );
-
-            return text;
-        }
-
-        function formatDate(value) {
-            if (!value) return "Fecha pendiente";
-
-            const date = new Date(value);
-
-            if (Number.isNaN(date.getTime())) {
-                return "Fecha no disponible";
-            }
-
-            return new Intl.DateTimeFormat("es-ES", {
-                weekday: "long",
-                day: "2-digit",
-                month: "long",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-                timeZone: "Europe/Madrid"
-            }).format(date);
-        }
-
-        // MOSTRAR NOMBRES REALES DE DISCORD
-        function renderPilotList(items) {
-            if (!Array.isArray(items) || items.length === 0) {
-                return '<div class="empty-list">Ningún piloto todavía</div>';
-            }
-
-            return items.map(name => {
-                const safeName = escapeHTML(name);
-                return `<div class="pilot">${safeName}</div>`;
-            }).join("");
-        }
-
-        function renderList(title, items, type) {
-            const count = Array.isArray(items) ? items.length : 0;
-
-            return `
-                <section class="list-card">
-                    <div class="list-title ${type}">
-                        ${title} (${count})
-                    </div>
-                    <div class="list-body">
-                        ${renderPilotList(items)}
-                    </div>
-                </section>
-            `;
-        }
-
-        // ======================================
-        // MOSTRAR EVENTO Y BOTONES
-        // ======================================
-
-        function renderEvent(event, permisos, rsvpNames) {
-            const rsvps = rsvpNames || {
-                yes: event.rsvps?.yes || [],
-                reserve: event.rsvps?.reserve || [],
-                maybe: event.rsvps?.maybe || [],
-                no: event.rsvps?.no || []
-            };
-
-            const puedeSerTitular =
-                permisos?.puedeSerTitular === true;
-
-            const puedeSerReserva =
-                permisos?.puedeSerReserva === true;
-
-            const imageHTML = event.image
-                ? `<img class="event-image" id="event-image"
-                    src="${escapeHTML(event.image)}"
-                    alt="Imagen del evento">`
-                : "";
-
-            let permisoMensaje = "";
-
-            if (puedeSerTitular) {
-                permisoMensaje =
-                    "Tu rol de Discord te permite seleccionar TITULAR.";
-            } else if (puedeSerReserva) {
-                permisoMensaje =
-                    "Tu rol de Discord te permite seleccionar RESERVA.";
-            } else {
-                permisoMensaje =
-                    "TITULAR y RESERVA requieren sus roles correspondientes.";
-            }
-
-            eventContainer.innerHTML = `
-                <article class="event-card">
-
-                    <header class="event-header">
-                        <span class="event-tag">EVENTO ACTUAL</span>
-
-                        <h2 class="event-title">
-                            ${escapeHTML(event.title || "Evento REDLINE GT")}
-                        </h2>
-
-                        <div class="event-meta">
-                            📅 ${escapeHTML(formatDate(event.scheduledAt))}<br>
-                            📢 ${escapeHTML(event.channelName || "Canal de eventos")}
-                        </div>
-                    </header>
-
-                    ${imageHTML}
-
-                    <div class="event-description">${formatDiscordText(
-                        event.description || "Sin descripción adicional."
-                    )}</div>
-
-                    <div class="event-content">
-
-                        <h3 class="section-heading">
-                            CONFIRMA TU ASISTENCIA
-                        </h3>
-
-                        <div class="rsvp-buttons">
-
-                            <button
-                                class="rsvp-button yes ${puedeSerTitular ? "available" : ""}"
-                                data-respuesta="yes"
-                                type="button"
-                                ${puedeSerTitular ? "" : "disabled"}
-                            >
-                                ✅ TITULAR
-                            </button>
-
-                            <button
-                                class="rsvp-button reserve ${puedeSerReserva ? "available" : ""}"
-                                data-respuesta="reserve"
-                                type="button"
-                                ${puedeSerReserva ? "" : "disabled"}
-                            >
-                                🔃 RESERVA
-                            </button>
-
-                            <button
-                                class="rsvp-button maybe available"
-                                data-respuesta="maybe"
-                                type="button"
-                            >
-                                ❔ DUDA
-                            </button>
-
-                            <button
-                                class="rsvp-button no available"
-                                data-respuesta="no"
-                                type="button"
-                            >
-                                ❌ NO PUEDO
-                            </button>
-
-                        </div>
-
-                        <p class="rsvp-note">
-                            ${escapeHTML(permisoMensaje)}
-                            DUDA y NO PUEDO están disponibles para cualquier usuario que haya iniciado sesión.
-                        </p>
-
-                        <p
-                            class="rsvp-status"
-                            id="rsvp-status"
-                            aria-live="polite"
-                        ></p>
-
-                        <h3 class="section-heading">
-                            LISTA DE PARTICIPANTES
-                        </h3>
-
-                        <div class="lists-grid">
-                            ${renderList("✅ TITULARES", rsvps.yes, "yes")}
-                            ${renderList("🔃 RESERVAS", rsvps.reserve, "reserve")}
-                            ${renderList("❔ DUDAS", rsvps.maybe, "maybe")}
-                            ${renderList("❌ NO PUEDEN", rsvps.no, "no")}
-                        </div>
-
-                    </div>
-                </article>
-            `;
-
-            const image = document.getElementById("event-image");
-
-            if (image) {
-                image.addEventListener("error", () => {
-                    image.style.display = "none";
-                });
-
-                image.addEventListener("load", () => {
-                    image.style.display = "block";
-                });
-            }
-
-            // Conectar los botones.
-            const responseButtons =
-                eventContainer.querySelectorAll("[data-respuesta]");
-
-            responseButtons.forEach(button => {
-                button.addEventListener("click", () => {
-                    sendRsvp(button.dataset.respuesta);
-                });
-            });
-        }
-        // ======================================
-        // ENVIAR RESPUESTA AL SERVIDOR
-        // ======================================
-
-        async function sendRsvp(respuesta) {
-            const status = document.getElementById("rsvp-status");
-
-            if (!respuesta || !status) return;
-
-            const buttons =
-                eventContainer.querySelectorAll("[data-respuesta]");
-
-            const previousStates = [];
-
-            buttons.forEach(button => {
-                previousStates.push({
-                    button,
-                    disabled: button.disabled
-                });
-
-                button.disabled = true;
-            });
-
-            status.className = "rsvp-status";
-            status.textContent = "Registrando tu respuesta...";
-
-            try {
-                const response = await fetch("/api/evento/responder", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    credentials: "same-origin",
-                    body: JSON.stringify({ respuesta })
-                });
-
-                const result = await response.json().catch(() => ({}));
-
-                if (!response.ok) {
-                    throw new Error(
-                        result.error || result.message ||
-                        "No se pudo registrar tu respuesta."
-                    );
-                }
-
-                await loadEvent();
-
-                const newStatus =
-                    document.getElementById("rsvp-status");
-
-                if (newStatus) {
-                    newStatus.className = "rsvp-status";
-                    newStatus.textContent =
-                        result.message || "Respuesta registrada correctamente.";
-                }
-
-            } catch (error) {
-                const currentStatus =
-                    document.getElementById("rsvp-status");
-
-                if (currentStatus) {
-                    currentStatus.className = "rsvp-status error";
-                    currentStatus.textContent =
-                        error.message || "Ha ocurrido un error.";
-                }
-
-                previousStates.forEach(item => {
-                    item.button.disabled = item.disabled;
-                });
-            }
-        }
-
-        // ======================================
-        // CARGAR EVENTO
-        // ======================================
-
-        async function loadEvent() {
-            try {
-                const response = await fetch("/api/evento", {
-                    method: "GET",
-                    credentials: "same-origin",
-                    cache: "no-store"
-                });
-
-                if (response.status === 401 ||
-                    response.status === 403) {
-                    window.location.href = "/auth/discord";
-                    return;
-                }
-
-                const result = await response.json().catch(() => ({}));
-
-                if (!response.ok) {
-                    throw new Error(
-                        result.error || "No se pudo cargar el evento."
-                    );
-                }
-
-                if (!result.evento) {
-                    eventContainer.innerHTML = `
-                        <div class="message">
-                            Actualmente no hay ningún evento publicado.
-                        </div>
-                    `;
-                    return;
-                }
-
-                renderEvent(
-                    result.evento,
-                    result.permisos || {},
-                    result.rsvpNames || null
-                );
-
-            } catch (error) {
-                console.error("Error cargando evento:", error);
-
-                eventContainer.innerHTML = `
-                    <div class="message error">
-                        No se ha podido cargar el evento.<br>
-                        ${escapeHTML(error.message)}
-                    </div>
-                `;
-            }
-        }
-
-        // ======================================
-        // INICIO
-        // ======================================
-
-        loadEvent();
-    </script>
+
+    <!-- ==================================
+         FONDO PARA CERRAR EL MENÚ
+         ================================== -->
+
+    <div
+        id="menu-backdrop"
+        class="menu-backdrop"
+        aria-hidden="true"
+    ></div>
+
+
+    <!-- ==================================
+         MENÚ FLOTANTE
+         ================================== -->
+
+    <aside
+        id="floating-menu"
+        class="floating-menu"
+    >
+
+        <!-- PANEL DESPLEGABLE -->
+
+        <nav
+            id="menu-panel"
+            class="menu-panel"
+            aria-label="Menú principal"
+            aria-hidden="true"
+        >
+
+            <button
+                class="menu-button active"
+                type="button"
+                aria-current="page"
+            >
+                <span class="menu-icon">🏁</span>
+                <span class="menu-label">EVENTO</span>
+            </button>
+
+            <button
+                class="menu-button"
+                type="button"
+                disabled
+            >
+                <span class="menu-icon">📜</span>
+                <span class="menu-label">REGLAMENTO</span>
+            </button>
+
+            <button
+                class="menu-button"
+                type="button"
+                disabled
+            >
+                <span class="menu-icon">ℹ️</span>
+                <span class="menu-label">INFO</span>
+            </button>
+
+            <button
+                class="menu-button"
+                type="button"
+                disabled
+            >
+                <span class="menu-icon">🏆</span>
+                <span class="menu-label">CLASIFICACIÓN</span>
+            </button>
+
+            <button
+                class="menu-button"
+                type="button"
+                disabled
+            >
+                <span class="menu-icon">💬</span>
+                <span class="menu-label">CHAT</span>
+            </button>
+
+            <form
+                action="/auth/logout"
+                method="POST"
+                class="menu-logout-form"
+            >
+                <button
+                    class="menu-logout"
+                    type="submit"
+                >
+                    Cerrar sesión
+                </button>
+            </form>
+
+        </nav>
+
+
+        <!-- BOTÓN CIRCULAR -->
+
+        <button
+            id="menu-toggle"
+            class="menu-toggle"
+            type="button"
+            aria-label="Abrir menú"
+            aria-expanded="false"
+            aria-controls="menu-panel"
+        >
+            <img
+                id="round-logo"
+                src="https://cdn.discordapp.com/attachments/1483247050429567087/1567540257740558366/1793749060837_1.png?ex=6aec8d20&is=6aeb3ba0&hm=8ffcbff5f8c9750e76cbe6b07d4d57392cd52bbbfdbd0b9eb2d0e24b08473d88&"
+                alt="Abrir menú REDLINE GT"
+            >
+        </button>
+
+    </aside>
+
+
+    <!-- ==================================
+         JAVASCRIPT PRINCIPAL
+         ================================== -->
+
+    <script
+        type="module"
+        src="/js/main.js"
+    ></script>
 
 </body>
 </html>
