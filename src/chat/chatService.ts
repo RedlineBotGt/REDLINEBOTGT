@@ -1,4 +1,3 @@
-
 // ======================================
 // WEBLINE GT - SERVICIO DEL CHAT
 // ======================================
@@ -19,8 +18,16 @@ import {
 
 const DISCORD_API = "https://discord.com/api/v10";
 
+interface GuildDirectory {
+  roles: Array<{ id: string; name: string }>;
+  channels: Array<{ id: string; name: string }>;
+  expiresAt: number;
+}
+
+const directoryCache = new Map<string, GuildDirectory>();
+
 // ======================================
-// PETICIONES A DISCORD CON EL BOT
+// PETICIONES A DISCORD
 // ======================================
 
 async function discordRequest(
@@ -33,21 +40,17 @@ async function discordRequest(
     throw new Error("Falta la variable DISCORD_TOKEN.");
   }
 
-  const response = await fetch(
-    `${DISCORD_API}${endpoint}`,
-    {
-      ...options,
-      headers: {
-        Authorization: `Bot ${token}`,
-        "Content-Type": "application/json",
-        ...options.headers
-      }
+  const response = await fetch(`${DISCORD_API}${endpoint}`, {
+    ...options,
+    headers: {
+      Authorization: `Bot ${token}`,
+      "Content-Type": "application/json",
+      ...options.headers
     }
-  );
+  });
 
   if (!response.ok) {
     const error = await response.text();
-
     throw new Error(
       `Error de Discord (${response.status}): ${error}`
     );
@@ -61,7 +64,7 @@ async function discordRequest(
 }
 
 // ======================================
-// OBTENER ID DEL SERVIDOR
+// OBTENER SERVIDOR
 // ======================================
 
 async function getChatGuildId(): Promise<string> {
@@ -74,6 +77,52 @@ async function getChatGuildId(): Promise<string> {
   }
 
   return String(event.guildId);
+}
+
+// ======================================
+// DIRECTORIO DE ROLES Y CANALES
+// ======================================
+
+async function getGuildDirectory(
+  guildId: string
+): Promise<GuildDirectory> {
+
+  const cached = directoryCache.get(guildId);
+
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached;
+  }
+
+  const [discordRoles, discordChannels] = await Promise.all([
+    discordRequest(`/guilds/${guildId}/roles`),
+    discordRequest(`/guilds/${guildId}/channels`)
+  ]);
+
+  const roles = (discordRoles || [])
+    .filter((role: any) => role.name !== "@everyone")
+    .map((role: any) => ({
+      id: String(role.id),
+      name: String(role.name)
+    }));
+
+  const channels = (discordChannels || [])
+    .filter((channel: any) =>
+      channel.type === 0 || channel.type === 5
+    )
+    .map((channel: any) => ({
+      id: String(channel.id),
+      name: String(channel.name)
+    }));
+
+  const directory: GuildDirectory = {
+    roles,
+    channels,
+    expiresAt: Date.now() + 5 * 60 * 1000
+  };
+
+  directoryCache.set(guildId, directory);
+
+  return directory;
 }
 
 // ======================================
@@ -97,9 +146,70 @@ function getAvatarUrl(author: any): string {
 // ======================================
 
 function convertDiscordMessage(
-  message: any
+  message: any,
+  directory?: GuildDirectory,
+  guildId?: string
 ): ChatMessage {
+
   const author = message.author;
+
+  const mentionedUsers = (message.mentions || [])
+    .filter((user: any) => user?.id)
+    .map((user: any) => ({
+      id: String(user.id),
+      name:
+        message.mention_members?.find(
+          (member: any) => member.user?.id === user.id
+        )?.nick ||
+        user.global_name ||
+        user.username ||
+        "usuario"
+    }));
+
+  const mentionedRoleIds: string[] =
+    (message.mention_roles || []).map(String);
+
+  const mentionedChannelObjects =
+    message.mention_channels || [];
+
+  const mentionedChannelIds: string[] =
+    mentionedChannelObjects
+      .filter((channel: any) => channel?.id)
+      .map((channel: any) => String(channel.id));
+
+  const roles = mentionedRoleIds.map((id) => {
+    const role = directory?.roles.find(
+      (item) => item.id === id
+    );
+
+    return {
+      id,
+      name: role?.name || "rol"
+    };
+  });
+
+  const channels = mentionedChannelIds.map((id) => {
+    const channel = directory?.channels.find(
+      (item) => item.id === id
+    );
+
+    const embeddedChannel = mentionedChannelObjects.find(
+      (item: any) => String(item.id) === id
+    );
+
+    const name =
+      channel?.name ||
+      embeddedChannel?.name ||
+      "canal";
+
+    return {
+      id,
+      name,
+      url: guildId
+        ? `https://discord.com/channels/${guildId}/${id}`
+        : undefined
+    };
+  });
 
   return {
     id: message.id,
@@ -113,26 +223,40 @@ function convertDiscordMessage(
     createdAt: message.timestamp,
     source: "discord",
     replyTo: null,
+
     mentions: {
-      users: message.mentions?.map(
-        (user: any) => user.id
-      ) || [],
-      roles: message.mention_roles || []
+      users: mentionedUsers.map((user) => user.id),
+      roles: mentionedRoleIds,
+      channels: mentionedChannelIds
+    },
+
+    mentionData: {
+      users: mentionedUsers,
+      roles,
+      channels
     }
   };
 }
 
 // ======================================
-// OBTENER ÚLTIMOS MENSAJES
+// OBTENER HISTORIAL
 // ======================================
 
 export async function getChatHistory(): Promise<ChatMessage[]> {
-  const messages = await discordRequest(
-    `/channels/${CHAT_CHANNEL_ID}/messages?limit=${CHAT_HISTORY_LIMIT}`
-  );
+
+  const guildId = await getChatGuildId();
+
+  const [messages, directory] = await Promise.all([
+    discordRequest(
+      `/channels/${CHAT_CHANNEL_ID}/messages?limit=${CHAT_HISTORY_LIMIT}`
+    ),
+    getGuildDirectory(guildId)
+  ]);
 
   return messages
-    .map(convertDiscordMessage)
+    .map((message: any) =>
+      convertDiscordMessage(message, directory, guildId)
+    )
     .reverse();
 }
 
@@ -151,6 +275,7 @@ export async function sendChatMessage(
   content: string,
   user: ChatWebUser
 ): Promise<ChatMessage> {
+
   const cleanContent = content.trim();
 
   if (!cleanContent) {
@@ -186,9 +311,10 @@ export async function sendChatMessage(
     "discordapp.com"
   ].includes(parsedUrl.hostname);
 
-  const validPath = /^\/api\/webhooks\/\d+\/[^/]+\/?$/.test(
-    parsedUrl.pathname
-  );
+  const validPath =
+    /^\/api\/webhooks\/\d+\/[^/]+\/?$/.test(
+      parsedUrl.pathname
+    );
 
   if (
     parsedUrl.protocol !== "https:" ||
@@ -224,6 +350,9 @@ export async function sendChatMessage(
       `https://cdn.discordapp.com/embed/avatars/${defaultAvatar}.png`;
   }
 
+  // IMPORTANTE:
+  // Se conserva el envío original a Discord.
+
   const response = await fetch(parsedUrl.toString(), {
     method: "POST",
     headers: {
@@ -255,7 +384,14 @@ export async function sendChatMessage(
 
   const message = await response.json();
 
-  return convertDiscordMessage(message);
+  const guildId = await getChatGuildId();
+  const directory = await getGuildDirectory(guildId);
+
+  return convertDiscordMessage(
+    message,
+    directory,
+    guildId
+  );
 }
 
 // ======================================
@@ -265,8 +401,8 @@ export async function sendChatMessage(
 export async function getChatMembers(
   query: string
 ): Promise<any[]> {
-  const guildId = await getChatGuildId();
 
+  const guildId = await getChatGuildId();
   const cleanQuery = query.trim();
 
   if (!cleanQuery) {
@@ -281,6 +417,7 @@ export async function getChatMembers(
   return members
     .filter((member: any) => member.user?.id)
     .map((member: any) => {
+
       const user = member.user;
 
       const extension = user.avatar?.startsWith("a_")
@@ -288,7 +425,7 @@ export async function getChatMembers(
         : "png";
 
       return {
-        id: user.id,
+        id: String(user.id),
         name:
           member.nick ||
           user.global_name ||
@@ -302,84 +439,118 @@ export async function getChatMembers(
 }
 
 // ======================================
-// OBTENER ROLES PARA MENCIONES
+// OBTENER ROLES PARA AUTOCOMPLETADO
 // ======================================
 
 export async function getChatRoles(): Promise<any[]> {
-  const guildId = await getChatGuildId();
 
-  const roles = await discordRequest(
+  const guildId = await getChatGuildId();
+  const directory = await getGuildDirectory(guildId);
+
+  const discordRoles = await discordRequest(
     `/guilds/${guildId}/roles`
   );
 
-  return roles
+  return discordRoles
     .filter((role: any) =>
       role.name !== "@everyone" &&
       role.mentionable === true
     )
     .map((role: any) => ({
-      id: role.id,
-      name: role.name,
+      id: String(role.id),
+      name: String(role.name),
       type: "role"
     }));
 }
 
 // ======================================
-// BUSCAR USUARIOS Y ROLES
+// OBTENER CANALES PARA AUTOCOMPLETADO
+// ======================================
+
+export async function getChatChannels(): Promise<any[]> {
+
+  const guildId = await getChatGuildId();
+  const directory = await getGuildDirectory(guildId);
+
+  return directory.channels.map((channel) => ({
+    id: channel.id,
+    name: channel.name,
+    type: "channel"
+  }));
+}
+
+// ======================================
+// BUSCAR USUARIOS, ROLES O CANALES
 // ======================================
 
 export async function searchChatMentions(
-  query: string
+  query: string,
+  type?: string
 ): Promise<any[]> {
+
   const cleanQuery = query.trim().toLowerCase();
 
-  const [membersResult, rolesResult] = await Promise.allSettled([
-    getChatMembers(cleanQuery),
-    getChatRoles()
-  ]);
+  if (!cleanQuery) {
+    return [];
+  }
 
-  let members: any[] = [];
-  let roles: any[] = [];
+  let results: any[] = [];
 
-  if (membersResult.status === "fulfilled") {
-    members = membersResult.value;
+  if (type === "channel") {
+
+    results = await getChatChannels();
+
+  } else if (type === "role") {
+
+    results = await getChatRoles();
+
   } else {
-    console.warn(
-      "[CHAT] No se pudieron consultar usuarios:",
-      membersResult.reason
-    );
+
+    const [membersResult, rolesResult] =
+      await Promise.allSettled([
+        getChatMembers(cleanQuery),
+        getChatRoles()
+      ]);
+
+    let members: any[] = [];
+    let roles: any[] = [];
+
+    if (membersResult.status === "fulfilled") {
+      members = membersResult.value;
+    } else {
+      console.warn(
+        "[CHAT] No se pudieron consultar usuarios:",
+        membersResult.reason
+      );
+    }
+
+    if (rolesResult.status === "fulfilled") {
+      roles = rolesResult.value;
+    } else {
+      console.warn(
+        "[CHAT] No se pudieron consultar roles:",
+        rolesResult.reason
+      );
+    }
+
+    if (
+      membersResult.status === "rejected" &&
+      rolesResult.status === "rejected"
+    ) {
+      throw new Error(
+        "Discord no ha permitido consultar usuarios ni roles."
+      );
+    }
+
+    results = [...members, ...roles];
   }
 
-  if (rolesResult.status === "fulfilled") {
-    roles = rolesResult.value;
-  } else {
-    console.warn(
-      "[CHAT] No se pudieron consultar roles:",
-      rolesResult.reason
-    );
-  }
-
-  // Si fallan las dos consultas, no ocultamos el error.
-  if (
-    membersResult.status === "rejected" &&
-    rolesResult.status === "rejected"
-  ) {
-    throw new Error(
-      "Discord no ha permitido consultar usuarios ni roles."
-    );
-  }
-
-  const filteredMembers = members.filter(
-    (member: any) =>
-      member.name.toLowerCase().includes(cleanQuery)
+  const filtered = results.filter((item: any) =>
+    item.name.toLowerCase().includes(cleanQuery)
   );
 
-  const filteredRoles = roles.filter(
-    (role: any) =>
-      role.name.toLowerCase().includes(cleanQuery)
-  );
+  filtered.sort((a: any, b: any) => {
 
-  const sortMatches = (a: any, b: any) => {
     const aStarts = a.name.toLowerCase().startsWith(cleanQuery);
     const bStarts = b.name.toLowerCase().startsWith(cleanQuery);
 
@@ -388,13 +559,7 @@ export async function searchChatMentions(
     }
 
     return a.name.localeCompare(b.name, "es");
-  };
+  });
 
-  filteredMembers.sort(sortMatches);
-  filteredRoles.sort(sortMatches);
-
-  return [
-    ...filteredMembers.slice(0, 15),
-    ...filteredRoles.slice(0, 15)
-  ];
+  return filtered.slice(0, 25);
 }
