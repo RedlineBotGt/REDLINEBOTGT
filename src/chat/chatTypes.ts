@@ -1,4 +1,3 @@
-
 // ======================================
 // WEBLINE GT - TIPOS DEL CHAT
 // ======================================
@@ -21,20 +20,37 @@ export interface ChatMessage {
   authorAvatar: string | null;
   createdAt: string;
 
-  // Indica si el mensaje procede de WEBLINE GT
   source: "webline" | "discord";
 
-  // Datos de respuesta, si existe
   replyTo?: {
     messageId: string;
     authorName: string;
     content: string;
   } | null;
 
-  // Usuarios y roles mencionados
   mentions?: {
     users: string[];
     roles: string[];
+    channels?: string[];
+  };
+
+  // Nombres que se utilizarán al mostrar las menciones
+  mentionData?: {
+    users: Array<{
+      id: string;
+      name: string;
+    }>;
+
+    roles: Array<{
+      id: string;
+      name: string;
+    }>;
+
+    channels: Array<{
+      id: string;
+      name: string;
+      url?: string;
+    }>;
   };
 }
 
@@ -46,7 +62,7 @@ export interface ChatMention {
   id: string;
   name: string;
   avatar?: string | null;
-  type: "user" | "role";
+  type: "user" | "role" | "channel";
 }
 
 // ======================================
