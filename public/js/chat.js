@@ -10,6 +10,7 @@ let chatSendButton;
 let chatForm;
 let chatMentionsList;
 let sendingMessage = false;
+let lastPointerSendAt = 0;
 
 let mentionResults = [];
 let selectedMentionIndex = 0;
@@ -45,16 +46,42 @@ export function initializeChat() {
 
     chatMentionsList.hidden = true;
 
-    // Envío directo al pulsar la flecha azul.
+    // Envío directo para pantallas táctiles.
+    chatSendButton.addEventListener("pointerdown", (event) => {
+
+        if (
+            event.pointerType === "touch" ||
+            event.pointerType === "pen"
+        ) {
+            event.preventDefault();
+
+            lastPointerSendAt = Date.now();
+
+            sendMessage();
+        }
+
+    });
+
+    // Respaldo para ratón y otros dispositivos.
     chatSendButton.addEventListener("click", (event) => {
+
         event.preventDefault();
+
+        // Evitar que el mismo toque envíe dos veces.
+        if (Date.now() - lastPointerSendAt < 800) {
+            return;
+        }
+
         sendMessage();
+
     });
 
     // Mantener también el envío del formulario.
     chatForm.addEventListener("submit", (event) => {
+
         event.preventDefault();
         sendMessage();
+
     });
 
     chatInput.addEventListener("keydown", handleInputKeydown);
@@ -327,59 +354,54 @@ function renderMessageText(element, message) {
 
 async function sendMessage() {
 
-    if (!chatInput || !chatSendButton || sendingMessage) return;
+    if (sendingMessage) return;
 
     const content = chatInput.value.trim();
 
     if (!content) return;
 
-    if (content.length > 2000) {
-        alert("El mensaje supera los 2000 caracteres.");
-        return;
-    }
-
-    // Evitar envíos duplicados.
     sendingMessage = true;
     chatSendButton.disabled = true;
 
     try {
 
         const response = await fetch(`${CHAT_API}/messages`, {
-
             method: "POST",
-
             credentials: "same-origin",
-
             headers: {
                 "Content-Type": "application/json"
             },
-
             body: JSON.stringify({
                 content
             })
-
         });
 
         const data = await response.json();
 
         if (!response.ok || !data.success) {
+
             throw new Error(
                 data.message || "No se pudo enviar el mensaje."
             );
+
         }
 
         chatInput.value = "";
+        hideMentions();
 
         if (data.message) {
             renderMessage(data.message);
-            scrollToBottom();
         }
+
+        scrollToBottom();
 
     } catch (error) {
 
         console.error("[CHAT] Error enviando mensaje:", error);
 
-        alert(error.message || "Error enviando el mensaje.");
+        alert(
+            error.message || "No se pudo enviar el mensaje."
+        );
 
     } finally {
 
@@ -396,46 +418,41 @@ async function sendMessage() {
 
 function handleInputKeydown(event) {
 
-    if (mentionResults.length > 0) {
+    if (chatMentionsList && !chatMentionsList.hidden) {
 
         if (event.key === "ArrowDown") {
 
             event.preventDefault();
-
-            selectedMentionIndex =
-                (selectedMentionIndex + 1) % mentionResults.length;
-
-            renderMentionOptions();
+            moveMentionSelection(1);
             return;
+
         }
 
         if (event.key === "ArrowUp") {
 
             event.preventDefault();
-
-            selectedMentionIndex =
-                (selectedMentionIndex - 1 + mentionResults.length) %
-                mentionResults.length;
-
-            renderMentionOptions();
+            moveMentionSelection(-1);
             return;
+
         }
 
-        if (event.key === "Enter" && currentMention) {
+        if (event.key === "Enter" && !event.shiftKey) {
 
             event.preventDefault();
 
-            selectMention(
-                mentionResults[selectedMentionIndex]
-            );
+            if (mentionResults.length > 0) {
+                selectMention(selectedMentionIndex);
+            }
 
             return;
+
         }
 
         if (event.key === "Escape") {
 
-            closeMentionList();
+            hideMentions();
             return;
+
         }
     }
 
@@ -453,109 +470,96 @@ function handleInputKeydown(event) {
 
 function handleInputChange() {
 
-    const text = chatInput.value;
+    const value = chatInput.value;
     const cursor = chatInput.selectionStart;
 
-    const beforeCursor = text.slice(0, cursor);
+    const textBeforeCursor = value.slice(0, cursor);
 
-    // Detecta @ al principio, después de un espacio
-    // o después de un paréntesis/corchete.
-    const match = beforeCursor.match(
-        /(?:^|[\s([{])@([^\s@]*)$/
+    const match = textBeforeCursor.match(
+        /(^|\s)@([^\s@]*)$/
     );
 
     if (!match) {
 
-        mentionSearchId++;
-        clearTimeout(searchTimeout);
-        closeMentionList();
+        hideMentions();
         return;
+
     }
 
-    const query = match[1];
+    const query = match[2] || "";
 
     currentMention = {
         start: cursor - query.length - 1,
         end: cursor
     };
 
-    clearTimeout(searchTimeout);
-
-    const searchId = ++mentionSearchId;
-
-    searchTimeout = setTimeout(() => {
-        searchMentions(query, searchId);
-    }, 150);
+    searchMentions(query);
 }
 
 // ======================================
 // BUSCAR USUARIOS Y ROLES
 // ======================================
 
-async function searchMentions(query, searchId) {
+async function searchMentions(query) {
 
-    try {
+    const requestId = ++mentionSearchId;
 
-        const response = await fetch(
-            `${CHAT_API}/mentions?q=${encodeURIComponent(query)}`,
-            {
-                credentials: "same-origin"
+    clearTimeout(searchTimeout);
+
+    searchTimeout = setTimeout(async () => {
+
+        try {
+
+            const response = await fetch(
+                `${CHAT_API}/mentions?q=${encodeURIComponent(query)}`,
+                {
+                    credentials: "same-origin"
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error("Error buscando menciones.");
             }
-        );
 
-        if (!response.ok) {
-            throw new Error("Error buscando menciones.");
+            const data = await response.json();
+
+            if (requestId !== mentionSearchId) {
+                return;
+            }
+
+            mentionResults = data.results || [];
+
+            selectedMentionIndex = 0;
+
+            renderMentions();
+
+        } catch (error) {
+
+            console.error(
+                "[CHAT] Error buscando menciones:",
+                error
+            );
+
+            hideMentions();
+
         }
 
-        const data = await response.json();
-
-        if (!data.success) {
-            throw new Error(data.message);
-        }
-
-        // Ignorar respuestas antiguas si el usuario
-        // ya ha seguido escribiendo.
-        if (searchId !== mentionSearchId) {
-            return;
-        }
-
-        mentionResults = data.results || [];
-        selectedMentionIndex = 0;
-
-        renderMentionOptions();
-
-    } catch (error) {
-
-        if (searchId !== mentionSearchId) {
-            return;
-        }
-
-        console.error("[CHAT] Error en menciones:", error);
-
-        closeMentionList();
-
-    }
+    }, 250);
 }
 
 // ======================================
-// MOSTRAR SUGERENCIAS
+// MOSTRAR RESULTADOS DE MENCIONES
 // ======================================
 
-function renderMentionOptions() {
+function renderMentions() {
 
     chatMentionsList.innerHTML = "";
 
     if (mentionResults.length === 0) {
 
-        const empty = document.createElement("div");
-
-        empty.className = "chat-mention-empty";
-        empty.textContent = "No hay coincidencias.";
-
-        chatMentionsList.appendChild(empty);
-        chatMentionsList.hidden = false;
-
+        hideMentions();
         return;
+
     }
 
     mentionResults.forEach((item, index) => {
@@ -566,45 +570,30 @@ function renderMentionOptions() {
         option.className = "chat-mention-option";
 
         if (index === selectedMentionIndex) {
-            option.classList.add("active");
-        }
-
-        if (item.type === "user" && item.avatar) {
-
-            const avatar = document.createElement("img");
-
-            avatar.src = item.avatar;
-            avatar.alt = "";
-
-            option.appendChild(avatar);
-
-        } else {
-
-            const icon = document.createElement("span");
-
-            icon.textContent = "👥";
-
-            option.appendChild(icon);
-
+            option.classList.add("selected");
         }
 
         const name = document.createElement("span");
 
-        name.className = "chat-mention-option-name";
-        name.textContent = item.name;
+        name.textContent = item.name || "Usuario";
 
-        const type = document.createElement("span");
+        const type = document.createElement("small");
 
-        type.className = "chat-mention-option-type";
         type.textContent =
-            item.type === "role" ? "ROL" : "USUARIO";
+            item.type === "role" ? "Rol" : "Usuario";
 
         option.appendChild(name);
         option.appendChild(type);
 
-        option.addEventListener("click", () => {
-            selectMention(item);
+        option.addEventListener("mousedown", (event) => {
+            event.preventDefault();
+            selectMention(index);
         });
+
+        option.addEventListener("touchstart", (event) => {
+            event.preventDefault();
+            selectMention(index);
+        }, { passive: false });
 
         chatMentionsList.appendChild(option);
 
@@ -614,27 +603,56 @@ function renderMentionOptions() {
 }
 
 // ======================================
-// SELECCIONAR MENCIÓN
+// MOVER SELECCIÓN
 // ======================================
 
-function selectMention(item) {
+function moveMentionSelection(direction) {
 
-    if (!currentMention || !chatInput) return;
+    if (mentionResults.length === 0) return;
 
-    const text = chatInput.value;
+    selectedMentionIndex += direction;
 
-    const before = text.slice(0, currentMention.start);
-    const after = text.slice(currentMention.end);
+    if (selectedMentionIndex < 0) {
+        selectedMentionIndex = mentionResults.length - 1;
+    }
 
-    const mentionText = item.type === "role"
-        ? `<@&${item.id}>`
-        : `<@${item.id}>`;
+    if (selectedMentionIndex >= mentionResults.length) {
+        selectedMentionIndex = 0;
+    }
 
-    const insertion = `${mentionText} `;
+    renderMentions();
+}
 
-    chatInput.value = before + insertion + after;
+// ======================================
+// INSERTAR MENCIÓN
+// ======================================
 
-    const newCursor = before.length + insertion.length;
+function selectMention(index) {
+
+    const item = mentionResults[index];
+
+    if (!item || !currentMention) return;
+
+    const value = chatInput.value;
+
+    const before = value.slice(0, currentMention.start);
+    const after = value.slice(currentMention.end);
+
+    let mentionText;
+
+    if (item.type === "role") {
+        mentionText = `<@&${item.id}>`;
+    } else {
+        mentionText = `<@${item.id}>`;
+    }
+
+    const newValue =
+        before + mentionText + " " + after;
+
+    chatInput.value = newValue;
+
+    const newCursor =
+        before.length + mentionText.length + 1;
 
     chatInput.focus();
 
@@ -643,36 +661,41 @@ function selectMention(item) {
         newCursor
     );
 
-    closeMentionList();
+    hideMentions();
 }
 
 // ======================================
-// CERRAR SUGERENCIAS
+// OCULTAR MENCIONES
 // ======================================
 
-function closeMentionList() {
+function hideMentions() {
+
+    if (!chatMentionsList) return;
+
+    chatMentionsList.hidden = true;
+    chatMentionsList.innerHTML = "";
 
     mentionResults = [];
+    selectedMentionIndex = 0;
     currentMention = null;
 
-    if (chatMentionsList) {
-
-        chatMentionsList.innerHTML = "";
-        chatMentionsList.hidden = true;
-
-    }
+    mentionSearchId++;
 }
 
 // ======================================
-// SCROLL
+// SCROLL AL ÚLTIMO MENSAJE
 // ======================================
 
 function scrollToBottom() {
 
     if (!chatMessages) return;
 
-    chatMessages.scrollTop =
-        chatMessages.scrollHeight;
+    requestAnimationFrame(() => {
+
+        chatMessages.scrollTop =
+            chatMessages.scrollHeight;
+
+    });
 }
 
 // ======================================
@@ -688,6 +711,14 @@ export function closeChat() {
 
     }
 
-    clearTimeout(searchTimeout);
-    mentionSearchId++;
+    if (searchTimeout) {
+
+        clearTimeout(searchTimeout);
+        searchTimeout = null;
+
+    }
+
+    hideMentions();
+
+    console.log("[CHAT] Chat cerrado.");
 }
