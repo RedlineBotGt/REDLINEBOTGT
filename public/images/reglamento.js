@@ -3,14 +3,14 @@ const IMAGENES = {
     ,
     reglamento2: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110633",
     reglamento3: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110634",
-    reglamento4: "URL_IMAGEN_4",
+    reglamento4: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110635",
     reglamento5: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110636",
-    reglamento6: "URL_IMAGEN_6",
-    reglamento7: "URL_IMAGEN_7",
-    reglamento8: "URL_IMAGEN_8",
-    reglamento9: "URL_IMAGEN_9",
-    reglamento10: "URL_IMAGEN_10",
-    reglamento11: "URL_IMAGEN_11"
+    reglamento6: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110637",
+    reglamento7: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110638",
+    reglamento8: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110639",
+    reglamento9: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110640",
+    reglamento10: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110641",
+    reglamento11: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110642"
 };
 
 export default IMAGENES;
