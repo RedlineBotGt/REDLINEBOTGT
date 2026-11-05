@@ -1,4 +1,3 @@
-
 /* =========================================
    REDLINE GTCUP - PANTALLA DE BIENVENIDA
    ========================================= */
@@ -101,6 +100,12 @@
 
     font-weight: 900;
     letter-spacing: 1px;
+}
+
+/* COLOR DEL NOMBRE DE LA COMPETICIÓN */
+
+.welcome-brand {
+    color: #4bc879;
 }
 
 .welcome-subtitle {
