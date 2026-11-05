@@ -9,6 +9,10 @@ import {
   type ChatMessage
 } from "./chatTypes.js";
 
+import {
+  getCurrentEvent
+} from "../eventos.js";
+
 // ======================================
 // CONFIGURACIÓN
 // ======================================
@@ -54,6 +58,22 @@ async function discordRequest(
   }
 
   return response.json();
+}
+
+// ======================================
+// OBTENER ID DEL SERVIDOR
+// ======================================
+
+async function getChatGuildId(): Promise<string> {
+  const event = await getCurrentEvent();
+
+  if (!event?.guildId) {
+    throw new Error(
+      "No se ha encontrado el servidor del evento activo."
+    );
+  }
+
+  return String(event.guildId);
 }
 
 // ======================================
@@ -137,7 +157,6 @@ export async function sendChatMessage(
     throw new Error("El mensaje no puede estar vacío.");
   }
 
-  // Reservamos espacio para el prefijo 🌐
   if (cleanContent.length > 1997) {
     throw new Error("El mensaje supera el límite permitido.");
   }
@@ -243,38 +262,43 @@ export async function sendChatMessage(
 // OBTENER USUARIOS PARA MENCIONES
 // ======================================
 
-export async function getChatMembers(query = ""): Promise<any[]> {
-  const guildId = process.env.DISCORD_GUILD_ID;
+export async function getChatMembers(
+  query: string
+): Promise<any[]> {
+  const guildId = await getChatGuildId();
 
-  if (!guildId) {
-    throw new Error("Falta la variable DISCORD_GUILD_ID.");
+  const cleanQuery = query.trim();
+
+  if (!cleanQuery) {
+    return [];
   }
 
-  const endpoint = query.trim()
-    ? `/guilds/${guildId}/members/search?query=${encodeURIComponent(query.trim())}&limit=100`
-    : `/guilds/${guildId}/members?limit=1000`;
+  const endpoint =
+    `/guilds/${guildId}/members/search?query=${encodeURIComponent(cleanQuery)}&limit=100`;
 
   const members = await discordRequest(endpoint);
 
-  return members.map((member: any) => {
-    const user = member.user;
+  return members
+    .filter((member: any) => member.user?.id)
+    .map((member: any) => {
+      const user = member.user;
 
-    const extension = user.avatar?.startsWith("a_")
-      ? "gif"
-      : "png";
+      const extension = user.avatar?.startsWith("a_")
+        ? "gif"
+        : "png";
 
-    return {
-      id: user.id,
-      name:
-        member.nick ||
-        user.global_name ||
-        user.username,
-      avatar: user.avatar
-        ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${extension}?size=64`
-        : null,
-      type: "user"
-    };
-  });
+      return {
+        id: user.id,
+        name:
+          member.nick ||
+          user.global_name ||
+          user.username,
+        avatar: user.avatar
+          ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${extension}?size=64`
+          : null,
+        type: "user"
+      };
+    });
 }
 
 // ======================================
@@ -282,18 +306,17 @@ export async function getChatMembers(query = ""): Promise<any[]> {
 // ======================================
 
 export async function getChatRoles(): Promise<any[]> {
-  const guildId = process.env.DISCORD_GUILD_ID;
-
-  if (!guildId) {
-    throw new Error("Falta la variable DISCORD_GUILD_ID.");
-  }
+  const guildId = await getChatGuildId();
 
   const roles = await discordRequest(
     `/guilds/${guildId}/roles`
   );
 
   return roles
-    .filter((role: any) => role.name !== "@everyone")
+    .filter((role: any) =>
+      role.name !== "@everyone" &&
+      role.mentionable === true
+    )
     .map((role: any) => ({
       id: role.id,
       name: role.name,
@@ -310,10 +333,6 @@ export async function searchChatMentions(
 ): Promise<any[]> {
   const cleanQuery = query.trim().toLowerCase();
 
-  // Buscamos usuarios y roles por separado.
-  // Si Discord rechaza una búsqueda, la otra
-  // puede seguir funcionando con normalidad.
-
   const [membersResult, rolesResult] = await Promise.allSettled([
     getChatMembers(cleanQuery),
     getChatRoles()
@@ -326,7 +345,7 @@ export async function searchChatMentions(
     members = membersResult.value;
   } else {
     console.warn(
-      "[CHAT] No se pudieron consultar algunos usuarios:",
+      "[CHAT] No se pudieron consultar usuarios:",
       membersResult.reason
     );
   }
@@ -335,23 +354,30 @@ export async function searchChatMentions(
     roles = rolesResult.value;
   } else {
     console.warn(
-      "[CHAT] No se pudieron consultar los roles:",
+      "[CHAT] No se pudieron consultar roles:",
       rolesResult.reason
     );
   }
 
-  const filteredMembers = members
-    .filter((member: any) =>
+  // Si fallan las dos consultas, no ocultamos el error.
+  if (
+    membersResult.status === "rejected" &&
+    rolesResult.status === "rejected"
+  ) {
+    throw new Error(
+      "Discord no ha permitido consultar usuarios ni roles."
+    );
+  }
+
+  const filteredMembers = members.filter(
+    (member: any) =>
       member.name.toLowerCase().includes(cleanQuery)
-    );
+  );
 
-  const filteredRoles = roles
-    .filter((role: any) =>
+  const filteredRoles = roles.filter(
+    (role: any) =>
       role.name.toLowerCase().includes(cleanQuery)
-    );
-
-  // Primero aparecen los nombres que empiezan
-  // exactamente por lo que se ha escrito.
+  );
 
   const sortMatches = (a: any, b: any) => {
     const aStarts = a.name.toLowerCase().startsWith(cleanQuery);
