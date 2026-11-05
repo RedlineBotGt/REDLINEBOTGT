@@ -243,22 +243,40 @@ export async function sendChatMessage(
 // OBTENER USUARIOS PARA MENCIONES
 // ======================================
 
-export async function getChatMembers(): Promise<any[]> {
-  const members = await discordRequest(
-    `/guilds/${process.env.DISCORD_GUILD_ID}/members?limit=1000`
-  );
+export async function getChatMembers(query = ""): Promise<any[]> {
+  const guildId = process.env.DISCORD_GUILD_ID;
 
-  return members.map((member: any) => ({
-    id: member.user.id,
-    name:
-      member.nick ||
-      member.user.global_name ||
-      member.user.username,
-    avatar: member.user.avatar
-      ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png`
-      : null,
-    type: "user"
-  }));
+  if (!guildId) {
+    throw new Error("Falta la variable DISCORD_GUILD_ID.");
+  }
+
+  // Si hay texto, Discord busca directamente entre
+  // los miembros del servidor.
+  const endpoint = query.trim()
+    ? `/guilds/${guildId}/members/search?query=${encodeURIComponent(query.trim())}&limit=100`
+    : `/guilds/${guildId}/members?limit=1000`;
+
+  const members = await discordRequest(endpoint);
+
+  return members.map((member: any) => {
+    const user = member.user;
+
+    const extension = user.avatar?.startsWith("a_")
+      ? "gif"
+      : "png";
+
+    return {
+      id: user.id,
+      name:
+        member.nick ||
+        user.global_name ||
+        user.username,
+      avatar: user.avatar
+        ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${extension}?size=64`
+        : null,
+      type: "user"
+    };
+  });
 }
 
 // ======================================
@@ -266,8 +284,14 @@ export async function getChatMembers(): Promise<any[]> {
 // ======================================
 
 export async function getChatRoles(): Promise<any[]> {
+  const guildId = process.env.DISCORD_GUILD_ID;
+
+  if (!guildId) {
+    throw new Error("Falta la variable DISCORD_GUILD_ID.");
+  }
+
   const roles = await discordRequest(
-    `/guilds/${process.env.DISCORD_GUILD_ID}/roles`
+    `/guilds/${guildId}/roles`
   );
 
   return roles
@@ -289,7 +313,7 @@ export async function searchChatMentions(
   const cleanQuery = query.trim().toLowerCase();
 
   const [members, roles] = await Promise.all([
-    getChatMembers(),
+    getChatMembers(cleanQuery),
     getChatRoles()
   ]);
 
@@ -302,6 +326,22 @@ export async function searchChatMentions(
     .filter((role: any) =>
       role.name.toLowerCase().includes(cleanQuery)
     );
+
+  // Primero aparecen los nombres que empiezan
+  // exactamente por lo que se ha escrito.
+  const sortMatches = (a: any, b: any) => {
+    const aStarts = a.name.toLowerCase().startsWith(cleanQuery);
+    const bStarts = b.name.toLowerCase().startsWith(cleanQuery);
+
+    if (aStarts !== bStarts) {
+      return aStarts ? -1 : 1;
+    }
+
+    return a.name.localeCompare(b.name, "es");
+  };
+
+  filteredMembers.sort(sortMatches);
+  filteredRoles.sort(sortMatches);
 
   return [
     ...filteredMembers.slice(0, 15),
