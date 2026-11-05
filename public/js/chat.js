@@ -11,6 +11,7 @@ let chatForm;
 let chatMentionsList;
 let sendingMessage = false;
 let lastPointerSendAt = 0;
+let chatInitialized = false;
 
 let mentionResults = [];
 let selectedMentionIndex = 0;
@@ -46,43 +47,61 @@ export function initializeChat() {
 
     chatMentionsList.hidden = true;
 
-    chatSendButton.addEventListener("pointerdown", (event) => {
+    // Evitar registrar los mismos eventos más de una vez.
+    if (!chatInitialized) {
 
-        if (
-            event.pointerType === "touch" ||
-            event.pointerType === "pen"
-        ) {
+        chatSendButton.addEventListener("pointerdown", (event) => {
+
+            if (
+                event.pointerType === "touch" ||
+                event.pointerType === "pen"
+            ) {
+                event.preventDefault();
+                lastPointerSendAt = Date.now();
+                sendMessage();
+            }
+
+        });
+
+        chatSendButton.addEventListener("click", (event) => {
+
             event.preventDefault();
-            lastPointerSendAt = Date.now();
+
+            if (Date.now() - lastPointerSendAt < 800) {
+                return;
+            }
+
             sendMessage();
-        }
 
-    });
+        });
 
-    chatSendButton.addEventListener("click", (event) => {
+        chatForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+            sendMessage();
+        });
 
-        event.preventDefault();
+        chatInput.addEventListener("keydown", handleInputKeydown);
+        chatInput.addEventListener("input", handleInputChange);
 
-        if (Date.now() - lastPointerSendAt < 800) {
-            return;
-        }
-
-        sendMessage();
-
-    });
-
-    chatForm.addEventListener("submit", (event) => {
-        event.preventDefault();
-        sendMessage();
-    });
-
-    chatInput.addEventListener("keydown", handleInputKeydown);
-    chatInput.addEventListener("input", handleInputChange);
+        chatInitialized = true;
+    }
 
     loadMessages();
     connectChatStream();
 
     console.log("[CHAT] Interfaz inicializada.");
+}
+
+// ======================================
+// CERRAR CHAT
+// ======================================
+
+// El menú llama a esta función al cambiar de apartado.
+// Mantenemos la conexión SSE activa para que, al volver
+// al chat, no sea necesario registrar de nuevo los eventos.
+
+export function closeChat() {
+    hideMentionSuggestions();
 }
 
 // ======================================
@@ -288,7 +307,7 @@ function renderMessage(message) {
 
 function renderMessageText(element, message, mentionData = {}) {
 
-    const regex = /<@!?(\d+)>|<@&(\d+)>|<#(\d+)>/g;
+    const regex = /<@!?(\\d+)>|<@&(\\d+)>|<#(\\d+)>/g;
 
     const users = mentionData.users || [];
     const roles = mentionData.roles || [];
@@ -760,21 +779,4 @@ function scrollToBottom() {
             chatMessages.scrollHeight;
 
     });
-}
-
-// ======================================
-// INICIALIZACIÓN AUTOMÁTICA
-// ======================================
-
-if (document.readyState === "loading") {
-
-    document.addEventListener(
-        "DOMContentLoaded",
-        initializeChat
-    );
-
-} else {
-
-    initializeChat();
-
 }
