@@ -9,25 +9,31 @@ import {
   type ChatMessage
 } from "./chatTypes.js";
 
+import {
+  publishChatMessage
+} from "./chatEvents.js";
+
 // ======================================
-// WEBLINE GT - CONEXIÓN GATEWAY
+// WEBLINE GT - DISCORD GATEWAY
 // ======================================
 
 let discordClient: Client | null = null;
-
-let gatewayStarted = false;
+let gatewayStarting = false;
 
 // ======================================
-// CONVERTIR MENSAJE
+// CONVERTIR MENSAJE DE DISCORD
 // ======================================
 
 function convertMessage(message: any): ChatMessage {
+
   const author = message.author;
 
   return {
     id: message.id,
     content: message.content || "",
+
     authorId: author.id,
+
     authorName:
       message.member?.displayName ||
       author.globalName ||
@@ -59,17 +65,12 @@ function convertMessage(message: any): ChatMessage {
 }
 
 // ======================================
-// INICIAR CONEXIÓN
+// INICIAR GATEWAY
 // ======================================
 
-export async function startDiscordGateway(
-  onMessage: (message: ChatMessage) => void
-): Promise<void> {
+export async function startDiscordGateway(): Promise<void> {
 
-  if (gatewayStarted) {
-    console.log(
-      "[CHAT] Gateway ya está iniciado."
-    );
+  if (discordClient || gatewayStarting) {
     return;
   }
 
@@ -80,6 +81,8 @@ export async function startDiscordGateway(
       "[CHAT] Falta DISCORD_TOKEN."
     );
   }
+
+  gatewayStarting = true;
 
   const client = new Client({
     intents: [
@@ -92,15 +95,15 @@ export async function startDiscordGateway(
   discordClient = client;
 
   // ======================================
-  // CONEXIÓN ESTABLECIDA
+  // CONEXIÓN
   // ======================================
 
   client.once("ready", () => {
-    gatewayStarted = true;
 
     console.log(
-      `[CHAT] Gateway conectado como ${client.user?.tag}`
+      `[CHAT] Discord conectado como ${client.user?.tag}`
     );
+
   });
 
   // ======================================
@@ -113,21 +116,31 @@ export async function startDiscordGateway(
       return;
     }
 
-    if (message.author.bot && !message.webhookId) {
+    // Ignorar mensajes de otros bots.
+    // Los mensajes del propio bot sí se reciben.
+    if (
+      message.author.bot &&
+      message.author.id !== client.user?.id &&
+      !message.webhookId
+    ) {
       return;
     }
 
     try {
+
       const chatMessage = convertMessage(message);
 
-      onMessage(chatMessage);
+      publishChatMessage(chatMessage);
 
     } catch (error) {
+
       console.error(
         "[CHAT] Error procesando mensaje:",
         error
       );
+
     }
+
   });
 
   // ======================================
@@ -135,10 +148,12 @@ export async function startDiscordGateway(
   // ======================================
 
   client.on("error", (error) => {
+
     console.error(
       "[CHAT] Error de Gateway:",
       error
     );
+
   });
 
   // ======================================
@@ -146,10 +161,15 @@ export async function startDiscordGateway(
   // ======================================
 
   try {
+
     await client.login(token);
 
   } catch (error) {
+
+    client.destroy();
+
     discordClient = null;
+    gatewayStarting = false;
 
     console.error(
       "[CHAT] No se pudo conectar con Discord:",
@@ -157,11 +177,14 @@ export async function startDiscordGateway(
     );
 
     throw error;
+
   }
+
+  gatewayStarting = false;
 }
 
 // ======================================
-// CERRAR CONEXIÓN
+// CERRAR GATEWAY
 // ======================================
 
 export async function stopDiscordGateway(): Promise<void> {
@@ -173,9 +196,10 @@ export async function stopDiscordGateway(): Promise<void> {
   discordClient.destroy();
 
   discordClient = null;
-  gatewayStarted = false;
+  gatewayStarting = false;
 
   console.log(
     "[CHAT] Gateway desconectado."
   );
+
 }
