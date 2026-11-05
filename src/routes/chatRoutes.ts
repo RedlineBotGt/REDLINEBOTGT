@@ -1,4 +1,3 @@
-
 import { Router, Request, Response } from "express";
 
 import {
@@ -121,7 +120,7 @@ router.post(
 );
 
 // ======================================
-// BUSCAR USUARIOS Y ROLES
+// BUSCAR USUARIOS, ROLES Y CANALES
 // ======================================
 
 router.get(
@@ -141,7 +140,15 @@ router.get(
           ? req.query.q
           : "";
 
-      const results = await searchChatMentions(query);
+      const type =
+        typeof req.query.type === "string"
+          ? req.query.type
+          : undefined;
+
+      const results = await searchChatMentions(
+        query,
+        type
+      );
 
       return res.json({
         success: true,
@@ -153,7 +160,7 @@ router.get(
 
       return res.status(500).json({
         success: false,
-        message: "No se pudieron buscar usuarios y roles."
+        message: "No se pudieron buscar las menciones."
       });
     }
   }
@@ -221,7 +228,6 @@ router.get(
     req.on("close", () => {
 
       clearInterval(heartbeat);
-
       unsubscribe();
 
     });
