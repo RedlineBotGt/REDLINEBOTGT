@@ -1,4 +1,3 @@
-
 // ======================================
 // WEBLINE GT - CHAT
 // ======================================
@@ -8,8 +7,9 @@ const CHAT_API = "/api/chat";
 let chatMessages;
 let chatInput;
 let chatSendButton;
-let chatMentionsList;
 let chatForm;
+let chatMentionsList;
+
 let mentionResults = [];
 let selectedMentionIndex = 0;
 let currentMention = null;
@@ -28,12 +28,14 @@ export function initializeChat() {
     chatMessages = document.getElementById("chat-messages");
     chatInput = document.getElementById("chat-input");
     chatSendButton = document.getElementById("chat-send");
+    chatForm = document.getElementById("chat-form");
     chatMentionsList = document.getElementById("chat-mentions-list");
 
     if (
         !chatMessages ||
         !chatInput ||
         !chatSendButton ||
+        !chatForm ||
         !chatMentionsList
     ) {
         console.warn("[CHAT] No se encontraron los elementos.");
@@ -42,7 +44,11 @@ export function initializeChat() {
 
     chatMentionsList.hidden = true;
 
-    chatSendButton.addEventListener("click", sendMessage);
+    chatForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        sendMessage();
+    });
+
     chatInput.addEventListener("keydown", handleInputKeydown);
     chatInput.addEventListener("input", handleInputChange);
 
@@ -270,7 +276,7 @@ function renderMessage(message) {
 
 function renderMessageText(element, message) {
 
-    const regex = /<@!?(\d+)>|<@&(\d+)>/g;
+    const regex = /<@!?(\\d+)>|<@&(\\d+)>/g;
 
     let lastIndex = 0;
     let match;
@@ -430,7 +436,6 @@ function handleInputKeydown(event) {
 
     }
 }
-
 // ======================================
 // DETECTAR MENCIONES
 // ======================================
