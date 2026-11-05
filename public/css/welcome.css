@@ -1,0 +1,249 @@
+/* =========================================
+   REDLINE GTCUP - PANTALLA DE BIENVENIDA
+   ========================================= */
+
+.welcome-screen {
+    min-height: calc(100vh - 125px);
+    width: 100%;
+    max-width: 850px;
+    margin: 0 auto;
+    padding: 20px 24px 95px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    position: relative;
+}
+
+.welcome-content {
+    width: 100%;
+    max-width: 620px;
+    background:
+        linear-gradient(145deg, #191919, #090909);
+    border: 1px solid #343434;
+    border-top: 3px solid #d71920;
+    border-radius: 15px;
+    padding: 25px 24px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.55);
+}
+
+.welcome-logo {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+
+.welcome-logo img {
+    width: auto;
+    max-width: 220px;
+    max-height: 75px;
+    object-fit: contain;
+}
+
+.welcome-season {
+    display: inline-block;
+    color: #fff;
+    background: #b71920;
+    padding: 6px 15px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    margin: 5px 0 13px;
+}
+
+.welcome-content h1 {
+    color: #fff;
+    font-size: clamp(23px, 5vw, 34px);
+    line-height: 1.15;
+    margin: 0 0 9px;
+    font-weight: 900;
+    letter-spacing: 1px;
+}
+
+.welcome-subtitle {
+    color: #aaa;
+    font-size: 13px;
+    margin: 0;
+}
+
+.welcome-divider {
+    height: 1px;
+    background: linear-gradient(
+        to right,
+        transparent,
+        #555,
+        transparent
+    );
+    margin: 19px 0;
+}
+
+.welcome-options {
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+    text-align: left;
+}
+
+.welcome-options > div {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    column-gap: 9px;
+    align-items: center;
+    color: #fff;
+    font-size: 23px;
+}
+
+.welcome-options strong {
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+
+.welcome-options span {
+    grid-column: 2;
+    color: #aaa;
+    font-size: 12px;
+    line-height: 1.4;
+    margin-top: 2px;
+}
+
+.welcome-closing {
+    color: #ddd;
+    font-size: 12px;
+    line-height: 1.5;
+    margin: 19px 0 12px;
+}
+
+.welcome-racing {
+    color: #4bc879;
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    margin-top: 8px;
+}
+
+/* =========================================
+   INDICACIÓN DEL MENÚ
+   ========================================= */
+
+.welcome-menu-hint {
+    position: fixed;
+    right: 88px;
+    bottom: 27px;
+    z-index: 1001;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: #4bc879;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 0.8px;
+    pointer-events: none;
+    text-shadow: 0 2px 5px #000;
+}
+
+.welcome-arrow {
+    font-size: 36px;
+    line-height: 1;
+    animation: welcome-arrow-move 1s infinite alternate;
+}
+
+@keyframes welcome-arrow-move {
+    from {
+        transform: translate(0, 0);
+    }
+
+    to {
+        transform: translate(5px, 5px);
+    }
+}
+
+/* =========================================
+   MÓVILES
+   ========================================= */
+
+@media (max-width: 480px) {
+    .welcome-screen {
+        min-height: calc(100vh - 100px);
+        padding: 12px 12px 85px;
+    }
+
+    .welcome-content {
+        padding: 20px 17px;
+    }
+
+    .welcome-logo img {
+        max-width: 180px;
+        max-height: 60px;
+    }
+
+    .welcome-divider {
+        margin: 15px 0;
+    }
+
+    .welcome-options {
+        gap: 11px;
+    }
+
+    .welcome-options span {
+        font-size: 11px;
+    }
+
+    .welcome-closing {
+        margin-top: 15px;
+    }
+
+    .welcome-menu-hint {
+        right: 78px;
+        bottom: 22px;
+        font-size: 9px;
+        gap: 5px;
+    }
+
+    .welcome-arrow {
+        font-size: 32px;
+    }
+}
+
+/* =========================================
+   PANTALLAS BAJAS
+   ========================================= */
+
+@media (max-height: 700px) {
+    .welcome-screen {
+        padding-top: 8px;
+        padding-bottom: 75px;
+    }
+
+    .welcome-content {
+        padding-top: 14px;
+        padding-bottom: 14px;
+    }
+
+    .welcome-logo img {
+        max-height: 48px;
+    }
+
+    .welcome-divider {
+        margin: 11px 0;
+    }
+
+    .welcome-options {
+        gap: 8px;
+    }
+
+    .welcome-closing {
+        margin-top: 11px;
+    }
+}
+
+/* =========================================
+   ACCESIBILIDAD
+   ========================================= */
+
+@media (prefers-reduced-motion: reduce) {
+    .welcome-arrow {
+        animation: none;
+    }
+}
