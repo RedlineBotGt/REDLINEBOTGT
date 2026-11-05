@@ -1,15 +1,14 @@
 
+import "dotenv/config";
+
 import express from "express";
 import session from "express-session";
 import MongoStore from "connect-mongo";
 import path from "path";
 import { fileURLToPath } from "url";
-import dotenv from "dotenv";
 
 import authRoutes from "./auth.js";
 import eventRoutes from "./routes/eventRoutes.js";
-
-dotenv.config();
 
 // ======================================
 // CONFIGURACIÓN GENERAL
@@ -34,21 +33,15 @@ const publicPath = path.resolve(
 // ======================================
 
 if (!MONGODB_URI) {
-  throw new Error(
-    "Falta la variable MONGODB_URI."
-  );
+  throw new Error("Falta la variable MONGODB_URI.");
 }
 
 if (!SESSION_SECRET) {
-  throw new Error(
-    "Falta la variable SESSION_SECRET."
-  );
+  throw new Error("Falta la variable SESSION_SECRET.");
 }
 
 if (!DISCORD_TOKEN) {
-  throw new Error(
-    "Falta la variable DISCORD_TOKEN."
-  );
+  throw new Error("Falta la variable DISCORD_TOKEN.");
 }
 
 // ======================================
@@ -94,10 +87,8 @@ app.use(
 // CONECTAR RUTAS
 // ======================================
 
-// Autenticación mediante Discord.
 app.use("/auth", authRoutes);
 
-// Rutas del sistema de eventos.
 app.use("/api", eventRoutes);
 
 // ======================================
@@ -120,9 +111,7 @@ app.get("/", (req, res) => {
 // ARCHIVOS PÚBLICOS
 // ======================================
 
-app.use(
-  express.static(publicPath)
-);
+app.use(express.static(publicPath));
 
 // ======================================
 // COMPROBACIÓN DEL SERVIDOR
@@ -137,15 +126,7 @@ app.get("/health", (_req, res) => {
 // ======================================
 
 app.listen(PORT, () => {
-  console.log(
-    `WEBLINEGT activo en el puerto ${PORT}`
-  );
-
-  console.log(
-    "Sistema de autenticación conectado."
-  );
-
-  console.log(
-    "Sistema de eventos conectado."
-  );
+  console.log(`WEBLINEGT activo en el puerto ${PORT}`);
+  console.log("Sistema de autenticación conectado.");
+  console.log("Sistema de eventos conectado.");
 });
