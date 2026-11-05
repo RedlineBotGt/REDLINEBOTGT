@@ -1,3 +1,4 @@
+
 // ======================================
 // WEBLINE GT - CHAT
 // ======================================
@@ -302,12 +303,13 @@ function renderMessage(message) {
 }
 
 // ======================================
-// INTERPRETAR MENCIONES DE DISCORD
+// INTERPRETAR MENCIONES Y ENLACES DISCORD
 // ======================================
 
 function renderMessageText(element, message, mentionData = {}) {
 
-    const regex = /<@!?(\d+)>|<@&(\d+)>|<#(\d+)>/g;
+    const regex =
+        /<@!?(\d+)>|<@&(\d+)>|<#(\d+)>|https?:\/\/(?:www\.)?discord(?:app)?\.com\/channels\/(\d+)\/(\d+)\/(\d+)/gi;
 
     const users = mentionData.users || [];
     const roles = mentionData.roles || [];
@@ -330,9 +332,35 @@ function renderMessageText(element, message, mentionData = {}) {
 
         let mentionElement;
 
+        // ENLACE A UN MENSAJE DE DISCORD
+
+        if (match[4] && match[5] && match[6]) {
+
+            const channelId = match[5];
+
+            const channel = channels.find(
+                item => String(item.id) === channelId
+            );
+
+            const name = channel?.name || "canal";
+
+            mentionElement = document.createElement("a");
+            mentionElement.className =
+                "chat-mention chat-mention-channel";
+
+            mentionElement.href = match[0];
+            mentionElement.target = "_blank";
+            mentionElement.rel = "noopener noreferrer";
+
+            mentionElement.textContent = `#${name} 🗨️`;
+            mentionElement.title =
+                `Abrir mensaje en #${name} en Discord`;
+
+        }
+
         // USUARIO
 
-        if (match[1]) {
+        else if (match[1]) {
 
             const id = match[1];
 
@@ -371,7 +399,7 @@ function renderMessageText(element, message, mentionData = {}) {
 
         }
 
-        // CANAL
+        // CANAL MENCIONADO
 
         else {
 
@@ -411,6 +439,7 @@ function renderMessageText(element, message, mentionData = {}) {
 
     }
 }
+
 // ======================================
 // ENVIAR MENSAJE
 // ======================================
