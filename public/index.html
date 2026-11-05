@@ -9,11 +9,20 @@
     <title>WEBLINE GT</title>
 
     <meta property="og:title" content="WEBLINE GT">
-    <meta property="og:description" content="Plataforma oficial de REDLINE GT">
+    <meta property="og:description" content="Portal oficial de WEBLINE GT">
 
-    <link rel="icon" href="https://cdn.discordapp.com/attachments/1483247050429567087/1567540257740558366/1793749060837_1.png">
-    <link rel="apple-touch-icon" href="https://cdn.discordapp.com/attachments/1483247050429567087/1567540257740558366/1793749060837_1.png">
+    <link
+        rel="icon"
+        type="image/png"
+        href="https://cdn.discordapp.com/attachments/1483247050429567087/1567540257740558366/1793749060837_1.png"
+    >
 
+    <link
+        rel="apple-touch-icon"
+        href="https://cdn.discordapp.com/attachments/1483247050429567087/1567540257740558366/1793749060837_1.png"
+    >
+
+    <!-- ESTILOS -->
     <link rel="stylesheet" href="/css/base.css">
     <link rel="stylesheet" href="/css/event.css">
     <link rel="stylesheet" href="/css/menu.css">
@@ -21,22 +30,21 @@
 
 <body>
 
-    <!-- ==================================
+    <!-- =====================================
          CABECERA
-         ================================== -->
+         ===================================== -->
 
     <header class="topbar">
         <img
-            id="horizontal-logo"
-            src="https://cdn.discordapp.com/attachments/1483247050429567087/1567540249570185236/1793749060837.png?ex=6aec8d1e&is=6aeb3b9e&hm=0d3fc3d7d05583c986903390e2840148333771bdd0fa7060e6d36168edb2afd5&"
-            alt="REDLINE GT"
+            src="https://cdn.discordapp.com/attachments/1483247050429567087/1567853761039171584/Photoroom-20260710_235454839.png?ex=6aedb119&is=6aec5f99&hm=c239078f547f0dd24a49dc0cb33f6ac6860311c4c7a16fdfe918393afcd5cb7d&"
+            alt="WEBLINE GT"
         >
     </header>
 
 
-    <!-- ==================================
+    <!-- =====================================
          CONTENIDO PRINCIPAL
-         ================================== -->
+         ===================================== -->
 
     <main class="main">
 
@@ -44,38 +52,38 @@
 
         <div id="event-container">
             <div class="message">
-                Cargando evento de REDLINE GT...
+                Cargando evento...
             </div>
-        </div>
-
-        <div class="footer">
-            REDLINE GT · WEBLINEGT
         </div>
 
     </main>
 
 
-    <!-- ==================================
+    <!-- =====================================
+         PIE DE PÁGINA
+         ===================================== -->
+
+    <footer class="footer">
+        WEBLINE GT
+    </footer>
+
+
+    <!-- =====================================
          FONDO PARA CERRAR EL MENÚ
-         ================================== -->
+         ===================================== -->
 
     <div
         id="menu-backdrop"
         class="menu-backdrop"
-        aria-hidden="true"
-    ></div>
+        aria-hidden="true">
+    </div>
 
 
-    <!-- ==================================
+    <!-- =====================================
          MENÚ FLOTANTE
-         ================================== -->
+         ===================================== -->
 
-    <aside
-        id="floating-menu"
-        class="floating-menu"
-    >
-
-        <!-- PANEL DESPLEGABLE -->
+    <aside id="floating-menu" class="floating-menu">
 
         <nav
             id="menu-panel"
@@ -85,67 +93,66 @@
         >
 
             <button
+                type="button"
                 class="menu-button active"
-                type="button"
-                aria-current="page"
             >
-                <span class="menu-icon">🏁</span>
-                <span class="menu-label">EVENTO</span>
+                🏁 EVENTO
             </button>
 
             <button
-                class="menu-button"
                 type="button"
+                class="menu-button"
                 disabled
             >
-                <span class="menu-icon">📜</span>
-                <span class="menu-label">REGLAMENTO</span>
+                📜 REGLAMENTO
             </button>
 
             <button
-                class="menu-button"
                 type="button"
+                class="menu-button"
                 disabled
             >
-                <span class="menu-icon">ℹ️</span>
-                <span class="menu-label">INFO</span>
+                ℹ️ INFO
             </button>
 
             <button
-                class="menu-button"
                 type="button"
+                class="menu-button"
                 disabled
             >
-                <span class="menu-icon">🏆</span>
-                <span class="menu-label">CLASIFICACIÓN</span>
+                🏆 CLASIFICACIÓN
             </button>
 
             <button
-                class="menu-button"
                 type="button"
+                class="menu-button"
                 disabled
             >
-                <span class="menu-icon">💬</span>
-                <span class="menu-label">CHAT</span>
+                💬 CHAT
             </button>
+
+
+            <!-- CERRAR SESIÓN -->
 
             <form
                 action="/auth/logout"
                 method="POST"
                 class="menu-logout-form"
             >
+
                 <button
-                    class="menu-logout"
                     type="submit"
+                    class="menu-logout"
                 >
-                    Cerrar sesión
+                    🚪 CERRAR SESIÓN
                 </button>
+
             </form>
 
         </nav>
 
 
-        <!-- BOTÓN CIRCULAR -->
+        <!-- BOTÓN REDONDO DEL MENÚ -->
 
         <button
             id="menu-toggle"
@@ -155,24 +162,22 @@
             aria-expanded="false"
             aria-controls="menu-panel"
         >
+
             <img
-                id="round-logo"
-                src="https://cdn.discordapp.com/attachments/1483247050429567087/1567540257740558366/1793749060837_1.png?ex=6aec8d20&is=6aeb3ba0&hm=8ffcbff5f8c9750e76cbe6b07d4d57392cd52bbbfdbd0b9eb2d0e24b08473d88&"
-                alt="Abrir menú REDLINE GT"
+                src="https://cdn.discordapp.com/attachments/1483247050429567087/1567540257740558366/1793749060837_1.png"
+                alt="Menú WEBLINE GT"
             >
+
         </button>
 
     </aside>
 
 
-    <!-- ==================================
+    <!-- =====================================
          JAVASCRIPT PRINCIPAL
-         ================================== -->
+         ===================================== -->
 
-    <script
-        type="module"
-        src="/js/main.js"
-    ></script>
+    <script type="module" src="/js/main.js"></script>
 
 </body>
 </html>
