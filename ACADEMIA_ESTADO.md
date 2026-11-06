@@ -30,12 +30,12 @@ Academia Campos es una aplicación web familiar e independiente de REDLINE BOT G
 - Perfiles: `leo`, `papa`, `mama`.
 - Los tres perfiles comienzan desde el mismo nivel inicial.
 - El historial y progreso deben ser independientes por perfil y, cuando se implante el sistema completo, por asignatura.
-- Asignaturas: Cultura general, Retos Imposibles, Matemáticas y Geografía (esta última continúa desactivada).
+- Asignaturas: Cultura general, Retos Imposibles, Matemáticas y Geografía (las cuatro habilitadas en la selección de ejercicios).
 - Cultura general usa la clave canónica `cultura_general`; `lateral` se conserva como alias histórico exclusivamente de Cultura general.
 - Retos Imposibles usa la clave independiente `pensamiento_lateral`.
 - Cultura general es la base funcional que debe preservarse.
 - Matemáticas ya está habilitada en los validadores del frontend y backend; su generador/evaluador está separado en su propio módulo. Pendiente probar generación y evaluación reales tras el despliegue.
-- Geografía debe permanecer desactivada en la experiencia de ejercicios hasta que se autorice y se complete su implementación.
+- Geografía queda habilitada con generación y evaluación propias, usando el mismo flujo de pista, respuesta y siguiente ejercicio que Cultura general.
 - Deberes es una función independiente y debe permanecer intacta.
 - El ranking anterior no se debe conservar como diseño definitivo. Se rediseñará desde cero cuando corresponda: clasificación general y vistas independientes por asignatura. No implementar ahora.
 - Los niveles deben ser independientes por asignatura.
@@ -105,7 +105,7 @@ Nunca guardar valores secretos en este documento.
 - `services/subjects/culturaGeneral.ts`: prompt y evaluación de Cultura general, centrados en conocimientos de España, Europa y el mundo para 2.º-3.º de Primaria.
 - `services/subjects/pensamientoLateral.ts`: módulo independiente de Retos Imposibles, con generación y evaluación de enigmas, lógica y pensamiento lateral.
 - `services/subjects/matematicas.ts`: generación matemática y evaluación numérica.
-- `services/subjects/geografia.ts`: módulo de generación preparado, pero la asignatura sigue bloqueada en la interfaz/API y no dispone de evaluación completa.
+- `services/subjects/geografia.ts`: generación y evaluación de preguntas geográficas con validación de respuesta y explicación.
 
 ### Web
 
@@ -168,7 +168,7 @@ La función `obtenerAsignaturaValida()` solo acepta `lateral` y `cultura`; cualq
 Corrección aplicada directamente en GitHub:
 - `lateral` o `cultura` -> enviar `cultura`.
 - `matematicas` -> enviar `matematicas`.
-- `geografia` -> mantener bloqueada con mensaje propio.
+- `geografia` -> enviar `geografia` al backend.
 - Cualquier otra clave -> error de selección no válida.
 - El log de recepción muestra la asignatura seleccionada.
 
@@ -183,7 +183,7 @@ La función `obtenerAsignatura()` solo reconoce Cultura general y devuelve `null
 
 Corrección aplicada directamente en GitHub:
 - Reconoce `matematicas` y `matemáticas` como `matematicas`.
-- Mantiene `geografia` rechazada.
+- Reconoce `geografia` como asignatura activa.
 - El mensaje de error enumera Cultura general y Matemáticas.
 - El log de generación muestra la asignatura real.
 - Se mantienen intactos el control de perfil, nivel inicial 1, mapa de retos pendientes, expiración, límites, protección de la solución y evaluación.
@@ -202,7 +202,7 @@ Ambos cambios están guardados y se han vuelto a leer desde GitHub en la rama de
 3. Comprobar la coherencia entre enunciado, operación y resultado matemático.
 4. Comprobar que los errores de Gemini se muestran sin dejar la pantalla bloqueada y que los controles recuperan su estado.
 5. Verificar que Cultura general sigue generando y evaluando igual que antes.
-6. Confirmar que Geografía continúa bloqueada.
+6. Probar generación y evaluación de Geografía.
 7. Confirmar que Deberes y la navegación no han sufrido regresiones.
 8. Ejecutar compilación TypeScript y pruebas disponibles antes de autorizar cualquier despliegue.
 
@@ -289,3 +289,22 @@ Al retomar Academia Campos:
 5. Actualizar este archivo al cerrar cada bloque de trabajo.
 
 **Regla de oro:** mantener lo que funciona, tocar solo lo necesario y no desplegar sin permiso.
+
+
+---
+
+## 13. Habilitación de Geografía (7-11-2026)
+
+El usuario confirma que Cultura general funciona y solicita abrir Geografía con el mismo estilo.
+
+Cambios guardados en `backup-antes-limpieza`:
+- `services/subjects/geografia.ts`: se conserva el generador de la asignatura, se valida que el ejercicio incluya enunciado, pista, solución y categoría, y se añade evaluación semántica con Gemini y el esquema común.
+- `services/subjects/index.ts`: exporta generación y evaluación de Geografía.
+- `services/aiService.ts`: enruta la evaluación de Geografía al nuevo evaluador.
+- `routes/questions.ts`: acepta Geografía en generación y evaluación, manteniendo el control de perfil, reto pendiente y solución protegida.
+- `public/js/challenges.js`: deja de bloquear Geografía y envía la clave `geografia`. El botón ya existía en `public/index.html`; no fue necesario modificar la interfaz.
+- El flujo común conserva pista, reintentos cuando la respuesta no es correcta y botón de siguiente pregunta al acertar.
+
+**Alcance:** no se han modificado perfiles, niveles, progreso, persistencia, Deberes ni ranking. No se ha compilado ni desplegado todavía. La habilitación está guardada en GitHub, pendiente de compilación y prueba funcional.
+
+**Siguiente paso:** ejecutar build TypeScript, corregir solo errores relacionados con este cambio y esperar autorización del usuario para el deploy manual. Después probar Geografía (generación, pista, respuesta incorrecta y correcta, siguiente pregunta) y comprobar regresión de Cultura general y Matemáticas.
