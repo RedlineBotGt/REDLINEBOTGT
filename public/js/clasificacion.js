@@ -1,4 +1,3 @@
-
 // ======================================
 // WEBLINE GT - CLASIFICACIÓN
 // ======================================
@@ -26,14 +25,15 @@ export function initializeClasificacion() {
 
     const TOTAL_COLUMNS = 13;
 
-    // ======================================
-    // IMÁGENES DE CABECERA
-    // ======================================
-
     const IMAGENES = {
-        cupmediano: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110668",
-        horizontal: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110671",
-        gt7: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110670"
+        cupmediano:
+            "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110668",
+
+        horizontal:
+            "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110671",
+
+        gt7:
+            "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110670"
     };
 
     let loading = false;
@@ -55,34 +55,93 @@ export function initializeClasificacion() {
     }
 
     // ======================================
-    // CONSTRUIR ZONA DE LOGOS
+    // CREAR CELDA CON LOGO
     // ======================================
 
-    function createLogos() {
+    function createLogoCell(className, imageUrl, alt, colSpan, rowSpan) {
 
-        const logos = document.createElement("div");
-        logos.className = "clasificacion-logos";
+        const cell = document.createElement("td");
 
-        const cup = document.createElement("img");
-        cup.src = IMAGENES.cupmediano;
-        cup.alt = "LINE GT CUP";
-        cup.className = "logo-cup";
+        cell.className = `clasificacion-logo-cell ${className}`;
+        cell.colSpan = colSpan;
+        cell.rowSpan = rowSpan;
 
-        const horizontal = document.createElement("img");
-        horizontal.src = IMAGENES.horizontal;
-        horizontal.alt = "REDLINE GT";
-        horizontal.className = "logo-horizontal";
+        const image = document.createElement("img");
 
-        const gt7 = document.createElement("img");
-        gt7.src = IMAGENES.gt7;
-        gt7.alt = "Gran Turismo 7";
-        gt7.className = "logo-gt7";
+        image.src = imageUrl;
+        image.alt = alt;
+        image.loading = "eager";
 
-        logos.appendChild(cup);
-        logos.appendChild(horizontal);
-        logos.appendChild(gt7);
+        cell.appendChild(image);
 
-        return logos;
+        return cell;
+    }
+
+    // ======================================
+    // FILAS SUPERIORES CON LOGOS
+    // ======================================
+
+    function createLogoRows() {
+
+        const fragment = document.createDocumentFragment();
+
+        for (let row = 1; row <= 7; row++) {
+
+            const tr = document.createElement("tr");
+
+            tr.className = "clasificacion-logo-row";
+
+            if (row === 1) {
+
+                // B1:C7
+                tr.appendChild(
+                    createLogoCell(
+                        "logo-cup",
+                        IMAGENES.cupmediano,
+                        "REDLINE GTCUP",
+                        2,
+                        7
+                    )
+                );
+
+                // D1:M4
+                tr.appendChild(
+                    createLogoCell(
+                        "logo-horizontal",
+                        IMAGENES.horizontal,
+                        "REDLINE GT",
+                        10,
+                        4
+                    )
+                );
+
+                // N1:N7
+                tr.appendChild(
+                    createLogoCell(
+                        "logo-gt7",
+                        IMAGENES.gt7,
+                        "Gran Turismo 7",
+                        1,
+                        7
+                    )
+                );
+
+            } else if (row > 4) {
+
+                // Espacio central de las filas 5, 6 y 7.
+                const emptyCell = document.createElement("td");
+
+                emptyCell.className = "clasificacion-logo-empty";
+                emptyCell.colSpan = 10;
+
+                tr.appendChild(emptyCell);
+
+            }
+
+            fragment.appendChild(tr);
+        }
+
+        return fragment;
     }
 
     // ======================================
@@ -101,10 +160,15 @@ export function initializeClasificacion() {
         const table = document.createElement("table");
         table.className = "clasificacion-table";
 
-        const thead = document.createElement("thead");
         const tbody = document.createElement("tbody");
 
+        // Logos integrados en la propia tabla.
+        tbody.appendChild(createLogoRows());
+
+        // Cabecera original de la clasificación.
         const headerRow = document.createElement("tr");
+        headerRow.className = "clasificacion-header-row";
+
         const headers = rows[0] || [];
 
         for (let column = 0; column < TOTAL_COLUMNS; column++) {
@@ -112,12 +176,13 @@ export function initializeClasificacion() {
             const th = document.createElement("th");
 
             th.textContent = headers[column] ?? "";
-            headerRow.appendChild(th);
 
+            headerRow.appendChild(th);
         }
 
-        thead.appendChild(headerRow);
+        tbody.appendChild(headerRow);
 
+        // Datos originales.
         rows.slice(1).forEach((row, rowIndex) => {
 
             const tr = document.createElement("tr");
@@ -129,16 +194,13 @@ export function initializeClasificacion() {
                 td.textContent = row[column] ?? "";
 
                 tr.appendChild(td);
-
             }
 
             tr.dataset.row = String(rowIndex + 2);
 
             tbody.appendChild(tr);
-
         });
 
-        table.appendChild(thead);
         table.appendChild(tbody);
 
         const wrapper = document.createElement("div");
@@ -146,10 +208,7 @@ export function initializeClasificacion() {
 
         wrapper.appendChild(table);
 
-        container.replaceChildren(
-            createLogos(),
-            wrapper
-        );
+        container.replaceChildren(wrapper);
 
         status.textContent =
             `${rows.length - 1} filas de clasificación`;
