@@ -1,6 +1,6 @@
 const IMAGENES = {
     CUPgrande: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110672",
-    info2: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110661",
+    horizontal: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110671",
     info3: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110662",
     info4: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110663",
     info5: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110664",
