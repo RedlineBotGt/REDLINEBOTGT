@@ -220,6 +220,8 @@ Ambos cambios están guardados y se han vuelto a leer desde GitHub en la rama de
 | 2026-11-06 | `services/ai/gemini.ts` | Revisado estructuralmente; no modificar sin evidencia. | Revisado |
 | 2026-11-07 | `public/js/challenges.js` | Desbloqueada Matemáticas en frontend; Geografía sigue bloqueada; log dinámico. | Guardado en GitHub y releído |
 | 2026-11-07 | `routes/questions.ts` | Desbloqueadas generación y evaluación para Matemáticas; alias acentuado; mensaje/log dinámicos. | Guardado en GitHub y releído |
+| 2026-11-07 | `services/subjects/matematicas.ts` | Añadido historial en memoria de los últimos 25 enunciados por nivel, instrucciones para no repetir, código de variación por petición y hasta 4 intentos si Gemini devuelve un enunciado idéntico. | Guardado en GitHub y releído; pendiente compilación y prueba en Render |
+
 | 2026-11-07 | Build TypeScript | No ejecutado desde este entorno; pendiente antes o después del deploy manual. | Pendiente |
 | 2026-11-07 | Prueba funcional en Render | Usuario realizará deploy manual y probará Matemáticas. | Pendiente |
 
