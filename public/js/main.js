@@ -5,6 +5,7 @@
 import { initializeMenu } from "./menu.js";
 import { initializeEvent } from "./event.js";
 import { initializeReglamento } from "./reglamento.js";
+import { initializeInfo } from "./info.js";
 
 // ======================================
 // INICIAR APLICACIÓN
@@ -20,5 +21,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Inicializar apartado de reglamento.
     initializeReglamento();
+
+    // Inicializar apartado de información.
+    initializeInfo();
 
 });
