@@ -36,8 +36,9 @@ function validarPerfil(valor: unknown): valor is Perfil {
 
 /**
  * Asignaturas activas:
- * - Cultura general: conserva la clave interna "lateral".
- * - Matemáticas: utiliza su módulo independiente.
+ * - cultura_general: Cultura general.
+ * - pensamiento_lateral: Detectives de la Mente.
+ * - lateral: alias histórico de Cultura general.
  * Geografía permanece desactivada.
  */
 function obtenerAsignatura(
@@ -45,20 +46,30 @@ function obtenerAsignatura(
 ): AsignaturaReto | null {
   const asignatura = String(valor || "")
     .trim()
-    .toLowerCase();
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
 
   if (
     asignatura === "cultura" ||
     asignatura === "cultura general" ||
+    asignatura === "cultura_general" ||
     asignatura === "lateral"
   ) {
-    return "lateral";
+    return "cultura_general";
   }
 
   if (
-    asignatura === "matematicas" ||
-    asignatura === "matemáticas"
+    asignatura === "pensamiento lateral" ||
+    asignatura === "pensamiento_lateral" ||
+    asignatura === "detectives de la mente" ||
+    asignatura === "detectives"
   ) {
+    return "pensamiento_lateral";
+  }
+
+  if (asignatura === "matematicas") {
     return "matematicas";
   }
 
@@ -68,9 +79,17 @@ function obtenerAsignatura(
 function nombreAsignatura(
   asignatura: AsignaturaReto
 ): string {
-  return asignatura === "matematicas"
-    ? "Matemáticas"
-    : "Cultura general";
+  switch (asignatura) {
+    case "cultura_general":
+    case "lateral":
+      return "Cultura general";
+    case "pensamiento_lateral":
+      return "Detectives de la Mente";
+    case "matematicas":
+      return "Matemáticas";
+    case "geografia":
+      return "Geografía";
+  }
 }
 
 function limpiarRetosCaducados(): void {
@@ -114,7 +133,7 @@ router.post("/question", async (req, res) => {
   if (!materia) {
     return res.status(400).json({
       ok: false,
-      error: "Por ahora solo están disponibles Cultura general y Matemáticas."
+      error: "Por ahora están disponibles Cultura general, Detectives de la Mente y Matemáticas."
     });
   }
 
