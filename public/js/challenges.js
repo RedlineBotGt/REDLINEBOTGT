@@ -57,11 +57,8 @@ function obtenerAsignaturaValida() {
     return "matematicas";
   }
 
-  // Geografía continúa desactivada.
   if (asignatura === "geografia") {
-    throw new Error(
-      "Geografía todavía no está disponible."
-    );
+    return "geografia";
   }
 
   throw new Error(
