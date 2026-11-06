@@ -11,7 +11,8 @@ import {
   evaluarRespuestaPensamientoLateral,
   generarRetoMatematicas,
   evaluarRespuestaMatematicas,
-  generarRetoGeografia
+  generarRetoGeografia,
+  evaluarRespuestaGeografia
 } from "./subjects/index.js";
 
 import type {
@@ -98,8 +99,10 @@ export async function evaluarRespuestaIA(
       );
 
     case "geografia":
-      throw new Error(
-        "La evaluación de Geografía todavía no está preparada."
+      return evaluarRespuestaGeografia(
+        pregunta,
+        respuesta,
+        solucion
       );
 
     default:
