@@ -15,6 +15,7 @@ export function initializeMenu({
 
     const eventSection = document.getElementById("event-section");
     const reglamentoSection = document.getElementById("reglamento-section");
+    const infoSection = document.getElementById("info-section");
     const chatSection = document.getElementById("chat-section");
     const welcomeScreen = document.getElementById("welcome-screen");
 
@@ -25,6 +26,7 @@ export function initializeMenu({
         !backdrop ||
         !eventSection ||
         !reglamentoSection ||
+        !infoSection ||
         !chatSection
     ) {
         console.error("[MENU] No se encontraron los elementos.");
@@ -67,6 +69,7 @@ export function initializeMenu({
         if (
             section !== "event" &&
             section !== "reglamento" &&
+            section !== "info" &&
             section !== "chat"
         ) {
             return;
@@ -76,6 +79,7 @@ export function initializeMenu({
 
         eventSection.hidden = section !== "event";
         reglamentoSection.hidden = section !== "reglamento";
+        infoSection.hidden = section !== "info";
         chatSection.hidden = section !== "chat";
 
         // La bienvenida solo desaparece cuando
