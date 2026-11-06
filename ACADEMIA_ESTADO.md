@@ -30,9 +30,9 @@ Academia Campos es una aplicación web familiar e independiente de REDLINE BOT G
 - Perfiles: `leo`, `papa`, `mama`.
 - Los tres perfiles comienzan desde el mismo nivel inicial.
 - El historial y progreso deben ser independientes por perfil y, cuando se implante el sistema completo, por asignatura.
-- Asignaturas: Cultura general, Detectives de la Mente, Matemáticas y Geografía (esta última continúa desactivada).
+- Asignaturas: Cultura general, Retos Imposibles, Matemáticas y Geografía (esta última continúa desactivada).
 - Cultura general usa la clave canónica `cultura_general`; `lateral` se conserva como alias histórico exclusivamente de Cultura general.
-- Detectives de la Mente usa la clave independiente `pensamiento_lateral`.
+- Retos Imposibles usa la clave independiente `pensamiento_lateral`.
 - Cultura general es la base funcional que debe preservarse.
 - Matemáticas ya está habilitada en los validadores del frontend y backend; su generador/evaluador está separado en su propio módulo. Pendiente probar generación y evaluación reales tras el despliegue.
 - Geografía debe permanecer desactivada en la experiencia de ejercicios hasta que se autorice y se complete su implementación.
@@ -103,7 +103,7 @@ Nunca guardar valores secretos en este documento.
 - `services/ai/schemas.ts`: esquemas compartidos de reto y evaluación.
 - `services/subjects/index.ts`: exportaciones por asignatura y tipos.
 - `services/subjects/culturaGeneral.ts`: prompt y evaluación de Cultura general, centrados en conocimientos de España, Europa y el mundo para 2.º-3.º de Primaria.
-- `services/subjects/pensamientoLateral.ts`: módulo independiente de Detectives de la Mente, con generación y evaluación de enigmas, lógica y pensamiento lateral.
+- `services/subjects/pensamientoLateral.ts`: módulo independiente de Retos Imposibles, con generación y evaluación de enigmas, lógica y pensamiento lateral.
 - `services/subjects/matematicas.ts`: generación matemática y evaluación numérica.
 - `services/subjects/geografia.ts`: módulo de generación preparado, pero la asignatura sigue bloqueada en la interfaz/API y no dispone de evaluación completa.
 
@@ -134,7 +134,7 @@ Nunca guardar valores secretos en este documento.
 - Ya no debe generar acertijos de pensamiento lateral.
 - Un ejercicio por petición, con enunciado, pista, solución y categoría; evaluación por significado.
 
-### Detectives de la Mente
+### Retos Imposibles
 
 - Clave independiente: `pensamiento_lateral`.
 - Módulo propio: `services/subjects/pensamientoLateral.ts`.
@@ -212,7 +212,7 @@ Ambos cambios están guardados y se han vuelto a leer desde GitHub en la rama de
 - Mantener el proyecto actual; no crear otro repositorio ni otro proyecto ChatGPT.
 - No reconstruir toda la web para modularizar la IA.
 - Separar motor Gemini común y módulos específicos por asignatura.
-- Cultura general y Detectives de la Mente son asignaturas distintas; `lateral` se mantiene como alias histórico de Cultura general, nunca como clave de Detectives.
+- Cultura general y Retos Imposibles son asignaturas distintas; `lateral` se mantiene como alias histórico de Cultura general, nunca como clave de Detectives.
 - Matemáticas se habilita como siguiente asignatura.
 - Geografía queda para una fase posterior.
 - No alterar Deberes.
@@ -250,9 +250,9 @@ No marcar una prueba como superada si solo se ha inspeccionado el código. Regis
 
 ---
 
-## 11. Separación de Cultura general y Detectives de la Mente (7-11-2026)
+## 11. Separación de Cultura general y Retos Imposibles (7-11-2026)
 
-Nombre visible elegido para pensamiento lateral: **Detectives de la Mente**.
+Nombre visible vigente para pensamiento lateral: **Retos Imposibles** (sustituye al nombre provisional Detectives de la Mente).
 
 Cambios guardados en la rama `backup-antes-limpieza`:
 - Creado `services/subjects/pensamientoLateral.ts` con generación y evaluación propias de enigmas y razonamiento. Commit `5c7638cda39670be80c5b97c46d8b5feab590852`.
@@ -261,11 +261,11 @@ Cambios guardados en la rama `backup-antes-limpieza`:
 - Actualizado `services/subjects/culturaGeneral.ts`: ahora genera conocimientos de España, Europa y el mundo, nivel objetivo 2.º-3.º de Primaria. Commit `e814d4834fa97341a8cc79789269b30593d49674`.
 - Actualizado `routes/questions.ts`: normaliza claves nuevas y alias antiguos; mantiene Matemáticas y Geografía desactivada. Commit `f7ab79dbb28ff0f982e83ba572c76801eb63b987`.
 - Actualizado `public/js/subjects.js` y `public/js/challenges.js`: claves independientes en frontend y alias antiguo para Cultura general. Commits `8b63e1f8a8655508fafbd62657ed67476957ba4c` y `44ed585fe69d2a5358486eb3032fc5f415a33f6b`.
-- Actualizado `public/index.html`: muestra botones separados para Cultura general y Detectives de la Mente. Commit `9ce8594b06b6ea152116eefbb0bf4249ed986226`.
+- Actualizado `public/index.html`: muestra botones separados para Cultura general y Retos Imposibles. Commit `9ce8594b06b6ea152116eefbb0bf4249ed986226`.
 - No se ha tocado `public/js/ranking.js`, Matemáticas, Deberes, perfiles, progreso ni persistencia.
 
 Compatibilidad y cautelas:
-- La clave antigua `lateral` se asigna solo a Cultura general. No se reutiliza para Detectives.
+- La clave antigua `lateral` se asigna solo a Cultura general. No se reutiliza para Retos Imposibles.
 - El ranking anterior permanece sin cambios y pendiente de rediseño futuro.
 - El usuario confirma que el paso 1 (pruebas de Matemáticas) está hecho; no se han añadido aquí detalles ni resultados técnicos que no consten.
 - Los cambios anteriores están guardados en GitHub, pero todavía no se han compilado ni probado en Render. No desplegar sin autorización expresa.
@@ -273,7 +273,7 @@ Compatibilidad y cautelas:
 Siguiente paso:
 1. Releer los archivos modificados y comprobar rutas, nombres, alias y sintaxis.
 2. Ejecutar build TypeScript.
-3. Probar Cultura general y Detectives de la Mente por separado con los tres perfiles, comprobando generación, pista, respuesta correcta/incorrecta y siguiente ejercicio.
+3. Probar Cultura general y Retos Imposibles por separado con los tres perfiles, comprobando generación, pista, respuesta correcta/incorrecta y siguiente ejercicio.
 4. Confirmar que Matemáticas sigue funcionando y Geografía sigue bloqueada.
 5. Solo después, abordar Geografía.
 
