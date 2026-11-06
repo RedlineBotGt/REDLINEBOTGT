@@ -39,7 +39,7 @@ function validarPerfil(valor: unknown): valor is Perfil {
  * - cultura_general: Cultura general.
  * - pensamiento_lateral: Retos Imposibles.
  * - lateral: alias histórico de Cultura general.
- * Geografía permanece desactivada.
+ * geografia: Geografía.
  */
 function obtenerAsignatura(
   valor: unknown
@@ -71,6 +71,10 @@ function obtenerAsignatura(
 
   if (asignatura === "matematicas") {
     return "matematicas";
+  }
+
+  if (asignatura === "geografia") {
+    return "geografia";
   }
 
   return null;
@@ -133,7 +137,7 @@ router.post("/question", async (req, res) => {
   if (!materia) {
     return res.status(400).json({
       ok: false,
-      error: "Por ahora están disponibles Cultura general, Retos Imposibles y Matemáticas."
+      error: "Por ahora están disponibles Cultura general, Retos Imposibles, Matemáticas y Geografía."
     });
   }
 
