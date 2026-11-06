@@ -1,10 +1,13 @@
+const GEMINI_MODELS = [
+  "gemini-3.8-flash",
+  "gemini-3.5-flash-lite"
+] as const;
 
-const GEMINI_MODEL = "gemini-3.8-flash";
 const GEMINI_URL =
   "https://generativelanguage.googleapis.com/v1beta/interactions";
 
-const TIMEOUT_MS = 30000;
-const MAX_INTENTOS = 3;
+const TIMEOUT_MS = 20000;
+const MAX_INTENTOS = 2;
 
 export type AsignaturaReto =
   | "lateral"
@@ -24,6 +27,13 @@ export interface EvaluacionReto {
   explanation: string;
 }
 
+class ErrorGeminiTemporal extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ErrorGeminiTemporal";
+  }
+}
+
 const ESQUEMA_RETO = {
   type: "object",
   properties: {
@@ -32,7 +42,12 @@ const ESQUEMA_RETO = {
     solution: { type: "string" },
     category: { type: "string" }
   },
-  required: ["prompt", "hint", "solution", "category"]
+  required: [
+    "prompt",
+    "hint",
+    "solution",
+    "category"
+  ]
 };
 
 const ESQUEMA_EVALUACION = {
@@ -42,7 +57,11 @@ const ESQUEMA_EVALUACION = {
     feedback: { type: "string" },
     explanation: { type: "string" }
   },
-  required: ["correct", "feedback", "explanation"]
+  required: [
+    "correct",
+    "feedback",
+    "explanation"
+  ]
 };
 
 function esperar(ms: number): Promise<void> {
@@ -119,7 +138,8 @@ function parsearJSON<T>(texto: string): T {
 
 async function consultarGemini<T>(
   instrucciones: string,
-  esquema: object
+  esquema: object,
+  modelo: string
 ): Promise<T> {
   const apiKey = obtenerApiKey();
   let ultimoError: Error | null = null;
@@ -137,6 +157,11 @@ async function consultarGemini<T>(
     );
 
     try {
+      console.log(
+        `[GEMINI] Consultando modelo: ${modelo}. ` +
+        `Intento ${intento}/${MAX_INTENTOS}.`
+      );
+
       const respuesta = await fetch(GEMINI_URL, {
         method: "POST",
         headers: {
@@ -144,7 +169,7 @@ async function consultarGemini<T>(
           "x-goog-api-key": apiKey
         },
         body: JSON.stringify({
-          model: GEMINI_MODEL,
+          model: modelo,
           input: instrucciones,
           response_format: {
             type: "text",
@@ -155,8 +180,6 @@ async function consultarGemini<T>(
         signal: controller.signal
       });
 
-      clearTimeout(timeout);
-
       if (!respuesta.ok) {
         const detalle = await respuesta.text();
 
@@ -164,20 +187,8 @@ async function consultarGemini<T>(
           `Gemini respondió con HTTP ${respuesta.status}: ` +
           detalle.slice(0, 500);
 
-        if (
-          esErrorTemporal(respuesta.status) &&
-          intento < MAX_INTENTOS
-        ) {
-          ultimoError = new Error(mensaje);
-
-          console.warn(
-            `[Academia] Gemini temporalmente ocupado. ` +
-            `Reintento ${intento}/${MAX_INTENTOS}.`
-          );
-
-          // Espera antes de volver a consultar Gemini.
-          await esperar(800 * intento);
-          continue;
+        if (esErrorTemporal(respuesta.status)) {
+          throw new ErrorGeminiTemporal(mensaje);
         }
 
         throw new Error(mensaje);
@@ -189,34 +200,98 @@ async function consultarGemini<T>(
       return parsearJSON<T>(texto);
 
     } catch (error: any) {
-      clearTimeout(timeout);
-
       if (error?.name === "AbortError") {
-        ultimoError = new Error(
-          "Gemini ha tardado demasiado en responder."
+        ultimoError = new ErrorGeminiTemporal(
+          `El modelo ${modelo} ha agotado el tiempo de espera.`
         );
+      } else if (
+        error instanceof ErrorGeminiTemporal
+      ) {
+        ultimoError = error;
       } else {
-        ultimoError =
-          error instanceof Error
-            ? error
-            : new Error(String(error));
+        throw error instanceof Error
+          ? error
+          : new Error(String(error));
       }
 
+      console.warn(
+        `[GEMINI] Fallo temporal en ${modelo}: ` +
+        ultimoError.message
+      );
+
       if (intento < MAX_INTENTOS) {
-        console.warn(
-          `[Academia] Error en Gemini. ` +
-          `Reintento ${intento}/${MAX_INTENTOS}: ` +
-          ultimoError.message
+        const espera = 1200 * intento;
+
+        console.log(
+          `[GEMINI] Reintentando en ${espera} ms...`
         );
 
-        await esperar(800 * intento);
-        continue;
+        await esperar(espera);
+      }
+
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  throw ultimoError ||
+    new ErrorGeminiTemporal(
+      `No se pudo obtener respuesta de ${modelo}.`
+    );
+}
+
+async function consultarConRespaldo<T>(
+  instrucciones: string,
+  esquema: object
+): Promise<T> {
+  let ultimoError: Error | null = null;
+
+  for (
+    let i = 0;
+    i < GEMINI_MODELS.length;
+    i++
+  ) {
+    const modelo = GEMINI_MODELS[i];
+
+    try {
+      const resultado = await consultarGemini<T>(
+        instrucciones,
+        esquema,
+        modelo
+      );
+
+      console.log(
+        `[GEMINI] Respuesta correcta usando ${modelo}.`
+      );
+
+      return resultado;
+
+    } catch (error: any) {
+      ultimoError =
+        error instanceof Error
+          ? error
+          : new Error(String(error));
+
+      if (
+        !(error instanceof ErrorGeminiTemporal)
+      ) {
+        throw error;
+      }
+
+      if (i < GEMINI_MODELS.length - 1) {
+        console.warn(
+          `[GEMINI] ${modelo} no está disponible. ` +
+          `Activando modelo de respaldo: ` +
+          `${GEMINI_MODELS[i + 1]}.`
+        );
       }
     }
   }
 
   throw ultimoError ||
-    new Error("No se ha podido consultar Gemini.");
+    new Error(
+      "Ningún modelo de Gemini ha podido responder."
+    );
 }
 
 function instruccionesAsignatura(
@@ -276,10 +351,11 @@ export async function generarRetoIA(
     Devuelve exclusivamente el JSON solicitado.
   `;
 
-  const reto = await consultarGemini<RetoGenerado>(
-    instrucciones,
-    ESQUEMA_RETO
-  );
+  const reto =
+    await consultarConRespaldo<RetoGenerado>(
+      instrucciones,
+      ESQUEMA_RETO
+    );
 
   if (
     !reto.prompt?.trim() ||
@@ -332,7 +408,7 @@ export async function evaluarRespuestaIA(
   `;
 
   const evaluacion =
-    await consultarGemini<EvaluacionReto>(
+    await consultarConRespaldo<EvaluacionReto>(
       instrucciones,
       ESQUEMA_EVALUACION
     );
