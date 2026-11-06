@@ -18,7 +18,8 @@ import {
 // ========================================
 
 export async function generarRetoPensamientoLateral(
-  nivel: number = 1
+  nivel: number = 1,
+  recientes: string[] = []
 ): Promise<RetoGenerado> {
   const instrucciones = `
 Eres el creador de retos de Retos Imposibles
@@ -30,6 +31,13 @@ pistas, cuestionar una suposición o descubrir una
 solución ingeniosa.
 
 NIVEL: ${nivel}
+
+RETOS RECIENTES DE ESTE PERFIL Y ASIGNATURA:
+${recientes.length ? recientes.map((p, i) => `${i + 1}. ${p}`).join("\n") : "Todavía no hay retos anteriores."}
+
+No repitas los retos recientes ni reutilices el mismo mecanismo lógico
+cambiando únicamente nombres, objetos o números. Busca una idea nueva.
+
 Adapta el vocabulario y la dificultad a un niño de
 2.º-3.º de Primaria, sin hacer el reto infantil o trivial.
 
