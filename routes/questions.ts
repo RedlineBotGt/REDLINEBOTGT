@@ -35,11 +35,11 @@ function claveHistorial(perfil: Perfil, asignatura: AsignaturaReto): string {
 function normalizarPregunta(valor: string): string {
   return valor
     .normalize("NFD")
-    .replace(/[\\u0300-\\u036f]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim()
-    .replace(/\\s+/g, " ");
+    .replace(/\s+/g, " ");
 }
 
 function obtenerHistorial(
