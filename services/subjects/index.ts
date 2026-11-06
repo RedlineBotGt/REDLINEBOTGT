@@ -9,7 +9,7 @@ export {
   evaluarRespuestaCulturaGeneral
 } from "./culturaGeneral.js";
 
-// Detectives de la Mente
+// Retos Imposibles
 export {
   generarRetoPensamientoLateral,
   evaluarRespuestaPensamientoLateral
@@ -22,9 +22,10 @@ export {
 } from "./matematicas.js";
 
 // Geografía
-// Solo generación por ahora; permanece desactivada.
+// Generación y evaluación de Geografía.
 export {
-  generarRetoGeografia
+  generarRetoGeografia,
+  evaluarRespuestaGeografia
 } from "./geografia.js";
 
 // ========================================
