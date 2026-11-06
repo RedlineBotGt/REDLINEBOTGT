@@ -1,3 +1,4 @@
+
 // ======================================
 // WEBLINE GT - CLASIFICACIÓN
 // ======================================
@@ -24,7 +25,6 @@ export function initializeClasificacion() {
     }
 
     const TOTAL_COLUMNS = 13;
-
     const FILAS_LOGOS = 7;
 
     const IMAGENES = {
@@ -88,6 +88,28 @@ export function initializeClasificacion() {
     }
 
     // ======================================
+    // CREAR TÍTULO CAMPEONATO
+    // ======================================
+
+    function createChampionshipCell(text) {
+
+        const cell = document.createElement("td");
+
+        cell.className = "clasificacion-titulo-campeonato";
+
+        cell.colSpan = 11;
+        cell.rowSpan = 1;
+
+        cell.textContent = text;
+
+        cell.style.color = "#00ff66";
+        cell.style.fontWeight = "900";
+        cell.style.textAlign = "center";
+
+        return cell;
+    }
+
+    // ======================================
     // CONSTRUIR FILAS DE LA TABLA
     // ======================================
 
@@ -107,14 +129,14 @@ export function initializeClasificacion() {
         const tbody = document.createElement("tbody");
 
         // ==================================
-        // FILAS 1 A 7: LOGOS Y CELDAS RESTANTES
+        // FILAS 1 A 7: LOGOS Y TÍTULO
         // ==================================
 
         for (let rowIndex = 0; rowIndex < FILAS_LOGOS; rowIndex++) {
 
             const tr = document.createElement("tr");
 
-            // Primera fila: insertar los tres logos.
+            // PRIMERA FILA: LOGOS
             if (rowIndex === 0) {
 
                 // B1:C7
@@ -149,24 +171,19 @@ export function initializeClasificacion() {
                         7
                     )
                 );
-
             }
 
-            // Filas 5, 6 y 7:
-            // conservar las diez celdas centrales originales.
-            if (rowIndex >= 4) {
+            // FILA 5: TÍTULO C5:M7
+            if (rowIndex === 4) {
 
                 const originalRow = rows[rowIndex] || [];
 
-                for (let column = 2; column < 12; column++) {
+                const championshipText =
+                    originalRow[2] ?? "";
 
-                    const td = document.createElement("td");
-
-                    td.textContent =
-                        originalRow[column] ?? "";
-
-                    tr.appendChild(td);
-                }
+                tr.appendChild(
+                    createChampionshipCell(championshipText)
+                );
             }
 
             tr.dataset.row = String(rowIndex + 1);
