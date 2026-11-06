@@ -37,7 +37,7 @@ function validarPerfil(valor: unknown): valor is Perfil {
 /**
  * Asignaturas activas:
  * - cultura_general: Cultura general.
- * - pensamiento_lateral: Detectives de la Mente.
+ * - pensamiento_lateral: Retos Imposibles.
  * - lateral: alias histórico de Cultura general.
  * Geografía permanece desactivada.
  */
@@ -84,7 +84,7 @@ function nombreAsignatura(
     case "lateral":
       return "Cultura general";
     case "pensamiento_lateral":
-      return "Detectives de la Mente";
+      return "Retos Imposibles";
     case "matematicas":
       return "Matemáticas";
     case "geografia":
@@ -133,7 +133,7 @@ router.post("/question", async (req, res) => {
   if (!materia) {
     return res.status(400).json({
       ok: false,
-      error: "Por ahora están disponibles Cultura general, Detectives de la Mente y Matemáticas."
+      error: "Por ahora están disponibles Cultura general, Retos Imposibles y Matemáticas."
     });
   }
 
