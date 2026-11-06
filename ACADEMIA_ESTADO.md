@@ -33,7 +33,7 @@ Academia Campos es una aplicación web familiar e independiente de REDLINE BOT G
 - Asignaturas visibles: Cultura general, Matemáticas y Geografía.
 - Cultura general conserva internamente la clave histórica `lateral`.
 - Cultura general es la base funcional que debe preservarse.
-- Matemáticas se está habilitando ahora y su generador/evaluador ya se ha separado en su propio módulo.
+- Matemáticas ya está habilitada en los validadores del frontend y backend; su generador/evaluador está separado en su propio módulo. Pendiente probar generación y evaluación reales tras el despliegue.
 - Geografía debe permanecer desactivada en la experiencia de ejercicios hasta que se autorice y se complete su implementación.
 - Deberes es una función independiente y debe permanecer intacta.
 - El ranking anterior no se debe conservar como diseño definitivo. Se rediseñará desde cero cuando corresponda: clasificación general y vistas independientes por asignatura. No implementar ahora.
@@ -140,7 +140,7 @@ Nunca guardar valores secretos en este documento.
 - La solución numérica debe calcularse en servidor y la evaluación debe comparar el resultado numérico.
 - Riesgo pendiente detectado: si Gemini genera una historia/enunciado que no coincide con la operación explícita, el cálculo será correcto pero el problema narrativo será incoherente. La solución robusta será que el servidor construya el enunciado a partir de los operandos y la operación, o valide rigurosamente su correspondencia. No dar por resuelto este riesgo todavía.
 
-## 6. Bloqueos actuales identificados (7-11-2026)
+## 6. Bloqueos detectados y correcciones aplicadas (7-11-2026)
 
 La pantalla de Matemáticas mostró:
 - «No se ha podido generar el ejercicio».
@@ -154,12 +154,15 @@ Archivo: `public/js/challenges.js`.
 
 La función `obtenerAsignaturaValida()` solo acepta `lateral` y `cultura`; cualquier otra asignatura lanza el error de asignatura no disponible. Por tanto, Matemáticas falla antes de llamar a la API.
 
-Cambio propuesto al usuario (pendiente de confirmar que se ha guardado):
+Corrección aplicada directamente en GitHub:
 - `lateral` o `cultura` -> enviar `cultura`.
 - `matematicas` -> enviar `matematicas`.
 - `geografia` -> mantener bloqueada con mensaje propio.
 - Cualquier otra clave -> error de selección no válida.
-También se propuso hacer dinámico el log de recepción del ejercicio.
+- El log de recepción muestra la asignatura seleccionada.
+
+Commit: `0e2beb0630e15cc38b303654f0ac78366cf8e3de`.
+Blob SHA verificado: `e2abf69b07f3de388e5fc100ec67ee29972f4894`.
 
 ### Bloqueo B — backend
 
@@ -167,15 +170,19 @@ Archivo: `routes/questions.ts`.
 
 La función `obtenerAsignatura()` solo reconoce Cultura general y devuelve `null` para Matemáticas. El endpoint `POST /question` responde que solo está disponible Cultura general. El endpoint `POST /answer` usa el mismo validador y también rechaza Matemáticas.
 
-Cambio pendiente:
-- Reconocer `matematicas` (y opcionalmente la grafía acentuada `matemáticas`) como `matematicas`.
-- Mantener `geografia` rechazada.
-- Actualizar el mensaje de error y los logs para reflejar las asignaturas realmente activas.
-- Mantener intactos el control de perfil, nivel inicial 1, mapa de retos pendientes, expiración, límites, protección de la solución y evaluación.
+Corrección aplicada directamente en GitHub:
+- Reconoce `matematicas` y `matemáticas` como `matematicas`.
+- Mantiene `geografia` rechazada.
+- El mensaje de error enumera Cultura general y Matemáticas.
+- El log de generación muestra la asignatura real.
+- Se mantienen intactos el control de perfil, nivel inicial 1, mapa de retos pendientes, expiración, límites, protección de la solución y evaluación.
+
+Commit: `f8c07bec6c7577e9a38d835ae70cf18a11a04b0b`.
+Blob SHA verificado: `9bf84e02ac61f61abb2519e38073c5403578957f`.
 
 ### Estado de guardado de estos cambios
 
-A fecha de esta consolidación, el código real consultado en GitHub todavía contiene ambos bloqueos. La corrección frontend se había entregado como cambio puntual, pero no consta aquí confirmación de que el usuario la haya guardado. El archivo `routes/questions.ts` aún no se ha actualizado. No afirmar que Matemáticas está ya desbloqueada.
+Ambos cambios están guardados y se han vuelto a leer desde GitHub en la rama de Academia. La barrera de validación frontend/backend está corregida. Esto no equivale todavía a confirmar que Gemini genere ejercicios correctos: falta deploy manual y prueba funcional de extremo a extremo.
 
 ## 7. Riesgos técnicos a comprobar después de desbloquear
 
@@ -211,20 +218,22 @@ A fecha de esta consolidación, el código real consultado en GitHub todavía co
 | 2026-11-06 | `services/subjects/index.ts` | Exportaciones separadas por asignatura. | Entregado en conversación; revisar SHA antes de asumir guardado |
 | 2026-11-06 | `services/aiService.ts` | Revisado como fachada de compatibilidad; no requiere cambio conocido. | Revisado |
 | 2026-11-06 | `services/ai/gemini.ts` | Revisado estructuralmente; no modificar sin evidencia. | Revisado |
-| 2026-11-07 | `public/js/challenges.js` | Detectado bloqueo frontend a Matemáticas; corrección propuesta. | Pendiente de guardar/verificar |
-| 2026-11-07 | `routes/questions.ts` | Detectado bloqueo backend a Matemáticas. | Pendiente de corregir |
+| 2026-11-07 | `public/js/challenges.js` | Desbloqueada Matemáticas en frontend; Geografía sigue bloqueada; log dinámico. | Guardado en GitHub y releído |
+| 2026-11-07 | `routes/questions.ts` | Desbloqueadas generación y evaluación para Matemáticas; alias acentuado; mensaje/log dinámicos. | Guardado en GitHub y releído |
+| 2026-11-07 | Build TypeScript | No ejecutado desde este entorno; pendiente antes o después del deploy manual. | Pendiente |
+| 2026-11-07 | Prueba funcional en Render | Usuario realizará deploy manual y probará Matemáticas. | Pendiente |
 
 No marcar una prueba como superada si solo se ha inspeccionado el código. Registrar separadamente: revisado, modificado, compilado, probado localmente, probado en Render.
 
 ## 10. Siguiente secuencia de trabajo
 
-1. Confirmar/guardar la corrección puntual de `public/js/challenges.js` que admite Matemáticas y mantiene Geografía bloqueada.
-2. Corregir `routes/questions.ts` con cambios mínimos para admitir Matemáticas en generación y evaluación.
-3. Revisar los cambios reales de ambos archivos en GitHub y comprobar que no se ha alterado nada más.
-4. Revisar coherencia matemática y manejo de respuestas del motor.
-5. Ejecutar comprobaciones de compilación y pruebas sin desplegar.
-6. Solo cuando el usuario lo autorice, desplegar manualmente y probar Cultura general, Matemáticas y Deberes.
-7. Actualizar este documento con SHA/commit, pruebas reales y nuevo siguiente paso.
+1. El usuario hará el deploy manual de la rama de Academia para probar Matemáticas.
+2. Comprobar en Render que se genera un ejercicio, que la operación y el enunciado son coherentes y que la evaluación acepta la respuesta numérica correcta.
+3. Si falla, recoger el mensaje de pantalla y los logs; no cambiar otros módulos por intuición.
+4. Revisar y corregir la coherencia entre historia y operación: el módulo actual pide a Gemini que coincidan, pero no verifica esa correspondencia de forma independiente.
+5. Ejecutar/confirmar build TypeScript y pruebas de regresión de Cultura general.
+6. Confirmar que Geografía sigue bloqueada y que Deberes permanece intacto.
+7. Actualizar este documento con resultados reales y siguiente paso.
 
 ---
 
