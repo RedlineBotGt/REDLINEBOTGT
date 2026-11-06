@@ -1,60 +1,15 @@
 
-import {
-  perfiles,
-  obtenerPerfilActual
-} from "./users.js";
-
-import {
-  asignaturas,
-  obtenerAsignaturaActual
-} from "./subjects.js";
+import { obtenerPerfilActual } from "./users.js";
+import { obtenerAsignaturaActual } from "./subjects.js";
 
 // ========================================
 // ESTADO DE LOS EJERCICIOS
 // ========================================
 
-let preguntaActual = null;
-let preguntaLocal = false;
+let retoActual = null;
 let peticionActual = 0;
-
-// ========================================
-// PREGUNTAS LOCALES DE RESPALDO
-// ========================================
-
-const preguntasLocales = {
-  lateral: [
-    {
-      pregunta: "¿Cuál es el planeta más grande del sistema solar?",
-      respuesta: "jupiter",
-      explicacion: "Júpiter es el planeta más grande del sistema solar.",
-      pista: "Es un gigante gaseoso."
-    },
-    {
-      pregunta: "¿Cuántos lados tiene un hexágono?",
-      respuesta: "6",
-      explicacion: "Un hexágono tiene seis lados.",
-      pista: "Es un número par."
-    }
-  ],
-
-  matematicas: [
-    {
-      pregunta: "¿Cuánto es 8 × 7?",
-      respuesta: "56",
-      explicacion: "8 multiplicado por 7 es 56.",
-      pista: "Suma ocho veces el número siete."
-    }
-  ],
-
-  geografia: [
-    {
-      pregunta: "¿Cuál es la capital de España?",
-      respuesta: "madrid",
-      explicacion: "Madrid es la capital de España.",
-      pista: "Está en el centro de la península."
-    }
-  ]
-};
+let respuestaEvaluada = false;
+let controllerActual = null;
 
 // ========================================
 // UTILIDADES
@@ -70,155 +25,193 @@ function mostrarMensaje(elemento, mensaje) {
   }
 }
 
+function obtenerPerfilValido() {
+  const perfil = obtenerPerfilActual();
+
+  if (!["leo", "papa", "mama"].includes(perfil)) {
+    throw new Error("No se ha seleccionado un perfil válido.");
+  }
+
+  return perfil;
+}
+
+function obtenerAsignaturaValida() {
+  const asignatura = obtenerAsignaturaActual();
+
+  // La primera materia visible es Cultura general.
+  // Internamente conserva la clave lateral.
+  if (asignatura !== "lateral" && asignatura !== "cultura") {
+    throw new Error(
+      "Esta asignatura todavía no está disponible. Estamos preparando Cultura general."
+    );
+  }
+
+  return "cultura";
+}
+
+async function realizarPeticion(url, datos, numeroPeticion) {
+  const controller = new AbortController();
+  controllerActual = controller;
+
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, 30000);
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(datos),
+      signal: controller.signal
+    });
+
+    let data;
+
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error("El servidor ha devuelto una respuesta no válida.");
+    }
+
+    if (numeroPeticion !== peticionActual) {
+      return null;
+    }
+
+    if (!response.ok || data.ok === false) {
+      throw new Error(
+        data.error ||
+        data.message ||
+        "Error del servidor: " + response.status
+      );
+    }
+
+    return data;
+
+  } catch (error) {
+    if (error.name === "AbortError") {
+      throw new Error(
+        "La operación ha tardado demasiado. Inténtalo de nuevo."
+      );
+    }
+
+    throw error;
+
+  } finally {
+    clearTimeout(timeout);
+
+    if (controllerActual === controller) {
+      controllerActual = null;
+    }
+  }
+}
+
 // ========================================
 // CARGAR PREGUNTA
 // ========================================
 
 export async function cargarPregunta() {
-  const perfil = obtenerPerfilActual();
-  const asignatura = obtenerAsignaturaActual();
+  const prompt = obtenerElemento("challenge-prompt");
+  const feedback = obtenerElemento("ai-feedback");
+  const boton = obtenerElemento("send-btn");
+  const campo = obtenerElemento("user-answer");
 
-  if (!perfil || !asignatura) {
-    console.warn("[ACADEMIA] Falta perfil o asignatura");
+  if (!prompt || !boton) {
+    console.error("[ACADEMIA] Faltan elementos de la pantalla.");
     return;
   }
 
   const numeroPeticion = ++peticionActual;
 
-  const prompt = obtenerElemento("challenge-prompt");
-  const feedback = obtenerElemento("ai-feedback");
-  const boton = obtenerElemento("send-btn");
-  const respuesta = obtenerElemento("user-answer");
-
-  if (!prompt || !boton) {
-    console.error("[ACADEMIA] Faltan elementos de la pantalla");
-    return;
+  if (controllerActual) {
+    controllerActual.abort();
+    controllerActual = null;
   }
 
-  mostrarMensaje(prompt, "Preparando una pregunta...");
-  mostrarMensaje(feedback, "");
+  retoActual = null;
+  respuestaEvaluada = false;
 
   boton.disabled = true;
 
-  preguntaActual = null;
-  preguntaLocal = false;
-
-  if (respuesta) {
-    respuesta.value = "";
+  if (campo) {
+    campo.value = "";
   }
+
+  mostrarMensaje(prompt, "La IA está preparando un ejercicio...");
+  mostrarMensaje(feedback, "");
 
   try {
-    const controller = new AbortController();
+    const perfil = obtenerPerfilValido();
+    const asignatura = obtenerAsignaturaValida();
 
-    const timeout = setTimeout(() => {
-      controller.abort();
-    }, 15000);
+    const data = await realizarPeticion(
+      "/api/academia/question",
+      {
+        perfil,
+        asignatura
+      },
+      numeroPeticion
+    );
 
-    let data;
-
-    try {
-      const response = await fetch("/api/academia/question", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          perfil: perfiles[perfil].nombre,
-          asignatura: asignaturas[asignatura],
-          nivel: perfiles[perfil].nivel
-        }),
-        signal: controller.signal
-      });
-
-      if (!response.ok) {
-        throw new Error(
-          "El servidor respondió con error " + response.status
-        );
-      }
-
-      data = await response.json();
-
-    } finally {
-      clearTimeout(timeout);
-    }
-
-    if (numeroPeticion !== peticionActual) return;
-
-    if (
-      !data.ok ||
-      !data.pregunta ||
-      typeof data.pregunta.pregunta !== "string" ||
-      typeof data.pregunta.respuesta !== "string" ||
-      typeof data.pregunta.explicacion !== "string" ||
-      typeof data.pregunta.pista !== "string"
-    ) {
-      throw new Error("Respuesta incompleta del servidor");
-    }
-
-    preguntaActual = data.pregunta;
-
-    console.log("[ACADEMIA] Pregunta recibida de Gemini");
-
-  } catch (error) {
-    if (numeroPeticion !== peticionActual) return;
-
-    console.warn("[ACADEMIA] Gemini no disponible:", error);
-
-    const lista = preguntasLocales[asignatura] || [];
-
-    if (lista.length > 0) {
-      const indice = Math.floor(Math.random() * lista.length);
-
-      preguntaActual = lista[indice];
-      preguntaLocal = true;
-
-      console.log("[ACADEMIA] Usando pregunta local");
-
-    } else {
-      mostrarMensaje(
-        prompt,
-        "No hay preguntas disponibles. Comprueba la conexión e inténtalo de nuevo."
-      );
-
-      boton.disabled = true;
+    if (numeroPeticion !== peticionActual || !data) {
       return;
     }
-  }
 
-  if (numeroPeticion !== peticionActual) return;
+    if (
+      !data.reto ||
+      typeof data.reto.prompt !== "string" ||
+      typeof data.reto.solution !== "string" ||
+      typeof data.reto.hint !== "string"
+    ) {
+      throw new Error(
+        "La IA no ha devuelto un ejercicio completo."
+      );
+    }
 
-  if (!preguntaActual) {
-    mostrarMensaje(prompt, "No se ha podido preparar la pregunta.");
+    retoActual = data.reto;
+
+    mostrarMensaje(prompt, retoActual.prompt);
+    mostrarMensaje(feedback, "");
+
+    if (campo) {
+      campo.value = "";
+      campo.disabled = false;
+    }
+
+    boton.disabled = false;
+
+    console.log(
+      "[ACADEMIA] Ejercicio de Cultura general recibido."
+    );
+
+  } catch (error) {
+    if (numeroPeticion !== peticionActual) {
+      return;
+    }
+
+    console.error("[ACADEMIA] Error al generar ejercicio:", error);
+
+    mostrarMensaje(
+      prompt,
+      "No se ha podido generar el ejercicio."
+    );
+
+    mostrarMensaje(
+      feedback,
+      error.message || "Comprueba la conexión e inténtalo de nuevo."
+    );
+
     boton.disabled = true;
-    return;
   }
-
-  mostrarMensaje(prompt, preguntaActual.pregunta);
-
-  if (respuesta) {
-    respuesta.value = "";
-  }
-
-  boton.disabled = false;
 }
 
 // ========================================
-// COMPROBACIÓN DE RESPUESTAS
+// EVALUAR RESPUESTA CON IA
 // ========================================
 
-function normalizar(texto) {
-  return String(texto)
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .replace(/[.,!?¿¡]/g, "")
-    .replace(/\s+/g, " ");
-}
-
-export function enviarRespuesta() {
-  if (!preguntaActual) {
-    alert("Primero debes cargar una pregunta.");
+export async function enviarRespuesta() {
+  if (!retoActual || respuestaEvaluada) {
     return;
   }
 
@@ -226,7 +219,9 @@ export function enviarRespuesta() {
   const boton = obtenerElemento("send-btn");
   const feedback = obtenerElemento("ai-feedback");
 
-  if (!campo || !feedback) return;
+  if (!campo || !feedback) {
+    return;
+  }
 
   const respuesta = campo.value.trim();
 
@@ -235,41 +230,109 @@ export function enviarRespuesta() {
     return;
   }
 
-  const correcta =
-    normalizar(respuesta) === normalizar(preguntaActual.respuesta);
-
-  if (correcta) {
-    feedback.textContent =
-      "¡Correcto! 🎉 " + preguntaActual.explicacion;
-  } else {
-    feedback.textContent =
-      "No es correcto. La respuesta es: " +
-      preguntaActual.respuesta +
-      ". " +
-      preguntaActual.explicacion;
-  }
-
-  if (preguntaLocal) {
-    feedback.textContent += " (Pregunta de respaldo local)";
-  }
+  const numeroPeticion = ++peticionActual;
 
   if (boton) {
     boton.disabled = true;
   }
+
+  campo.disabled = true;
+
+  mostrarMensaje(
+    feedback,
+    "La IA está evaluando tu respuesta..."
+  );
+
+  try {
+    const perfil = obtenerPerfilValido();
+    const asignatura = obtenerAsignaturaValida();
+
+    const data = await realizarPeticion(
+      "/api/academia/answer",
+      {
+        perfil,
+        asignatura,
+        pregunta: retoActual.prompt,
+        respuesta,
+        solucion: retoActual.solution
+      },
+      numeroPeticion
+    );
+
+    if (numeroPeticion !== peticionActual || !data) {
+      return;
+    }
+
+    if (
+      !data.evaluacion ||
+      typeof data.evaluacion.correct !== "boolean"
+    ) {
+      throw new Error(
+        "La IA no ha podido evaluar correctamente la respuesta."
+      );
+    }
+
+    const evaluacion = data.evaluacion;
+
+    respuestaEvaluada = true;
+
+    const resultado = evaluacion.correct
+      ? "¡Correcto! 🎉 "
+      : "Todavía no es correcto. ";
+
+    const explicacion =
+      evaluacion.explanation ||
+      evaluacion.feedback ||
+      "";
+
+    mostrarMensaje(
+      feedback,
+      resultado +
+      (evaluacion.feedback || "") +
+      (explicacion ? " " + explicacion : "")
+    );
+
+    console.log(
+      "[ACADEMIA] Respuesta evaluada:",
+      evaluacion.correct
+    );
+
+  } catch (error) {
+    if (numeroPeticion !== peticionActual) {
+      return;
+    }
+
+    console.error("[ACADEMIA] Error al evaluar:", error);
+
+    mostrarMensaje(
+      feedback,
+      "No se ha podido evaluar la respuesta. " +
+      (error.message || "Inténtalo de nuevo.")
+    );
+
+    campo.disabled = false;
+
+  } finally {
+    if (numeroPeticion === peticionActual && boton) {
+      boton.disabled = respuestaEvaluada;
+    }
+  }
 }
 
 // ========================================
-// PISTAS
+// MOSTRAR PISTA
 // ========================================
 
 export function mostrarPista() {
-  if (!preguntaActual) return;
+  if (!retoActual) {
+    return;
+  }
 
   const feedback = obtenerElemento("ai-feedback");
 
   mostrarMensaje(
     feedback,
-    "💡 Pista: " + preguntaActual.pista
+    "💡 Pista: " + retoActual.hint
   );
 }
 
@@ -278,7 +341,7 @@ export function mostrarPista() {
 // ========================================
 
 export function siguientePregunta() {
-  if (!obtenerAsignaturaActual() || !obtenerPerfilActual()) {
+  if (!obtenerPerfilActual() || !obtenerAsignaturaActual()) {
     return;
   }
 
@@ -291,8 +354,14 @@ export function siguientePregunta() {
 
 export function cancelarPregunta() {
   peticionActual++;
-  preguntaActual = null;
-  preguntaLocal = false;
+
+  if (controllerActual) {
+    controllerActual.abort();
+    controllerActual = null;
+  }
+
+  retoActual = null;
+  respuestaEvaluada = false;
 }
 
 // ========================================
