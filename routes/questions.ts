@@ -1,15 +1,29 @@
-
 import { Router } from "express";
+import { randomUUID } from "crypto";
 
 import {
   generarRetoIA,
   evaluarRespuestaIA,
-  type AsignaturaReto
+  type AsignaturaReto,
+  type RetoGenerado
 } from "../services/aiService.ts";
 
 const router = Router();
 
 type Perfil = "leo" | "papa" | "mama";
+
+interface RetoPendiente {
+  id: string;
+  perfil: Perfil;
+  asignatura: AsignaturaReto;
+  reto: RetoGenerado;
+  creadoEn: number;
+}
+
+const retosPendientes = new Map<string, RetoPendiente>();
+
+const DURACION_RETO_MS = 2 * 60 * 60 * 1000;
+const MAX_RETOS_PENDIENTES = 500;
 
 function validarPerfil(valor: unknown): valor is Perfil {
   return (
@@ -19,6 +33,10 @@ function validarPerfil(valor: unknown): valor is Perfil {
   );
 }
 
+/**
+ * En esta primera fase solo está activa Cultura general.
+ * La clave antigua "lateral" se conserva para compatibilidad.
+ */
 function obtenerAsignatura(
   valor: unknown
 ): AsignaturaReto | null {
@@ -34,18 +52,25 @@ function obtenerAsignatura(
     return "cultura";
   }
 
-  if (
-    asignatura === "matematicas" ||
-    asignatura === "matemáticas"
-  ) {
-    return "matematicas";
-  }
-
-  if (asignatura === "geografia" || asignatura === "geografía") {
-    return "geografia";
-  }
-
   return null;
+}
+
+function limpiarRetosCaducados(): void {
+  const ahora = Date.now();
+
+  for (const [id, reto] of retosPendientes.entries()) {
+    if (ahora - reto.creadoEn > DURACION_RETO_MS) {
+      retosPendientes.delete(id);
+    }
+  }
+
+  while (retosPendientes.size > MAX_RETOS_PENDIENTES) {
+    const primerId = retosPendientes.keys().next().value;
+
+    if (!primerId) break;
+
+    retosPendientes.delete(primerId);
+  }
 }
 
 // ========================================
@@ -71,16 +96,20 @@ router.post("/question", async (req, res) => {
   if (!materia) {
     return res.status(400).json({
       ok: false,
-      error: "Asignatura no válida."
+      error: "Por ahora solo está disponible Cultura general."
     });
   }
 
-  // Todos los perfiles comienzan desde el mismo nivel.
-  // El progreso individual se conectará posteriormente.
-  const nivelInicial = 1;
-
   try {
-    console.log("[GEMINI] Generando reto de Cultura general...");
+    limpiarRetosCaducados();
+
+    // Todos comienzan desde el mismo nivel.
+    // El progreso individual se añadirá después.
+    const nivelInicial = 1;
+
+    console.log(
+      `[GEMINI] Generando Cultura general para ${perfil}...`
+    );
 
     const reto = await generarRetoIA(
       nivelInicial,
@@ -88,24 +117,36 @@ router.post("/question", async (req, res) => {
       materia
     );
 
-    console.log("[GEMINI] Reto generado:", reto.category);
+    const id = randomUUID();
 
-    // Adaptamos el formato para que el frontend actual
-    // pueda recibir el reto sin romper su estructura.
+    retosPendientes.set(id, {
+      id,
+      perfil,
+      asignatura: materia,
+      reto,
+      creadoEn: Date.now()
+    });
+
+    console.log(
+      `[GEMINI] Reto preparado para ${perfil}: ${reto.category}`
+    );
+
+    // La solución NO sale del servidor.
     return res.json({
       ok: true,
-      pregunta: {
-        pregunta: reto.prompt,
-        respuesta: reto.solution,
-        explicacion: reto.solution,
-        pista: reto.hint,
-        categoria: reto.category
-      },
-      reto
+      reto: {
+        id,
+        prompt: reto.prompt,
+        hint: reto.hint,
+        category: reto.category
+      }
     });
 
   } catch (error) {
-    console.error("[GEMINI] Error al generar reto:", error);
+    console.error(
+      "[GEMINI] Error al generar reto:",
+      error
+    );
 
     return res.status(502).json({
       ok: false,
@@ -125,9 +166,8 @@ router.post("/answer", async (req, res) => {
   const {
     perfil,
     asignatura,
-    pregunta,
-    respuesta,
-    solucion
+    retoId,
+    respuesta
   } = req.body || {};
 
   if (!validarPerfil(perfil)) {
@@ -147,28 +187,62 @@ router.post("/answer", async (req, res) => {
   }
 
   if (
-    typeof pregunta !== "string" ||
+    typeof retoId !== "string" ||
+    !retoId.trim() ||
     typeof respuesta !== "string" ||
-    typeof solucion !== "string" ||
-    !pregunta.trim() ||
-    !respuesta.trim() ||
-    !solucion.trim()
+    !respuesta.trim()
   ) {
     return res.status(400).json({
       ok: false,
-      error: "Faltan datos para evaluar la respuesta."
+      error: "Escribe una respuesta antes de comprobarla."
+    });
+  }
+
+  if (respuesta.trim().length > 3000) {
+    return res.status(400).json({
+      ok: false,
+      error: "La respuesta es demasiado larga."
+    });
+  }
+
+  limpiarRetosCaducados();
+
+  const pendiente = retosPendientes.get(retoId);
+
+  if (!pendiente) {
+    return res.status(404).json({
+      ok: false,
+      error: "Este ejercicio ya no está disponible. Genera otro."
+    });
+  }
+
+  if (
+    pendiente.perfil !== perfil ||
+    pendiente.asignatura !== materia
+  ) {
+    return res.status(403).json({
+      ok: false,
+      error: "Este ejercicio pertenece a otro perfil."
     });
   }
 
   try {
-    console.log("[GEMINI] Evaluando respuesta:", perfil);
+    console.log(
+      `[GEMINI] Evaluando respuesta de ${perfil}...`
+    );
 
     const evaluacion = await evaluarRespuestaIA(
-      pregunta,
-      respuesta,
-      solucion,
-      materia
+      pendiente.reto.prompt,
+      respuesta.trim(),
+      pendiente.reto.solution,
+      pendiente.asignatura
     );
+
+    // Si acierta, el ejercicio deja de estar pendiente.
+    // Si falla, puede volver a intentarlo.
+    if (evaluacion.correct) {
+      retosPendientes.delete(retoId);
+    }
 
     return res.json({
       ok: true,
@@ -176,7 +250,10 @@ router.post("/answer", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("[GEMINI] Error al evaluar:", error);
+    console.error(
+      "[GEMINI] Error al evaluar:",
+      error
+    );
 
     return res.status(502).json({
       ok: false,
