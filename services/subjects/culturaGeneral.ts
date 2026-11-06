@@ -18,7 +18,8 @@ import {
 // ========================================
 
 export async function generarRetoCulturaGeneral(
-  nivel: number = 1
+  nivel: number = 1,
+  recientes: string[] = []
 ): Promise<RetoGenerado> {
   const instrucciones = `
 Eres un profesor de Cultura General de Academia Campos.
@@ -27,6 +28,13 @@ Crea UNA SOLA pregunta nueva de conocimientos generales
 para un alumno de Primaria.
 
 NIVEL DEL ALUMNO: ${nivel}
+
+PREGUNTAS RECIENTES DE ESTE PERFIL Y ASIGNATURA:
+${recientes.length ? recientes.map((p, i) => `${i + 1}. ${p}`).join("\n") : "Todavía no hay preguntas anteriores."}
+
+No repitas ninguna pregunta reciente ni preguntes por el mismo dato
+con palabras ligeramente diferentes. Cambia el tema y el conocimiento evaluado.
+
 El nivel objetivo inicial equivale aproximadamente a
 2.º-3.º de Primaria. Utiliza vocabulario claro, frases
 cortas y contenidos adecuados a esa edad.
