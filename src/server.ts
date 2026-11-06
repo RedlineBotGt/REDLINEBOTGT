@@ -1,4 +1,3 @@
-
 import "dotenv/config";
 
 import express from "express";
@@ -104,10 +103,20 @@ app.use("/api", clasificacionRoutes);
 app.get("/", (req, res) => {
   const user = (req.session as any)?.user;
 
-  if (!user) {
+  const userAgent = req.get("user-agent") || "";
+
+  // Permitir que Discord lea los metadatos
+  // de la página para generar la vista previa.
+  const isDiscordBot = /Discordbot/i.test(userAgent);
+
+  // Los visitantes normales siguen necesitando
+  // iniciar sesión con Discord.
+  if (!user && !isDiscordBot) {
     return res.redirect("/auth/discord");
   }
 
+  // Discord y los usuarios autenticados reciben
+  // el HTML real de WEBLINE GT.
   return res.sendFile(
     path.join(publicPath, "index.html")
   );
