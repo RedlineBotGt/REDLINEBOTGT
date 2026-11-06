@@ -25,6 +25,8 @@ export function initializeClasificacion() {
 
     const TOTAL_COLUMNS = 13;
 
+    const FILAS_LOGOS = 7;
+
     const IMAGENES = {
         cupmediano:
             "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110668",
@@ -58,11 +60,19 @@ export function initializeClasificacion() {
     // CREAR CELDA CON LOGO
     // ======================================
 
-    function createLogoCell(className, imageUrl, alt, colSpan, rowSpan) {
+    function createLogoCell(
+        className,
+        imageUrl,
+        alt,
+        colSpan,
+        rowSpan
+    ) {
 
         const cell = document.createElement("td");
 
-        cell.className = `clasificacion-logo-cell ${className}`;
+        cell.className =
+            `clasificacion-logo-cell ${className}`;
+
         cell.colSpan = colSpan;
         cell.rowSpan = rowSpan;
 
@@ -78,20 +88,34 @@ export function initializeClasificacion() {
     }
 
     // ======================================
-    // FILAS SUPERIORES CON LOGOS
+    // CONSTRUIR FILAS DE LA TABLA
     // ======================================
 
-    function createLogoRows() {
+    function renderTable(rows) {
 
-        const fragment = document.createDocumentFragment();
+        if (!Array.isArray(rows) || rows.length === 0) {
+            showMessage(
+                "No hay datos disponibles en la clasificación."
+            );
+            return;
+        }
 
-        for (let row = 1; row <= 7; row++) {
+        const table = document.createElement("table");
+
+        table.className = "clasificacion-table";
+
+        const tbody = document.createElement("tbody");
+
+        // ==================================
+        // FILAS 1 A 7: LOGOS Y CELDAS RESTANTES
+        // ==================================
+
+        for (let rowIndex = 0; rowIndex < FILAS_LOGOS; rowIndex++) {
 
             const tr = document.createElement("tr");
 
-            tr.className = "clasificacion-logo-row";
-
-            if (row === 1) {
+            // Primera fila: insertar los tres logos.
+            if (rowIndex === 0) {
 
                 // B1:C7
                 tr.appendChild(
@@ -126,68 +150,43 @@ export function initializeClasificacion() {
                     )
                 );
 
-            } else if (row > 4) {
-
-                // Espacio central de las filas 5, 6 y 7.
-                const emptyCell = document.createElement("td");
-
-                emptyCell.className = "clasificacion-logo-empty";
-                emptyCell.colSpan = 10;
-
-                tr.appendChild(emptyCell);
-
             }
 
-            fragment.appendChild(tr);
+            // Filas 5, 6 y 7:
+            // conservar las diez celdas centrales originales.
+            if (rowIndex >= 4) {
+
+                const originalRow = rows[rowIndex] || [];
+
+                for (let column = 2; column < 12; column++) {
+
+                    const td = document.createElement("td");
+
+                    td.textContent =
+                        originalRow[column] ?? "";
+
+                    tr.appendChild(td);
+                }
+            }
+
+            tr.dataset.row = String(rowIndex + 1);
+
+            tbody.appendChild(tr);
         }
 
-        return fragment;
-    }
+        // ==================================
+        // FILAS 8 EN ADELANTE
+        // ==================================
 
-    // ======================================
-    // CONSTRUIR TABLA
-    // ======================================
-
-    function renderTable(rows) {
-
-        if (!Array.isArray(rows) || rows.length === 0) {
-            showMessage(
-                "No hay datos disponibles en la clasificación."
-            );
-            return;
-        }
-
-        const table = document.createElement("table");
-        table.className = "clasificacion-table";
-
-        const tbody = document.createElement("tbody");
-
-        // Logos integrados en la propia tabla.
-        tbody.appendChild(createLogoRows());
-
-        // Cabecera original de la clasificación.
-        const headerRow = document.createElement("tr");
-        headerRow.className = "clasificacion-header-row";
-
-        const headers = rows[0] || [];
-
-        for (let column = 0; column < TOTAL_COLUMNS; column++) {
-
-            const th = document.createElement("th");
-
-            th.textContent = headers[column] ?? "";
-
-            headerRow.appendChild(th);
-        }
-
-        tbody.appendChild(headerRow);
-
-        // Datos originales.
-        rows.slice(1).forEach((row, rowIndex) => {
+        rows.slice(FILAS_LOGOS).forEach((row, index) => {
 
             const tr = document.createElement("tr");
 
-            for (let column = 0; column < TOTAL_COLUMNS; column++) {
+            for (
+                let column = 0;
+                column < TOTAL_COLUMNS;
+                column++
+            ) {
 
                 const td = document.createElement("td");
 
@@ -196,14 +195,19 @@ export function initializeClasificacion() {
                 tr.appendChild(td);
             }
 
-            tr.dataset.row = String(rowIndex + 2);
+            tr.dataset.row = String(index + FILAS_LOGOS + 1);
 
             tbody.appendChild(tr);
         });
 
+        // ==================================
+        // FINALIZAR TABLA
+        // ==================================
+
         table.appendChild(tbody);
 
         const wrapper = document.createElement("div");
+
         wrapper.className = "clasificacion-table-wrapper";
 
         wrapper.appendChild(table);
@@ -211,7 +215,7 @@ export function initializeClasificacion() {
         container.replaceChildren(wrapper);
 
         status.textContent =
-            `${rows.length - 1} filas de clasificación`;
+            `${Math.max(0, rows.length - FILAS_LOGOS)} filas de clasificación`;
     }
 
     // ======================================
@@ -225,6 +229,7 @@ export function initializeClasificacion() {
         }
 
         loading = true;
+
         refreshButton.disabled = true;
         refreshButton.textContent = "CARGANDO...";
 
@@ -250,8 +255,10 @@ export function initializeClasificacion() {
             const result = await response.json();
 
             if (!response.ok || !result.success) {
+
                 throw new Error(
-                    result.error || "No se pudo cargar la clasificación."
+                    result.error ||
+                    "No se pudo cargar la clasificación."
                 );
             }
 
@@ -267,13 +274,15 @@ export function initializeClasificacion() {
             status.textContent = "No se pudo actualizar";
 
             showMessage(
-                error.message || "Error cargando la clasificación.",
+                error.message ||
+                "Error cargando la clasificación.",
                 "error"
             );
 
         } finally {
 
             loading = false;
+
             refreshButton.disabled = false;
             refreshButton.textContent = "↻ ACTUALIZAR";
 
