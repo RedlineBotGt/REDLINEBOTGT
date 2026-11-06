@@ -35,8 +35,10 @@ function validarPerfil(valor: unknown): valor is Perfil {
 }
 
 /**
- * En esta primera fase solo está activa Cultura general.
- * Internamente conserva la clave "lateral".
+ * Asignaturas activas:
+ * - Cultura general: conserva la clave interna "lateral".
+ * - Matemáticas: utiliza su módulo independiente.
+ * Geografía permanece desactivada.
  */
 function obtenerAsignatura(
   valor: unknown
@@ -53,7 +55,22 @@ function obtenerAsignatura(
     return "lateral";
   }
 
+  if (
+    asignatura === "matematicas" ||
+    asignatura === "matemáticas"
+  ) {
+    return "matematicas";
+  }
+
   return null;
+}
+
+function nombreAsignatura(
+  asignatura: AsignaturaReto
+): string {
+  return asignatura === "matematicas"
+    ? "Matemáticas"
+    : "Cultura general";
 }
 
 function limpiarRetosCaducados(): void {
@@ -97,7 +114,7 @@ router.post("/question", async (req, res) => {
   if (!materia) {
     return res.status(400).json({
       ok: false,
-      error: "Por ahora solo está disponible Cultura general."
+      error: "Por ahora solo están disponibles Cultura general y Matemáticas."
     });
   }
 
@@ -109,7 +126,7 @@ router.post("/question", async (req, res) => {
     const nivelInicial = 1;
 
     console.log(
-      `[GEMINI] Generando Cultura general para ${perfil}...`
+      `[GEMINI] Generando ${nombreAsignatura(materia)} para ${perfil}...`
     );
 
     // La firma actual de aiService recibe primero
