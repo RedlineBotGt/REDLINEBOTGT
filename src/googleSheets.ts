@@ -33,6 +33,9 @@ function getPrivateKey(): string {
 const SHEET_TAB = "Inscripción";
 const USER_ID_RANGE = "B2:B";
 
+// Rango de clasificación
+const CLASIFICACION_RANGE = "'Tabla2'!B1:N34";
+
 // Normalizar IDs de Discord
 function normalizeDiscordId(value: unknown): string {
   return String(value ?? "")
@@ -98,6 +101,37 @@ export async function isAuthorizedDiscordUser(
   } catch (error: any) {
     console.error(
       "[WEBLINEGT] Error consultando Google Sheets:",
+      error?.message || error
+    );
+
+    throw error;
+  }
+}
+
+// ======================================
+// OBTENER CLASIFICACIÓN
+// ======================================
+
+export async function getClasificacionData(): Promise<string[][]> {
+  try {
+    const sheets = getSheetsClient();
+
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID!,
+      range: CLASIFICACION_RANGE
+    });
+
+    const values = response.data.values ?? [];
+
+    console.log("[WEBLINEGT] Clasificación obtenida:", {
+      filasLeidas: values.length
+    });
+
+    return values as string[][];
+
+  } catch (error: any) {
+    console.error(
+      "[WEBLINEGT] Error consultando la clasificación:",
       error?.message || error
     );
 
