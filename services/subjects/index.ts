@@ -11,7 +11,8 @@ export {
 
 // Matemáticas
 export {
-  generarRetoMatematicas
+  generarRetoMatematicas,
+  evaluarRespuestaMatematicas
 } from "./matematicas.js";
 
 // Geografía
@@ -19,10 +20,7 @@ export {
   generarRetoGeografia
 } from "./geografia.js";
 
-// ========================================
-// TIPOS COMPARTIDOS
-// ========================================
-
+// Tipos compartidos
 export type {
   RetoGenerado,
   EvaluacionReto
