@@ -1,0 +1,169 @@
+
+/* ======================================
+   WEBLINE GT - APARTADO TWITCH
+====================================== */
+
+#twitch-section {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 12px;
+    box-sizing: border-box;
+}
+
+/* ======================================
+   INTRODUCCIÓN
+====================================== */
+
+.twitch-intro {
+    color: #ccc;
+    text-align: center;
+    font-size: 14px;
+    margin: 8px 0 18px;
+}
+
+/* ======================================
+   CONTENEDOR DEL REPRODUCTOR
+====================================== */
+
+.twitch-player-container {
+    width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+/* ======================================
+   CONTROLES DE TAMAÑO
+====================================== */
+
+.twitch-player-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.twitch-size-button {
+    background: #9147ff;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.twitch-size-button:hover {
+    background: #772ce8;
+}
+
+.twitch-size-button:active {
+    transform: scale(0.97);
+}
+
+/* ======================================
+   REPRODUCTOR
+====================================== */
+
+.twitch-player {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    border: 1px solid #292929;
+    border-radius: 10px;
+    overflow: hidden;
+    transition: all 0.25s ease;
+}
+
+.twitch-player iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+/* ======================================
+   MODO AMPLIADO
+====================================== */
+
+.twitch-player.expanded {
+    width: 100%;
+    aspect-ratio: auto;
+    height: 75vh;
+    min-height: 400px;
+    max-height: 900px;
+    border-radius: 8px;
+}
+
+/* ======================================
+   ENLACE AL CANAL
+====================================== */
+
+.twitch-channel-link {
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    margin: 16px auto 8px;
+    padding: 10px 18px;
+    box-sizing: border-box;
+    background: #9147ff;
+    color: #fff;
+    border-radius: 7px;
+    text-align: center;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.twitch-channel-link:hover {
+    background: #772ce8;
+}
+
+.twitch-channel-name {
+    color: #aaa;
+    text-align: center;
+    font-size: 12px;
+    margin: 8px 0;
+}
+
+/* ======================================
+   MÓVILES
+====================================== */
+
+@media (max-width: 600px) {
+
+    #twitch-section {
+        padding: 8px;
+    }
+
+    .twitch-intro {
+        font-size: 12px;
+        margin-bottom: 12px;
+    }
+
+    .twitch-player {
+        border-radius: 6px;
+    }
+
+    .twitch-player.expanded {
+        height: 65vh;
+        min-height: 260px;
+        max-height: none;
+    }
+
+    .twitch-size-button {
+        padding: 7px 11px;
+        font-size: 12px;
+    }
+
+    .twitch-channel-link {
+        font-size: 13px;
+        padding: 9px 14px;
+    }
+}
