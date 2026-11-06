@@ -1,3 +1,4 @@
+
 import { Router } from "express";
 import { randomUUID } from "crypto";
 
@@ -35,7 +36,7 @@ function validarPerfil(valor: unknown): valor is Perfil {
 
 /**
  * En esta primera fase solo está activa Cultura general.
- * La clave antigua "lateral" se conserva para compatibilidad.
+ * Internamente conserva la clave "lateral".
  */
 function obtenerAsignatura(
   valor: unknown
@@ -49,7 +50,7 @@ function obtenerAsignatura(
     asignatura === "cultura general" ||
     asignatura === "lateral"
   ) {
-    return "cultura";
+    return "lateral";
   }
 
   return null;
@@ -111,10 +112,11 @@ router.post("/question", async (req, res) => {
       `[GEMINI] Generando Cultura general para ${perfil}...`
     );
 
+    // La firma actual de aiService recibe primero
+    // la asignatura y después el nivel.
     const reto = await generarRetoIA(
-      nivelInicial,
-      [],
-      materia
+      materia,
+      nivelInicial
     );
 
     const id = randomUUID();
@@ -131,7 +133,7 @@ router.post("/question", async (req, res) => {
       `[GEMINI] Reto preparado para ${perfil}: ${reto.category}`
     );
 
-    // La solución NO sale del servidor.
+    // La solución nunca sale del servidor.
     return res.json({
       ok: true,
       reto: {
