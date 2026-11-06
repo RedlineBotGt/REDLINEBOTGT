@@ -23,6 +23,48 @@ interface RetoPendiente {
 
 const retosPendientes = new Map<string, RetoPendiente>();
 
+// Historial temporal independiente por perfil y asignatura.
+const MAX_HISTORIAL_PREGUNTAS = 30;
+const MAX_INTENTOS_PREGUNTA_NUEVA = 4;
+const historialPreguntas = new Map<string, string[]>();
+
+function claveHistorial(perfil: Perfil, asignatura: AsignaturaReto): string {
+  return `${perfil}:${asignatura}`;
+}
+
+function normalizarPregunta(valor: string): string {
+  return valor
+    .normalize("NFD")
+    .replace(/[\\u0300-\\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\\s+/g, " ");
+}
+
+function obtenerHistorial(
+  perfil: Perfil,
+  asignatura: AsignaturaReto
+): string[] {
+  return historialPreguntas.get(claveHistorial(perfil, asignatura)) || [];
+}
+
+function guardarPreguntaReciente(
+  perfil: Perfil,
+  asignatura: AsignaturaReto,
+  pregunta: string
+): void {
+  const clave = claveHistorial(perfil, asignatura);
+  const recientes = [...(historialPreguntas.get(clave) || [])];
+  recientes.push(pregunta);
+
+  while (recientes.length > MAX_HISTORIAL_PREGUNTAS) {
+    recientes.shift();
+  }
+
+  historialPreguntas.set(clave, recientes);
+}
+
 const DURACION_RETO_MS = 2 * 60 * 60 * 1000;
 const MAX_RETOS_PENDIENTES = 500;
 
@@ -152,12 +194,46 @@ router.post("/question", async (req, res) => {
       `[GEMINI] Generando ${nombreAsignatura(materia)} para ${perfil}...`
     );
 
-    // La firma actual de aiService recibe primero
-    // la asignatura y después el nivel.
-    const reto = await generarRetoIA(
-      materia,
-      nivelInicial
-    );
+    // Cada perfil y asignatura consulta únicamente su propio historial.
+    let reto: RetoGenerado | null = null;
+
+    for (
+      let intento = 1;
+      intento <= MAX_INTENTOS_PREGUNTA_NUEVA;
+      intento++
+    ) {
+      const recientes = obtenerHistorial(perfil, materia);
+
+      const candidato = await generarRetoIA(
+        materia,
+        nivelInicial,
+        recientes
+      );
+
+      const claveCandidata = normalizarPregunta(candidato.prompt);
+      const repetida = recientes.some(
+        anterior => normalizarPregunta(anterior) === claveCandidata
+      );
+
+      // Revisión adicional por si dos peticiones simultáneas
+      // del mismo perfil y asignatura generaron el mismo enunciado.
+      if (repetida) {
+        console.warn(
+          `[GEMINI] Pregunta repetida en ${materia} para ${perfil}. Reintento ${intento}/${MAX_INTENTOS_PREGUNTA_NUEVA}.`
+        );
+        continue;
+      }
+
+      reto = candidato;
+      guardarPreguntaReciente(perfil, materia, candidato.prompt);
+      break;
+    }
+
+    if (!reto) {
+      throw new Error(
+        "No se ha podido generar una pregunta nueva sin repetir las recientes. Inténtalo de nuevo."
+      );
+    }
 
     const id = randomUUID();
 
