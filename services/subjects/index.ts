@@ -1,4 +1,3 @@
-
 // ========================================
 // ÍNDICE DE ASIGNATURAS
 // Academia Campos
@@ -10,6 +9,12 @@ export {
   evaluarRespuestaCulturaGeneral
 } from "./culturaGeneral.js";
 
+// Detectives de la Mente
+export {
+  generarRetoPensamientoLateral,
+  evaluarRespuestaPensamientoLateral
+} from "./pensamientoLateral.js";
+
 // Matemáticas
 export {
   generarRetoMatematicas,
@@ -17,8 +22,7 @@ export {
 } from "./matematicas.js";
 
 // Geografía
-// Solo generación por ahora.
-// Su evaluación todavía no está preparada.
+// Solo generación por ahora; permanece desactivada.
 export {
   generarRetoGeografia
 } from "./geografia.js";
