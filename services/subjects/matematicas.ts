@@ -11,7 +11,24 @@ import {
 // GENERACIÓN DE EJERCICIOS
 // ========================================
 
-function instruccionesMatematicas(nivel: number): string {
+const MAX_HISTORIAL_EJERCICIOS = 25;
+const MAX_INTENTOS_GENERACION = 4;
+const historialEjercicios = new Map<number, string[]>();
+
+function normalizarEnunciado(valor: string): string {
+  return valor
+    .normalize("NFD")
+    .replace(/[\\u0300-\\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\\s+/g, " ")
+    .trim();
+}
+
+function instruccionesMatematicas(
+  nivel: number,
+  recientes: string[],
+  variacion: string
+): string {
   return `
 Eres el profesor de Matemáticas de Academia Campos.
 
@@ -19,6 +36,10 @@ Crea un ejercicio matemático original y adecuado
 al nivel indicado.
 
 NIVEL DEL ALUMNO: ${nivel}
+CÓDIGO DE VARIACIÓN DE ESTA PETICIÓN: ${variacion}
+
+EJERCICIOS RECIENTES QUE NO DEBES REPETIR:
+${recientes.length ? recientes.map((p, i) => `${i + 1}. ${p}`).join("\\n") : "Todavía no hay ejercicios anteriores."}
 
 CONTENIDOS:
 - Sumas.
@@ -47,7 +68,7 @@ RESULTADO: 42
 8. Después del resultado, explica brevemente
    cómo se resuelve la operación.
 9. Incluye una pista breve que no revele la respuesta.
-10. Alterna operaciones y evita repetir ejercicios típicos.
+10. Alterna operaciones y evita repetir ejercicios típicos.\n11. No reutilices ningún enunciado ni operación de la lista de ejercicios recientes.\n12. Cambia los números y el contexto; el código de variación debe ayudarte a crear un ejercicio distinto.\n13. No copies literalmente ningún ejercicio anterior.
 
 Devuelve exclusivamente el JSON solicitado.
 `;
@@ -149,29 +170,70 @@ export async function generarRetoMatematicas(
   nivel: number = 1
 ): Promise<RetoGenerado> {
 
-  const reto = await consultarConRespaldo<RetoGenerado>(
-    instruccionesMatematicas(nivel),
-    ESQUEMA_RETO
-  );
+  const recientes = historialEjercicios.get(nivel) || [];
+  let retoValido: RetoGenerado | null = null;
+  let operacionValida: Operacion | null = null;
 
-  if (
-    !reto.prompt?.trim() ||
-    !reto.hint?.trim() ||
-    !reto.solution?.trim() ||
-    !reto.category?.trim()
+  for (
+    let intento = 1;
+    intento <= MAX_INTENTOS_GENERACION;
+    intento++
   ) {
-    throw new Error("Gemini ha generado un ejercicio incompleto.");
+    const variacion = Math.random().toString(36).slice(2, 10);
+
+    const reto = await consultarConRespaldo<RetoGenerado>(
+      instruccionesMatematicas(nivel, recientes, variacion),
+      ESQUEMA_RETO
+    );
+
+    if (
+      !reto.prompt?.trim() ||
+      !reto.hint?.trim() ||
+      !reto.solution?.trim() ||
+      !reto.category?.trim()
+    ) {
+      throw new Error("Gemini ha generado un ejercicio incompleto.");
+    }
+
+    const clave = normalizarEnunciado(reto.prompt);
+
+    if (recientes.some(anterior =>
+      normalizarEnunciado(anterior) === clave
+    )) {
+      console.warn(
+        `[MATEMATICAS] Gemini repitió un ejercicio. Reintentando (${intento}/${MAX_INTENTOS_GENERACION}).`
+      );
+      continue;
+    }
+
+    const operacion = extraerOperacion(reto.prompt);
+
+    if (!operacion) {
+      throw new Error(
+        "El ejercicio matemático no contiene una operación verificable."
+      );
+    }
+
+    retoValido = reto;
+    operacionValida = operacion;
+    break;
   }
 
-  const operacion = extraerOperacion(reto.prompt);
-
-  if (!operacion) {
+  if (!retoValido || !operacionValida) {
     throw new Error(
-      "El ejercicio matemático no contiene una operación verificable."
+      "No se ha podido generar un ejercicio nuevo sin repetir los anteriores. Inténtalo de nuevo."
     );
   }
 
+  const reto = retoValido;
+  const operacion = operacionValida;
   const resultado = calcularOperacion(operacion);
+
+  recientes.push(reto.prompt);
+  while (recientes.length > MAX_HISTORIAL_EJERCICIOS) {
+    recientes.shift();
+  }
+  historialEjercicios.set(nivel, recientes);
 
   // El servidor establece el resultado real.
   // No se utiliza el resultado numérico de Gemini.
