@@ -1,3 +1,4 @@
+
 // ========================================
 // ÍNDICE DE ASIGNATURAS
 // Academia Campos
@@ -16,11 +17,16 @@ export {
 } from "./matematicas.js";
 
 // Geografía
+// Solo generación por ahora.
+// Su evaluación todavía no está preparada.
 export {
   generarRetoGeografia
 } from "./geografia.js";
 
-// Tipos compartidos
+// ========================================
+// TIPOS COMPARTIDOS
+// ========================================
+
 export type {
   RetoGenerado,
   EvaluacionReto
