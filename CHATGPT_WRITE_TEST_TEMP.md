@@ -1,1 +1,0 @@
-Prueba temporal de escritura desde ChatGPT. Este archivo se eliminará inmediatamente.
