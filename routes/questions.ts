@@ -210,13 +210,15 @@ router.post("/question", async (req, res) => {
         recientes
       );
 
+      // Volvemos a leer el historial después de esperar a Gemini:
+      // otra petición simultánea puede haber guardado ya esa pregunta.
+      const historialActual = obtenerHistorial(perfil, materia);
       const claveCandidata = normalizarPregunta(candidato.prompt);
-      const repetida = recientes.some(
+      const repetida = historialActual.some(
         anterior => normalizarPregunta(anterior) === claveCandidata
       );
 
-      // Revisión adicional por si dos peticiones simultáneas
-      // del mismo perfil y asignatura generaron el mismo enunciado.
+      // Evita que dos peticiones simultáneas acepten el mismo enunciado.
       if (repetida) {
         console.warn(
           `[GEMINI] Pregunta repetida en ${materia} para ${perfil}. Reintento ${intento}/${MAX_INTENTOS_PREGUNTA_NUEVA}.`
