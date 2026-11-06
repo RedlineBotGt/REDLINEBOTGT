@@ -1,3 +1,4 @@
+
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -30,7 +31,9 @@ const posiblesRutasPublicas = [
 
 const publicPath =
   posiblesRutasPublicas.find((ruta) =>
-    existsSync(path.join(ruta, "js", "homework", "form.js"))
+    existsSync(
+      path.join(ruta, "js", "homework", "forms.js")
+    )
   ) ||
   posiblesRutasPublicas.find((ruta) => existsSync(ruta)) ||
   posiblesRutasPublicas[0];
@@ -51,8 +54,10 @@ console.log("[ARRANQUE] Directorio actual:", process.cwd());
 console.log("[ARRANQUE] Archivos web:", publicPath);
 
 console.log(
-  "[ARCHIVOS] form.js:",
-  existsSync(path.join(publicPath, "js", "homework", "form.js"))
+  "[ARCHIVOS] forms.js:",
+  existsSync(
+    path.join(publicPath, "js", "homework", "forms.js")
+  )
     ? "ENCONTRADO"
     : "NO ENCONTRADO"
 );
