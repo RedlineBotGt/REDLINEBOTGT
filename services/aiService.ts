@@ -42,21 +42,22 @@ export type {
 
 export async function generarRetoIA(
   asignatura: AsignaturaReto,
-  nivel: number = 1
+  nivel: number = 1,
+  historialReciente: string[] = []
 ): Promise<RetoGenerado> {
   switch (asignatura) {
     case "cultura_general":
     case "lateral":
-      return generarRetoCulturaGeneral(nivel);
+      return generarRetoCulturaGeneral(nivel, historialReciente);
 
     case "pensamiento_lateral":
-      return generarRetoPensamientoLateral(nivel);
+      return generarRetoPensamientoLateral(nivel, historialReciente);
 
     case "matematicas":
-      return generarRetoMatematicas(nivel);
+      return generarRetoMatematicas(nivel, historialReciente);
 
     case "geografia":
-      return generarRetoGeografia(nivel);
+      return generarRetoGeografia(nivel, historialReciente);
 
     default:
       throw new Error(
