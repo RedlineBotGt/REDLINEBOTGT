@@ -10,6 +10,7 @@ import { fileURLToPath } from "url";
 import authRoutes from "./auth.js";
 import eventRoutes from "./routes/eventRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
+import clasificacionRoutes from "./routes/clasificacionRoutes.js";
 
 // ======================================
 // CONFIGURACIÓN GENERAL
@@ -94,6 +95,8 @@ app.use("/api", eventRoutes);
 
 app.use("/api", chatRoutes);
 
+app.use("/api", clasificacionRoutes);
+
 // ======================================
 // PÁGINA PRINCIPAL
 // ======================================
@@ -133,4 +136,5 @@ app.listen(PORT, () => {
   console.log("Sistema de autenticación conectado.");
   console.log("Sistema de eventos conectado.");
   console.log("Sistema de chat conectado.");
+  console.log("Sistema de clasificación conectado.");
 });
