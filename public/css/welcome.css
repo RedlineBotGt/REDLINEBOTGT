@@ -1,438 +1,326 @@
 
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#080808">
-
-    <title>WEBLINE GT</title>
-
-    <meta name="description" content="Portal oficial de WEBLINE GT">
-
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="WEBLINE GT">
-    <meta property="og:description" content="Portal oficial de WEBLINE GT">
-    <meta property="og:image" content="https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110675">
-    <meta property="og:image:secure_url" content="https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110675">
-    <meta property="og:image:alt" content="WEBLINE GT - Twitch">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="WEBLINE GT">
-    <meta name="twitter:description" content="Portal oficial de WEBLINE GT">
-    <meta name="twitter:image" content="https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110675">
-
-    <link rel="icon" href="https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110545">
-    <link rel="apple-touch-icon" href="https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110545">
-
-    <link rel="manifest" href="/manifest.json">
-
-    <!-- ESTILOS -->
-    <link rel="stylesheet" href="/css/base.css">
-    <link rel="stylesheet" href="/css/welcome.css">
-    <link rel="stylesheet" href="/css/event.css">
-    <link rel="stylesheet" href="/css/menu.css">
-    <link rel="stylesheet" href="/css/chat.css">
-    <link rel="stylesheet" href="/css/reglamento.css">
-    <link rel="stylesheet" href="/css/info.css">
-    <link rel="stylesheet" href="/css/clasificacion.css">
-    <link rel="stylesheet" href="/css/twitch.css">
-</head>
-
-<body>
-
-    <!-- CABECERA -->
-    <header class="topbar">
-        <img
-            src="https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110577"
-            alt="WEBLINE GT"
-        >
-    </header>
-
-    <!-- PANTALLA DE BIENVENIDA -->
-    <section
-        id="welcome-screen"
-        class="welcome-screen"
-        aria-label="Bienvenida a REDLINE GTCUP"
-    >
-        <div class="welcome-content">
-
-            <div class="welcome-logo">
-                <img
-                    src="https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110577"
-                    alt="REDLINE GT"
-                >
-            </div>
-
-            <div class="welcome-season">
-                2.ª TEMPORADA
-            </div>
-
-            <h1>
-                ¡BIENVENIDO A<br>
-                <span class="welcome-brand">REDLINE GTCUP!</span>
-            </h1>
-
-            <p class="welcome-subtitle">
-                Tu centro de control de la competición externo a Discord.
-            </p>
-
-            <div class="welcome-divider"></div>
-
-            <div class="welcome-options">
-
-                <div>
-                    🙋🏻
-                    <strong>EVENTOS</strong>
-                    <span>
-                        Confirma tu participación como:
-                        <br>✅ Titular
-                        <br>🔃 Reserva
-                        <br>❔ Duda
-                        <br>❌ No puedes asistir.
-                    </span>
-                </div>
-
-                <div>
-                    💬
-                    <strong>CHAT</strong>
-                    <span>
-                        Comunícate con la comunidad GTCUP
-                        sin necesidad de utilizar Discord.
-                    </span>
-                </div>
-
-                <div>
-                    🏆
-                    <strong>MUCHO MÁS</strong>
-                    <span>
-                        📜 Reglamento y normas.
-                        <br>ℹ️ Información de interés.
-                        <br>🏆 Clasificaciones y resultados.
-                        <br>📺 Retransmisiones en Twitch.
-                        <br><br>
-                        Todo WEBLINE GT en un solo lugar,
-                        incluso si no te manejas con Discord.
-                    </span>
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="welcome-menu-hint">
-            <span>ABRE EL MENÚ PARA COMENZAR</span>
-            <span class="welcome-arrow">↘</span>
-        </div>
-    </section>
-
-    <!-- CONTENIDO PRINCIPAL -->
-    <main class="main">
-
-        <!-- APARTADO EVENTO -->
-        <section id="event-section" hidden>
-            <h1 class="page-title">EVENTO</h1>
-
-            <div id="event-container">
-                <div class="message">
-                    Cargando evento...
-                </div>
-            </div>
-        </section>
-
-        <!-- APARTADO REGLAMENTO -->
-        <section id="reglamento-section" hidden>
-            <h1 class="page-title">📜 REGLAMENTO</h1>
-
-            <p class="reglamento-intro">
-                Desliza lateralmente para consultar los capítulos
-                del reglamento.
-            </p>
-
-            <div
-                id="reglamento-gallery"
-                class="reglamento-gallery"
-            ></div>
-        </section>
-
-        <!-- APARTADO INFO -->
-        <section id="info-section" hidden>
-            <h1 class="page-title">ℹ️ INFO</h1>
-
-            <p class="info-intro">
-                Desliza lateralmente para consultar la información
-                de REDLINE GTCUP.
-            </p>
-
-            <div
-                id="info-gallery"
-                class="info-gallery"
-            ></div>
-        </section>
-
-        <!-- APARTADO CLASIFICACIÓN -->
-        <section id="clasificacion-section" hidden>
-
-            <h1 class="page-title">🏆 CLASIFICACIÓN</h1>
-
-            <p class="clasificacion-intro">
-                Clasificación oficial de REDLINE GTCUP.
-            </p>
-
-            <div class="clasificacion-toolbar">
-                <span
-                    id="clasificacion-status"
-                    class="clasificacion-status"
-                    aria-live="polite"
-                >
-                    Preparando clasificación...
-                </span>
-
-                <button
-                    id="clasificacion-refresh"
-                    class="clasificacion-refresh"
-                    type="button"
-                >
-                    ↻ ACTUALIZAR
-                </button>
-            </div>
-
-            <div
-                id="clasificacion-container"
-                class="clasificacion-container"
-            >
-                <div class="message">
-                    Cargando clasificación...
-                </div>
-            </div>
-
-        </section>
-
-        <!-- APARTADO TWITCH -->
-        <section id="twitch-section" hidden>
-
-            <h1 class="page-title">📺 TWITCH</h1>
-
-            <p class="twitch-intro">
-                Sigue en directo las retransmisiones de REDLINE GTCUP.
-            </p>
-
-            <div class="twitch-player-container">
-
-                <div class="twitch-player-toolbar">
-
-                    <button
-                        id="twitch-reduce"
-                        class="twitch-size-button"
-                        type="button"
-                    >
-                        − REDUCIR
-                    </button>
-
-                    <button
-                        id="twitch-expand"
-                        class="twitch-size-button"
-                        type="button"
-                    >
-                        + AMPLIAR
-                    </button>
-
-                </div>
-
-                <div
-                    id="twitch-player"
-                    class="twitch-player"
-                >
-                    <div class="twitch-loading">
-                        Preparando retransmisión...
-                    </div>
-                </div>
-
-            </div>
-
-            <a
-                class="twitch-channel-link"
-                href="https://www.twitch.tv/pollo_racinggt"
-                target="_blank"
-                rel="noopener noreferrer"
-            >
-                VER CANAL EN TWITCH ↗
-            </a>
-
-            <p class="twitch-channel-name">
-                Canal: <strong>pollo_racinggt</strong>
-            </p>
-
-        </section>
-
-        <!-- APARTADO CHAT -->
-        <section id="chat-section" hidden>
-            <h1 class="page-title">CHAT</h1>
-
-            <div class="chat-container">
-
-                <div class="chat-header">
-                    <div class="chat-header-title">
-                        💬 CHAT WEBLINE GT
-                    </div>
-
-                    <div class="chat-status">
-                        Conectando
-                    </div>
-                </div>
-
-                <div
-                    id="chat-messages"
-                    class="chat-messages"
-                    aria-live="polite"
-                >
-                    <div class="chat-loading">
-                        Cargando mensajes...
-                    </div>
-                </div>
-
-                <div class="chat-input-area">
-
-                    <div
-                        id="chat-mentions-list"
-                        class="chat-mentions-list"
-                        hidden
-                    ></div>
-
-                    <form
-                        id="chat-form"
-                        class="chat-input-wrapper"
-                    >
-
-                        <textarea
-                            id="chat-input"
-                            class="chat-input"
-                            placeholder="Escribe un mensaje..."
-                            rows="1"
-                            maxlength="2000"
-                        ></textarea>
-
-                        <button
-                            id="chat-send"
-                            class="chat-send-button"
-                            type="submit"
-                            aria-label="Enviar mensaje"
-                        >
-                            ➤
-                        </button>
-
-                    </form>
-
-                </div>
-
-            </div>
-        </section>
-
-    </main>
-
-    <!-- PIE DE PÁGINA -->
-    <footer class="footer">
-        WEBLINE GT
-    </footer>
-
-    <!-- FONDO PARA CERRAR EL MENÚ -->
-    <div
-        id="menu-backdrop"
-        class="menu-backdrop"
-        aria-hidden="true"
-    ></div>
-
-    <!-- MENÚ FLOTANTE -->
-    <aside id="floating-menu" class="floating-menu">
-
-        <nav
-            id="menu-panel"
-            class="menu-panel"
-            aria-label="Menú principal"
-            aria-hidden="true"
-        >
-
-            <button
-                type="button"
-                class="menu-button"
-                data-section="event"
-            >
-                🏁 EVENTO
-            </button>
-
-            <button
-                type="button"
-                class="menu-button"
-                data-section="reglamento"
-            >
-                📜 REGLAMENTO
-            </button>
-
-            <button
-                type="button"
-                class="menu-button"
-                data-section="info"
-            >
-                ℹ️ INFO
-            </button>
-
-            <button
-                type="button"
-                class="menu-button"
-                data-section="clasificacion"
-            >
-                🏆 CLASIFICACIÓN
-            </button>
-
-            <button
-                type="button"
-                class="menu-button"
-                data-section="twitch"
-            >
-                📺 TWITCH
-            </button>
-
-            <button
-                type="button"
-                class="menu-button"
-                data-section="chat"
-            >
-                💬 CHAT
-            </button>
-
-            <form
-                action="/auth/logout"
-                method="POST"
-                class="menu-logout-form"
-            >
-                <button
-                    type="submit"
-                    class="menu-logout"
-                >
-                    🚪 CERRAR SESIÓN
-                </button>
-            </form>
-
-        </nav>
-
-        <!-- BOTÓN REDONDO DEL MENÚ -->
-        <button
-            id="menu-toggle"
-            class="menu-toggle"
-            type="button"
-            aria-label="Abrir menú"
-            aria-expanded="false"
-            aria-controls="menu-panel"
-        >
-            <img
-                src="https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110545"
-                alt="Menú WEBLINE GT"
-            >
-        </button>
-
-    </aside>
-
-    <!-- JAVASCRIPT PRINCIPAL -->
-    <script type="module" src="/js/main.js"></script>
-
-</body>
-</html>
+/* =========================================
+   REDLINE GTCUP - PANTALLA DE BIENVENIDA
+   ========================================= */
+
+/* La bienvenida funciona como una capa
+   que cubre la aplicación mientras carga. */
+
+.welcome-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    box-sizing: border-box;
+
+    padding: 24px 20px 105px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    overflow-y: auto;
+    text-align: center;
+
+    background: #080808;
+}
+
+/* Al seleccionar Evento o Chat desaparece. */
+
+.welcome-screen[hidden] {
+    display: none !important;
+}
+
+/* =========================================
+   TARJETA PRINCIPAL
+   ========================================= */
+
+.welcome-content {
+    width: 100%;
+    max-width: 620px;
+    box-sizing: border-box;
+
+    background: linear-gradient(145deg, #191919, #090909);
+    border: 1px solid #343434;
+    border-top: 3px solid #d71920;
+    border-radius: 15px;
+
+    padding: 25px 24px;
+
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.55);
+}
+
+/* =========================================
+   LOGO
+   ========================================= */
+
+.welcome-logo {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+
+.welcome-logo img {
+    width: auto;
+    max-width: 220px;
+    max-height: 75px;
+    object-fit: contain;
+}
+
+/* =========================================
+   TEMPORADA Y TÍTULOS
+   ========================================= */
+
+.welcome-season {
+    display: inline-block;
+
+    color: #fff;
+    background: #b71920;
+
+    padding: 6px 15px;
+    border-radius: 4px;
+
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 2px;
+
+    margin: 5px 0 13px;
+}
+
+/* COLOR DEL NOMBRE DE LA COMPETICIÓN */
+
+.welcome-brand {
+    color: #4bc879;
+}
+
+.welcome-content h1 {
+    color: #fff;
+
+    font-size: clamp(23px, 5vw, 34px);
+    line-height: 1.15;
+
+    margin: 0 0 9px;
+
+    font-weight: 900;
+    letter-spacing: 1px;
+}
+
+.welcome-subtitle {
+    color: #aaa;
+    font-size: 13px;
+    margin: 0;
+}
+
+/* =========================================
+   SEPARADOR
+   ========================================= */
+
+.welcome-divider {
+    height: 1px;
+
+    background: linear-gradient(
+        to right,
+        transparent,
+        #555,
+        transparent
+    );
+
+    margin: 19px 0;
+}
+
+/* =========================================
+   APARTADOS
+   ========================================= */
+
+.welcome-options {
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+    text-align: left;
+}
+
+.welcome-options > div {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    column-gap: 9px;
+    align-items: center;
+
+    color: #fff;
+    font-size: 23px;
+}
+
+.welcome-options strong {
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+
+.welcome-options span {
+    grid-column: 2;
+
+    color: #aaa;
+    font-size: 12px;
+    line-height: 1.4;
+
+    margin-top: 2px;
+}
+
+/* =========================================
+   CIERRE
+   ========================================= */
+
+.welcome-closing {
+    color: #ddd;
+
+    font-size: 12px;
+    line-height: 1.5;
+
+    margin: 19px 0 12px;
+}
+
+.welcome-racing {
+    color: #4bc879;
+
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+
+    margin-top: 8px;
+}
+
+/* =========================================
+   INDICACIÓN DEL MENÚ
+   ========================================= */
+
+.welcome-menu-hint {
+    position: absolute;
+    right: 88px;
+    bottom: 27px;
+
+    z-index: 1;
+
+    display: flex;
+    align-items: center;
+    gap: 9px;
+
+    color: #4bc879;
+
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 0.8px;
+
+    pointer-events: none;
+    text-shadow: 0 2px 5px #000;
+}
+
+.welcome-arrow {
+    font-size: 36px;
+    line-height: 1;
+
+    animation: welcome-arrow-move 1s infinite alternate;
+}
+
+@keyframes welcome-arrow-move {
+    from {
+        transform: translate(0, 0);
+    }
+
+    to {
+        transform: translate(5px, 5px);
+    }
+}
+
+/* =========================================
+   MÓVILES
+   ========================================= */
+
+@media (max-width: 480px) {
+
+    .welcome-screen {
+        padding: 15px 12px 90px;
+    }
+
+    .welcome-content {
+        padding: 20px 17px;
+    }
+
+    .welcome-logo img {
+        max-width: 180px;
+        max-height: 60px;
+    }
+
+    .welcome-divider {
+        margin: 15px 0;
+    }
+
+    .welcome-options {
+        gap: 11px;
+    }
+
+    .welcome-options span {
+        font-size: 11px;
+    }
+
+    .welcome-closing {
+        margin-top: 15px;
+    }
+
+    .welcome-menu-hint {
+        right: 78px;
+        bottom: 22px;
+
+        font-size: 9px;
+        gap: 5px;
+    }
+
+    .welcome-arrow {
+        font-size: 32px;
+    }
+}
+
+/* =========================================
+   PANTALLAS BAJAS
+   ========================================= */
+
+@media (max-height: 700px) {
+
+    .welcome-screen {
+        padding-top: 8px;
+        padding-bottom: 80px;
+    }
+
+    .welcome-content {
+        padding-top: 14px;
+        padding-bottom: 14px;
+    }
+
+    .welcome-logo img {
+        max-height: 48px;
+    }
+
+    .welcome-divider {
+        margin: 11px 0;
+    }
+
+    .welcome-options {
+        gap: 8px;
+    }
+
+    .welcome-closing {
+        margin-top: 11px;
+    }
+}
+
+/* =========================================
+   ACCESIBILIDAD
+   ========================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .welcome-arrow {
+        animation: none;
+    }
+}
