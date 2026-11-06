@@ -308,3 +308,27 @@ Cambios guardados en `backup-antes-limpieza`:
 **Alcance:** no se han modificado perfiles, niveles, progreso, persistencia, Deberes ni ranking. No se ha compilado ni desplegado todavía. La habilitación está guardada en GitHub, pendiente de compilación y prueba funcional.
 
 **Siguiente paso:** ejecutar build TypeScript, corregir solo errores relacionados con este cambio y esperar autorización del usuario para el deploy manual. Después probar Geografía (generación, pista, respuesta incorrecta y correcta, siguiente pregunta) y comprobar regresión de Cultura general y Matemáticas.
+
+
+---
+
+## 14. Historial de preguntas por perfil y asignatura (7-11-2026)
+
+El usuario autoriza implantar un historial común de preguntas para todas las asignaturas, independiente por perfil y materia.
+
+### Diseño aplicado en código
+- Memoria en servidor, identificada por `perfil:asignatura`.
+- Perfiles: `leo`, `papa`, `mama`.
+- Asignaturas: `cultura_general`, `matematicas`, `geografia`, `pensamiento_lateral` (Retos Imposibles).
+- Máximo: 30 enunciados recientes por cada combinación perfil/asignatura.
+- Todos los generadores reciben su historial reciente y se les instruye para evitar repetir tanto el enunciado como el mismo concepto/idea.
+- La ruta comprueba duplicados exactos normalizados y permite hasta cuatro intentos de generación antes de devolver un error controlado.
+- Matemáticas deja de mantener una memoria global por nivel (25 ejercicios); utiliza el historial independiente que recibe desde la ruta.
+- El historial se añade al generar correctamente el ejercicio, no depende de que el alumno acierte.
+- No se modifican niveles, puntos, progreso, MongoDB, ranking, Deberes ni interfaz.
+
+### Limitación conocida
+La memoria es temporal y reside en RAM. Se pierde al reiniciar o volver a desplegar el servidor. No se ha añadido persistencia en MongoDB para respetar el alcance autorizado. La detección determinista bloquea enunciados idénticos tras normalización; evitar preguntas semánticamente parecidas depende también de las instrucciones al modelo y no constituye una garantía matemática.
+
+### Estado de verificación
+Cambios guardados en GitHub: pendiente de releer todos los archivos y compilar TypeScript. No desplegado en Render. No probado funcionalmente.
