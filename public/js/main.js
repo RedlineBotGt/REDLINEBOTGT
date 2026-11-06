@@ -8,6 +8,7 @@ import { initializeEvent } from "./event.js";
 import { initializeReglamento } from "./reglamento.js";
 import { initializeInfo } from "./info.js";
 import { initializeClasificacion } from "./clasificacion.js";
+import { initializeTwitch } from "./twitch.js";
 
 // ======================================
 // INICIAR APLICACIÓN
@@ -29,5 +30,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Inicializar apartado de clasificación.
     initializeClasificacion();
+
+    // Inicializar apartado de Twitch.
+    initializeTwitch();
 
 });
