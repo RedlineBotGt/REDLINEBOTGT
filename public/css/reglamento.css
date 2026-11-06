@@ -1,0 +1,283 @@
+
+/* =========================================
+   WEBLINE GT - REGLAMENTO
+   ========================================= */
+
+.reglamento-intro {
+    color: var(--muted);
+    font-size: 13px;
+    margin: -8px 0 18px;
+}
+
+/* =========================================
+   GALERÍA HORIZONTAL
+   ========================================= */
+
+.reglamento-gallery {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    padding: 5px 2px 18px;
+
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+
+    scrollbar-width: thin;
+    scrollbar-color: var(--red) #222;
+}
+
+.reglamento-gallery::-webkit-scrollbar {
+    height: 6px;
+}
+
+.reglamento-gallery::-webkit-scrollbar-track {
+    background: #222;
+    border-radius: 10px;
+}
+
+.reglamento-gallery::-webkit-scrollbar-thumb {
+    background: var(--red);
+    border-radius: 10px;
+}
+
+/* =========================================
+   TARJETAS DE IMAGEN
+   ========================================= */
+
+.reglamento-item {
+    position: relative;
+    flex: 0 0 230px;
+
+    padding: 0;
+    overflow: hidden;
+
+    border: 1px solid var(--border);
+    border-radius: 10px;
+
+    background: #111;
+    cursor: pointer;
+
+    scroll-snap-align: start;
+
+    transition:
+        border-color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.reglamento-item:hover {
+    border-color: var(--red);
+    transform: translateY(-3px);
+}
+
+.reglamento-item:focus-visible {
+    outline: 3px solid white;
+    outline-offset: 3px;
+}
+
+.reglamento-item img {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+.reglamento-number {
+    display: block;
+    padding: 11px 8px;
+
+    background: #151515;
+    color: white;
+
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-align: center;
+}
+
+/* =========================================
+   VISOR A PANTALLA COMPLETA
+   ========================================= */
+
+.reglamento-viewer[hidden] {
+    display: none;
+}
+
+.reglamento-viewer {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 55px 55px 35px;
+
+    background: rgba(0, 0, 0, 0.96);
+}
+
+.reglamento-viewer-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+}
+
+.reglamento-viewer-image {
+    display: block;
+
+    max-width: 100%;
+    max-height: calc(100vh - 105px);
+
+    width: auto;
+    height: auto;
+
+    object-fit: contain;
+}
+
+.reglamento-viewer-counter {
+    margin-top: 12px;
+    color: #aaa;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+/* =========================================
+   BOTONES DEL VISOR
+   ========================================= */
+
+.reglamento-close,
+.reglamento-prev,
+.reglamento-next {
+    position: absolute;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid #444;
+    border-radius: 50%;
+
+    background: #181818;
+    color: white;
+
+    cursor: pointer;
+}
+
+.reglamento-close {
+    top: 14px;
+    right: 16px;
+
+    width: 42px;
+    height: 42px;
+
+    font-size: 20px;
+}
+
+.reglamento-prev,
+.reglamento-next {
+    top: 50%;
+    transform: translateY(-50%);
+
+    width: 42px;
+    height: 52px;
+
+    border-radius: 10px;
+    font-size: 32px;
+}
+
+.reglamento-prev {
+    left: 8px;
+}
+
+.reglamento-next {
+    right: 8px;
+}
+
+.reglamento-close:hover,
+.reglamento-prev:hover,
+.reglamento-next:hover {
+    background: var(--red);
+    border-color: var(--red);
+}
+
+.reglamento-prev:disabled,
+.reglamento-next:disabled {
+    opacity: 0.25;
+    cursor: default;
+}
+
+/* =========================================
+   BLOQUEAR DESPLAZAMIENTO DE FONDO
+   ========================================= */
+
+body.reglamento-viewer-open {
+    overflow: hidden;
+}
+
+/* =========================================
+   MÓVILES
+   ========================================= */
+
+@media (max-width: 600px) {
+
+    .reglamento-item {
+        flex-basis: 72%;
+        max-width: 280px;
+    }
+
+    .reglamento-gallery {
+        gap: 12px;
+    }
+
+    .reglamento-viewer {
+        padding: 55px 35px 25px;
+    }
+
+    .reglamento-viewer-image {
+        max-height: calc(100vh - 110px);
+    }
+
+    .reglamento-prev,
+    .reglamento-next {
+        width: 30px;
+        height: 42px;
+        font-size: 25px;
+    }
+
+    .reglamento-prev {
+        left: 2px;
+    }
+
+    .reglamento-next {
+        right: 2px;
+    }
+
+}
+
+/* =========================================
+   REDUCCIÓN DE MOVIMIENTO
+   ========================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .reglamento-gallery {
+        scroll-behavior: auto;
+    }
+
+    .reglamento-item {
+        transition: none;
+    }
+
+}
