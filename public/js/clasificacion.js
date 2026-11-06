@@ -26,6 +26,16 @@ export function initializeClasificacion() {
 
     const TOTAL_COLUMNS = 13;
 
+    // ======================================
+    // IMÁGENES DE CABECERA
+    // ======================================
+
+    const IMAGENES = {
+        cupmediano: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110668",
+        horizontal: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110671",
+        gt7: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110670"
+    };
+
     let loading = false;
 
     // ======================================
@@ -42,6 +52,37 @@ export function initializeClasificacion() {
         element.textContent = message;
 
         container.appendChild(element);
+    }
+
+    // ======================================
+    // CONSTRUIR ZONA DE LOGOS
+    // ======================================
+
+    function createLogos() {
+
+        const logos = document.createElement("div");
+        logos.className = "clasificacion-logos";
+
+        const cup = document.createElement("img");
+        cup.src = IMAGENES.cupmediano;
+        cup.alt = "LINE GT CUP";
+        cup.className = "logo-cup";
+
+        const horizontal = document.createElement("img");
+        horizontal.src = IMAGENES.horizontal;
+        horizontal.alt = "REDLINE GT";
+        horizontal.className = "logo-horizontal";
+
+        const gt7 = document.createElement("img");
+        gt7.src = IMAGENES.gt7;
+        gt7.alt = "Gran Turismo 7";
+        gt7.className = "logo-gt7";
+
+        logos.appendChild(cup);
+        logos.appendChild(horizontal);
+        logos.appendChild(gt7);
+
+        return logos;
     }
 
     // ======================================
@@ -105,7 +146,10 @@ export function initializeClasificacion() {
 
         wrapper.appendChild(table);
 
-        container.replaceChildren(wrapper);
+        container.replaceChildren(
+            createLogos(),
+            wrapper
+        );
 
         status.textContent =
             `${rows.length - 1} filas de clasificación`;
