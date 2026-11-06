@@ -2,7 +2,7 @@ const IMAGENES = {
     info1: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110660",
     info2: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110661",
     info3: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110662",
-    reglamento4: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110635",
+    info4: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110663",
     reglamento5: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110636",
     reglamento6: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110637",
     reglamento7: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110638",
