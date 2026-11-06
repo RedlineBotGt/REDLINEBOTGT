@@ -1,0 +1,341 @@
+/* ======================================
+   WEBLINE GT - APARTADO INFO
+====================================== */
+
+/* INTRODUCCIÓN */
+
+.info-intro {
+    color: #bdbdbd;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    text-align: center;
+    margin: 0 auto 22px;
+    max-width: 650px;
+}
+
+/* ======================================
+   GALERÍA HORIZONTAL
+====================================== */
+
+.info-gallery {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+
+    width: 100%;
+    padding: 10px 4px 20px;
+
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+
+    scrollbar-width: thin;
+    scrollbar-color: #c90024 #1a1a1a;
+}
+
+.info-gallery::-webkit-scrollbar {
+    height: 6px;
+}
+
+.info-gallery::-webkit-scrollbar-track {
+    background: #1a1a1a;
+    border-radius: 10px;
+}
+
+.info-gallery::-webkit-scrollbar-thumb {
+    background: #c90024;
+    border-radius: 10px;
+}
+
+/* ======================================
+   TARJETAS
+====================================== */
+
+.info-item {
+    flex: 0 0 280px;
+    max-width: 80%;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+
+    padding: 10px;
+
+    background: #111;
+    border: 1px solid #292929;
+    border-radius: 10px;
+
+    cursor: pointer;
+    scroll-snap-align: start;
+
+    transition:
+        border-color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.info-item:hover {
+    border-color: #c90024;
+    transform: translateY(-3px);
+}
+
+.info-item:focus-visible {
+    outline: 2px solid #c90024;
+    outline-offset: 3px;
+}
+
+/* IMÁGENES */
+
+.info-item img {
+    display: block;
+
+    width: 100%;
+    height: auto;
+
+    max-height: 65vh;
+
+    object-fit: contain;
+
+    border-radius: 5px;
+}
+
+/* NUMERACIÓN */
+
+.info-number {
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+/* ======================================
+   VISOR A PANTALLA COMPLETA
+====================================== */
+
+.info-viewer {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 15px;
+
+    background: rgba(0, 0, 0, 0.96);
+}
+
+.info-viewer[hidden] {
+    display: none;
+}
+
+.info-viewer-content {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+    height: 100%;
+    max-width: 1200px;
+}
+
+/* IMAGEN AMPLIADA */
+
+.info-viewer-image {
+    display: block;
+
+    max-width: 100%;
+    max-height: 88vh;
+
+    width: auto;
+    height: auto;
+
+    object-fit: contain;
+
+    border-radius: 4px;
+}
+
+/* ======================================
+   BOTONES DEL VISOR
+====================================== */
+
+.info-viewer-close,
+.info-viewer-prev,
+.info-viewer-next {
+    position: absolute;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 44px;
+    height: 44px;
+
+    padding: 0;
+
+    color: #fff;
+    background: rgba(25, 25, 25, 0.9);
+
+    border: 1px solid #444;
+    border-radius: 50%;
+
+    font-size: 30px;
+    line-height: 1;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.info-viewer-close:hover,
+.info-viewer-prev:hover,
+.info-viewer-next:hover {
+    background: #c90024;
+    border-color: #c90024;
+}
+
+.info-viewer-close:focus-visible,
+.info-viewer-prev:focus-visible,
+.info-viewer-next:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 3px;
+}
+
+/* CERRAR */
+
+.info-viewer-close {
+    top: 15px;
+    right: 15px;
+
+    z-index: 2;
+
+    font-size: 32px;
+}
+
+/* ANTERIOR */
+
+.info-viewer-prev {
+    left: 10px;
+    top: 50%;
+
+    transform: translateY(-50%);
+}
+
+/* SIGUIENTE */
+
+.info-viewer-next {
+    right: 10px;
+    top: 50%;
+
+    transform: translateY(-50%);
+}
+
+/* CONTADOR */
+
+.info-viewer-counter {
+    position: absolute;
+
+    bottom: 15px;
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    padding: 7px 14px;
+
+    color: #fff;
+    background: rgba(20, 20, 20, 0.9);
+
+    border: 1px solid #333;
+    border-radius: 20px;
+
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+/* BLOQUEAR SCROLL DEL FONDO */
+
+body.info-viewer-open {
+    overflow: hidden;
+}
+
+/* ======================================
+   MÓVILES
+====================================== */
+
+@media (max-width: 600px) {
+
+    .info-gallery {
+        gap: 12px;
+        padding-left: 2px;
+        padding-right: 2px;
+    }
+
+    .info-item {
+        flex: 0 0 72%;
+        max-width: 280px;
+    }
+
+    .info-item img {
+        max-height: 60vh;
+    }
+
+    .info-viewer {
+        padding: 8px;
+    }
+
+    .info-viewer-image {
+        max-height: 85vh;
+    }
+
+    .info-viewer-close,
+    .info-viewer-prev,
+    .info-viewer-next {
+        width: 38px;
+        height: 38px;
+        font-size: 25px;
+    }
+
+    .info-viewer-close {
+        top: 10px;
+        right: 10px;
+    }
+
+    .info-viewer-prev {
+        left: 4px;
+    }
+
+    .info-viewer-next {
+        right: 4px;
+    }
+
+}
+
+/* ======================================
+   ACCESIBILIDAD
+====================================== */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .info-gallery {
+        scroll-behavior: auto;
+    }
+
+    .info-item {
+        transition: none;
+    }
+
+    .info-viewer-close,
+    .info-viewer-prev,
+    .info-viewer-next {
+        transition: none;
+    }
+
+}
