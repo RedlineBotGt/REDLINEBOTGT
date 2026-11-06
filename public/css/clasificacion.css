@@ -78,31 +78,22 @@
     min-width: 1000px;
     border-collapse: separate;
     border-spacing: 0;
+    table-layout: fixed;
     color: var(--text);
     font-size: 12px;
 }
 
 /* =========================================
-   FILAS DE LOGOS
+   CELDAS QUE CONTIENEN LOS LOGOS
    ========================================= */
-
-.clasificacion-table .clasificacion-logo-row {
-    height: 24px;
-}
-
-.clasificacion-table .clasificacion-logo-row:nth-child(odd) {
-    background: #181818;
-}
-
-.clasificacion-table .clasificacion-logo-row:nth-child(even) {
-    background: #222;
-}
 
 .clasificacion-table .clasificacion-logo-cell {
     padding: 0;
+    margin: 0;
+    overflow: hidden;
     text-align: center;
     vertical-align: middle;
-    overflow: hidden;
+    background: #111;
     border-right: 1px solid #292929;
     border-bottom: 1px solid #292929;
     box-sizing: border-box;
@@ -112,47 +103,36 @@
     display: block;
     width: 100%;
     height: 100%;
+    max-width: 100%;
+    max-height: 100%;
     object-fit: contain;
     object-position: center;
     box-sizing: border-box;
 }
 
-/* Logo izquierdo: B1:C7 */
+/* B1:C7 */
 
 .clasificacion-table .logo-cup {
     padding: 5px;
 }
 
-/* Logo central: D1:M4 */
+/* D1:M4 */
 
 .clasificacion-table .logo-horizontal {
     padding: 5px;
 }
 
-/* Logo derecho: N1:N7 */
+/* N1:N7 */
 
 .clasificacion-table .logo-gt7 {
     padding: 4px;
 }
 
-/* Espacio central de las filas 5, 6 y 7 */
-
-.clasificacion-table .clasificacion-logo-empty {
-    padding: 0;
-    border-right: 1px solid #292929;
-    border-bottom: 1px solid #292929;
-    background: #181818;
-}
-
 /* =========================================
-   CABECERA DE CLASIFICACIÓN
+   FILAS Y CELDAS ORIGINALES
    ========================================= */
 
-.clasificacion-table .clasificacion-header-row th {
-    position: sticky;
-    top: 0;
-    z-index: 3;
-
+.clasificacion-table th {
     padding: 13px 12px;
     background: #a90f16;
     color: white;
@@ -163,10 +143,6 @@
     white-space: nowrap;
     font-weight: bold;
 }
-
-/* =========================================
-   CELDAS DE CLASIFICACIÓN
-   ========================================= */
 
 .clasificacion-table td {
     padding: 11px 12px;
@@ -186,22 +162,12 @@
     background: #222;
 }
 
-/* Mantener colores propios de las filas de logos */
-
-.clasificacion-table tbody tr.clasificacion-logo-row:nth-child(odd) {
-    background: #181818;
-}
-
-.clasificacion-table tbody tr.clasificacion-logo-row:nth-child(even) {
-    background: #222;
-}
-
 .clasificacion-table tbody tr:hover {
     background: #303030;
 }
 
 /* =========================================
-   ÚLTIMA COLUMNA Y FILA
+   BORDES
    ========================================= */
 
 .clasificacion-table th:last-child,
@@ -237,12 +203,7 @@
         padding: 3px;
     }
 
-    .clasificacion-table .clasificacion-logo-row {
-        height: 24px;
-    }
-
     .clasificacion-table-wrapper {
         max-height: 70vh;
     }
-
 }
