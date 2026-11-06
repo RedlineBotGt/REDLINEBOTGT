@@ -3,10 +3,18 @@
 // ========================================
 
 export const asignaturas = {
-  lateral: "Cultura general",
+  cultura_general: "Cultura general",
+  pensamiento_lateral: "Detectives de la Mente",
   matematicas: "Matemáticas",
   geografia: "Geografía"
 };
+
+// Clave antigua conservada como alias de Cultura general.
+function normalizarAsignatura(asignatura) {
+  return asignatura === "lateral"
+    ? "cultura_general"
+    : asignatura;
+}
 
 // ========================================
 // ASIGNATURA ACTUAL
@@ -19,7 +27,9 @@ export let asignaturaActual = null;
 // ========================================
 
 export function seleccionarAsignatura(asignatura) {
-  if (!asignaturas[asignatura]) {
+  const clave = normalizarAsignatura(asignatura);
+
+  if (!asignaturas[clave]) {
     console.warn(
       "[ACADEMIA] Asignatura desconocida:",
       asignatura
@@ -28,17 +38,17 @@ export function seleccionarAsignatura(asignatura) {
     return false;
   }
 
-  asignaturaActual = asignatura;
+  asignaturaActual = clave;
 
   const titulo = document.getElementById("challenge-title");
 
   if (titulo) {
-    titulo.textContent = asignaturas[asignatura];
+    titulo.textContent = asignaturas[clave];
   }
 
   console.log(
     "[ACADEMIA] Asignatura seleccionada:",
-    asignaturas[asignatura]
+    asignaturas[clave]
   );
 
   return true;
