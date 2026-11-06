@@ -4,9 +4,9 @@
 
 .clasificacion-intro {
     color: var(--muted);
-    font-size: 14px;
-    line-height: 1.5;
-    margin: -8px 0 20px;
+    font-size: 12px;
+    line-height: 1.4;
+    margin: -5px 0 12px;
 }
 
 /* =========================================
@@ -17,24 +17,24 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 7px;
     flex-wrap: wrap;
-    margin-bottom: 15px;
+    margin-bottom: 9px;
 }
 
 .clasificacion-status {
     color: var(--muted);
-    font-size: 12px;
+    font-size: 10px;
 }
 
 .clasificacion-refresh {
-    min-height: 38px;
-    padding: 8px 13px;
+    min-height: 30px;
+    padding: 5px 9px;
     border: 1px solid var(--red);
-    border-radius: 7px;
+    border-radius: 6px;
     background: #171717;
     color: white;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: bold;
     cursor: pointer;
 }
@@ -49,7 +49,7 @@
 }
 
 /* =========================================
-   CONTENEDOR DE LA TABLA
+   CONTENEDOR
    ========================================= */
 
 .clasificacion-container {
@@ -61,10 +61,10 @@
     width: 100%;
     overflow-x: auto;
     overflow-y: auto;
-    max-height: 75vh;
+    max-height: 78vh;
 
     border: 1px solid var(--border);
-    border-radius: 9px;
+    border-radius: 7px;
     background: #111;
     -webkit-overflow-scrolling: touch;
 }
@@ -75,16 +75,16 @@
 
 .clasificacion-table {
     width: 100%;
-    min-width: 1000px;
+    min-width: 820px;
     border-collapse: separate;
     border-spacing: 0;
     table-layout: fixed;
     color: var(--text);
-    font-size: 12px;
+    font-size: 10px;
 }
 
 /* =========================================
-   CELDAS QUE CONTIENEN LOS LOGOS
+   LOGOS
    ========================================= */
 
 .clasificacion-table .clasificacion-logo-cell {
@@ -110,30 +110,24 @@
     box-sizing: border-box;
 }
 
-/* B1:C7 */
-
 .clasificacion-table .logo-cup {
-    padding: 5px;
+    padding: 3px;
 }
-
-/* D1:M4 */
 
 .clasificacion-table .logo-horizontal {
-    padding: 5px;
+    padding: 3px;
 }
 
-/* N1:N7 */
-
 .clasificacion-table .logo-gt7 {
-    padding: 4px;
+    padding: 2px;
 }
 
 /* =========================================
-   FILAS Y CELDAS ORIGINALES
+   CABECERAS
    ========================================= */
 
 .clasificacion-table th {
-    padding: 13px 12px;
+    padding: 6px 4px;
     background: #a90f16;
     color: white;
     border-right: 1px solid rgba(255, 255, 255, 0.15);
@@ -141,17 +135,23 @@
 
     text-align: center;
     white-space: nowrap;
+    font-size: 9px;
     font-weight: bold;
 }
 
+/* =========================================
+   CELDAS
+   ========================================= */
+
 .clasificacion-table td {
-    padding: 11px 12px;
+    padding: 5px 4px;
     border-right: 1px solid #292929;
     border-bottom: 1px solid #292929;
 
     text-align: center;
     white-space: nowrap;
     vertical-align: middle;
+    font-size: 10px;
 }
 
 .clasificacion-table tbody tr:nth-child(odd) {
@@ -186,24 +186,41 @@
 @media (max-width: 600px) {
 
     .clasificacion-toolbar {
-        align-items: flex-start;
+        align-items: center;
+        gap: 5px;
+        margin-bottom: 7px;
+    }
+
+    .clasificacion-status {
+        font-size: 9px;
+    }
+
+    .clasificacion-refresh {
+        min-height: 27px;
+        padding: 4px 7px;
+        font-size: 9px;
     }
 
     .clasificacion-table {
-        min-width: 1000px;
-        font-size: 11px;
+        min-width: 760px;
+        font-size: 9px;
     }
 
-    .clasificacion-table th,
+    .clasificacion-table th {
+        padding: 5px 3px;
+        font-size: 8px;
+    }
+
     .clasificacion-table td {
-        padding: 10px 9px;
+        padding: 4px 3px;
+        font-size: 9px;
     }
 
     .clasificacion-table .clasificacion-logo-cell {
-        padding: 3px;
+        padding: 2px;
     }
 
     .clasificacion-table-wrapper {
-        max-height: 70vh;
+        max-height: 78vh;
     }
 }
