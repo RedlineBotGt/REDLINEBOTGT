@@ -1,7 +1,7 @@
 // ========================================
 // CULTURA GENERAL
 // Academia Campos
-// Conserva las instrucciones originales
+// Conocimientos de España, Europa y el mundo
 // ========================================
 
 import { consultarConRespaldo } from "../ai/gemini.js";
@@ -20,41 +20,51 @@ import {
 export async function generarRetoCulturaGeneral(
   nivel: number = 1
 ): Promise<RetoGenerado> {
-
   const instrucciones = `
-    Eres un profesor creativo de Academia Campos.
+Eres un profesor de Cultura General de Academia Campos.
 
-    Crea una pregunta de cultura general
-    que estimule el razonamiento y la curiosidad.
+Crea UNA SOLA pregunta nueva de conocimientos generales
+para un alumno de Primaria.
 
-    Puede incluir pensamiento lateral,
-    lógica, naturaleza, ciencia o conocimientos
-    generales.
+NIVEL DEL ALUMNO: ${nivel}
+El nivel objetivo inicial equivale aproximadamente a
+2.º-3.º de Primaria. Utiliza vocabulario claro, frases
+cortas y contenidos adecuados a esa edad.
 
-    Debe ser adecuada para un niño,
-    pero no excesivamente sencilla.
+TEMAS:
+- Cultura, historia y tradiciones de España.
+- Comunidades, monumentos, personajes y hechos relevantes
+  de la historia y cultura española.
+- Países, capitales, monumentos y cultura de Europa.
+- Continentes, países, culturas y conocimientos del mundo.
+- Ciencia, naturaleza y descubrimientos importantes.
+- Arte, literatura, música y curiosidades culturales.
 
-    Nivel del alumno: ${nivel}.
+CRITERIOS:
+- La pregunta debe enseñar un dato o concepto real.
+- Alterna España, Europa y mundo; no te centres siempre
+  en el mismo tema.
+- Evita preguntas ambiguas o que admitan varias respuestas
+  sin especificar qué se está preguntando.
+- No inventes hechos, fechas, lugares ni personajes.
+- No conviertas la pregunta en un acertijo de pensamiento lateral.
+- Ajusta la dificultad al nivel indicado.
+- Genera un ejercicio nuevo, no una pregunta típica repetida.
 
-    Genera UN SOLO ejercicio nuevo.
-    No repitas preguntas típicas ni ejemplos conocidos.
-    La pregunta debe ser clara y comprensible.
+Incluye:
+- prompt: pregunta clara que verá el alumno.
+- hint: pista breve que ayude sin revelar la respuesta.
+- solution: respuesta correcta y explicación sencilla.
+- category: tema concreto de la pregunta.
 
-    Incluye:
-    - prompt: enunciado que verá el alumno.
-    - hint: pista breve que ayude sin revelar la respuesta.
-    - solution: solución correcta y explicación breve.
-    - category: categoría del ejercicio.
+No incluyas la solución en el enunciado.
+Devuelve exclusivamente el JSON solicitado.
+`;
 
-    No incluyas la solución dentro del enunciado.
-    Devuelve exclusivamente el JSON solicitado.
-  `;
-
-  const reto =
-    await consultarConRespaldo<RetoGenerado>(
-      instrucciones,
-      ESQUEMA_RETO
-    );
+  const reto = await consultarConRespaldo<RetoGenerado>(
+    instrucciones,
+    ESQUEMA_RETO
+  );
 
   if (
     !reto.prompt?.trim() ||
@@ -63,7 +73,7 @@ export async function generarRetoCulturaGeneral(
     !reto.category?.trim()
   ) {
     throw new Error(
-      "Gemini ha generado un ejercicio incompleto."
+      "Gemini ha generado un ejercicio incompleto de Cultura general."
     );
   }
 
@@ -79,36 +89,32 @@ export async function evaluarRespuestaCulturaGeneral(
   respuesta: string,
   solucion: string
 ): Promise<EvaluacionReto> {
-
   const instrucciones = `
-    Eres un profesor de Academia Campos.
+Eres un profesor de Cultura General de Academia Campos.
 
-    Asignatura: lateral
+PREGUNTA:
+${pregunta}
 
-    Pregunta:
-    ${pregunta}
+RESPUESTA CORRECTA:
+${solucion}
 
-    Respuesta correcta:
-    ${solucion}
+RESPUESTA DEL ALUMNO:
+${respuesta}
 
-    Respuesta del alumno:
-    ${respuesta}
+Evalúa si el alumno conoce el dato o concepto preguntado.
+Ten en cuenta el significado, no solo las palabras exactas.
+Acepta respuestas equivalentes y errores ortográficos
+menores si la respuesta es claramente correcta.
+No aceptes una respuesta que contradiga el dato correcto.
 
-    Evalúa la respuesta teniendo en cuenta
-    su significado, no solamente las palabras exactas.
+Devuelve:
+- correct: true o false.
+- feedback: mensaje breve y amable para el alumno.
+- explanation: explicación sencilla que refuerce el aprendizaje.
 
-    Si la respuesta expresa correctamente la idea,
-    aunque esté escrita de otra manera,
-    considérala correcta.
-
-    Devuelve:
-    - correct: true o false.
-    - feedback: mensaje breve y amable para el alumno.
-    - explanation: explicación sencilla de la solución.
-
-    Sé justo y educativo.
-    Devuelve exclusivamente el JSON solicitado.
-  `;
+Sé justo y educativo.
+Devuelve exclusivamente el JSON solicitado.
+`;
 
   const evaluacion =
     await consultarConRespaldo<EvaluacionReto>(
@@ -122,7 +128,7 @@ export async function evaluarRespuestaCulturaGeneral(
     !evaluacion.explanation?.trim()
   ) {
     throw new Error(
-      "Gemini ha devuelto una evaluación incompleta."
+      "Gemini ha devuelto una evaluación incompleta de Cultura general."
     );
   }
 
