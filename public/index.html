@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -23,6 +24,7 @@
     <link rel="stylesheet" href="/css/chat.css">
     <link rel="stylesheet" href="/css/reglamento.css">
     <link rel="stylesheet" href="/css/info.css">
+    <link rel="stylesheet" href="/css/clasificacion.css">
 </head>
 
 <body>
@@ -150,6 +152,44 @@
             ></div>
         </section>
 
+        <!-- APARTADO CLASIFICACIÓN -->
+        <section id="clasificacion-section" hidden>
+
+            <h1 class="page-title">🏆 CLASIFICACIÓN</h1>
+
+            <p class="clasificacion-intro">
+                Clasificación oficial de REDLINE GTCUP.
+            </p>
+
+            <div class="clasificacion-toolbar">
+                <span
+                    id="clasificacion-status"
+                    class="clasificacion-status"
+                    aria-live="polite"
+                >
+                    Preparando clasificación...
+                </span>
+
+                <button
+                    id="clasificacion-refresh"
+                    class="clasificacion-refresh"
+                    type="button"
+                >
+                    ↻ ACTUALIZAR
+                </button>
+            </div>
+
+            <div
+                id="clasificacion-container"
+                class="clasificacion-container"
+            >
+                <div class="message">
+                    Cargando clasificación...
+                </div>
+            </div>
+
+        </section>
+
         <!-- APARTADO CHAT -->
         <section id="chat-section" hidden>
             <h1 class="page-title">CHAT</h1>
@@ -264,7 +304,7 @@
             <button
                 type="button"
                 class="menu-button"
-                disabled
+                data-section="clasificacion"
             >
                 🏆 CLASIFICACIÓN
             </button>
