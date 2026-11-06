@@ -1,7 +1,3 @@
-// ========================================
-// MATEMÁTICAS
-// Academia Campos
-// ========================================
 
 import { consultarConRespaldo } from "../ai/gemini.js";
 
@@ -12,49 +8,137 @@ import {
 } from "../ai/schemas.js";
 
 // ========================================
-// INSTRUCCIONES
+// GENERACIÓN DE EJERCICIOS
 // ========================================
 
-function instruccionesMatematicas(
-  nivel: number
-): string {
+function instruccionesMatematicas(nivel: number): string {
   return `
 Eres el profesor de Matemáticas de Academia Campos.
 
-Crea un ejercicio matemático original.
+Crea un ejercicio matemático original y adecuado
+al nivel indicado.
 
-NIVEL:
-${nivel}
+NIVEL DEL ALUMNO: ${nivel}
 
 CONTENIDOS:
 - Sumas.
 - Restas.
+- Multiplicaciones.
+- Divisiones exactas.
 - Cálculo mental.
-- Operaciones combinadas sencillas.
-- Problemas matemáticos.
-- Números de varias cifras.
-- Decimales cuando corresponda.
+- Operaciones con números decimales.
 
-PROGRESIÓN:
-- Adapta la dificultad al nivel.
-- Aumenta la dificultad gradualmente.
-- Alterna operaciones y problemas.
-- Evita repetir continuamente los mismos ejercicios.
+REGLAS OBLIGATORIAS:
 
-REGLAS IMPORTANTES:
+1. Crea un único ejercicio.
+2. Debe tener una respuesta numérica única.
+3. La operación debe aparecer explícitamente en el enunciado.
+4. Incluye una línea con este formato exacto:
 
-1. El ejercicio debe tener una única respuesta numérica.
-2. Comprueba matemáticamente el resultado antes de responder.
-3. No inventes resultados.
-4. La solución debe comenzar obligatoriamente con:
-   RESULTADO: seguido del resultado numérico exacto.
-5. Después del resultado, explica el procedimiento.
+OPERACIÓN: 27 + 15
 
-PISTA:
-Incluye una pista breve sin revelar el resultado.
+5. La operación debe corresponder exactamente
+   con lo que se pregunta en el enunciado.
+6. Comprueba el resultado antes de responder.
+7. En solution, comienza obligatoriamente con:
 
-RESPONDE EXCLUSIVAMENTE CON EL JSON SOLICITADO.
+RESULTADO: 42
+
+8. Después del resultado, explica brevemente
+   cómo se resuelve la operación.
+9. Incluye una pista breve que no revele la respuesta.
+10. Alterna operaciones y evita repetir ejercicios típicos.
+
+Devuelve exclusivamente el JSON solicitado.
 `;
+}
+
+// ========================================
+// CÁLCULO SEGURO DE OPERACIONES
+// ========================================
+
+interface Operacion {
+  numero1: number;
+  operador: string;
+  numero2: number;
+}
+
+function extraerOperacion(pregunta: string): Operacion | null {
+  const coincidencia = pregunta.match(
+    /OPERACIÓN\s*:\s*(-?\d+(?:[.,]\d+)?)\s*([+\-*/×÷])\s*(-?\d+(?:[.,]\d+)?)/i
+  );
+
+  if (!coincidencia) {
+    return null;
+  }
+
+  const numero1 = Number(coincidencia[1].replace(",", "."));
+  const numero2 = Number(coincidencia[3].replace(",", "."));
+
+  if (!Number.isFinite(numero1) || !Number.isFinite(numero2)) {
+    return null;
+  }
+
+  return {
+    numero1,
+    operador: coincidencia[2],
+    numero2
+  };
+}
+
+function calcularOperacion(operacion: Operacion): number {
+  const { numero1, operador, numero2 } = operacion;
+
+  let resultado: number;
+
+  switch (operador) {
+    case "+":
+      resultado = numero1 + numero2;
+      break;
+
+    case "-":
+      resultado = numero1 - numero2;
+      break;
+
+    case "*":
+    case "×":
+      resultado = numero1 * numero2;
+      break;
+
+    case "/":
+    case "÷":
+      if (numero2 === 0) {
+        throw new Error("La división entre cero no está permitida.");
+      }
+
+      resultado = numero1 / numero2;
+      break;
+
+    default:
+      throw new Error("Operación matemática no reconocida.");
+  }
+
+  if (!Number.isFinite(resultado)) {
+    throw new Error("El resultado matemático no es válido.");
+  }
+
+  return Number(resultado.toFixed(10));
+}
+
+// ========================================
+// NORMALIZACIÓN DE RESPUESTAS
+// ========================================
+
+function normalizarNumero(valor: string): number | null {
+  const limpio = valor.trim().replace(/\s/g, "").replace(",", ".");
+
+  if (!/^-?\d+(?:\.\d+)?$/.test(limpio)) {
+    return null;
+  }
+
+  const numero = Number(limpio);
+
+  return Number.isFinite(numero) ? numero : null;
 }
 
 // ========================================
@@ -65,56 +149,41 @@ export async function generarRetoMatematicas(
   nivel: number = 1
 ): Promise<RetoGenerado> {
 
-  const instrucciones =
-    instruccionesMatematicas(nivel);
-
-  return consultarConRespaldo<RetoGenerado>(
-    instrucciones,
+  const reto = await consultarConRespaldo<RetoGenerado>(
+    instruccionesMatematicas(nivel),
     ESQUEMA_RETO
   );
-}
 
-// ========================================
-// NORMALIZAR RESULTADOS
-// ========================================
-
-function normalizarNumero(
-  valor: string
-): number | null {
-
-  const limpio = valor
-    .trim()
-    .replace(/\s/g, "")
-    .replace(",", ".");
-
-  if (!/^-?\d+(?:\.\d+)?$/.test(limpio)) {
-    return null;
+  if (
+    !reto.prompt?.trim() ||
+    !reto.hint?.trim() ||
+    !reto.solution?.trim() ||
+    !reto.category?.trim()
+  ) {
+    throw new Error("Gemini ha generado un ejercicio incompleto.");
   }
 
-  const numero = Number(limpio);
+  const operacion = extraerOperacion(reto.prompt);
 
-  return Number.isFinite(numero)
-    ? numero
-    : null;
-}
-
-// ========================================
-// EXTRAER RESULTADO DE LA SOLUCIÓN
-// ========================================
-
-function extraerResultado(
-  solucion: string
-): number | null {
-
-  const coincidencia = solucion.match(
-    /RESULTADO\s*:\s*(-?\d+(?:[.,]\d+)?)/i
-  );
-
-  if (!coincidencia) {
-    return null;
+  if (!operacion) {
+    throw new Error(
+      "El ejercicio matemático no contiene una operación verificable."
+    );
   }
 
-  return normalizarNumero(coincidencia[1]);
+  const resultado = calcularOperacion(operacion);
+
+  // El servidor establece el resultado real.
+  // No se utiliza el resultado numérico de Gemini.
+
+  const explicacion = reto.solution
+    .replace(/^RESULTADO\s*:\s*-?\d+(?:[.,]\d+)?\s*/i, "")
+    .trim();
+
+  reto.solution =
+    `RESULTADO: ${resultado}\n${explicacion}`;
+
+  return reto;
 }
 
 // ========================================
@@ -127,23 +196,22 @@ export async function evaluarRespuestaMatematicas(
   solucion: string
 ): Promise<EvaluacionReto> {
 
-  const resultadoCorrecto =
-    extraerResultado(solucion);
+  const operacion = extraerOperacion(pregunta);
 
-  if (resultadoCorrecto === null) {
+  if (!operacion) {
     throw new Error(
-      "No se ha podido identificar el resultado matemático de la solución."
+      "No se puede evaluar el ejercicio: falta una operación verificable."
     );
   }
 
-  const resultadoAlumno =
-    normalizarNumero(respuesta);
+  const resultadoCorrecto = calcularOperacion(operacion);
+  const resultadoAlumno = normalizarNumero(respuesta);
 
   if (resultadoAlumno === null) {
     return {
       correct: false,
-      feedback: "Prueba a escribir el resultado numérico.",
-      explanation: "Escribe únicamente el número de tu respuesta."
+      feedback: "Escribe una respuesta numérica para poder corregirla.",
+      explanation: "Introduce el resultado de la operación."
     };
   }
 
@@ -154,16 +222,15 @@ export async function evaluarRespuestaMatematicas(
     return {
       correct: true,
       feedback: "¡Muy bien! Has acertado.",
-      explanation: solucion.replace(
-        /^RESULTADO\s*:\s*/i,
-        "Resultado correcto: "
-      )
+      explanation:
+        `El resultado correcto es ${resultadoCorrecto}.`
     };
   }
 
   return {
     correct: false,
     feedback: "No es correcto todavía. ¡Inténtalo de nuevo!",
-    explanation: "Revisa las operaciones y vuelve a intentarlo."
+    explanation:
+      "Revisa la operación y vuelve a intentarlo."
   };
 }
