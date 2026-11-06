@@ -18,9 +18,9 @@ const historialEjercicios = new Map<number, string[]>();
 function normalizarEnunciado(valor: string): string {
   return valor
     .normalize("NFD")
-    .replace(/[\\u0300-\\u036f]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .replace(/\\s+/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -39,7 +39,7 @@ NIVEL DEL ALUMNO: ${nivel}
 CÓDIGO DE VARIACIÓN DE ESTA PETICIÓN: ${variacion}
 
 EJERCICIOS RECIENTES QUE NO DEBES REPETIR:
-${recientes.length ? recientes.map((p, i) => `${i + 1}. ${p}`).join("\\n") : "Todavía no hay ejercicios anteriores."}
+${recientes.length ? recientes.map((p, i) => `${i + 1}. ${p}`).join("\n") : "Todavía no hay ejercicios anteriores."}
 
 CONTENIDOS:
 - Sumas.
