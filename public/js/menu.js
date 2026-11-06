@@ -1,4 +1,3 @@
-
 // ======================================
 // WEBLINE GT - MENÚ FLOTANTE Y NAVEGACIÓN
 // ======================================
@@ -15,6 +14,7 @@ export function initializeMenu({
     const backdrop = document.getElementById("menu-backdrop");
 
     const eventSection = document.getElementById("event-section");
+    const reglamentoSection = document.getElementById("reglamento-section");
     const chatSection = document.getElementById("chat-section");
     const welcomeScreen = document.getElementById("welcome-screen");
 
@@ -24,6 +24,7 @@ export function initializeMenu({
         !panel ||
         !backdrop ||
         !eventSection ||
+        !reglamentoSection ||
         !chatSection
     ) {
         console.error("[MENU] No se encontraron los elementos.");
@@ -63,13 +64,18 @@ export function initializeMenu({
 
     function changeSection(section, fromUser = false) {
 
-        if (section !== "event" && section !== "chat") {
+        if (
+            section !== "event" &&
+            section !== "reglamento" &&
+            section !== "chat"
+        ) {
             return;
         }
 
         currentSection = section;
 
         eventSection.hidden = section !== "event";
+        reglamentoSection.hidden = section !== "reglamento";
         chatSection.hidden = section !== "chat";
 
         // La bienvenida solo desaparece cuando
