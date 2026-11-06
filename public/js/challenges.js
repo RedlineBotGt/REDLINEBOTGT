@@ -39,18 +39,29 @@ function obtenerPerfilValido() {
 function obtenerAsignaturaValida() {
   const asignatura = obtenerAsignaturaActual();
 
-  // La clave interna "lateral" se conserva.
-  // La materia visible es Cultura general.
+  // Cultura general conserva su clave histórica.
   if (
-    asignatura !== "lateral" &&
-    asignatura !== "cultura"
+    asignatura === "lateral" ||
+    asignatura === "cultura"
   ) {
+    return "cultura";
+  }
+
+  // Matemáticas ya dispone de generador y evaluador propios.
+  if (asignatura === "matematicas") {
+    return "matematicas";
+  }
+
+  // Geografía continúa desactivada.
+  if (asignatura === "geografia") {
     throw new Error(
-      "Esta asignatura todavía no está disponible. Estamos preparando Cultura general."
+      "Geografía todavía no está disponible."
     );
   }
 
-  return "cultura";
+  throw new Error(
+    "Selecciona una asignatura válida."
+  );
 }
 
 async function realizarPeticion(
@@ -204,7 +215,7 @@ export async function cargarPregunta() {
     boton.disabled = false;
 
     console.log(
-      `[ACADEMIA] Ejercicio de Cultura general recibido para ${perfil}.`
+      `[ACADEMIA] Ejercicio de ${asignatura} recibido para ${perfil}.`
     );
 
   } catch (error) {
