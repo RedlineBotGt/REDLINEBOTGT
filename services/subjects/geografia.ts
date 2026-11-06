@@ -16,7 +16,10 @@ import {
 // INSTRUCCIONES DE GEOGRAFÍA
 // ========================================
 
-function instruccionesGeografia(nivel: number): string {
+function instruccionesGeografia(
+  nivel: number,
+  recientes: string[]
+): string {
   return `
 Eres el profesor de Geografía de Academia Campos.
 
@@ -24,6 +27,13 @@ Crea UNA SOLA pregunta original de geografía adaptada
 al nivel del alumno de Primaria.
 
 NIVEL DEL ALUMNO: ${nivel}
+
+PREGUNTAS RECIENTES DE ESTE PERFIL Y ASIGNATURA:
+${recientes.length ? recientes.map((p, i) => `${i + 1}. ${p}`).join("\n") : "Todavía no hay preguntas anteriores."}
+
+No repitas ninguna pregunta reciente ni evalúes el mismo dato geográfico
+con palabras diferentes. Cambia de tema, región y concepto.
+
 Utiliza vocabulario claro, frases cortas y dificultad
 progresiva, aproximadamente de 2.º-3.º de Primaria al inicio.
 
@@ -63,10 +73,11 @@ Devuelve exclusivamente el JSON solicitado.
 // ========================================
 
 export async function generarRetoGeografia(
-  nivel: number = 1
+  nivel: number = 1,
+  recientes: string[] = []
 ): Promise<RetoGenerado> {
   const reto = await consultarConRespaldo<RetoGenerado>(
-    instruccionesGeografia(nivel),
+    instruccionesGeografia(nivel, recientes),
     ESQUEMA_RETO
   );
 
