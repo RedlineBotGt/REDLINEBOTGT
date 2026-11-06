@@ -8,6 +8,7 @@ import {
   generarRetoCulturaGeneral,
   evaluarRespuestaCulturaGeneral,
   generarRetoMatematicas,
+  evaluarRespuestaMatematicas,
   generarRetoGeografia
 } from "./subjects/index.js";
 
@@ -24,10 +25,6 @@ export type AsignaturaReto =
   | "lateral"
   | "matematicas"
   | "geografia";
-
-// ========================================
-// EXPORTAR TIPOS
-// ========================================
 
 export type {
   RetoGenerado,
@@ -82,8 +79,10 @@ export async function evaluarRespuestaIA(
       );
 
     case "matematicas":
-      throw new Error(
-        "La evaluación de Matemáticas todavía no está preparada."
+      return evaluarRespuestaMatematicas(
+        pregunta,
+        respuesta,
+        solucion
       );
 
     case "geografia":
