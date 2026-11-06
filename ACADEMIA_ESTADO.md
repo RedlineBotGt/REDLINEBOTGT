@@ -331,4 +331,9 @@ El usuario autoriza implantar un historial común de preguntas para todas las as
 La memoria es temporal y reside en RAM. Se pierde al reiniciar o volver a desplegar el servidor. No se ha añadido persistencia en MongoDB para respetar el alcance autorizado. La detección determinista bloquea enunciados idénticos tras normalización; evitar preguntas semánticamente parecidas depende también de las instrucciones al modelo y no constituye una garantía matemática.
 
 ### Estado de verificación
-Cambios guardados en GitHub: pendiente de releer todos los archivos y compilar TypeScript. No desplegado en Render. No probado funcionalmente.
+- Cambios guardados en GitHub y releídos desde la rama de trabajo.
+- Comprobadas las firmas y el paso del historial por la fachada a los cuatro generadores.
+- Comprobados el límite de 30, la clave perfil/asignatura, la normalización y el reintento ante duplicados, incluida la comprobación tras peticiones simultáneas.
+- Compilación TypeScript: pendiente; no se pudo ejecutar desde este entorno porque no fue posible clonar el repositorio.
+- Despliegue Render: no realizado.
+- Prueba funcional en Render: pendiente.
