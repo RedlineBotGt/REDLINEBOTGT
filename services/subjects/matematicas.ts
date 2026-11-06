@@ -11,9 +11,7 @@ import {
 // GENERACIÓN DE EJERCICIOS
 // ========================================
 
-const MAX_HISTORIAL_EJERCICIOS = 25;
 const MAX_INTENTOS_GENERACION = 4;
-const historialEjercicios = new Map<number, string[]>();
 
 function normalizarEnunciado(valor: string): string {
   return valor
@@ -167,10 +165,9 @@ function normalizarNumero(valor: string): number | null {
 // ========================================
 
 export async function generarRetoMatematicas(
-  nivel: number = 1
+  nivel: number = 1,
+  recientes: string[] = []
 ): Promise<RetoGenerado> {
-
-  const recientes = historialEjercicios.get(nivel) || [];
   let retoValido: RetoGenerado | null = null;
   let operacionValida: Operacion | null = null;
 
@@ -228,12 +225,6 @@ export async function generarRetoMatematicas(
   const reto = retoValido;
   const operacion = operacionValida;
   const resultado = calcularOperacion(operacion);
-
-  recientes.push(reto.prompt);
-  while (recientes.length > MAX_HISTORIAL_EJERCICIOS) {
-    recientes.shift();
-  }
-  historialEjercicios.set(nivel, recientes);
 
   // El servidor establece el resultado real.
   // No se utiliza el resultado numérico de Gemini.
