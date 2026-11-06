@@ -1,5 +1,5 @@
 // ========================================
-// ESQUEMAS DE RESPUESTA DE IA
+// ESQUEMAS DE RESPUESTA DE GEMINI
 // Academia Campos
 // ========================================
 
@@ -21,32 +21,26 @@ export interface EvaluacionReto {
 }
 
 // ========================================
-// ESQUEMA PARA GENERAR RETOS
+// ESQUEMA DE GENERACIÓN DE RETOS
 // ========================================
 
 export const ESQUEMA_RETO = {
-  type: "OBJECT",
+  type: "object",
   properties: {
     prompt: {
-      type: "STRING"
+      type: "string"
     },
     hint: {
-      type: "STRING"
+      type: "string"
     },
     solution: {
-      type: "STRING"
+      type: "string"
     },
     category: {
-      type: "STRING"
+      type: "string"
     }
   },
   required: [
-    "prompt",
-    "hint",
-    "solution",
-    "category"
-  ],
-  propertyOrdering: [
     "prompt",
     "hint",
     "solution",
@@ -55,28 +49,23 @@ export const ESQUEMA_RETO = {
 };
 
 // ========================================
-// ESQUEMA PARA EVALUAR RESPUESTAS
+// ESQUEMA DE EVALUACIÓN
 // ========================================
 
 export const ESQUEMA_EVALUACION = {
-  type: "OBJECT",
+  type: "object",
   properties: {
     correct: {
-      type: "BOOLEAN"
+      type: "boolean"
     },
     feedback: {
-      type: "STRING"
+      type: "string"
     },
     explanation: {
-      type: "STRING"
+      type: "string"
     }
   },
   required: [
-    "correct",
-    "feedback",
-    "explanation"
-  ],
-  propertyOrdering: [
     "correct",
     "feedback",
     "explanation"
