@@ -4,7 +4,7 @@
 
 export const asignaturas = {
   cultura_general: "Cultura general",
-  pensamiento_lateral: "Detectives de la Mente",
+  pensamiento_lateral: "Retos Imposibles",
   matematicas: "Matemáticas",
   geografia: "Geografía"
 };
