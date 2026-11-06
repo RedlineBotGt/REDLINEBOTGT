@@ -39,15 +39,20 @@ function obtenerPerfilValido() {
 function obtenerAsignaturaValida() {
   const asignatura = obtenerAsignaturaActual();
 
-  // Cultura general conserva su clave histórica.
+  // Compatibilidad: la clave antigua lateral corresponde
+  // exclusivamente a Cultura general.
   if (
     asignatura === "lateral" ||
-    asignatura === "cultura"
+    asignatura === "cultura" ||
+    asignatura === "cultura_general"
   ) {
-    return "cultura";
+    return "cultura_general";
   }
 
-  // Matemáticas ya dispone de generador y evaluador propios.
+  if (asignatura === "pensamiento_lateral") {
+    return "pensamiento_lateral";
+  }
+
   if (asignatura === "matematicas") {
     return "matematicas";
   }
