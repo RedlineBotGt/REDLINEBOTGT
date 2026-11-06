@@ -1,6 +1,6 @@
 const IMAGENES = {
     info1: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110660",
-    reglamento2: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110633",
+    info2: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110661",
     reglamento3: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110634",
     reglamento4: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110635",
     reglamento5: "https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110636",
