@@ -1,22 +1,24 @@
+// ======================================
+// WEBLINE GT - INICIO PRINCIPAL
+// ======================================
+
 import { initializeMenu } from "./menu.js";
 import { initializeEvent } from "./event.js";
-import { initializeChat } from "./chat.js";
 import { initializeReglamento } from "./reglamento.js";
+
+// ======================================
+// INICIAR APLICACIÓN
+// ======================================
 
 document.addEventListener("DOMContentLoaded", () => {
 
-    // Inicializar CHAT
-    initializeChat();
+    // Inicializar menú flotante.
+    initializeMenu();
 
-    // Inicializar MENÚ
-    initializeMenu({
-        chatAlreadyInitialized: true
-    });
-
-    // Inicializar EVENTO
+    // Inicializar apartado de eventos.
     initializeEvent();
 
-    // Inicializar REGLAMENTO
+    // Inicializar apartado de reglamento.
     initializeReglamento();
 
 });
