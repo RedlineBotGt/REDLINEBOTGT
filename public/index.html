@@ -8,8 +8,18 @@
 
     <title>WEBLINE GT</title>
 
+    <meta name="description" content="Portal oficial de WEBLINE GT">
+
+    <meta property="og:type" content="website">
     <meta property="og:title" content="WEBLINE GT">
     <meta property="og:description" content="Portal oficial de WEBLINE GT">
+    <meta property="og:image" content="https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110675">
+    <meta property="og:image:secure_url" content="https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110675">
+    <meta property="og:image:alt" content="WEBLINE GT - Twitch">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="WEBLINE GT">
+    <meta name="twitter:description" content="Portal oficial de WEBLINE GT">
+    <meta name="twitter:image" content="https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110675">
 
     <link rel="icon" href="https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110545">
     <link rel="apple-touch-icon" href="https://res.cloudinary.com/iir4vyqc/image/upload/f_auto,q_auto/1000110545">
@@ -25,6 +35,7 @@
     <link rel="stylesheet" href="/css/reglamento.css">
     <link rel="stylesheet" href="/css/info.css">
     <link rel="stylesheet" href="/css/clasificacion.css">
+    <link rel="stylesheet" href="/css/twitch.css">
 </head>
 
 <body>
@@ -190,6 +201,63 @@
 
         </section>
 
+        <!-- APARTADO TWITCH -->
+        <section id="twitch-section" hidden>
+
+            <h1 class="page-title">📺 TWITCH</h1>
+
+            <p class="twitch-intro">
+                Sigue en directo las retransmisiones de REDLINE GTCUP.
+            </p>
+
+            <div class="twitch-player-container">
+
+                <div class="twitch-player-toolbar">
+
+                    <button
+                        id="twitch-reduce"
+                        class="twitch-size-button"
+                        type="button"
+                    >
+                        − REDUCIR
+                    </button>
+
+                    <button
+                        id="twitch-expand"
+                        class="twitch-size-button"
+                        type="button"
+                    >
+                        + AMPLIAR
+                    </button>
+
+                </div>
+
+                <div
+                    id="twitch-player"
+                    class="twitch-player"
+                >
+                    <div class="twitch-loading">
+                        Preparando retransmisión...
+                    </div>
+                </div>
+
+            </div>
+
+            <a
+                class="twitch-channel-link"
+                href="https://www.twitch.tv/pollo_racinggt"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                VER CANAL EN TWITCH ↗
+            </a>
+
+            <p class="twitch-channel-name">
+                Canal: <strong>pollo_racinggt</strong>
+            </p>
+
+        </section>
+
         <!-- APARTADO CHAT -->
         <section id="chat-section" hidden>
             <h1 class="page-title">CHAT</h1>
@@ -307,6 +375,14 @@
                 data-section="clasificacion"
             >
                 🏆 CLASIFICACIÓN
+            </button>
+
+            <button
+                type="button"
+                class="menu-button"
+                data-section="twitch"
+            >
+                📺 TWITCH
             </button>
 
             <button
