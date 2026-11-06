@@ -1,5 +1,5 @@
 // ========================================
-// DETECTIVES DE LA MENTE
+// RETOS IMPOSIBLES
 // Academia Campos
 // Pensamiento lateral, lógica y enigmas
 // ========================================
@@ -21,7 +21,7 @@ export async function generarRetoPensamientoLateral(
   nivel: number = 1
 ): Promise<RetoGenerado> {
   const instrucciones = `
-Eres el creador de retos de Detectives de la Mente
+Eres el creador de retos de Retos Imposibles
 de Academia Campos.
 
 Crea UN SOLO enigma original de pensamiento lateral,
@@ -64,7 +64,7 @@ Devuelve exclusivamente el JSON solicitado.
     !reto.category?.trim()
   ) {
     throw new Error(
-      "Gemini ha generado un reto incompleto de Detectives de la Mente."
+      "Gemini ha generado un reto incompleto de Retos Imposibles."
     );
   }
 
@@ -81,7 +81,7 @@ export async function evaluarRespuestaPensamientoLateral(
   solucion: string
 ): Promise<EvaluacionReto> {
   const instrucciones = `
-Eres un profesor de Detectives de la Mente.
+Eres un profesor de Retos Imposibles.
 
 ENIGMA:
 ${pregunta}
@@ -119,7 +119,7 @@ Devuelve exclusivamente el JSON solicitado.
     !evaluacion.explanation?.trim()
   ) {
     throw new Error(
-      "Gemini ha devuelto una evaluación incompleta de Detectives de la Mente."
+      "Gemini ha devuelto una evaluación incompleta de Retos Imposibles."
     );
   }
 
