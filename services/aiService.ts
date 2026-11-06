@@ -7,6 +7,8 @@
 import {
   generarRetoCulturaGeneral,
   evaluarRespuestaCulturaGeneral,
+  generarRetoPensamientoLateral,
+  evaluarRespuestaPensamientoLateral,
   generarRetoMatematicas,
   evaluarRespuestaMatematicas,
   generarRetoGeografia
@@ -22,6 +24,8 @@ import type {
 // ========================================
 
 export type AsignaturaReto =
+  | "cultura_general"
+  | "pensamiento_lateral"
   | "lateral"
   | "matematicas"
   | "geografia";
@@ -39,11 +43,13 @@ export async function generarRetoIA(
   asignatura: AsignaturaReto,
   nivel: number = 1
 ): Promise<RetoGenerado> {
-
   switch (asignatura) {
-
+    case "cultura_general":
     case "lateral":
       return generarRetoCulturaGeneral(nivel);
+
+    case "pensamiento_lateral":
+      return generarRetoPensamientoLateral(nivel);
 
     case "matematicas":
       return generarRetoMatematicas(nivel);
@@ -68,11 +74,17 @@ export async function evaluarRespuestaIA(
   solucion: string,
   asignatura: AsignaturaReto
 ): Promise<EvaluacionReto> {
-
   switch (asignatura) {
-
+    case "cultura_general":
     case "lateral":
       return evaluarRespuestaCulturaGeneral(
+        pregunta,
+        respuesta,
+        solucion
+      );
+
+    case "pensamiento_lateral":
+      return evaluarRespuestaPensamientoLateral(
         pregunta,
         respuesta,
         solucion
