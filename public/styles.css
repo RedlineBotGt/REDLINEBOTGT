@@ -230,6 +230,31 @@ p {
   margin: 20px 0;
 }
 
+.challenge-visual {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 110px;
+  padding: 18px;
+  margin: 14px 0 22px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.challenge-visual-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  min-height: 48px;
+  font-size: clamp(2rem, 8vw, 3.2rem);
+  line-height: 1;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.12));
+}
+
 #challenge-screen label {
   display: block;
   margin-bottom: 8px;
