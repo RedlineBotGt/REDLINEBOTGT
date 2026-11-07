@@ -26,7 +26,7 @@ import {
   iniciarDeberes
 } from "./js/homework.js";
 
-import { iniciarAvisos } from "./js/notices.js";
+import { iniciarAvisos } from "./js/notices.js?v=2";
 
 import {
   iniciarChat,
