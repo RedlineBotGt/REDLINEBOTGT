@@ -9,6 +9,7 @@ import { existsSync } from "fs";
 import questionsRouter from "./routes/questions.ts";
 import homeworkRouter from "./routes/homework.ts";
 import chatRouter from "./routes/chat.ts";
+import noticesRouter from "./routes/notices.ts";
 
 dotenv.config();
 
@@ -172,6 +173,7 @@ app.get("/api/academia", (_req, res) => {
 app.use("/api/academia", questionsRouter);
 app.use("/api/academia", homeworkRouter);
 app.use("/api/academia", chatRouter);
+app.use("/api/academia", noticesRouter);
 
 // ========================================
 // RUTAS NO ENCONTRADAS

@@ -652,3 +652,30 @@ El usuario aprueba comenzar la implementación de Lenguaje Musical como asignatu
 - Efecto: el navegador no podía cargar correctamente `app.js`; por eso no respondían los botones de selección de perfiles.
 - Corrección: sustituir esas dos secuencias por saltos de línea reales. No se modifican perfiles, datos, PIN ni autenticación.
 - Pendiente: confirmar compilación/despliegue automático y probar la selección de Leo, Papá y Mamá en navegador.
+
+
+---
+
+## 22. Avisos familiares (8-11-2026)
+
+### Diseño y funcionamiento
+- En la pantalla principal de selección de perfiles se muestra un listado compacto de avisos, justo debajo de los tres perfiles y alineado a la izquierda. No son tarjetas grandes; la lista puede desplazarse si acumula muchos avisos.
+- Cada línea identifica a Papá como autor, muestra el destinatario (Leo, Mamá o Todos), el mensaje y la fecha.
+- Papá dispone del botón «📢 Avisos» debajo de «Consultar deberes», dentro de su pantalla de asignaturas. El botón solo aparece en el perfil Papá.
+- El panel permite elegir destinatario (Leo, Mamá o Todos) y publicar un mensaje de hasta 240 caracteres.
+- Los avisos se guardan en MongoDB, base academia_campos (o MONGODB_DB), colección independiente family_notices. Se listan hasta 200, del más reciente al más antiguo.
+- La lectura es pública para que los avisos aparezcan en la pantalla de perfiles; la creación requiere la sesión firmada de Papá usada por Deberes. No se crea un PIN ni token adicional.
+- La ruta no admite autor enviado por el cliente: el servidor establece siempre autor=papa.
+- El listado se representa con textContent para evitar interpretar los avisos como HTML.
+- Deberes y chat familiar conservan sus rutas y lógica. Solo se exporta el middleware de sesión de Papá para reutilizarlo en la ruta de avisos.
+
+### Archivos
+- Nuevos: services/noticesService.ts, routes/notices.ts, public/js/notices.js.
+- Modificados: routes/homework.ts, server.ts, public/app.js, public/index.html, public/styles.css y este estado vivo.
+
+### Verificación pendiente
+- Confirmar build TypeScript y deploy automático de Render.
+- Probar lectura pública en pantalla de perfiles.
+- Entrar como Papá, comprobar que el botón aparece, reutilizar la sesión PIN de Deberes y publicar avisos dirigidos a Leo, Mamá y Todos.
+- Verificar que se conservan al recargar y que Deberes y chat siguen funcionando.
+- No se ha realizado aún una prueba funcional en navegador.

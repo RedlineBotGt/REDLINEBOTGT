@@ -121,7 +121,7 @@ function comprobarToken(token: string): boolean {
   }
 }
 
-function requierePapa(
+export function requierePapa(
   req: Request,
   res: Response,
   next: NextFunction

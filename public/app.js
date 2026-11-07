@@ -26,6 +26,8 @@ import {
   iniciarDeberes
 } from "./js/homework.js";
 
+import { iniciarAvisos } from "./js/notices.js";
+
 import {
   iniciarChat,
   abrirChat,
@@ -96,6 +98,7 @@ function iniciarAcademia() {
     iniciarRanking();
     iniciarDeberes();
     iniciarChat();
+    iniciarAvisos();
 
     console.log("[ACADEMIA] Todos los módulos iniciados.");
 

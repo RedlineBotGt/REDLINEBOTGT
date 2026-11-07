@@ -42,6 +42,11 @@
           <strong>Mamá</strong>
         </button>
       </div>
+
+      <section id="family-notices" class="family-notices" aria-label="Avisos familiares">
+        <h3>Avisos</h3>
+        <div id="notices-list" aria-live="polite"><p class="notices-empty">Cargando avisos...</p></div>
+      </section>
     </section>
 
     <!-- SELECCIÓN DE ASIGNATURA -->
@@ -114,12 +119,36 @@
 
         <button
           type="button"
+          id="open-notices-btn"
+          class="hidden"
+        >
+          📢 Avisos
+        </button>
+
+        <button
+          type="button"
           id="open-chat-btn"
           onclick="abrirChat()"
         >
           💬 Chat familiar
         </button>
       </div>
+
+      <section id="notices-admin" class="notices-admin hidden" aria-labelledby="notices-admin-title">
+        <h3 id="notices-admin-title">📢 Crear aviso</h3>
+        <form id="notice-form">
+          <label for="notice-recipient">Destinatario</label>
+          <select id="notice-recipient" required>
+            <option value="leo">Leo</option>
+            <option value="mama">Mamá</option>
+            <option value="todos">Todos</option>
+          </select>
+          <label for="notice-text">Mensaje</label>
+          <textarea id="notice-text" rows="3" maxlength="240" placeholder="Escribe un aviso para la familia..." required></textarea>
+          <button type="submit" id="notice-submit">Publicar aviso</button>
+          <p id="notice-form-message" role="status" aria-live="polite"></p>
+        </form>
+      </section>
     </section>
 
     <!-- PANTALLA DE RETOS -->

@@ -1145,3 +1145,72 @@ p {
 .challenge-audio { display:flex; flex-direction:column; align-items:center; gap:10px; padding:18px; margin:16px 0 22px; border:1px solid var(--primary); border-radius:14px; background:var(--panel-light); text-align:center; }
 .challenge-audio p { margin:0; color:var(--text); font-weight:bold; }
 .challenge-audio button { min-height:48px; padding:11px 24px; border:0; border-radius:10px; background:var(--primary); color:#082033; font-size:1rem; font-weight:bold; cursor:pointer; }
+
+
+/* AVISOS FAMILIARES */
+.family-notices {
+  width: 100%;
+  margin: 18px 0 0;
+  text-align: left;
+}
+.family-notices h3 {
+  margin: 0 0 5px;
+  color: var(--muted);
+  font-size: .9rem;
+}
+#notices-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 45vh;
+  overflow-y: auto;
+}
+.notice-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 4px;
+  margin: 0;
+  padding: 5px 7px;
+  border-bottom: 1px solid var(--border);
+  font-size: .84rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.notice-row strong { color: var(--primary); }
+.notice-row time {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: .72rem;
+}
+.notices-empty { margin: 3px 0; color: var(--muted); font-size: .82rem; }
+#open-notices-btn {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 10px;
+  padding: 12px 18px;
+  background: var(--panel-light);
+  color: var(--text);
+  border: 1px solid var(--primary);
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: bold;
+}
+.notices-admin {
+  margin-top: 14px;
+  padding: 14px;
+  background: var(--panel-light);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.notices-admin label { display:block; margin:10px 0 5px; font-weight:bold; }
+.notices-admin select, .notices-admin textarea {
+  display:block; width:100%; padding:11px; background:var(--bg);
+  color:var(--text); border:1px solid var(--border); border-radius:8px; font:inherit;
+}
+.notices-admin button {
+  width:100%; min-height:46px; margin-top:12px; padding:10px;
+  background:var(--primary); color:#082033; border:0; border-radius:9px; font-weight:bold;
+}
+#notice-form-message { margin:8px 0 0; }
+#notice-form-message.error { color:var(--danger); }
