@@ -61,6 +61,10 @@ function obtenerAsignaturaValida() {
     return "geografia";
   }
 
+  if (asignatura === "english") {
+    return "english";
+  }
+
   throw new Error(
     "Selecciona una asignatura válida."
   );
