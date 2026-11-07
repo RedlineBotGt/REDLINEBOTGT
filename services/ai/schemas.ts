@@ -12,6 +12,7 @@ export interface RetoGenerado {
   hint: string;
   solution: string;
   category: string;
+  visual?: { alt: string; items: Array<{ emoji: string; count: number }> };
 }
 
 export interface EvaluacionReto {
@@ -38,6 +39,24 @@ export const ESQUEMA_RETO = {
     },
     category: {
       type: "string"
+    },
+    visual: {
+      type: "object",
+      properties: {
+        alt: { type: "string" },
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              emoji: { type: "string" },
+              count: { type: "integer" }
+            },
+            required: ["emoji", "count"]
+          }
+        }
+      },
+      required: ["alt", "items"]
     }
   },
   required: [
