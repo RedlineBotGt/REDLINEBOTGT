@@ -107,11 +107,13 @@ async function realizarPeticion(
     }
 
     if (!response.ok || data.ok === false) {
-      throw new Error(
+      const error = new Error(
         data.error ||
         data.message ||
         "Error del servidor: " + response.status
       );
+      error.status = response.status;
+      throw error;
     }
 
     return data;
@@ -382,16 +384,35 @@ export async function enviarRespuesta() {
       error
     );
 
-    mostrarMensaje(
-      feedback,
-      "No se ha podido evaluar la respuesta. " +
-      (error.message || "Inténtalo de nuevo.")
-    );
+    if (error.status === 404) {
+      // El ejercicio anterior se perdió o caducó en el servidor.
+      // Permitimos descartarlo y continuar sin marcarlo como acertado.
+      respuestaEvaluada = true;
+      mostrarMensaje(
+        feedback,
+        "Este ejercicio ya no está disponible. Puedes pasar a una pregunta nueva."
+      );
+      campo.disabled = true;
 
-    campo.disabled = false;
+      if (boton) {
+        boton.disabled = true;
+      }
 
-    if (botonSiguiente) {
-      botonSiguiente.disabled = true;
+      if (botonSiguiente) {
+        botonSiguiente.disabled = false;
+      }
+    } else {
+      mostrarMensaje(
+        feedback,
+        "No se ha podido evaluar la respuesta. " +
+        (error.message || "Inténtalo de nuevo.")
+      );
+
+      campo.disabled = false;
+
+      if (botonSiguiente) {
+        botonSiguiente.disabled = true;
+      }
     }
 
   } finally {
