@@ -24,6 +24,37 @@ function mostrarMensaje(elemento, mensaje) {
   }
 }
 
+function mostrarVisual(visual) {
+  const contenedor = obtenerElemento("challenge-visual");
+  if (!contenedor) return;
+  contenedor.replaceChildren();
+  if (!visual || !Array.isArray(visual.items) || visual.items.length === 0) {
+    contenedor.classList.add("hidden");
+    contenedor.removeAttribute("aria-label");
+    return;
+  }
+  let total = 0;
+  for (const item of visual.items.slice(0, 4)) {
+    if (!item || typeof item.emoji !== "string" || !item.emoji.trim()) continue;
+    const cantidad = Math.max(1, Math.min(12, Math.floor(Number(item.count) || 1)));
+    for (let i = 0; i < cantidad && total < 18; i++, total++) {
+      const objeto = document.createElement("span");
+      objeto.className = "challenge-visual-item";
+      objeto.textContent = item.emoji;
+      objeto.setAttribute("aria-hidden", "true");
+      contenedor.appendChild(objeto);
+    }
+  }
+  if (total === 0) {
+    contenedor.classList.add("hidden");
+    return;
+  }
+  contenedor.setAttribute("aria-label",
+    typeof visual.alt === "string" && visual.alt.trim()
+      ? visual.alt : "Ilustración del ejercicio");
+  contenedor.classList.remove("hidden");
+}
+
 function obtenerPerfilValido() {
   const perfil = obtenerPerfilActual();
 
@@ -163,6 +194,7 @@ export async function cargarPregunta() {
 
   retoActual = null;
   respuestaEvaluada = false;
+  mostrarVisual(null);
 
   boton.disabled = true;
 
@@ -213,6 +245,7 @@ export async function cargarPregunta() {
     retoActual = data.reto;
 
     mostrarMensaje(prompt, retoActual.prompt);
+    mostrarVisual(retoActual.visual);
     mostrarMensaje(feedback, "");
 
     if (campo) {
