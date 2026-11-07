@@ -1139,3 +1139,4 @@ p {
     width: 100%;
   }
 }
+\n\n/* LENGUAJE MUSICAL */\n.challenge-audio { display:flex; flex-direction:column; align-items:center; gap:10px; padding:18px; margin:16px 0 22px; border:1px solid var(--primary); border-radius:14px; background:var(--panel-light); text-align:center; }\n.challenge-audio p { margin:0; color:var(--text); font-weight:bold; }\n.challenge-audio button { min-height:48px; padding:11px 24px; border:0; border-radius:10px; background:var(--primary); color:#082033; font-size:1rem; font-weight:bold; cursor:pointer; }\n

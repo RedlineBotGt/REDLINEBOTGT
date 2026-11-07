@@ -612,3 +612,29 @@ Se incorpora Lengua como asignatura independiente, siguiendo el flujo modular de
 - Se conserva el visual opcional exclusivo de English; Lengua no depende de imágenes ni emojis.
 - Deberes, chat, perfiles, otras asignaturas y ranking no se modifican.
 - Pendiente: comprobar compilación TypeScript, despliegue automático y pruebas reales de generación/evaluación. No se declara probado hasta completar esas verificaciones.
+
+
+---
+
+## 21. Nueva asignatura Lenguaje Musical — primera implementación (8-11-2026)
+
+El usuario aprueba comenzar la implementación de Lenguaje Musical como asignatura independiente.
+
+### Alcance de esta primera versión
+- Motor propio `services/subjects/lenguajeMusical.ts`, conectado al servicio Gemini común.
+- Contenidos previstos en el prompt: sonido/silencio, duración, intensidad, altura, instrumentos, ritmo, notas, pentagrama, oído musical, composición y estilos.
+- Campo opcional `audio` en el esquema de retos, con secuencias acotadas de tonos.
+- El navegador genera los tonos mediante Web Audio API, sin proveedor de audio ni coste adicional. Son tonos electrónicos, no grabaciones de instrumentos.
+- Botón de reproducción añadido dinámicamente a la pantalla de retos.
+- Nueva tarjeta «Lenguaje Musical» y clave independiente `lenguaje_musical`.
+- Se reutiliza el flujo de perfil, reto pendiente, pista, evaluación y siguiente pregunta.
+- Las ilustraciones visuales opcionales usan el sistema visual actual de elementos emoji; todavía no se ha incorporado un banco de fotografías o ilustraciones reales.
+
+### Límites y comprobaciones pendientes
+- No se ha compilado TypeScript ni probado la generación/evaluación real.
+- No se ha comprobado la reproducción en Android/Chrome.
+- El esquema de audio debe validarse con respuestas reales de Gemini; no basta con la validación estática.
+- La asignatura no se considera validada hasta probar distintos ejercicios, audio, respuestas correctas/incorrectas y continuidad.
+- No se ha cambiado Deberes, chat, ranking ni perfiles.
+- Render tiene auto-deploy por commit en esta rama: actualizar la rama iniciará un despliegue automático. No lanzar deploy manual.
+

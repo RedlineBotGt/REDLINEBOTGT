@@ -35,7 +35,7 @@ export type AsignaturaReto =
   | "matematicas"
   | "geografia"
   | "english"
-  | "lengua";
+  | "lengua"\n  | "lenguaje_musical";
 
 export type {
   RetoGenerado,

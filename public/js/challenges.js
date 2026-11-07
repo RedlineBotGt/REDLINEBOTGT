@@ -55,6 +55,48 @@ function mostrarVisual(visual) {
   contenedor.classList.remove("hidden");
 }
 
+function mostrarAudio(audio) {
+  obtenerElemento("challenge-audio")?.remove();
+  if (!audio || !Array.isArray(audio.notes) || !audio.notes.length) return;
+  const box = document.createElement("section");
+  box.id = "challenge-audio";
+  box.className = "challenge-audio";
+  const label = document.createElement("p");
+  label.textContent = audio.label || "Escucha el ejemplo";
+  const play = document.createElement("button");
+  play.type = "button";
+  play.textContent = "▶ Escuchar sonido";
+  play.addEventListener("click", async () => {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) { label.textContent = "Este navegador no admite audio."; return; }
+    const ctx = new AudioContextClass();
+    await ctx.resume();
+    let at = ctx.currentTime + 0.05;
+    const notes = audio.notes.slice(0, 16);
+    for (const note of notes) {
+      const duration = Math.max(0.1, Math.min(1.6, Number(note.durationMs) / 1000 || 0.4));
+      const gap = Math.max(0, Math.min(1, Number(note.gapMs) / 1000 || 0));
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = note.waveform === "triangle" ? "triangle" : "sine";
+      osc.frequency.setValueAtTime(Math.max(80, Math.min(1200, Number(note.frequency) || 440)), at);
+      gain.gain.setValueAtTime(0.0001, at);
+      gain.gain.exponentialRampToValueAtTime(0.15, at + 0.02);
+      gain.gain.setValueAtTime(0.15, at + Math.max(0.025, duration - 0.03));
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + duration);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(at); osc.stop(at + duration + 0.02);
+      at += duration + gap;
+    }
+    const total = notes.reduce((sum,n) => sum + Math.max(100,Math.min(1600,Number(n.durationMs)||400)) + Math.max(0,Math.min(1000,Number(n.gapMs)||0)),0);
+    window.setTimeout(() => ctx.close().catch(() => {}), total + 500);
+  });
+  box.append(label, play);
+  const visual = obtenerElemento("challenge-visual");
+  if (visual?.parentNode) visual.parentNode.insertBefore(box, visual.nextSibling);
+  else obtenerElemento("challenge-prompt")?.after(box);
+}
+
 function obtenerPerfilValido() {
   const perfil = obtenerPerfilActual();
 
@@ -198,7 +240,7 @@ export async function cargarPregunta() {
 
   retoActual = null;
   respuestaEvaluada = false;
-  mostrarVisual(null);
+  mostrarVisual(null);\n  mostrarAudio(null);
 
   boton.disabled = true;
 
@@ -249,7 +291,7 @@ export async function cargarPregunta() {
     retoActual = data.reto;
 
     mostrarMensaje(prompt, retoActual.prompt);
-    mostrarVisual(retoActual.visual);
+    mostrarVisual(retoActual.visual);\n    mostrarAudio(retoActual.audio);
     mostrarMensaje(feedback, "");
 
     if (campo) {

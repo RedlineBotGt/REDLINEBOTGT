@@ -168,7 +168,7 @@ router.post("/question", async (req, res) => {
   if (!materia) {
     return res.status(400).json({
       ok: false,
-      error: "Por ahora están disponibles Cultura general, Retos Imposibles, Matemáticas, Geografía, English y Lengua."
+      error: "Por ahora están disponibles Cultura general, Retos Imposibles, Matemáticas, Geografía, English, Lengua y Lenguaje Musical."
     });
   }
 
@@ -242,7 +242,7 @@ router.post("/question", async (req, res) => {
         prompt: reto.prompt,
         hint: reto.hint,
         category: reto.category,
-        ...(materia === "english" && reto.visual ? { visual: reto.visual } : {})
+        ...(materia === "english" && reto.visual ? { visual: reto.visual } : {}),\n        ...(materia === "lenguaje_musical" && reto.visual ? { visual: reto.visual } : {}),\n        ...(materia === "lenguaje_musical" && reto.audio ? { audio: reto.audio } : {})
       }
     });
 

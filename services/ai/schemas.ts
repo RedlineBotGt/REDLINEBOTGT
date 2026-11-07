@@ -13,6 +13,7 @@ export interface RetoGenerado {
   solution: string;
   category: string;
   visual?: { alt: string; items: Array<{ emoji: string; count: number }> };
+  audio?: { kind: "tones" | "rhythm"; label: string; notes: Array<{ frequency: number; durationMs: number; gapMs: number; waveform: "sine" | "triangle" }> };
 }
 
 export interface EvaluacionReto {
@@ -40,7 +41,7 @@ export const ESQUEMA_RETO = {
     category: {
       type: "string"
     },
-    visual: {
+    audio: { type: "object", properties: { kind: { type: "string", enum: ["tones", "rhythm"] }, label: { type: "string" }, notes: { type: "array", items: { type: "object", properties: { frequency: { type: "number" }, durationMs: { type: "integer" }, gapMs: { type: "integer" }, waveform: { type: "string", enum: ["sine", "triangle"] } }, required: ["frequency", "durationMs", "gapMs", "waveform"] } } }, required: ["kind", "label", "notes"] },\n    visual: {
       type: "object",
       properties: {
         alt: { type: "string" },

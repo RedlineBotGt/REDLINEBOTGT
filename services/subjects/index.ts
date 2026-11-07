@@ -48,3 +48,4 @@ export type {
   RetoGenerado,
   EvaluacionReto
 } from "../ai/schemas.js";
+\n// Lenguaje Musical\nexport { generarRetoLenguajeMusical, evaluarRespuestaLenguajeMusical } from "./lenguajeMusical.js";\n
