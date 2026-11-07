@@ -385,3 +385,23 @@ Pendiente:
 - Compilar TypeScript y probar funcionalmente en Render tras el despliegue manual autorizado por el usuario.
 - Verificar con Leo/Mamá que al completar un deber desaparece y que Papá lo conserva en su lista.
 - No se ha hecho deploy ni se ha modificado Render.
+
+ 
+## 13. Diseño de casillas de respuesta en ejercicios de Deberes (7-11-2026)
+
+Petición:
+- En ejercicios con preguntas (no deberes de tipo enlace), mostrar cada pregunta en una fila y su casilla de respuesta en la fila inmediatamente inferior.
+- La casilla debe ocupar todo el ancho disponible.
+
+Cambio aplicado:
+- Archivo: `public/styles.css`.
+- Añadidos estilos específicos para `.homework-exercise-question`: columna vertical, etiqueta de pregunta en bloque y textarea debajo.
+- Textarea con `display: block`, `width: 100%`, `max-width: 100%`, `box-sizing: border-box`, altura mínima 76px y padding/borde coherentes con el diseño.
+- El cambio solo afecta a las preguntas de ejercicios dentro de Deberes; no modifica los deberes de enlace ni otros formularios.
+- Commit: `f9124c5fc00021a48547be38a2807bc31e180973`.
+- Blob SHA verificado: `707160fc04d5b8d4e86c86ced97176d93d0d9e05`.
+- Se volvió a leer el CSS desde GitHub y se confirmó que las reglas quedaron guardadas.
+
+Pendiente:
+- Comprobar visualmente en móvil y escritorio después del despliegue manual.
+- No se ha compilado ni desplegado; Render no se ha tocado.
