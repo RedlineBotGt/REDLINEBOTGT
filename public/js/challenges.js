@@ -296,7 +296,8 @@ export async function cargarPregunta() {
     retoActual = data.reto;
 
     mostrarMensaje(prompt, retoActual.prompt);
-    mostrarVisual(retoActual.visual);\n    mostrarAudio(retoActual.audio);
+    mostrarVisual(retoActual.visual);
+    mostrarAudio(retoActual.audio);
     mostrarMensaje(feedback, "");
 
     if (campo) {
