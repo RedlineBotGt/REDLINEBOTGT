@@ -8,6 +8,7 @@ import { existsSync } from "fs";
 
 import questionsRouter from "./routes/questions.ts";
 import homeworkRouter from "./routes/homework.ts";
+import chatRouter from "./routes/chat.ts";
 
 dotenv.config();
 
@@ -170,6 +171,7 @@ app.get("/api/academia", (_req, res) => {
 
 app.use("/api/academia", questionsRouter);
 app.use("/api/academia", homeworkRouter);
+app.use("/api/academia", chatRouter);
 
 // ========================================
 // RUTAS NO ENCONTRADAS
@@ -230,5 +232,6 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log("[OK] Archivos web disponibles");
   console.log("[OK] Rutas de preguntas registradas");
   console.log("[OK] Rutas de deberes registradas");
+  console.log("[OK] Rutas del chat familiar registradas");
   console.log("====================================");
 });
