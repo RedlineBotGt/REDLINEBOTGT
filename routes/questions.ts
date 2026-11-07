@@ -8,20 +8,16 @@ import {
   type AsignaturaReto,
   type RetoGenerado
 } from "../services/aiService.ts";
+import {
+  guardarRetoPendiente,
+  obtenerRetoPendiente,
+  eliminarRetoPendiente,
+  limpiarRetosCaducados
+} from "../services/pendingChallengeService.ts";
 
 const router = Router();
 
 type Perfil = "leo" | "papa" | "mama";
-
-interface RetoPendiente {
-  id: string;
-  perfil: Perfil;
-  asignatura: AsignaturaReto;
-  reto: RetoGenerado;
-  creadoEn: number;
-}
-
-const retosPendientes = new Map<string, RetoPendiente>();
 
 // Historial temporal independiente por perfil y asignatura.
 const MAX_HISTORIAL_PREGUNTAS = 30;
@@ -64,9 +60,6 @@ function guardarPreguntaReciente(
 
   historialPreguntas.set(clave, recientes);
 }
-
-const DURACION_RETO_MS = 2 * 60 * 60 * 1000;
-const MAX_RETOS_PENDIENTES = 500;
 
 function validarPerfil(valor: unknown): valor is Perfil {
   return (
@@ -145,24 +138,6 @@ function nombreAsignatura(
   }
 }
 
-function limpiarRetosCaducados(): void {
-  const ahora = Date.now();
-
-  for (const [id, reto] of retosPendientes.entries()) {
-    if (ahora - reto.creadoEn > DURACION_RETO_MS) {
-      retosPendientes.delete(id);
-    }
-  }
-
-  while (retosPendientes.size > MAX_RETOS_PENDIENTES) {
-    const primerId = retosPendientes.keys().next().value;
-
-    if (!primerId) break;
-
-    retosPendientes.delete(primerId);
-  }
-}
-
 // ========================================
 // GENERAR RETO
 // ========================================
@@ -191,7 +166,7 @@ router.post("/question", async (req, res) => {
   }
 
   try {
-    limpiarRetosCaducados();
+    await limpiarRetosCaducados();
 
     // Todos comienzan desde el mismo nivel.
     // El progreso individual se añadirá después.
@@ -246,13 +221,7 @@ router.post("/question", async (req, res) => {
 
     const id = randomUUID();
 
-    retosPendientes.set(id, {
-      id,
-      perfil,
-      asignatura: materia,
-      reto,
-      creadoEn: Date.now()
-    });
+    await guardarRetoPendiente({ id, perfil, asignatura: materia, reto, creadoEn: Date.now() });
 
     console.log(
       `[GEMINI] Reto preparado para ${perfil}: ${reto.category}`
@@ -332,9 +301,9 @@ router.post("/answer", async (req, res) => {
     });
   }
 
-  limpiarRetosCaducados();
+  await limpiarRetosCaducados();
 
-  const pendiente = retosPendientes.get(retoId);
+  const pendiente = await obtenerRetoPendiente(retoId);
 
   if (!pendiente) {
     return res.status(404).json({
@@ -368,7 +337,7 @@ router.post("/answer", async (req, res) => {
     // Si acierta, el ejercicio deja de estar pendiente.
     // Si falla, puede volver a intentarlo.
     if (evaluacion.correct) {
-      retosPendientes.delete(retoId);
+      await eliminarRetoPendiente(retoId);
     }
 
     return res.json({
