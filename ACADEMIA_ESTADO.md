@@ -427,3 +427,70 @@ Verificación:
 - No se ha desplegado; Render no se ha tocado.
 
 Siguiente paso: después del deploy manual, comprobar que el mensaje se ve durante aproximadamente 1,8 segundos y que luego desaparece el ejercicio de Leo/Mamá, mientras Papá conserva el historial.
+
+
+---
+
+## 16. Chat familiar grupal (7-11-2026)
+
+El usuario solicita implementar primero un chat grupal compartido por los perfiles Leo, Papá y Mamá. El tutor IA queda fuera de este bloque.
+
+### Diseño y alcance implementado
+
+- Acceso «Chat familiar» desde la pantalla de asignaturas, disponible para cualquiera de los tres perfiles.
+- Los mensajes se identifican con el perfil seleccionado (leo, papa, mama) y fecha/hora.
+- Conversación común para los tres perfiles, no tres conversaciones separadas.
+- Actualización automática de mensajes cada 7 segundos mientras la pantalla del chat está abierta.
+- Persistencia en MongoDB, base academia_campos (o la indicada por MONGODB_DB), colección nueva e independiente family_chat_messages.
+- El chat devuelve los 100 mensajes más recientes; los mensajes antiguos siguen almacenados en MongoDB.
+- Límite de 1.000 caracteres por mensaje y validación de perfil en el servidor.
+- Los mensajes se insertan en el DOM usando textContent, evitando interpretar texto escrito como HTML.
+- El chat tiene pantalla y estilos propios; no modifica el funcionamiento de Deberes, ejercicios, ranking ni perfiles.
+
+### Archivos creados o modificados
+
+Creados:
+- services/chatService.ts: conexión y persistencia MongoDB para la colección independiente del chat.
+- routes/chat.ts: endpoints GET y POST /api/academia/chat/messages.
+- public/js/chat.js: carga, envío, renderizado seguro y actualización automática.
+
+Modificados:
+- server.ts: registra las rutas nuevas.
+- public/app.js: inicializa el módulo y conecta las acciones de abrir/cerrar.
+- public/index.html: acceso desde la pantalla de asignaturas y nueva pantalla del chat.
+- public/styles.css: estilos aislados para móvil y escritorio.
+- ACADEMIA_ESTADO.md: registro de este bloque.
+
+### Commits
+
+- services/chatService.ts: 97fad8c83fd8220410d712b2d12e9a9d45507dd0
+- routes/chat.ts: f88f899a4fba9d9065151ef37a6ba10a273c23df
+- public/js/chat.js: 7a36c7b78d7f13d502bfc938e989c87a24e90c3d
+- server.ts: 07fe48e919a6ba8df79c6eb3a1c7aaa9eb893344
+- public/app.js: fb2f56f9ee6424dd85b3e762eb0802f0c344772c
+- public/index.html: 07a5385ce323854c8eb59cb08d5fc64093a25c27
+- public/styles.css: 3e20aaeecbd220f860ba248d470b6526455935ee
+
+### Seguridad y limitaciones conocidas
+
+- Los perfiles de Academia no requieren autenticación individual. Por tanto, cualquier persona que pueda entrar en la web y seleccionar un perfil puede enviar mensajes atribuidos a ese perfil. Esto coincide con el funcionamiento actual de la selección de perfiles y no debe confundirse con una identidad verificada.
+- No se ha añadido borrado ni edición de mensajes.
+- La pantalla muestra los 100 mensajes más recientes; la colección conserva el historial completo.
+- No se ha añadido protección antispam avanzada ni moderación.
+
+### Verificación
+
+- Los siete archivos funcionales se han vuelto a leer desde GitHub en backup-antes-limpieza.
+- Comprobaciones estáticas realizadas: servicio MongoDB y nombre de colección; importación y montaje de ruta; importación e inicialización del cliente; acceso y pantalla en HTML; versiones de caché; estilos; renderizado seguro con textContent; límites de 1.000 caracteres y 100 mensajes.
+- Estas comprobaciones no equivalen a compilación TypeScript ni a prueba funcional.
+- Compilación: pendiente.
+- Prueba real con MongoDB y los tres perfiles: pendiente.
+- Despliegue Render: no realizado; el usuario conserva el despliegue manual.
+
+### Siguiente paso
+
+1. Ejecutar el build TypeScript y corregir solo errores relacionados con el chat.
+2. Esperar a que el usuario haga el deploy manual.
+3. Probar envío y recepción desde Leo, Papá y Mamá, incluida la persistencia al salir y volver a entrar.
+4. Comprobar que Deberes y los ejercicios siguen funcionando.
+5. Mantener el tutor IA fuera de esta fase.
