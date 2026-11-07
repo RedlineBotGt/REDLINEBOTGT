@@ -6,7 +6,8 @@ export const asignaturas = {
   cultura_general: "Cultura general",
   pensamiento_lateral: "Retos Imposibles",
   matematicas: "Matemáticas",
-  geografia: "Geografía"
+  geografia: "Geografía",
+  english: "English"
 };
 
 // Clave antigua conservada como alias de Cultura general.
