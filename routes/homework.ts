@@ -16,6 +16,7 @@ import type {
   DestinatarioDeber,
   EstadoDeber
 } from "../services/homeworkService.ts";
+import { crearAviso } from "../services/noticesService.ts";
 
 const router = Router();
 
@@ -475,6 +476,16 @@ router.post(
           ? { preguntas: req.body.preguntas }
           : {})
       });
+
+      // El deber ya está guardado: un fallo del aviso no debe invalidarlo.
+      try {
+        await crearAviso(
+          deber.destinatario,
+          "__DEBER__:" + deber.asignatura
+        );
+      } catch (error) {
+        console.error("[AVISOS] No se pudo crear el aviso del deber:", error);
+      }
 
       return res.status(201).json({ ok: true, deber });
 
