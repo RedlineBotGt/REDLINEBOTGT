@@ -1,0 +1,25 @@
+{
+  "name": "Academia Campos",
+  "short_name": "Academia",
+  "description": "Academia Campos: aprender juntos, crecer juntos.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#101827",
+  "theme_color": "#101827",
+  "icons": [
+    {
+      "src": "https://res.cloudinary.com/iir4vyqc/image/upload/f_png,q_auto,w_192,h_192,c_fit/1000110742",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://res.cloudinary.com/iir4vyqc/image/upload/f_png,q_auto,w_512,h_512,c_fit/1000110742",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
