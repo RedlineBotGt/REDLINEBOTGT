@@ -1177,6 +1177,7 @@ p {
   overflow-wrap: anywhere;
 }
 .notice-row strong { color: var(--primary); }
+.notice-row .notice-recipient { color: #60a5fa; font-weight: bold; }
 .notice-row time {
   margin-left: auto;
   color: var(--muted);

@@ -18,9 +18,11 @@ function pintarAvisos(avisos) {
     const fila = document.createElement("p");
     fila.className = "notice-row";
     const autor = document.createElement("strong");
-    autor.textContent = nombres[aviso.autor] || "Familia";
+    autor.textContent = "🔔";
+    autor.setAttribute("aria-label", "Aviso publicado por Papá");
     const destino = document.createElement("span");
-    destino.textContent = " → " + (nombres[aviso.destinatario] || "Familia") + ": ";
+    destino.className = "notice-recipient";
+    destino.textContent = (nombres[aviso.destinatario] || "Familia") + ": ";
     const mensaje = document.createElement("span");
     mensaje.textContent = aviso.mensaje || "";
     const fecha = document.createElement("time");

@@ -679,3 +679,11 @@ El usuario aprueba comenzar la implementación de Lenguaje Musical como asignatu
 - Entrar como Papá, comprobar que el botón aparece, reutilizar la sesión PIN de Deberes y publicar avisos dirigidos a Leo, Mamá y Todos.
 - Verificar que se conservan al recargar y que Deberes y chat siguen funcionando.
 - No se ha realizado aún una prueba funcional en navegador.
+
+
+### Ajuste visual de avisos familiares (8-11-2026)
+- En el listado público, el autor se representa ahora con el icono 🔔 en lugar del texto «Papá».
+- El destinatario (Leo, Mamá o Todos) se muestra en azul.
+- El mensaje y la fecha mantienen su presentación y comportamiento.
+- Cambios limitados a `public/js/notices.js`, `public/styles.css` y este registro.
+- Pendiente: build/despliegue automático de Render y comprobación visual en móvil.
