@@ -771,6 +771,11 @@ p {
   overflow-wrap: anywhere;
 }
 
+.homework-exercise-feedback.success {
+  color: #16a34a;
+  font-weight: 700;
+}
+
 .homework-exercise-feedback:empty {
   display: none;
 }
