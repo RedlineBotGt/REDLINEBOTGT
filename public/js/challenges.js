@@ -244,7 +244,8 @@ export async function cargarPregunta() {
 
   retoActual = null;
   respuestaEvaluada = false;
-  mostrarVisual(null);\n  mostrarAudio(null);
+  mostrarVisual(null);
+  mostrarAudio(null);
 
   boton.disabled = true;
 

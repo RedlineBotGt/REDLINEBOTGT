@@ -645,3 +645,10 @@ El usuario aprueba comenzar la implementación de Lenguaje Musical como asignatu
 - Despliegue automático: **live** (`dep-dbnqvbu8bjmc73aisn5g`).
 - Relectura de GitHub: se confirmaron el esquema de audio, las exportaciones, el enrutamiento de generación/evaluación, la tarjeta, el renderizador Web Audio y la persistencia del reto pendiente.
 - Pruebas funcionales en navegador y pruebas de generación/evaluación con Gemini: pendientes. La asignatura aún no está validada.
+
+
+### Incidencia de acceso a perfiles — 8-11-2026
+- Causa localizada en `public/js/challenges.js`: dos secuencias `\\n` quedaron escritas literalmente en el código JavaScript, provocando un error de sintaxis al importar el módulo principal.
+- Efecto: el navegador no podía cargar correctamente `app.js`; por eso no respondían los botones de selección de perfiles.
+- Corrección: sustituir esas dos secuencias por saltos de línea reales. No se modifican perfiles, datos, PIN ni autenticación.
+- Pendiente: confirmar compilación/despliegue automático y probar la selección de Leo, Papá y Mamá en navegador.
