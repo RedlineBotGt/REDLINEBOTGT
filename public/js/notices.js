@@ -70,6 +70,11 @@ async function publicarAviso(event) {
 }
 
 export function iniciarAvisos() {
+  document.addEventListener("academia:perfil-cambiado", event => {
+    const botonPerfil = document.getElementById("open-notices-btn");
+    const perfil = event.detail?.perfil;
+    if (botonPerfil) botonPerfil.classList.toggle("hidden", perfil !== "papa");
+  });
   const boton = document.getElementById("open-notices-btn");
   const panel = document.getElementById("notices-admin");
   const formulario = document.getElementById("notice-form");

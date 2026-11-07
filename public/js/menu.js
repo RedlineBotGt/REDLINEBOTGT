@@ -46,6 +46,7 @@ export function abrirPerfil(perfil) {
   }
 
   mostrarPantalla("subjects-screen");
+  document.dispatchEvent(new CustomEvent("academia:perfil-cambiado", { detail: { perfil } }));
 }
 
 // ========================================
