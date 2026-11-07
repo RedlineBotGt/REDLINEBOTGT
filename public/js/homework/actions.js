@@ -205,11 +205,23 @@ export async function comprobarEjercicioPantalla(id) {
     );
 
     if (resultado.completado) {
-      mostrarMensaje(
-        "¡Perfecto! Has acertado todas las respuestas. ¡Ejercicio terminado!",
-        "success"
+      const feedback = formulario.querySelector(
+        "[data-exercise-feedback]"
       );
 
+      const mensajeExito =
+        "¡Correcto! 🎉 Has acertado todas las respuestas. ¡Ejercicio completado!";
+
+      if (feedback) {
+        feedback.textContent = mensajeExito;
+        feedback.classList.add("success");
+      }
+
+      mostrarMensaje(mensajeExito, "success");
+
+      // Dejamos tiempo para que el alumno pueda leer la felicitación
+      // antes de retirar el ejercicio de su lista.
+      await new Promise(resolve => setTimeout(resolve, 1800));
       await actualizarDeberes();
     } else {
       mostrarMensaje(
