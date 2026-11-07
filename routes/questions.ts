@@ -234,7 +234,8 @@ router.post("/question", async (req, res) => {
         id,
         prompt: reto.prompt,
         hint: reto.hint,
-        category: reto.category
+        category: reto.category,
+        ...(materia === "english" && reto.visual ? { visual: reto.visual } : {})
       }
     });
 
@@ -327,8 +328,15 @@ router.post("/answer", async (req, res) => {
       `[GEMINI] Evaluando respuesta de ${perfil}...`
     );
 
+    const detalleVisual = pendiente.reto.visual?.items?.length
+      ? "\n\nILUSTRACIÓN DEL EJERCICIO (contenido exacto): " +
+        pendiente.reto.visual.items
+          .map(item => `${item.count} ${item.emoji}`)
+          .join(", ")
+      : "";
+
     const evaluacion = await evaluarRespuestaIA(
-      pendiente.reto.prompt,
+      pendiente.reto.prompt + detalleVisual,
       respuesta.trim(),
       pendiente.reto.solution,
       pendiente.asignatura
