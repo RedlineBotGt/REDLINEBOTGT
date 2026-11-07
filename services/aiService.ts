@@ -12,7 +12,9 @@ import {
   generarRetoMatematicas,
   evaluarRespuestaMatematicas,
   generarRetoGeografia,
-  evaluarRespuestaGeografia
+  evaluarRespuestaGeografia,
+  generarRetoEnglish,
+  evaluarRespuestaEnglish
 } from "./subjects/index.js";
 
 import type {
@@ -29,7 +31,8 @@ export type AsignaturaReto =
   | "pensamiento_lateral"
   | "lateral"
   | "matematicas"
-  | "geografia";
+  | "geografia"
+  | "english";
 
 export type {
   RetoGenerado,
@@ -58,6 +61,9 @@ export async function generarRetoIA(
 
     case "geografia":
       return generarRetoGeografia(nivel, historialReciente);
+
+    case "english":
+      return generarRetoEnglish(nivel, historialReciente);
 
     default:
       throw new Error(
@@ -101,6 +107,13 @@ export async function evaluarRespuestaIA(
 
     case "geografia":
       return evaluarRespuestaGeografia(
+        pregunta,
+        respuesta,
+        solucion
+      );
+
+    case "english":
+      return evaluarRespuestaEnglish(
         pregunta,
         respuesta,
         solucion
