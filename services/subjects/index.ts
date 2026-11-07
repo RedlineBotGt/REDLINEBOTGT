@@ -28,6 +28,12 @@ export {
   evaluarRespuestaGeografia
 } from "./geografia.js";
 
+// English
+export {
+  generarRetoEnglish,
+  evaluarRespuestaEnglish
+} from "./english.js";
+
 // ========================================
 // TIPOS COMPARTIDOS
 // ========================================
