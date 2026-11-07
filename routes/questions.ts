@@ -82,6 +82,7 @@ function validarPerfil(valor: unknown): valor is Perfil {
  * - pensamiento_lateral: Retos Imposibles.
  * - lateral: alias histórico de Cultura general.
  * geografia: Geografía.
+ * english: English.
  */
 function obtenerAsignatura(
   valor: unknown
@@ -119,6 +120,10 @@ function obtenerAsignatura(
     return "geografia";
   }
 
+  if (asignatura === "english" || asignatura === "ingles") {
+    return "english";
+  }
+
   return null;
 }
 
@@ -135,6 +140,8 @@ function nombreAsignatura(
       return "Matemáticas";
     case "geografia":
       return "Geografía";
+    case "english":
+      return "English";
   }
 }
 
@@ -179,7 +186,7 @@ router.post("/question", async (req, res) => {
   if (!materia) {
     return res.status(400).json({
       ok: false,
-      error: "Por ahora están disponibles Cultura general, Retos Imposibles, Matemáticas y Geografía."
+      error: "Por ahora están disponibles Cultura general, Retos Imposibles, Matemáticas, Geografía y English."
     });
   }
 
