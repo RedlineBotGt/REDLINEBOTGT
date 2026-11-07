@@ -337,3 +337,25 @@ La memoria es temporal y reside en RAM. Se pierde al reiniciar o volver a desple
 - Compilación TypeScript: pendiente; no se pudo ejecutar desde este entorno porque no fue posible clonar el repositorio.
 - Despliegue Render: no realizado.
 - Prueba funcional en Render: pendiente.
+
+
+---
+
+## 15. Instalación PWA y acceso directo Android (7-11-2026)
+
+El usuario solicita que Academia Campos pueda instalarse y añadirse a la pantalla de inicio desde Android, siguiendo el planteamiento de WEBLINE GT en `RESBOTv2`.
+
+Cambios guardados en `backup-antes-limpieza`:
+- Creado `public/manifest.json` con nombre `Academia Campos`, nombre corto `Academia`, `start_url: /`, `scope: /`, `display: standalone`, orientación vertical y colores de Academia (`#101827`).
+- El manifiesto declara iconos PNG de 192×192 y 512×512 usando la imagen elegida por el usuario en Cloudinary (`1000110742`), con transformación de tamaño y ajuste sin recorte.
+- Actualizado `public/index.html` para enlazar el manifiesto, establecer el icono de pestaña y el icono Apple touch, conservando el tema, estilos y scripts existentes.
+- No se ha modificado `server.ts`: el servidor ya sirve estáticamente el contenido de `public/`, por lo que `/manifest.json` queda disponible sin ruta backend adicional.
+- No se ha añadido service worker: esta fase prepara instalación/acceso directo, no funcionamiento offline.
+
+Verificación realizada:
+- Los dos archivos se han guardado en GitHub y releído desde la rama de Academia.
+- La URL original de la imagen no se pudo inspeccionar visualmente desde este entorno. Se ha usado la URL Cloudinary proporcionada con formato PNG explícito y variantes 192/512.
+- No se ha ejecutado compilación ni prueba de instalación en Chrome/Android.
+- No se ha desplegado en Render.
+
+Siguiente paso: el usuario debe autorizar el deploy manual de la rama `backup-antes-limpieza`; después probar en Chrome Android la opción «Instalar aplicación» o «Añadir a pantalla de inicio» y comprobar el icono. El lanzador Android puede aplicar su propia máscara circular o redondeada; no se ha recortado manualmente la imagen.
