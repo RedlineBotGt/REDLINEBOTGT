@@ -485,7 +485,7 @@ Modificados:
 - Estas comprobaciones no equivalen a compilación TypeScript ni a prueba funcional.
 - Compilación: pendiente.
 - Prueba real con MongoDB y los tres perfiles: pendiente.
-- Despliegue Render: no realizado; el usuario conserva el despliegue manual.
+- Render: autoDeploy=yes, trigger=commit, rama backup-antes-limpieza. Los commits del chat dispararon despliegues automáticos; el build de TypeScript y el último despliegue finalizaron correctamente (live). La web y /api/academia/status responden; GET /api/academia/chat/messages respondió {ok:true,mensajes:[]} y conectó con MongoDB. No se insertaron mensajes de prueba.
 
 ### Siguiente paso
 
