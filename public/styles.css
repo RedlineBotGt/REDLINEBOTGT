@@ -694,6 +694,88 @@ p {
 }
 
 /* ========================================
+   DEBERES: PREGUNTAS Y CASILLAS DE RESPUESTA
+======================================== */
+
+.homework-exercise {
+  width: 100%;
+  margin-top: 16px;
+}
+
+.homework-exercise-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.homework-exercise-question {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.homework-exercise-question label {
+  display: block;
+  width: 100%;
+  margin: 0;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.homework-exercise-question textarea {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 76px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.homework-exercise-question textarea::placeholder {
+  color: var(--muted);
+  opacity: 0.8;
+}
+
+.homework-exercise-question textarea:focus {
+  border-color: var(--primary);
+}
+
+.homework-exercise-submit {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--primary);
+  color: #082033;
+  font-size: 0.95rem;
+  font-weight: bold;
+}
+
+.homework-exercise-feedback {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.homework-exercise-feedback:empty {
+  display: none;
+}
+
+/* ========================================
    ADAPTACIÓN GENERAL A MÓVILES
 ======================================== */
 
