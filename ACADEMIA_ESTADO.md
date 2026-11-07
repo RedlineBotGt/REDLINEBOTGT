@@ -638,3 +638,10 @@ El usuario aprueba comenzar la implementación de Lenguaje Musical como asignatu
 - No se ha cambiado Deberes, chat, ranking ni perfiles.
 - Render tiene auto-deploy por commit en esta rama: actualizar la rama iniciará un despliegue automático. No lanzar deploy manual.
 
+
+
+### Verificación de la primera implementación (8-11-2026, 23:10 UTC)
+- Compilación TypeScript en Render: **correcta** (build del commit `2659431b3a8426234996e867f81036e93ce526b9` terminó con `buildStatus=succeeded`).
+- Despliegue automático: **live** (`dep-dbnqvbu8bjmc73aisn5g`).
+- Relectura de GitHub: se confirmaron el esquema de audio, las exportaciones, el enrutamiento de generación/evaluación, la tarjeta, el renderizador Web Audio y la persistencia del reto pendiente.
+- Pruebas funcionales en navegador y pruebas de generación/evaluación con Gemini: pendientes. La asignatura aún no está validada.
