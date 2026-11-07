@@ -494,3 +494,47 @@ Modificados:
 3. Probar envío y recepción desde Leo, Papá y Mamá, incluida la persistencia al salir y volver a entrar.
 4. Comprobar que Deberes y los ejercicios siguen funcionando.
 5. Mantener el tutor IA fuera de esta fase.
+
+
+---
+
+## 17. Nueva asignatura English (7-11-2026)
+
+El usuario solicita añadir English como quinta asignatura, siguiendo el flujo de las cuatro materias existentes.
+
+### Cambios guardados en GitHub
+- Creado `services/subjects/english.ts`: motor independiente de generación y evaluación mediante el servicio Gemini compartido y los esquemas comunes.
+- Contenidos progresivos: saludos, vocabulario cotidiano, números, colores, familia, cuerpo, animales, comida, ropa, colegio, casa, días y tiempo atmosférico; estructuras básicas (verb to be, have got, can/can't, there is/there are), preposiciones y comprensión de frases/textos breves.
+- Enunciados principalmente en inglés sencillo; pistas, feedback y explicaciones en español.
+- Evaluación semántica: acepta equivalencias correctas y errores ortográficos menores cuando la ortografía no sea el objetivo; conserva exigencia gramatical cuando se practica una estructura.
+- Registrada en `services/subjects/index.ts` y conectada a generación/evaluación en `services/aiService.ts`.
+- Backend: `routes/questions.ts` acepta la clave `english` y el alias `ingles`, y etiqueta la asignatura como English.
+- Frontend: `public/js/subjects.js` y `public/js/challenges.js` reconocen la clave; `public/index.html` muestra la quinta tarjeta 🇬🇧 English.
+- Cada perfil utiliza automáticamente su historial independiente para English mediante la clave `perfil:english`; se conserva el límite común de 30 preguntas recientes en memoria.
+- Se mantienen los niveles iniciales compartidos y el flujo común de pista, evaluación, reintentos y siguiente ejercicio. No se ha tocado Deberes, chat familiar, ranking ni las otras cuatro materias.
+
+### Commits
+- `services/subjects/english.ts`: `c6b00b7e0e42773e944909a7e60b4e33a3da9264`
+- `services/subjects/index.ts`: `1dbc8676311f724b8ee9dd841182f0caeaa7fb21`
+- `services/aiService.ts`: `ba38bdb8df434deb12fee35a903bc2fa52d92bbb`
+- `routes/questions.ts`: `db943a5fbe19f74181c2fb43f634ef22950bd7c0`
+- `public/js/subjects.js`: `eac1e0be6542447d3abb2bba9bb9c24a6470aca0`
+- `public/js/challenges.js`: `c20eb07904e9de3bd538449f0ebde3195e8b96f0`
+- `public/index.html`: `f49b059fa6e9a5056c7fb046d27aa067f1e4ea17`
+
+### Verificación realizada
+- Los siete archivos funcionales se han vuelto a leer desde la rama `backup-antes-limpieza`; las exportaciones, tipos, rutas, catálogo, validación frontend y tarjeta HTML muestran English integrado.
+- `package.json` define el build `tsc -p tsconfig.json` y copia de `public` a `dist/public`.
+- Compilación TypeScript: pendiente de confirmar mediante el build de Render.
+- Prueba funcional de generación, pista, evaluación correcta/incorrecta y siguiente ejercicio: pendiente.
+- Regresión de las otras cuatro materias, Deberes y chat: pendiente.
+
+### Despliegue
+- Corrección operativa: Render tiene `autoDeploy=yes`, `trigger=commit` y despliega automáticamente los commits de esta rama. Esto prevalece sobre las referencias antiguas del documento a deploy manual.
+- Por tanto, los commits de English han iniciado despliegues automáticos. Comprobar el último build y su estado antes de dar la tarea por terminada.
+
+### Siguiente paso
+1. Confirmar que el último despliegue de Render termina en `live` y que el build TypeScript ha tenido éxito.
+2. Probar English desde Leo, Papá y Mamá.
+3. Verificar generación, pista, respuesta incorrecta, respuesta correcta y siguiente ejercicio.
+4. Comprobar regresión de las cuatro materias existentes, Deberes y chat familiar.
