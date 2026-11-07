@@ -569,3 +569,30 @@ Al evaluar una respuesta, la web mostró «No se ha podido evaluar la respuesta.
 2. Probar English: generar, responder incorrectamente, volver a intentar, acertar y pulsar «Siguiente pregunta».
 3. Si hay un ejercicio antiguo que aún falla con 404, comprobar que ahora se puede descartar y continuar.
 4. Comprobar que las demás asignaturas conservan su flujo.
+
+
+---
+
+## 19. Ilustraciones en ejercicios de English (7-11-2026)
+
+### Alcance incorporado
+- English puede generar un campo visual opcional junto al enunciado: descripción accesible y grupos de elementos identificados por emoji y cantidad.
+- Se usa para ejercicios de contar objetos, reconocer animales, alimentos, colores y vocabulario cotidiano. Los ejercicios de gramática, traducción o lectura pueden seguir siendo solo texto.
+- Las cantidades de la ilustración se conservan en el reto pendiente del servidor y se incluyen en el contexto privado de evaluación, para que la respuesta se corrija respecto a lo que Leo ve.
+- El navegador dibuja los elementos con nodos DOM y textContent; no inserta HTML generado por Gemini. Se limita la cantidad de grupos y elementos renderizados.
+- Primera fase limitada a English. No se cambia la presentación de las otras asignaturas, Deberes, chat, perfiles, niveles ni ranking.
+- No se añade un proveedor de generación de imágenes ni una API de pago. La primera versión usa ilustraciones con emoji; no son fotografías ni imágenes fotorrealistas.
+
+### Archivos modificados
+- services/ai/schemas.ts: añade el campo visual opcional al esquema común.
+- services/subjects/english.ts: solicita ilustraciones coherentes con la pregunta cuando aportan valor didáctico.
+- routes/questions.ts: devuelve la ilustración solo en English y la añade al contexto privado de evaluación.
+- public/index.html: añade el contenedor de ilustración.
+- public/js/challenges.js: representa los elementos de forma segura y limpia el contenedor al cambiar de ejercicio.
+- public/styles.css: estilos adaptables para la ilustración.
+- ACADEMIA_ESTADO.md: registra este bloque.
+
+### Verificación y despliegue
+- Cambios guardados en GitHub en backup-antes-limpieza.
+- Render tiene autoDeploy=yes para esta rama: estos commits inician despliegues automáticos. No se ha lanzado un deploy manual.
+- Pendiente: confirmar build TypeScript y estado live; probar un ejercicio de contar objetos y otro ejercicio textual; comprobar que las otras asignaturas no muestran un contenedor vacío ni sufren regresiones.
