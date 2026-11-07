@@ -596,3 +596,19 @@ Al evaluar una respuesta, la web mostró «No se ha podido evaluar la respuesta.
 - Cambios guardados en GitHub en backup-antes-limpieza.
 - Render tiene autoDeploy=yes para esta rama: estos commits inician despliegues automáticos. No se ha lanzado un deploy manual.
 - Pendiente: confirmar build TypeScript y estado live; probar un ejercicio de contar objetos y otro ejercicio textual; comprobar que las otras asignaturas no muestran un contenedor vacío ni sufren regresiones.
+
+
+## 20. Nueva asignatura Lengua (7-11-2026)
+
+Se incorpora Lengua como asignatura independiente, siguiendo el flujo modular de las demás materias.
+
+- Nuevo módulo `services/subjects/lengua.ts` con generación y evaluación propias.
+- Contenidos alternados: comprensión lectora, ortografía, acentuación, sílabas, gramática, concordancia, sujeto y predicado, vocabulario, puntuación y expresión escrita.
+- Dificultad inicial orientativa de 2.º-3.º de Primaria.
+- Registrada en `services/subjects/index.ts` y conectada a `services/aiService.ts`.
+- Backend `routes/questions.ts`: reconoce Lengua y la procesa como materia independiente.
+- Frontend `public/js/subjects.js`, `public/js/challenges.js` y `public/index.html`: nueva tarjeta y clave de asignatura.
+- El flujo existente de retos pendientes e historial reciente utiliza la clave `perfil:lengua`, separada de las demás asignaturas.
+- Se conserva el visual opcional exclusivo de English; Lengua no depende de imágenes ni emojis.
+- Deberes, chat, perfiles, otras asignaturas y ranking no se modifican.
+- Pendiente: comprobar compilación TypeScript, despliegue automático y pruebas reales de generación/evaluación. No se declara probado hasta completar esas verificaciones.

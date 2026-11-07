@@ -34,6 +34,12 @@ export {
   evaluarRespuestaEnglish
 } from "./english.js";
 
+// Lengua
+export {
+  generarRetoLengua,
+  evaluarRespuestaLengua
+} from "./lengua.js";
+
 // ========================================
 // TIPOS COMPARTIDOS
 // ========================================

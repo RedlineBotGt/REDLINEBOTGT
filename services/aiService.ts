@@ -14,7 +14,9 @@ import {
   generarRetoGeografia,
   evaluarRespuestaGeografia,
   generarRetoEnglish,
-  evaluarRespuestaEnglish
+  evaluarRespuestaEnglish,
+  generarRetoLengua,
+  evaluarRespuestaLengua
 } from "./subjects/index.js";
 
 import type {
@@ -32,7 +34,8 @@ export type AsignaturaReto =
   | "lateral"
   | "matematicas"
   | "geografia"
-  | "english";
+  | "english"
+  | "lengua";
 
 export type {
   RetoGenerado,
@@ -64,6 +67,9 @@ export async function generarRetoIA(
 
     case "english":
       return generarRetoEnglish(nivel, historialReciente);
+
+    case "lengua":
+      return generarRetoLengua(nivel, historialReciente);
 
     default:
       throw new Error(
@@ -118,6 +124,9 @@ export async function evaluarRespuestaIA(
         respuesta,
         solucion
       );
+
+    case "lengua":
+      return evaluarRespuestaLengua(pregunta, respuesta, solucion);
 
     default:
       throw new Error(

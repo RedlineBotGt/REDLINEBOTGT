@@ -96,6 +96,10 @@ function obtenerAsignaturaValida() {
     return "english";
   }
 
+  if (asignatura === "lengua") {
+    return "lengua";
+  }
+
   throw new Error(
     "Selecciona una asignatura válida."
   );
