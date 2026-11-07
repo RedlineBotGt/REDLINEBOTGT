@@ -405,3 +405,25 @@ Cambio aplicado:
 Pendiente:
 - Comprobar visualmente en móvil y escritorio después del despliegue manual.
 - No se ha compilado ni desplegado; Render no se ha tocado.
+
+
+## 14. Confirmación visible al completar ejercicios de Deberes (7-11-2026)
+
+Petición:
+- Al acertar todas las respuestas, mostrar una felicitación clara antes de que el ejercicio desaparezca de la lista del alumno.
+
+Cambios guardados en GitHub, rama `backup-antes-limpieza`:
+- `public/js/homework/actions.js`: al recibir `resultado.completado`, escribe «¡Correcto! 🎉 Has acertado todas las respuestas. ¡Ejercicio completado!» en el área de feedback del propio ejercicio y en el mensaje general. Espera 1,8 segundos antes de recargar Deberes; así el alumno puede leer la confirmación y después el ejercicio desaparece como estaba previsto.
+- `public/styles.css`: el feedback de éxito se muestra en verde y negrita.
+- Se conserva la validación de respuestas, el tratamiento de errores y la persistencia del completado.
+
+Commits:
+- `public/js/homework/actions.js`: `4a2752a83f9da666ba0c29449f85e1f5cec90919` (blob `afa46ee1f4cff94d7b515ceda3459479470bb20a`).
+- `public/styles.css`: `f7abe6a8d8fd6dfe0a3a55ebe0648db3e8676d56` (blob `1e0a2dc2a9b7530150d0bc1bde85ffc9277d0025`).
+
+Verificación:
+- Cambios guardados mediante GitHub. Pendiente releer ambos archivos para verificar el contenido final.
+- No se ha compilado ni probado visualmente o en Render.
+- No se ha desplegado; Render no se ha tocado.
+
+Siguiente paso: después del deploy manual, comprobar que el mensaje se ve durante aproximadamente 1,8 segundos y que luego desaparece el ejercicio de Leo/Mamá, mientras Papá conserva el historial.
