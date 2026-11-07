@@ -16,7 +16,9 @@ import {
   generarRetoEnglish,
   evaluarRespuestaEnglish,
   generarRetoLengua,
-  evaluarRespuestaLengua
+  evaluarRespuestaLengua,
+  generarRetoLenguajeMusical,
+  evaluarRespuestaLenguajeMusical
 } from "./subjects/index.js";
 
 import type {
@@ -35,7 +37,8 @@ export type AsignaturaReto =
   | "matematicas"
   | "geografia"
   | "english"
-  | "lengua"\n  | "lenguaje_musical";
+  | "lengua"
+  | "lenguaje_musical";
 
 export type {
   RetoGenerado,
@@ -70,6 +73,9 @@ export async function generarRetoIA(
 
     case "lengua":
       return generarRetoLengua(nivel, historialReciente);
+
+    case "lenguaje_musical":
+      return generarRetoLenguajeMusical(nivel, historialReciente);
 
     default:
       throw new Error(
@@ -127,6 +133,9 @@ export async function evaluarRespuestaIA(
 
     case "lengua":
       return evaluarRespuestaLengua(pregunta, respuesta, solucion);
+
+    case "lenguaje_musical":
+      return evaluarRespuestaLenguajeMusical(pregunta, respuesta, solucion);
 
     default:
       throw new Error(

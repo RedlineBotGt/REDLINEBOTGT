@@ -41,7 +41,8 @@ export const ESQUEMA_RETO = {
     category: {
       type: "string"
     },
-    audio: { type: "object", properties: { kind: { type: "string", enum: ["tones", "rhythm"] }, label: { type: "string" }, notes: { type: "array", items: { type: "object", properties: { frequency: { type: "number" }, durationMs: { type: "integer" }, gapMs: { type: "integer" }, waveform: { type: "string", enum: ["sine", "triangle"] } }, required: ["frequency", "durationMs", "gapMs", "waveform"] } } }, required: ["kind", "label", "notes"] },\n    visual: {
+    audio: { type: "object", properties: { kind: { type: "string", enum: ["tones", "rhythm"] }, label: { type: "string" }, notes: { type: "array", items: { type: "object", properties: { frequency: { type: "number" }, durationMs: { type: "integer" }, gapMs: { type: "integer" }, waveform: { type: "string", enum: ["sine", "triangle"] } }, required: ["frequency", "durationMs", "gapMs", "waveform"] } } }, required: ["kind", "label", "notes"] },
+    visual: {
       type: "object",
       properties: {
         alt: { type: "string" },

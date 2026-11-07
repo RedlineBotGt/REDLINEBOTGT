@@ -122,6 +122,10 @@ function obtenerAsignatura(
     return "lengua";
   }
 
+  if (asignatura === "lenguaje musical" || asignatura === "lenguaje_musical" || asignatura === "musica") {
+    return "lenguaje_musical";
+  }
+
   return null;
 }
 
@@ -142,6 +146,8 @@ function nombreAsignatura(
       return "English";
     case "lengua":
       return "Lengua";
+    case "lenguaje_musical":
+      return "Lenguaje Musical";
   }
 }
 
@@ -242,7 +248,9 @@ router.post("/question", async (req, res) => {
         prompt: reto.prompt,
         hint: reto.hint,
         category: reto.category,
-        ...(materia === "english" && reto.visual ? { visual: reto.visual } : {}),\n        ...(materia === "lenguaje_musical" && reto.visual ? { visual: reto.visual } : {}),\n        ...(materia === "lenguaje_musical" && reto.audio ? { audio: reto.audio } : {})
+        ...(materia === "english" && reto.visual ? { visual: reto.visual } : {}),
+        ...(materia === "lenguaje_musical" && reto.visual ? { visual: reto.visual } : {}),
+        ...(materia === "lenguaje_musical" && reto.audio ? { audio: reto.audio } : {})
       }
     });
 
@@ -342,8 +350,12 @@ router.post("/answer", async (req, res) => {
           .join(", ")
       : "";
 
+    const detalleAudio = pendiente.reto.audio?.notes?.length
+      ? "\n\nSECUENCIA SONORA: " + pendiente.reto.audio.notes.map(n => `${n.frequency} Hz durante ${n.durationMs} ms`).join(", ")
+      : "";
+
     const evaluacion = await evaluarRespuestaIA(
-      pendiente.reto.prompt + detalleVisual,
+      pendiente.reto.prompt + detalleVisual + detalleAudio,
       respuesta.trim(),
       pendiente.reto.solution,
       pendiente.asignatura
