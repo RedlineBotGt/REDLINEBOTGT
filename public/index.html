@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="https://res.cloudinary.com/iir4vyqc/image/upload/f_png,q_auto,w_192,h_192,c_fit/1000110742">
   <link rel="apple-touch-icon" href="https://res.cloudinary.com/iir4vyqc/image/upload/f_png,q_auto,w_192,h_192,c_fit/1000110742">
   <title>Academia Campos</title>
-  <link rel="stylesheet" href="/styles.css?v=4">
+  <link rel="stylesheet" href="/styles.css?v=5">
 </head>
 
 <body>
@@ -98,6 +98,14 @@
           onclick="abrirDeberes()"
         >
           📚 Consultar deberes
+        </button>
+
+        <button
+          type="button"
+          id="open-chat-btn"
+          onclick="abrirChat()"
+        >
+          💬 Chat familiar
         </button>
       </div>
     </section>
@@ -354,9 +362,50 @@
 
     </section>
 
+    <!-- CHAT FAMILIAR -->
+    <section id="chat-screen" class="screen hidden" aria-labelledby="chat-title">
+      <button type="button" onclick="volverDesdeChat()">
+        ← Volver
+      </button>
+
+      <h2 id="chat-title">💬 Chat familiar</h2>
+      <p class="chat-subtitle">
+        Estás escribiendo como <strong id="chat-profile-name"></strong>.
+        Los mensajes se comparten con Leo, Papá y Mamá.
+      </p>
+
+      <div
+        id="chat-messages"
+        class="chat-messages"
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions text"
+      >
+        <p class="chat-empty">Cargando conversación...</p>
+      </div>
+
+      <form id="chat-form" class="chat-form">
+        <label for="chat-input">Tu mensaje</label>
+        <textarea
+          id="chat-input"
+          rows="3"
+          maxlength="1000"
+          placeholder="Escribe algo para la familia..."
+          required
+        ></textarea>
+
+        <div class="chat-form-footer">
+          <small>Máximo 1.000 caracteres</small>
+          <button type="submit" id="chat-send-btn">Enviar mensaje</button>
+        </div>
+      </form>
+
+      <p id="chat-message" class="chat-status" role="status" aria-live="polite"></p>
+    </section>
+
   </main>
 
-  <script type="module" src="/app.js?v=2"></script>
+  <script type="module" src="/app.js?v=3"></script>
 
 </body>
 </html>
