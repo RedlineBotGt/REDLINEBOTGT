@@ -370,17 +370,24 @@ router.get(
         filtros.asignatura = String(req.query.asignatura);
       }
 
-      if (req.query.estado) {
-        const estado = String(req.query.estado);
+      // Papá conserva el historial completo y puede filtrar por estado.
+      // Leo y Mamá solo reciben deberes pendientes: al completar uno,
+      // desaparece de su lista, pero sigue guardado para Papá.
+      if (perfil === "papa") {
+        if (req.query.estado) {
+          const estado = String(req.query.estado);
 
-        if (!ESTADOS.includes(estado as EstadoDeber)) {
-          return res.status(400).json({
-            ok: false,
-            error: "Estado no válido."
-          });
+          if (!ESTADOS.includes(estado as EstadoDeber)) {
+            return res.status(400).json({
+              ok: false,
+              error: "Estado no válido."
+            });
+          }
+
+          filtros.estado = estado as EstadoDeber;
         }
-
-        filtros.estado = estado as EstadoDeber;
+      } else {
+        filtros.estado = "pendiente";
       }
 
       if (perfil === "papa") {
