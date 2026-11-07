@@ -538,3 +538,34 @@ El usuario solicita añadir English como quinta asignatura, siguiendo el flujo d
 2. Probar English desde Leo, Papá y Mamá.
 3. Verificar generación, pista, respuesta incorrecta, respuesta correcta y siguiente ejercicio.
 4. Comprobar regresión de las cuatro materias existentes, Deberes y chat familiar.
+
+
+---
+
+## 18. Corrección de ejercicios que desaparecen al evaluar (7-11-2026)
+
+### Problema observado
+Al evaluar una respuesta, la web mostró «No se ha podido evaluar la respuesta. Este ejercicio ya no está disponible. Genera otro.» y el botón «Siguiente pregunta» quedó desactivado.
+
+### Causa localizada
+- `routes/questions.ts` guardaba los ejercicios pendientes en un `Map` en memoria del proceso.
+- Un reinicio de Render o una petición atendida por otra instancia podía dejar el ID del ejercicio sin correspondencia, aunque el navegador conservara el ejercicio.
+- El frontend bloqueaba «Siguiente pregunta» ante el 404 del servidor, sin ofrecer una salida para descartar el ejercicio perdido.
+
+### Corrección aplicada
+- Nuevo `services/pendingChallengeService.ts`: persiste los ejercicios pendientes en la colección MongoDB independiente `pending_challenges`, base `academia_campos` (o `MONGODB_DB` si está configurada). La solución sigue almacenada solo en el servidor.
+- `routes/questions.ts`: guarda, recupera y elimina los ejercicios pendientes en MongoDB; mantiene la caducidad de dos horas y la limpieza de ejercicios caducados.
+- `public/js/challenges.js`: conserva el estado HTTP del error. Si la evaluación devuelve 404 porque un ejercicio antiguo ya no existe, habilita «Siguiente pregunta» para descartarlo y continuar; no lo marca como respuesta correcta.
+- No se cambia el motor de English, las demás asignaturas, Deberes, chat, perfiles ni niveles.
+
+### Verificación
+- Código guardado en GitHub y releído: pendiente de confirmar tras los commits.
+- Build TypeScript: pendiente.
+- Prueba funcional de evaluación y siguiente pregunta en Render: pendiente.
+- Render tiene auto-deploy por commit en esta rama; guardar estos cambios iniciará el despliegue automático. No ejecutar un deploy manual adicional.
+
+### Siguiente paso
+1. Confirmar que Render termina el despliegue automático y que el build TypeScript es correcto.
+2. Probar English: generar, responder incorrectamente, volver a intentar, acertar y pulsar «Siguiente pregunta».
+3. Si hay un ejercicio antiguo que aún falla con 404, comprobar que ahora se puede descartar y continuar.
+4. Comprobar que las demás asignaturas conservan su flujo.
