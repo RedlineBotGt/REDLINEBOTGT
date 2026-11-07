@@ -51,6 +51,19 @@ La respuesta debe ser concreta, inequívoca y gramaticalmente correcta.
 No incluyas la solución en el enunciado ni uses vocabulario complejo
 para el nivel. Si hay varias respuestas válidas, indícalas en solution.
 
+Cuando el ejercicio se pueda resolver observando objetos, DEBES incluir
+el campo visual con:
+- alt: descripción breve de lo que se ve, sin revelar la respuesta.
+- items: lista de objetos; cada elemento lleva emoji (un emoji claro)
+  y count (cantidad entera entre 1 y 12).
+- Usa visual especialmente para contar objetos, reconocer animales,
+  alimentos, colores o elementos cotidianos.
+- La pregunta, la solución y las cantidades de visual.items DEBEN
+  coincidir exactamente. No preguntes por elementos que no aparezcan.
+- No incluyas números visibles ni la solución dentro de alt.
+- Si el ejercicio es de gramática, traducción o lectura y una imagen
+  no ayuda, omite visual.
+
 Devuelve exclusivamente el JSON solicitado.
 `;
 }
