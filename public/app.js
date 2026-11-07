@@ -26,6 +26,12 @@ import {
   iniciarDeberes
 } from "./js/homework.js";
 
+import {
+  iniciarChat,
+  abrirChat,
+  volverDesdeChat
+} from "./js/chat.js";
+
 // ========================================
 // CONEXIÓN CON LOS BOTONES DEL HTML
 // ========================================
@@ -50,6 +56,15 @@ window.volverAsignaturas = function() {
 window.volverPerfiles = function() {
   cancelarPregunta();
   volverPerfiles();
+};
+
+// Abrir y cerrar el chat familiar.
+window.abrirChat = function() {
+  abrirChat();
+};
+
+window.volverDesdeChat = function() {
+  volverDesdeChat();
 };
 
 // Comprobar respuesta.
@@ -80,6 +95,7 @@ function iniciarAcademia() {
     iniciarMenu();
     iniciarRanking();
     iniciarDeberes();
+    iniciarChat();
 
     console.log("[ACADEMIA] Todos los módulos iniciados.");
 
