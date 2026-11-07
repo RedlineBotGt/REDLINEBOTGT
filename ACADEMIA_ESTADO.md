@@ -359,3 +359,29 @@ Verificación realizada:
 - No se ha desplegado en Render.
 
 Siguiente paso: el usuario debe autorizar el deploy manual de la rama `backup-antes-limpieza`; después probar en Chrome Android la opción «Instalar aplicación» o «Añadir a pantalla de inicio» y comprobar el icono. El lanzador Android puede aplicar su propia máscara circular o redondeada; no se ha recortado manualmente la imagen.
+
+
+## 12. Ajuste de visibilidad y orden de Deberes (7-11-2026)
+
+Petición del usuario:
+1. Los deberes completados deben desaparecer de la vista de Leo o Mamá que los completa.
+2. Papá debe conservar y seguir viendo los deberes completados.
+3. Comprobar la posición de los deberes nuevos respecto a los existentes.
+
+Cambio aplicado en GitHub:
+- Archivo: `routes/homework.ts`.
+- En la consulta GET `/homework`, Papá conserva el filtro opcional por estado y recibe el historial completo de Leo y Mamá.
+- Para Leo y Mamá, el servidor fuerza `estado: "pendiente"`, independientemente de los filtros enviados. Así los deberes completados dejan de aparecer en su lista, pero no se borran de MongoDB y Papá los sigue viendo.
+- Commit: `efc7e970ac02255b2481f2758f3fdbf4e616b479`.
+- Blob SHA verificado: `f3ac272562f12dc1b98c2ccb6ad70ec27a6ae56c`.
+- El archivo se volvió a leer desde GitHub y se confirmó la regla guardada.
+
+Comprobación del orden actual:
+- `public/js/homework/render.js` ordena las tarjetas por `creadoEn` descendente (más reciente primero). El deber nuevo aparece arriba de los anteriores tanto para los perfiles familiares como en la vista de Papá.
+- La ruta de Papá también ordena en servidor por estado, fecha límite y creación, pero la interfaz vuelve a ordenar por fecha de creación; por tanto, el orden final visible es más reciente primero.
+- No se ha cambiado el orden porque la petición era comprobarlo, no modificarlo.
+
+Pendiente:
+- Compilar TypeScript y probar funcionalmente en Render tras el despliegue manual autorizado por el usuario.
+- Verificar con Leo/Mamá que al completar un deber desaparece y que Papá lo conserva en su lista.
+- No se ha hecho deploy ni se ha modificado Render.
