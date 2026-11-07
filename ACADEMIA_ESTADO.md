@@ -687,3 +687,15 @@ El usuario aprueba comenzar la implementación de Lenguaje Musical como asignatu
 - El mensaje y la fecha mantienen su presentación y comportamiento.
 - Cambios limitados a `public/js/notices.js`, `public/styles.css` y este registro.
 - Pendiente: build/despliegue automático de Render y comprobación visual en móvil.
+
+### Aviso automático al crear deberes (8-11-2026)
+- Al guardar un deber nuevo, el backend crea también un aviso familiar independiente, dirigido al mismo destinatario. Editar un deber existente no genera avisos duplicados.
+- El formato visual es una sola línea: icono de la asignatura, nombre de la asignatura en azul, «para» en blanco y destinatario en azul. Para Lengua se utiliza 📖, tal como se acordó en el ejemplo final.
+- Iconos incluidos: Ciencias 🔬, Matemáticas 🔢, Lengua 📖, Geografía 🗺️, Historia 🏛️, Inglés/English 🇬🇧, Cultura general 🌍, Lenguaje Musical 🎼, Retos Imposibles 🕵️ y Otras 📘.
+- Los avisos manuales conservan la campana 🔔, el destinatario azul y el texto original.
+- Las filas no saltan de línea en móvil; si una es más larga que el ancho disponible, puede desplazarse horizontalmente.
+- El aviso se guarda después de persistir el deber. Si la inserción del aviso falla, el deber sigue guardado y el error queda registrado en logs.
+- Archivos modificados: `routes/homework.ts`, `public/js/notices.js`, `public/styles.css`, `public/index.html`, `public/app.js`.
+- Commits de código: `b282e46c6fca0ae173456447ee54c2ba0191c625`, `dfc9c0f60b05384cd511be5d0462f97357028ff7`, `920b004453237f52087b7f00d74f1d81bf04e3fc` y los commits posteriores de caché.
+- Pendiente: confirmar build y despliegue final de Render; probar creando un deber de cada asignatura relevante y comprobar icono, nombre, destinatario y presentación en móvil.
+- Pendiente de decisión: el aviso independiente «🆕 Nueva asignatura: …» no tiene todavía un flujo de publicación; confirmar si Papá lo publicará desde el panel o si debe generarse al incorporar una asignatura nueva al catálogo.
