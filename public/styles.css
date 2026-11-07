@@ -1167,18 +1167,28 @@ p {
 }
 .notice-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0 4px;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 0 5px;
   margin: 0;
   padding: 5px 7px;
   border-bottom: 1px solid var(--border);
   font-size: .84rem;
   line-height: 1.35;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
-.notice-row strong { color: var(--primary); }
-.notice-row .notice-recipient { color: #60a5fa; font-weight: bold; }
+.notice-row strong { color: #60a5fa; }
+.notice-row .notice-recipient,
+.notice-row .notice-subject { color: #60a5fa; font-weight: bold; }
+.notice-row .notice-subject-icon,
+.notice-row .notice-plain,
+.notice-row .notice-message,
+.notice-row .notice-recipient,
+.notice-row .notice-subject { flex: 0 0 auto; }
 .notice-row time {
+  flex: 0 0 auto;
   margin-left: auto;
   color: var(--muted);
   font-size: .72rem;
