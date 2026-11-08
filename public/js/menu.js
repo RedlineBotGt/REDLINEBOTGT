@@ -54,6 +54,9 @@ export function abrirPerfil(perfil) {
   cerrarSesionDeberes();
   document.dispatchEvent(new CustomEvent("academia:perfil-cambiado", { detail: { perfil } }));
 
+  const botonIA = document.getElementById("open-ai-btn");
+  if (botonIA) botonIA.classList.toggle("hidden", perfil !== "papa");
+
   if (perfil === "papa") {
     // Papá ve únicamente el paso de PIN; nada del perfil queda accesible aún.
     mostrarAccesoPapa();
