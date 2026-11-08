@@ -18,10 +18,10 @@ const EXTENSIONS: Record<string, string> = {
  * Descarga de forma segura una imagen subida a un modal de Discord
  * y la prepara como adjunto para reenviarla al canal de destino.
  */
-export async function buildModalImageAttachment(
-    uploadedFile?: Attachment | null
-): Promise<AttachmentBuilder | null> {
-    if (!uploadedFile) return null;
+async function buildOneModalImageAttachment(
+    uploadedFile: Attachment,
+    index: number
+): Promise<AttachmentBuilder> {
 
     const url = new URL(uploadedFile.url);
 
@@ -75,9 +75,27 @@ export async function buildModalImageAttachment(
         const extension = EXTENSIONS[contentType] || 'img';
 
         return new AttachmentBuilder(data, {
-            name: `imagen-discord.${extension}`
+            name: `imagen-discord-${index + 1}.${extension}`
         });
     } finally {
         clearTimeout(timeout);
     }
+}
+
+/**
+ * Descarga y prepara todas las imágenes seleccionadas en el modal.
+ * Discord permite seleccionar hasta 10 archivos en este componente.
+ */
+export async function buildModalImageAttachments(
+    uploadedFiles: Attachment[] = []
+): Promise<AttachmentBuilder[]> {
+    if (uploadedFiles.length > 10) {
+        throw new Error('Solo se permiten hasta 10 imágenes por mensaje.');
+    }
+
+    return Promise.all(
+        uploadedFiles.map((file, index) =>
+            buildOneModalImageAttachment(file, index)
+        )
+    );
 }
