@@ -14,6 +14,11 @@ import {
   eliminarRetoPendiente,
   limpiarRetosCaducados
 } from "../services/pendingChallengeService.ts";
+import {
+  registrarIntentoEjercicioIA,
+  completarEjercicioIA,
+  obtenerHistorialEjerciciosIA
+} from "../services/aiExerciseHistoryService.ts";
 
 const router = Router();
 
@@ -159,6 +164,22 @@ function nombreAsignatura(
 }
 
 // ========================================
+// HISTORIAL DE EJERCICIOS IA DE LEO
+router.get("/ai-history", async (_req, res) => {
+  try {
+    const ejercicios = await obtenerHistorialEjerciciosIA("leo");
+    return res.json({ ok: true, ejercicios });
+  } catch (error) {
+    console.error("[IA] Error al consultar el historial:", error);
+    return res.status(500).json({
+      ok: false,
+      error: "No se ha podido cargar el historial de IA."
+    });
+  }
+});
+
+// ========================================
+
 // GENERAR RETO
 // ========================================
 
@@ -367,6 +388,19 @@ router.post("/answer", async (req, res) => {
       pendiente.reto.solution,
       pendiente.asignatura
     );
+
+    // Historial exclusivo de Leo: cada respuesta evaluada suma un intento.
+    if (perfil === "leo") {
+      const intentos = await registrarIntentoEjercicioIA({
+        id: retoId,
+        perfil,
+        asignatura: materia,
+        pregunta: pendiente.reto.prompt
+      });
+      if (evaluacion.correct) {
+        await completarEjercicioIA(retoId, intentos);
+      }
+    }
 
     // Si acierta, el ejercicio deja de estar pendiente.
     // Si falla, puede volver a intentarlo.
