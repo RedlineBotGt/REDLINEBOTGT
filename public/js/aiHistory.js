@@ -1,4 +1,5 @@
 import { obtenerPerfilActual } from "./users.js";
+import { solicitarAPI } from "./homework/api.js";
 
 function mostrarPantallaHistorial() {
   document.querySelectorAll(".screen").forEach(pantalla => {
@@ -23,13 +24,9 @@ async function cargarHistorial() {
   if (resumen) resumen.textContent = "";
 
   try {
-    const response = await fetch("/api/academia/ai-history", {
-      headers: { Accept: "application/json" }
-    });
-    const data = await response.json();
-
-    if (!response.ok || data.ok !== true || !Array.isArray(data.ejercicios)) {
-      throw new Error(data.error || "No se ha podido cargar el historial.");
+    const data = await solicitarAPI("/api/academia/ai-history");
+    if (!Array.isArray(data.ejercicios)) {
+      throw new Error("No se ha podido cargar el historial.");
     }
 
     lista.replaceChildren();
