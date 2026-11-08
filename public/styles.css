@@ -1308,3 +1308,66 @@ p {
 .notice-edit-form textarea { resize: vertical; }
 .notices-admin .notice-edit-form button[type="submit"] { background: var(--success); color: #052e24; }
 .notices-admin .notice-edit-form button[type="button"] { background: var(--panel-light); color: var(--text); border: 1px solid var(--border); }
+
+
+/* ========================================
+   ACCESOS DEL PERFIL: CUADRÍCULA 2 × 2
+======================================== */
+
+.homework-entry {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: 420px;
+  margin: 22px auto 0;
+}
+
+.homework-entry > button,
+#open-homework-btn,
+#open-notices-btn,
+#open-chat-btn,
+#open-ai-btn {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 64px;
+  margin: 0;
+  padding: 12px 8px;
+  background: var(--panel-light);
+  color: var(--text);
+  border: 1px solid var(--primary);
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: bold;
+  line-height: 1.3;
+  text-align: center;
+}
+
+#open-ai-btn:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.homework-entry > button:not(:disabled) {
+  cursor: pointer;
+}
+
+.homework-entry > button:not(:disabled):hover {
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+}
+
+@media (max-width: 360px) {
+  .homework-entry {
+    gap: 8px;
+  }
+
+  .homework-entry > button {
+    padding: 10px 5px;
+    font-size: 0.88rem;
+  }
+}
