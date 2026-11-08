@@ -17,6 +17,33 @@ export function parseMadridDateTime(dateStr: string, timeStr: string): Date | nu
     }
 }
 
+/**
+ * Formatea una fecha como DD/MM/YYYY usando la zona horaria de Madrid.
+ * Se utiliza para que cada repetición muestre la fecha real de su carrera.
+ */
+export function formatMadridDate(date: Date): string {
+    if (!(date instanceof Date) || isNaN(date.getTime())) {
+        throw new Error('Fecha inválida al formatear la fecha del evento.');
+    }
+
+    const parts = new Intl.DateTimeFormat('es-ES', {
+        timeZone: 'Europe/Madrid',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    }).formatToParts(date);
+
+    const day = parts.find(part => part.type === 'day')?.value;
+    const month = parts.find(part => part.type === 'month')?.value;
+    const year = parts.find(part => part.type === 'year')?.value;
+
+    if (!day || !month || !year) {
+        throw new Error('No se pudo obtener la fecha local de Madrid.');
+    }
+
+    return `${day}/${month}/${year}`;
+}
+
 function getMadridOffsetMinutes(date: Date): number {
     const madridDateStr = new Intl.DateTimeFormat('en-US', {
         timeZone: 'Europe/Madrid',
