@@ -203,7 +203,8 @@ async function cargarAvisos() {
   if (!lista) return;
   try {
     const datos = await solicitarAPI("/api/academia/notices");
-    pintarAvisos(datos.avisos || []);\n    pintarGestionAvisos(datos.avisos || []);
+    pintarAvisos(datos.avisos || []);
+    pintarGestionAvisos(datos.avisos || []);
   } catch {
     lista.textContent = "No se han podido cargar los avisos.";
   }
