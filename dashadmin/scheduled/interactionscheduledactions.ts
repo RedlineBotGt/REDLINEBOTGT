@@ -62,6 +62,88 @@ export async function handleScheduledActions(interaction: any): Promise<boolean>
         if (interaction.isButton()) {
             const customId = interaction.customId;
 
+            // Administración de trabajos ya guardados: solo se editan los pendientes.
+            if (customId.startsWith('sched_job_edit_')) {
+                const jobId = customId.slice('sched_job_edit_'.length);
+                if (!ObjectId.isValid(jobId) || !interaction.guildId) return true;
+                const { jobs } = await getSchedCollections();
+                const job = await jobs.findOne({ _id: new ObjectId(jobId), guildId: interaction.guildId, status: 'pending' });
+                if (!job) {
+                    await interaction.reply({ content: '⚠️ Este registro ya no está pendiente o no existe. Actualiza el historial.', flags: [MessageFlags.Ephemeral] });
+                    return true;
+                }
+                scheduledSessions.set(interaction.user.id, { editJobId: jobId, guildId: interaction.guildId });
+                const modal = new ModalBuilder().setCustomId('modal_sched_job_content').setTitle('Editar mensaje pendiente');
+                const textInput = new TextInputBuilder().setCustomId('job_text').setLabel('Texto del mensaje').setStyle(TextInputStyle.Paragraph).setValue(String(job.text || '').slice(0, 4000)).setRequired(true);
+                const imageInput = new TextInputBuilder().setCustomId('job_image').setLabel('URL de imagen (vacío = quitar)').setStyle(TextInputStyle.Short).setValue(String(job.image || '').slice(0, 400)).setRequired(false);
+                const dateInput = new TextInputBuilder().setCustomId('job_date').setLabel('Fecha DD/MM/AAAA').setStyle(TextInputStyle.Short).setValue(String(job.date || '')).setRequired(true);
+                const timeInput = new TextInputBuilder().setCustomId('job_time').setLabel('Hora HH:MM (Madrid)').setStyle(TextInputStyle.Short).setValue(String(job.time || '')).setRequired(true);
+                modal.addComponents(
+                    new ActionRowBuilder<TextInputBuilder>().addComponents(textInput),
+                    new ActionRowBuilder<TextInputBuilder>().addComponents(imageInput),
+                    new ActionRowBuilder<TextInputBuilder>().addComponents(dateInput),
+                    new ActionRowBuilder<TextInputBuilder>().addComponents(timeInput)
+                );
+                await interaction.showModal(modal);
+                return true;
+            }
+
+            if (customId.startsWith('sched_job_delete_')) {
+                const jobId = customId.slice('sched_job_delete_'.length);
+                if (!ObjectId.isValid(jobId) || !interaction.guildId) return true;
+                const { jobs } = await getSchedCollections();
+                const result = await jobs.deleteOne({ _id: new ObjectId(jobId), guildId: interaction.guildId });
+                await interaction.update({ content: result.deletedCount ? '✅ Registro eliminado.' : '⚠️ El registro ya no existe.', embeds: [], components: [] });
+                return true;
+            }
+
+            if (customId.startsWith('sched_job_channel_')) {
+                const jobId = customId.slice('sched_job_channel_'.length);
+                if (!ObjectId.isValid(jobId) || !interaction.guildId) return true;
+                scheduledSessions.set(interaction.user.id, { editJobId: jobId, guildId: interaction.guildId });
+                const menu = new ChannelSelectMenuBuilder().setCustomId('sched_job_channel_select').setPlaceholder('Selecciona el nuevo canal...').addChannelTypes(ChannelType.GuildText);
+                await interaction.reply({ content: '📢 Selecciona el canal de destino. Solo se actualizará si el mensaje sigue pendiente.', components: [new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(menu)], flags: [MessageFlags.Ephemeral] });
+                return true;
+            }
+
+            if (customId.startsWith('sched_job_role_')) {
+                const jobId = customId.slice('sched_job_role_'.length);
+                if (!ObjectId.isValid(jobId) || !interaction.guildId) return true;
+                scheduledSessions.set(interaction.user.id, { editJobId: jobId, guildId: interaction.guildId });
+                const menu = new RoleSelectMenuBuilder().setCustomId('sched_job_role_select').setPlaceholder('Selecciona el rol que se mencionará...');
+                const clear = new ButtonBuilder().setCustomId('sched_job_role_clear').setLabel('Quitar mención de rol').setStyle(ButtonStyle.Secondary);
+                await interaction.reply({ content: '🏷️ Selecciona un rol o quita la mención:', components: [new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(menu), new ActionRowBuilder<ButtonBuilder>().addComponents(clear)], flags: [MessageFlags.Ephemeral] });
+                return true;
+            }
+
+            if (customId === 'sched_job_role_clear') {
+                const session = scheduledSessions.get(interaction.user.id);
+                if (!session?.editJobId || !session.guildId) return true;
+                const { jobs } = await getSchedCollections();
+                const result = await jobs.updateOne({ _id: new ObjectId(session.editJobId), guildId: session.guildId, status: 'pending' }, { $set: { roleId: null } });
+                await interaction.update({ content: result.modifiedCount ? '✅ Mención de rol eliminada.' : '⚠️ El mensaje ya no está pendiente; no se modificó.', components: [] });
+                return true;
+            }
+
+            if (customId.startsWith('sched_job_repeat_')) {
+                const jobId = customId.slice('sched_job_repeat_'.length);
+                if (!ObjectId.isValid(jobId) || !interaction.guildId) return true;
+                const { jobs } = await getSchedCollections();
+                const job = await jobs.findOne({ _id: new ObjectId(jobId), guildId: interaction.guildId, status: 'pending' });
+                if (!job) {
+                    await interaction.reply({ content: '⚠️ El mensaje ya no está pendiente.', flags: [MessageFlags.Ephemeral] });
+                    return true;
+                }
+                scheduledSessions.set(interaction.user.id, { editJobId: jobId, guildId: interaction.guildId });
+                const modal = new ModalBuilder().setCustomId('modal_sched_job_repeat').setTitle('Editar repetición');
+                const days = new TextInputBuilder().setCustomId('job_repeat_days').setLabel('Intervalo en días').setStyle(TextInputStyle.Short).setValue(String(job.repeatIntervalDays ?? 0)).setRequired(true);
+                const hours = new TextInputBuilder().setCustomId('job_repeat_hours').setLabel('Intervalo en horas').setStyle(TextInputStyle.Short).setValue(String(job.repeatIntervalHours ?? 0)).setRequired(true);
+                const remaining = new TextInputBuilder().setCustomId('job_remaining').setLabel('Envíos restantes (1 = último envío)').setStyle(TextInputStyle.Short).setValue(String(job.remainingTimes ?? job.totalRepetitions ?? 1)).setRequired(true);
+                modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(days), new ActionRowBuilder<TextInputBuilder>().addComponents(hours), new ActionRowBuilder<TextInputBuilder>().addComponents(remaining));
+                await interaction.showModal(modal);
+                return true;
+            }
+
             if (customId.startsWith('sched_action_edit_')) {
                 const templateId = customId.replace('sched_action_edit_', '');
                 const { templates } = await getSchedCollections();
