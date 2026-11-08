@@ -723,3 +723,13 @@ El usuario aprueba comenzar la implementación de Lenguaje Musical como asignatu
 - Archivos modificados: `services/noticesService.ts`, `routes/notices.ts`, `public/js/notices.js`, `public/index.html`, `public/styles.css`.
 - Commits de implementación: `f06225307dd5df98fd47456137c4b70f6c917dc9`, `f74d246943576101b629a7038ad1b2c55d1caae3`, `6d8ef3ec309fdf335d524db2b8535d5b149973f4`, `d22e9b671a042e94f710e4788c0bb1e8a97ad7f2`, `0594bda7ee039eb0a486c98bf1119b441b638450`.
 - Pendiente: confirmar compilación y despliegue automático en Render; probar edición/borrado de aviso manual, edición de destinatario de aviso automático y borrado de un aviso legado sin ID. No se ha realizado todavía una prueba funcional con MongoDB.
+
+
+### Corrección de la interfaz de gestión de avisos (8-11-2026)
+
+- Incidencia reportada: no aparecían los botones de edición/borrado y el aviso antiguo seguía en el listado público.
+- Causa raíz confirmada en el HTML: el módulo JS ya intentaba renderizar en `#notices-admin-list`, pero ese contenedor no se había insertado dentro de `#notices-admin`. Por tanto, `pintarGestionAvisos()` terminaba sin mostrar controles.
+- Corrección: añadido el bloque «Avisos publicados» con `id="notices-admin-list"` dentro del panel de Papá en `public/index.html`.
+- Verificación de código: el HTML contiene el contenedor y `public/js/notices.js` contiene el render de la lista y las acciones PATCH/DELETE. El build de Render terminó con «Build successful» y la instancia nueva arrancó con «ACADEMIA CAMPOS ARRANCADA» y «Archivos web disponibles».
+- Commit de corrección: `d9fe53b83d67e962f97e17b644e33489509899f9`.
+- Pendiente de prueba desde la interfaz autenticada: confirmar que se muestra el listado, borrar el aviso antiguo y comprobar que desaparece también del listado público. No se ha borrado ningún aviso desde el backend ni se ha alterado la colección.
