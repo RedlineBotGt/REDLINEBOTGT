@@ -13,6 +13,11 @@ import {
   cerrarAsignatura
 } from "./subjects.js";
 
+import {
+  cerrarSesionDeberes,
+  mostrarAccesoPapa
+} from "./homework.js";
+
 // ========================================
 // UTILIDADES DE INTERFAZ
 // ========================================
@@ -47,6 +52,12 @@ export function abrirPerfil(perfil) {
 
   mostrarPantalla("subjects-screen");
   document.dispatchEvent(new CustomEvent("academia:perfil-cambiado", { detail: { perfil } }));
+
+  // El selector activa directamente la protección, sin depender del listener.
+  cerrarSesionDeberes();
+  if (perfil === "papa") {
+    mostrarAccesoPapa();
+  }
 }
 
 // ========================================
