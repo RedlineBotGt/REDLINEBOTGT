@@ -92,12 +92,118 @@ function pintarAvisos(avisos) {
   }
 }
 
+
+function pintarGestionAvisos(avisos) {
+  const lista = document.getElementById("notices-admin-list");
+  if (!lista) return;
+  lista.replaceChildren();
+
+  if (!avisos.length) {
+    const vacio = document.createElement("p");
+    vacio.className = "notices-empty";
+    vacio.textContent = "No hay avisos que gestionar.";
+    lista.appendChild(vacio);
+    return;
+  }
+
+  for (const aviso of avisos) {
+    const item = document.createElement("article");
+    item.className = "notice-admin-item";
+    const esDeber = typeof aviso.mensaje === "string" && aviso.mensaje.startsWith("__DEBER__:");
+    const resumen = document.createElement("p");
+    resumen.className = "notice-admin-summary";
+    resumen.textContent = (esDeber ? "📚 Aviso de deber · " : "🔔 Aviso manual · ") +
+      (nombres[aviso.destinatario] || "Familia") + " · " +
+      (esDeber ? (asignaturas[aviso.mensaje.slice(10)]?.nombre || aviso.mensaje.slice(10)) : aviso.mensaje);
+    item.appendChild(resumen);
+
+    const acciones = document.createElement("div");
+    acciones.className = "notice-admin-actions";
+    const editar = document.createElement("button");
+    editar.type = "button";
+    editar.className = "notice-edit-btn";
+    editar.textContent = "✏️ Editar";
+    editar.addEventListener("click", () => mostrarEditorAviso(item, aviso));
+    const borrar = document.createElement("button");
+    borrar.type = "button";
+    borrar.className = "notice-delete-btn";
+    borrar.textContent = "🗑️ Borrar";
+    borrar.addEventListener("click", async () => {
+      if (!confirm("¿Borrar este aviso? Esta acción no se puede deshacer.")) return;
+      borrar.disabled = true;
+      try {
+        await solicitarAPI("/api/academia/notices/" + encodeURIComponent(aviso._id), { method: "DELETE" });
+        await cargarAvisos();
+      } catch (error) {
+        alert(error.message || "No se ha podido borrar el aviso.");
+        borrar.disabled = false;
+      }
+    });
+    acciones.append(editar, borrar);
+    item.appendChild(acciones);
+    lista.appendChild(item);
+  }
+}
+
+function mostrarEditorAviso(item, aviso) {
+  if (item.querySelector("form")) return;
+  const form = document.createElement("form");
+  form.className = "notice-edit-form";
+  const destinoLabel = document.createElement("label");
+  destinoLabel.textContent = "Destinatario";
+  const destino = document.createElement("select");
+  for (const [valor, texto] of [["leo","Leo"],["mama","Mamá"],["todos","Todos"]]) {
+    const opcion = document.createElement("option");
+    opcion.value = valor;
+    opcion.textContent = texto;
+    destino.appendChild(opcion);
+  }
+  destino.value = aviso.destinatario;
+  const mensajeLabel = document.createElement("label");
+  mensajeLabel.textContent = "Mensaje";
+  const mensaje = document.createElement("textarea");
+  mensaje.rows = 2;
+  mensaje.maxLength = 240;
+  mensaje.required = true;
+  mensaje.value = aviso.mensaje.startsWith("__DEBER__:") ?
+    aviso.mensaje.slice("__DEBER__:".length) : aviso.mensaje;
+  if (aviso.mensaje.startsWith("__DEBER__:")) {
+    mensaje.value = "Aviso automático de deber: " + mensaje.value;
+    mensaje.disabled = true;
+    mensajeLabel.textContent = "Los avisos automáticos se actualizan desde el deber. Puedes cambiar el destinatario o borrarlos aquí.";
+  }
+  const guardar = document.createElement("button");
+  guardar.type = "submit";
+  guardar.textContent = "Guardar cambios";
+  const cancelar = document.createElement("button");
+  cancelar.type = "button";
+  cancelar.textContent = "Cancelar";
+  cancelar.addEventListener("click", () => form.remove());
+  form.append(destinoLabel, destino, mensajeLabel, mensaje, guardar, cancelar);
+  item.appendChild(form);
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    guardar.disabled = true;
+    try {
+      const texto = aviso.mensaje.startsWith("__DEBER__:") ? aviso.mensaje : mensaje.value.trim();
+      await solicitarAPI("/api/academia/notices/" + encodeURIComponent(aviso._id), {
+        method: "PATCH",
+        body: JSON.stringify({ destinatario: destino.value, mensaje: texto })
+      });
+      await cargarAvisos();
+    } catch (error) {
+      alert(error.message || "No se han podido guardar los cambios.");
+      guardar.disabled = false;
+    }
+  });
+}
+
 async function cargarAvisos() {
   const lista = document.getElementById("notices-list");
   if (!lista) return;
   try {
     const datos = await solicitarAPI("/api/academia/notices");
-    pintarAvisos(datos.avisos || []);
+    pintarAvisos(datos.avisos || []);\n    pintarGestionAvisos(datos.avisos || []);
   } catch {
     lista.textContent = "No se han podido cargar los avisos.";
   }
