@@ -9,7 +9,7 @@ import {
   abrirAsignatura,
   volverAsignaturas,
   volverPerfiles
-} from "./js/menu.js?v=3";
+} from "./js/menu.js?v=4";
 
 import {
   enviarRespuesta,
