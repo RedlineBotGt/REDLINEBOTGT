@@ -42,7 +42,7 @@ export function abrirDeberes() {
 
   const perfil = obtenerPerfilActual();
 
-  // PAPÁ: necesita iniciar sesión antes de ver la gestión.
+  // PAPÁ debe autenticarse al seleccionar su perfil, antes de entrar aquí.
   if (perfil === "papa") {
     if (!obtenerToken()) {
       mostrarAccesoPapa();
@@ -93,6 +93,10 @@ export function mostrarAccesoPapa() {
     return;
   }
 
+  const pantalla = document.getElementById("homework-screen");
+  const asignaturas = document.getElementById("subjects-screen");
+  if (pantalla) pantalla.classList.add("hidden");
+  if (asignaturas) asignaturas.classList.remove("hidden");
   if (acceso) acceso.classList.remove("hidden");
   if (gestion) gestion.classList.add("hidden");
 
@@ -142,14 +146,11 @@ export async function iniciarSesionDeberes() {
     pin.value = "";
 
     const acceso = document.getElementById("homework-login");
-    const gestion = document.getElementById("homework-management");
-
     if (acceso) acceso.classList.add("hidden");
-    if (gestion) gestion.classList.remove("hidden");
 
     if (mensaje) mensaje.textContent = "";
 
-    await cargarDeberes();
+    window.dispatchEvent(new Event("academia:papa-authenticated"));
   } catch (error) {
     cerrarSesion();
 
@@ -302,6 +303,20 @@ export function iniciarDeberes() {
     "academia:papa-session-expired",
     mostrarAccesoPapa
   );
+
+  window.addEventListener("academia:perfil-cambiado", event => {
+    if (event.detail?.perfil === "papa") {
+      // Cada entrada al perfil de Papá solicita una confirmación con PIN.
+      cerrarSesion();
+      mostrarAccesoPapa();
+    } else {
+      cerrarSesion();
+      const acceso = document.getElementById("homework-login");
+      const gestion = document.getElementById("homework-management");
+      if (acceso) acceso.classList.add("hidden");
+      if (gestion) gestion.classList.add("hidden");
+    }
+  });
 
   window.abrirDeberes = abrirDeberes;
   window.volverDesdeDeberes = volverDesdeDeberes;
