@@ -161,11 +161,11 @@ Archivos modificados:
 
 ### Seguridad operativa y límites
 
-- El usuario indicó que eliminará los mensajes pendientes antiguos y creará mensajes nuevos para probar. No se ha accedido ni modificado la colección MongoDB desde estos cambios.
+- El usuario indicó que eliminaría los mensajes pendientes antiguos y crearía mensajes nuevos para probar. No se ha accedido ni modificado la colección MongoDB desde estos cambios. Durante el primer despliegue, el worker anterior registró **un envío** a `Archivo RedLineGT` a las 22:33:05 UTC. No aparecen otros envíos del worker en los logs consultados hasta las 22:36 UTC; no fue posible inspeccionar directamente los documentos restantes en MongoDB. Confirmar con el usuario que los registros antiguos se han eliminado antes de crear pruebas.
 - El worker consulta cada 60 segundos y también realiza un primer ciclo al arrancar.
 - Un trabajo pasa temporalmente a `processing`; si el proceso cae y permanece en ese estado más de 10 minutos, vuelve a `pending`. Como con cualquier envío a Discord, si el proceso cae justo después de que Discord acepte el mensaje pero antes de confirmar MongoDB, una recuperación posterior podría repetir ese envío; no existe garantía de entrega exactamente una vez con el flujo actual.
 - El historial presenta los 25 registros más recientes. Si hay más de 25, el panel informa de ello; la paginación adicional queda pendiente.
-- Se retiró el fallback de URI MongoDB incrustado en los dos módulos de mensajes programados: estos módulos requieren una de las variables de entorno Mongo ya admitidas por el proyecto.
+- Se conserva el fallback de conexión MongoDB que ya existía en estos dos módulos porque Render no tiene configurada ninguna de las variables MongoDB contempladas por el código. No se cambiaron credenciales ni variables de entorno.
 
 ### Commits de esta intervención
 
@@ -180,4 +180,4 @@ Archivos modificados:
 - Revisión estática de los archivos modificados: realizada.
 - Compilación TypeScript integral: pendiente de confirmar mediante el build de Render.
 - Prueba funcional en Discord: pendiente; requiere crear un mensaje futuro de prueba y verificar edición, envío y recurrencia.
-- Render tiene Auto Deploy activo. Los commits ya generaron despliegues automáticos; el último estado consultado estaba en cola/en actualización, por lo que no se considera todavía verificado en producción.
+- Render tiene Auto Deploy activo. Los despliegues de los commits intermedios fallaron primero por una expresión regular con escape incorrecto y después por la ausencia de variables MongoDB en Render; ambas causas se corrigieron/restauraron en commits posteriores. El commit más reciente está en cola/en despliegue; producción aún no se considera verificada.
