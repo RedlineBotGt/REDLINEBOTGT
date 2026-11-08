@@ -80,6 +80,83 @@ server.on('error', (error) => {
 });
 
 // =====================================================
+// DESPERTADOR DE ACADEMIA CAMPOS (HTTP, SIN DISCORD)
+// =====================================================
+
+const ACADEMIA_HEALTH_URL =
+    process.env.ACADEMIA_HEALTH_URL ||
+    'https://academia-campos.onrender.com/api/academia/status';
+
+const ACADEMIA_CHECK_INTERVAL_MS = 10 * 60 * 1000;
+const ACADEMIA_REQUEST_TIMEOUT_MS = 60 * 1000;
+const ACADEMIA_RETRY_DELAY_MS = 15 * 1000;
+
+let academiaCheckInProgress = false;
+
+async function checkAcademiaStatus(): Promise<void> {
+    if (academiaCheckInProgress) return;
+
+    academiaCheckInProgress = true;
+
+    try {
+        for (let attempt = 1; attempt <= 2; attempt++) {
+            const controller = new AbortController();
+            const timeout = setTimeout(
+                () => controller.abort(),
+                ACADEMIA_REQUEST_TIMEOUT_MS
+            );
+
+            try {
+                const response = await fetch(ACADEMIA_HEALTH_URL, {
+                    method: 'GET',
+                    headers: { Accept: 'application/json' },
+                    signal: controller.signal
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json() as {
+                    estado?: string;
+                    servicio?: string;
+                };
+
+                console.log(
+                    `🟢 [Academia] Comprobación correcta: ${data.estado || 'activa'}.`
+                );
+                return;
+            } catch (error) {
+                console.warn(
+                    `⚠️ [Academia] Falló la comprobación ${attempt}/2:`,
+                    error instanceof Error ? error.message : error
+                );
+
+                if (attempt === 1) {
+                    await new Promise(resolve =>
+                        setTimeout(resolve, ACADEMIA_RETRY_DELAY_MS)
+                    );
+                }
+            } finally {
+                clearTimeout(timeout);
+            }
+        }
+
+        console.error(
+            '❌ [Academia] No respondió tras dos intentos. Se volverá a comprobar en el siguiente ciclo.'
+        );
+    } finally {
+        academiaCheckInProgress = false;
+    }
+}
+
+// Primera petición al arrancar y después una comprobación cada 10 minutos.
+void checkAcademiaStatus();
+setInterval(() => {
+    void checkAcademiaStatus();
+}, ACADEMIA_CHECK_INTERVAL_MS);
+
+// =====================================================
 // COMANDOS SLASH
 // =====================================================
 
