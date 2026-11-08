@@ -51,14 +51,12 @@ export async function handleDashMsnChannelSelect(interaction: ChannelSelectMenuI
 
     const inputTexto = new TextInputBuilder()
         .setCustomId('input_msn_texto')
-        .setLabel('Contenido del mensaje')
         .setStyle(TextInputStyle.Paragraph)
         .setPlaceholder('Escribe tu mensaje (ej: @miembro o @rol)...')
         .setRequired(true);
 
     const inputImagen = new TextInputBuilder()
         .setCustomId('input_msn_imagen')
-        .setLabel('URL de imagen o archivo (Opcional)')
         .setStyle(TextInputStyle.Short)
         .setPlaceholder('https://ejemplo.com/imagen.png (opcional)')
         .setRequired(false);
