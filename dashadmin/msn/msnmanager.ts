@@ -6,10 +6,14 @@ import {
     TextInputStyle, 
     ActionRowBuilder,
     ChannelSelectMenuBuilder,
+    FileUploadBuilder,
+    LabelBuilder,
     ChannelType,
     ModalSubmitInteraction,
     TextChannel
 } from 'discord.js';
+
+import { buildModalImageAttachment } from '../../handlers/modalImageUpload';
 
 // 1. Maneja el clic en el botón "Enviar mensaje" del panel
 export async function handleDashMsnButton(interaction: ButtonInteraction): Promise<boolean> {
@@ -59,9 +63,24 @@ export async function handleDashMsnChannelSelect(interaction: ChannelSelectMenuI
         .setPlaceholder('https://ejemplo.com/imagen.png (opcional)')
         .setRequired(false);
 
-    modal.addComponents(
-        new ActionRowBuilder<TextInputBuilder>().addComponents(inputTexto),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(inputImagen)
+    const inputArchivo = new FileUploadBuilder()
+        .setCustomId('input_msn_archivo')
+        .setMinValues(0)
+        .setMaxValues(1)
+        .setFileTypes('image');
+
+    modal.addLabelComponents(
+        new LabelBuilder()
+            .setLabel('Contenido del mensaje')
+            .setTextInputComponent(inputTexto),
+        new LabelBuilder()
+            .setLabel('URL de imagen (opcional)')
+            .setDescription('Puedes dejarlo vacío si adjuntas una foto desde tu dispositivo.')
+            .setTextInputComponent(inputImagen),
+        new LabelBuilder()
+            .setLabel('Foto desde la galería (opcional)')
+            .setDescription('Selecciona una imagen de tu móvil o dispositivo. Máximo 1 imagen.')
+            .setFileUploadComponent(inputArchivo)
     );
 
     await interaction.showModal(modal);
@@ -75,6 +94,7 @@ export async function handleDashMsnModalSubmit(interaction: ModalSubmitInteracti
     const channelId = interaction.customId.replace('modal_msn_', '');
     let texto = interaction.fields.getTextInputValue('input_msn_texto');
     const archivoUrl = interaction.fields.getTextInputValue('input_msn_imagen').trim();
+    const uploadedFile = interaction.fields.getUploadedFiles('input_msn_archivo')?.first() ?? null;
 
     const guild = interaction.guild;
     if (!guild) return false;
@@ -115,6 +135,8 @@ export async function handleDashMsnModalSubmit(interaction: ModalSubmitInteracti
             }
         }
 
+        const imagenAdjunta = await buildModalImageAttachment(uploadedFile);
+
         const opcionesEnvio: any = {
             content: texto,
             allowedMentions: {
@@ -122,9 +144,12 @@ export async function handleDashMsnModalSubmit(interaction: ModalSubmitInteracti
             }
         };
 
-        if (archivoUrl && archivoUrl.startsWith('http')) {
-            opcionesEnvio.files = [{ attachment: archivoUrl }];
+        const archivos: any[] = [];
+        if (imagenAdjunta) archivos.push(imagenAdjunta);
+        if (archivoUrl && /^https?:\/\//i.test(archivoUrl)) {
+            archivos.push({ attachment: archivoUrl });
         }
+        if (archivos.length) opcionesEnvio.files = archivos;
 
         await canalDestino.send(opcionesEnvio);
 
