@@ -3,14 +3,15 @@ import {
   MongoClient,
   ObjectId,
   Collection,
-  Db
+  Db,
+  GridFSBucket
 } from "mongodb";
 
 // ========================================
 // TIPOS DE DATOS
 // ========================================
 
-export type TipoDeber = "enlace" | "ejercicio" | "escrito";
+export type TipoDeber = "enlace" | "ejercicio" | "ejercicio_imagen" | "escrito";
 
 export type DestinatarioDeber = "leo" | "mama";
 
@@ -22,6 +23,13 @@ export interface PreguntaDeber {
   respuestaCorrecta: string;
 }
 
+export interface ImagenDeber {
+  fileId: string;
+  nombre: string;
+  contentType: string;
+  tamano: number;
+}
+
 export interface Deber {
   _id?: ObjectId;
   titulo: string;
@@ -31,6 +39,7 @@ export interface Deber {
   destinatario: DestinatarioDeber;
   fechaLimite?: string | null;
   preguntas?: PreguntaDeber[];
+  imagenes?: ImagenDeber[];
   estado: EstadoDeber;
   completadoEn?: Date | null;
   completadoPor?: string | null;
@@ -69,6 +78,108 @@ async function obtenerColeccion(): Promise<Collection<Deber>> {
   coleccion = baseDatos.collection<Deber>("homework");
 
   return coleccion;
+}
+
+
+/* ========================================
+   IMÁGENES DE DEBERES (MONGODB GRIDFS)
+======================================== */
+
+function obtenerBucketImagenes(): GridFSBucket {
+  if (!baseDatos) throw new Error("La conexión de MongoDB no está preparada.");
+  return new GridFSBucket(baseDatos, { bucketName: "homework_images" });
+}
+
+async function eliminarArchivosImagenes(imagenes: ImagenDeber[] = []) {
+  if (!imagenes.length) return;
+  const bucket = obtenerBucketImagenes();
+  for (const imagen of imagenes) {
+    if (!ObjectId.isValid(imagen.fileId)) continue;
+    try { await bucket.delete(new ObjectId(imagen.fileId)); }
+    catch (error) { console.warn("[HOMEWORK] No se pudo borrar una imagen:", error); }
+  }
+}
+
+export async function guardarImagenDeber(
+  id: string, buffer: Buffer, nombre: string, contentType: string
+): Promise<ImagenDeber> {
+  if (!ObjectId.isValid(id)) throw new Error("Identificador de deber no válido.");
+  if (!Buffer.isBuffer(buffer) || buffer.length === 0 || buffer.length > 5 * 1024 * 1024) {
+    throw new Error("La imagen está vacía o supera los 5 MB.");
+  }
+  if (!["image/jpeg", "image/png", "image/webp"].includes(contentType)) {
+    throw new Error("Solo se admiten imágenes JPG, PNG o WebP.");
+  }
+
+  const db = await obtenerColeccion();
+  const deber = await db.findOne({ _id: new ObjectId(id) });
+  if (!deber || deber.tipo !== "ejercicio_imagen") {
+    throw new Error("No se ha encontrado un ejercicio con imágenes.");
+  }
+  const actuales = Array.isArray(deber.imagenes) ? deber.imagenes : [];
+  if (actuales.length >= 5) throw new Error("Un ejercicio puede tener como máximo 5 imágenes.");
+
+  const bucket = obtenerBucketImagenes();
+  const subida = bucket.openUploadStream(nombre, {
+    contentType,
+    metadata: { homeworkId: id }
+  });
+  await new Promise<void>((resolve, reject) => {
+    subida.once("finish", resolve);
+    subida.once("error", reject);
+    subida.end(buffer);
+  });
+
+  const imagen: ImagenDeber = {
+    fileId: String(subida.id), nombre, contentType, tamano: buffer.length
+  };
+
+  try {
+    const actualizacion = await db.updateOne(
+      {
+        _id: new ObjectId(id),
+        tipo: "ejercicio_imagen",
+        $expr: { $lt: [{ $size: { $ifNull: ["$imagenes", []] } }, 5] }
+      },
+      { $push: { imagenes: imagen } as any }
+    );
+    if (actualizacion.matchedCount === 0) {
+      await bucket.delete(subida.id);
+      throw new Error("No se ha podido asociar la imagen al ejercicio.");
+    }
+  } catch (error) {
+    try { await bucket.delete(subida.id); } catch {}
+    throw error;
+  }
+  return imagen;
+}
+
+export async function obtenerImagenDeber(id: string, fileId: string, perfil: string) {
+  if (!ObjectId.isValid(id) || !ObjectId.isValid(fileId)) return null;
+  if (!["leo", "mama", "papa"].includes(perfil)) return null;
+
+  const db = await obtenerColeccion();
+  const filtro: Record<string, unknown> = { _id: new ObjectId(id) };
+  if (perfil !== "papa") filtro.destinatario = perfil;
+  const deber = await db.findOne(filtro);
+  if (!deber || deber.tipo !== "ejercicio_imagen") return null;
+
+  const imagenes = Array.isArray(deber.imagenes) ? deber.imagenes : [];
+  const imagen = imagenes.find(item => item.fileId === fileId);
+  if (!imagen) return null;
+
+  const bucket = obtenerBucketImagenes();
+  const archivo = await bucket.find({
+    _id: new ObjectId(fileId),
+    "metadata.homeworkId": id
+  }).next();
+  if (!archivo) return null;
+
+  return {
+    stream: bucket.openDownloadStream(new ObjectId(fileId)),
+    contentType: imagen.contentType,
+    tamano: imagen.tamano
+  };
 }
 
 // ========================================
@@ -199,18 +310,22 @@ export async function editarDeber(
   actualizaciones.actualizadoEn = new Date();
 
   const db = await obtenerColeccion();
+  const deberAnterior = await db.findOne({ _id: new ObjectId(id) });
 
-  const actualizacionMongo: any = {
-    $set: actualizaciones
-  };
+  const actualizacionMongo: any = { $set: actualizaciones };
 
-  // Si deja de ser un ejercicio, elimina sus preguntas.
   if (
     cambios.tipo !== undefined &&
-    cambios.tipo !== "ejercicio"
+    cambios.tipo !== "ejercicio" &&
+    cambios.tipo !== "ejercicio_imagen"
   ) {
+    actualizacionMongo.$unset = { preguntas: "" };
+  }
+
+  if (cambios.tipo !== undefined && cambios.tipo !== "ejercicio_imagen") {
     actualizacionMongo.$unset = {
-      preguntas: ""
+      ...(actualizacionMongo.$unset || {}),
+      imagenes: ""
     };
   }
 
@@ -221,6 +336,14 @@ export async function editarDeber(
 
   if (resultado.matchedCount === 0) {
     throw new Error("No se ha encontrado el deber.");
+  }
+
+  if (
+    deberAnterior?.tipo === "ejercicio_imagen" &&
+    cambios.tipo !== undefined &&
+    cambios.tipo !== "ejercicio_imagen"
+  ) {
+    await eliminarArchivosImagenes(deberAnterior.imagenes || []);
   }
 
   return db.findOne({ _id: new ObjectId(id) });
@@ -236,6 +359,7 @@ export async function eliminarDeber(id: string) {
   }
 
   const db = await obtenerColeccion();
+  const deber = await db.findOne({ _id: new ObjectId(id) });
 
   const resultado = await db.deleteOne({
     _id: new ObjectId(id)
@@ -243,6 +367,10 @@ export async function eliminarDeber(id: string) {
 
   if (resultado.deletedCount === 0) {
     throw new Error("No se ha encontrado el deber.");
+  }
+
+  if (deber?.imagenes?.length) {
+    await eliminarArchivosImagenes(deber.imagenes);
   }
 
   return { eliminado: true };

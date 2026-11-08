@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="https://res.cloudinary.com/iir4vyqc/image/upload/f_png,q_auto,w_192,h_192,c_fit/1000110742">
   <link rel="apple-touch-icon" href="https://res.cloudinary.com/iir4vyqc/image/upload/f_png,q_auto,w_192,h_192,c_fit/1000110742">
   <title>Academia Campos</title>
-  <link rel="stylesheet" href="/styles.css?v=10">
+  <link rel="stylesheet" href="/styles.css?v=11">
 </head>
 
 <body>
@@ -314,6 +314,7 @@
             <select id="homework-type" required>
               <option value="enlace">Enlace</option>
               <option value="ejercicio">Ejercicio con preguntas</option>
+              <option value="ejercicio_imagen">Ejercicio con imágenes</option>
             </select>
 
             <label for="homework-content" id="homework-content-label">
@@ -327,6 +328,13 @@
               required
               placeholder="Escribe las instrucciones del ejercicio o pega el enlace..."
             ></textarea>
+
+            <div id="homework-images-group" class="hidden">
+              <label for="homework-images">Imágenes del ejercicio</label>
+              <input type="file" id="homework-images" accept="image/jpeg,image/png,image/webp" multiple>
+              <small>Desde la galería del móvil. Máximo 5 imágenes, hasta 5 MB cada una.</small>
+              <div id="homework-images-preview" class="homework-images-preview"></div>
+            </div>
 
             <!-- PREGUNTAS DEL EJERCICIO -->
             <div id="homework-questions-container" class="hidden">
@@ -485,7 +493,7 @@
 
   </main>
 
-  <script type="module" src="/app.js?v=9"></script>
+  <script type="module" src="/app.js?v=10"></script>
 
 </body>
 </html>

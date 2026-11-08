@@ -18,6 +18,7 @@ export const ASIGNATURAS = {
 export const TIPOS = {
   enlace: "Enlace externo",
   ejercicio: "Ejercicio de Academia",
+  ejercicio_imagen: "Ejercicio con imágenes",
   escrito: "Tarea escrita (antigua)"
 };
 
@@ -193,6 +194,30 @@ export async function eliminarDeber(id) {
 }
 
 // ========================================
+// SUBIR IMÁGENES DE UN EJERCICIO
+// ========================================
+
+export async function subirImagenDeber(id, archivo) {
+  if (obtenerPerfilActual() !== "papa") throw new Error("Solo Papá puede adjuntar imágenes.");
+  if (!id || !archivo) throw new Error("Falta el deber o la imagen.");
+  const headers = {
+    "Content-Type": archivo.type,
+    "X-Image-Name": encodeURIComponent(archivo.name)
+  };
+  const token = obtenerToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const respuesta = await fetch(
+    `${API_URL}/${encodeURIComponent(id)}/images`,
+    { method: "POST", headers, body: archivo }
+  );
+  let datos;
+  try { datos = await respuesta.json(); }
+  catch { throw new Error("El servidor no ha devuelto una respuesta válida."); }
+  if (!respuesta.ok || datos.ok === false) throw new Error(datos.error || "No se ha podido subir la imagen.");
+  return datos.imagen;
+}
+
+// ========================================
 // COMPROBAR RESPUESTAS DEL EJERCICIO
 // ========================================
 
@@ -325,7 +350,7 @@ export function validarDeber(deber) {
     }
   }
 
-  if (deber.tipo === "ejercicio") {
+  if (deber.tipo === "ejercicio" || deber.tipo === "ejercicio_imagen") {
     if (
       !Array.isArray(deber.preguntas) ||
       deber.preguntas.length === 0

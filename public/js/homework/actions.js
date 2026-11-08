@@ -4,11 +4,11 @@ import {
   completarDeber,
   comprobarRespuestasEjercicio,
   reabrirDeber
-} from "./api.js";
+} from "./api.js?v=1";
 
 import {
   mostrarFormularioDeber
-} from "./forms.js";
+} from "./forms.js?v=1";
 
 let deberesActuales = [];
 
@@ -97,7 +97,7 @@ export async function completarDeberPantalla(id) {
     return;
   }
 
-  if (deber.tipo === "ejercicio") {
+  if (deber.tipo === "ejercicio" || deber.tipo === "ejercicio_imagen") {
     mostrarMensaje(
       "Los ejercicios se completan al acertar todas las respuestas.",
       "error"

@@ -1,5 +1,5 @@
 
-import { Router, Request, Response, NextFunction } from "express";
+import express, { Router, Request, Response, NextFunction } from "express";
 import crypto from "crypto";
 
 import {
@@ -8,7 +8,9 @@ import {
   editarDeber,
   eliminarDeber,
   completarDeber,
-  reabrirDeber
+  reabrirDeber,
+  guardarImagenDeber,
+  obtenerImagenDeber
 } from "../services/homeworkService.ts";
 
 import type {
@@ -156,6 +158,7 @@ const ASIGNATURAS = [
 const TIPOS: TipoDeber[] = [
   "enlace",
   "ejercicio",
+  "ejercicio_imagen",
   "escrito"
 ];
 
@@ -228,7 +231,7 @@ function normalizarRespuesta(respuesta: string): string {
  * los ejercicios a Leo o Mamá.
  */
 function ocultarRespuestasCorrectas(deber: any) {
-  if (!deber || deber.tipo !== "ejercicio") {
+  if (!deber || !["ejercicio", "ejercicio_imagen"].includes(deber.tipo)) {
     return deber;
   }
 
@@ -288,7 +291,7 @@ function validarDatosDeber(datos: any): string | null {
     }
   }
 
-  if (datos.tipo === "ejercicio") {
+  if (datos.tipo === "ejercicio" || datos.tipo === "ejercicio_imagen") {
     const errorPreguntas = validarPreguntas(datos.preguntas);
 
     if (errorPreguntas) {
@@ -448,6 +451,75 @@ router.get(
 // ===== FIN DE LA PARTE 1 =====
 
 // ========================================
+// SUBIR Y CONSULTAR IMÁGENES DE EJERCICIOS
+// ========================================
+
+router.post(
+  "/homework/:id/images",
+  requierePapa,
+  express.raw({ type: "image/*", limit: "5mb" }),
+  async (req: Request, res: Response) => {
+    try {
+      if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+        return res.status(400).json({ ok: false, error: "Selecciona una imagen válida." });
+      }
+      const contentType = String(req.headers["content-type"] || "").split(";")[0].trim().toLowerCase();
+      const buffer: Buffer = req.body;
+      const esJpeg = buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+      const esPng = buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+      const esWebp = buffer.length >= 12 && buffer.toString("ascii", 0, 4) === "RIFF" && buffer.toString("ascii", 8, 12) === "WEBP";
+      const tipoReal = esJpeg ? "image/jpeg" : esPng ? "image/png" : esWebp ? "image/webp" : "";
+      if (!tipoReal || tipoReal !== contentType) {
+        return res.status(400).json({ ok: false, error: "La imagen debe ser JPG, PNG o WebP válido." });
+      }
+
+      let nombre = "imagen";
+      try { nombre = decodeURIComponent(String(req.headers["x-image-name"] || "imagen")); } catch {}
+      nombre = nombre.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120) || "imagen";
+      const imagen = await guardarImagenDeber(req.params.id, buffer, nombre, tipoReal);
+      return res.status(201).json({ ok: true, imagen });
+    } catch (error) {
+      console.error("[HOMEWORK] Error al subir imagen:", error);
+      return res.status(400).json({
+        ok: false,
+        error: error instanceof Error ? error.message : "No se ha podido guardar la imagen."
+      });
+    }
+  }
+);
+
+router.get(
+  "/homework/:id/images/:fileId",
+  async (req: Request, res: Response) => {
+    try {
+      const perfil = String(req.query.perfil || "");
+      if (perfil === "papa") {
+        const autorizacion = req.headers.authorization || "";
+        const token = autorizacion.startsWith("Bearer ") ? autorizacion.slice(7) : "";
+        if (!token || !comprobarToken(token)) return res.status(401).end();
+      } else if (!DESTINATARIOS.includes(perfil as DestinatarioDeber)) {
+        return res.status(400).end();
+      }
+
+      const imagen = await obtenerImagenDeber(req.params.id, req.params.fileId, perfil);
+      if (!imagen) return res.status(404).end();
+      res.setHeader("Content-Type", imagen.contentType);
+      res.setHeader("Content-Length", String(imagen.tamano));
+      res.setHeader("Cache-Control", "private, max-age=3600");
+      imagen.stream.on("error", error => {
+        console.error("[HOMEWORK] Error al leer imagen:", error);
+        if (!res.headersSent) res.status(404).end();
+        else res.destroy(error);
+      });
+      imagen.stream.pipe(res);
+    } catch (error) {
+      console.error("[HOMEWORK] Error al consultar imagen:", error);
+      if (!res.headersSent) res.status(500).end();
+    }
+  }
+);
+
+// ========================================
 // CREAR DEBER
 // ========================================
 
@@ -472,7 +544,7 @@ router.post(
         contenido: req.body.contenido.trim(),
         destinatario: req.body.destinatario,
         fechaLimite: req.body.fechaLimite || null,
-        ...(req.body.tipo === "ejercicio"
+        ...(req.body.tipo === "ejercicio" || req.body.tipo === "ejercicio_imagen"
           ? { preguntas: req.body.preguntas }
           : {})
       });
@@ -621,7 +693,7 @@ router.patch(
       }
 
       if (
-        datos.tipo === "ejercicio" &&
+        (datos.tipo === "ejercicio" || datos.tipo === "ejercicio_imagen") &&
         datos.preguntas === undefined
       ) {
         return res.status(400).json({
@@ -764,7 +836,7 @@ router.post(
         });
       }
 
-      if (deber.tipo !== "ejercicio") {
+      if (!["ejercicio", "ejercicio_imagen"].includes(deber.tipo)) {
         return res.status(400).json({
           ok: false,
           error: "Este deber no es un ejercicio."
@@ -887,7 +959,7 @@ router.patch(
         });
       }
 
-      if (deber.tipo === "ejercicio") {
+      if (deber.tipo === "ejercicio" || deber.tipo === "ejercicio_imagen") {
         return res.status(400).json({
           ok: false,
           error: "Los ejercicios se completan al acertar todas las respuestas."

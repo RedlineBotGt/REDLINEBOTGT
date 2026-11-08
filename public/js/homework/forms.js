@@ -442,6 +442,18 @@ export async function guardarFormularioDeber() {
     deber.preguntas = [];
   }
 
+  if (
+    deber.tipo === "ejercicio_imagen" &&
+    !deberEditando?.imagenes?.length &&
+    imagenesSeleccionadas.length === 0
+  ) {
+    if (mensajeFormulario) {
+      mensajeFormulario.textContent = "Adjunta al menos una imagen para este tipo de ejercicio.";
+      mensajeFormulario.className = "homework-message error";
+    }
+    return;
+  }
+
   if (deberEditando?._id && campoEstado) {
     deber.estado = campoEstado.value;
   }

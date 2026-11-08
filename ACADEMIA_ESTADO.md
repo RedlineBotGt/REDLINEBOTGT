@@ -897,3 +897,31 @@ El usuario aprueba activar el acceso **🤖 IA** como una vista de consulta para
 - Verificar que Papá ve el acceso después del PIN, que Leo/Mamá no lo ven y que el endpoint rechaza peticiones sin sesión.
 - Confirmar que Deberes, Science, chat, avisos, PIN y navegación siguen funcionando.
 - El historial empieza a contar desde esta implementación; no se reconstruyen ejercicios anteriores porque el sistema previo no guardaba un registro persistente de intentos por pregunta.
+
+
+---
+
+## 27. Nuevo tipo de deber: Ejercicio con imágenes (8-11-2026)
+
+### Alcance
+- Nuevo tipo independiente `ejercicio_imagen`, visible como «Ejercicio con imágenes». Los tipos «Enlace» y «Ejercicio con preguntas» se conservan.
+- El formulario ofrece título, descripción, asignatura, destinatario, fecha límite, preguntas y selección múltiple de imágenes desde la galería móvil.
+- Formatos admitidos: JPG/JPEG, PNG y WebP. Máximo 5 imágenes por ejercicio y 5 MB por archivo.
+- Las imágenes se guardan en MongoDB GridFS (`homework_images`); el documento del deber conserva solo metadatos e identificadores.
+- El servidor valida la firma binaria real del archivo además del MIME.
+- Leo y Mamá ven las imágenes y responden a las preguntas. Las respuestas correctas siguen ocultas y se reutiliza el motor de corrección existente.
+- El ejercicio se completa únicamente al acertar todas las respuestas.
+- Al cambiar el tipo de deber o eliminarlo, se borran las imágenes asociadas.
+- No se añade API externa, proveedor de imágenes ni dependencia adicional.
+
+### Archivos modificados
+- `services/homeworkService.ts`, `routes/homework.ts`.
+- `public/js/homework/api.js`, `forms.js`, `render.js`, `actions.js`, `homework.js`.
+- `public/app.js`, `public/index.html`, `public/styles.css`.
+- Este estado vivo.
+
+### Verificación pendiente
+- Cambios agrupados para guardarse en un único commit atómico y evitar despliegues consecutivos.
+- Build TypeScript y despliegue automático: pendiente.
+- Prueba funcional pendiente desde Android: crear un ejercicio con imágenes, comprobar su visualización y corrección, editarlo y eliminarlo.
+- No declarar la función validada hasta completar esas pruebas.

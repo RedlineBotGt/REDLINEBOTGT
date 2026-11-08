@@ -7,15 +7,15 @@ import {
   guardarToken,
   cerrarSesion,
   obtenerToken
-} from "./homework/api.js";
+} from "./homework/api.js?v=1";
 
-import { pintarDeberes } from "./homework/render.js";
+import { pintarDeberes } from "./homework/render.js?v=1";
 
 import {
   mostrarFormularioDeber,
   ocultarFormularioDeber,
   guardarFormularioDeber
-} from "./homework/forms.js";
+} from "./homework/forms.js?v=1";
 
 import {
   establecerDeberesActuales,
@@ -23,7 +23,7 @@ import {
   eliminarDeberPantalla,
   completarDeberPantalla,
   reabrirDeberPantalla
-} from "./homework/actions.js";
+} from "./homework/actions.js?v=1";
 
 let deberesActuales = [];
 let inicializado = false;

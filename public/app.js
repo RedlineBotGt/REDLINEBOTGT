@@ -24,7 +24,7 @@ import {
 
 import {
   iniciarDeberes
-} from "./js/homework.js?v=2";
+} from "./js/homework.js?v=3";
 
 import { iniciarAvisos } from "./js/notices.js?v=2";
 import { iniciarHistorialIA } from "./js/aiHistory.js?v=1";

@@ -144,6 +144,30 @@ function obtenerDeberesNuevos(deberes, perfil) {
 }
 
 /**
+ * Muestra las imágenes adjuntas en los deberes de Leo o Mamá.
+ */
+function pintarImagenesEjercicio(deber, perfil) {
+  if (deber.tipo !== "ejercicio_imagen" || perfil === "papa" ||
+      !Array.isArray(deber.imagenes) || deber.imagenes.length === 0) return "";
+  const id = encodeURIComponent(String(deber._id || ""));
+  return `
+    <div class="homework-images-gallery">
+      ${deber.imagenes.map(imagen => {
+        const fileId = encodeURIComponent(String(imagen.fileId || ""));
+        const nombre = escaparHTML(imagen.nombre || "Imagen del ejercicio");
+        return `
+          <figure class="homework-image-item">
+            <img src="/api/academia/homework/${id}/images/${fileId}?perfil=${encodeURIComponent(perfil)}"
+              alt="${nombre}" loading="lazy">
+            <figcaption>${nombre}</figcaption>
+          </figure>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+/**
  * Dibuja las preguntas de un ejercicio.
  *
  * Las respuestas correctas nunca se incluyen
@@ -151,7 +175,7 @@ function obtenerDeberesNuevos(deberes, perfil) {
  */
 function pintarPreguntasEjercicio(deber, perfil) {
   if (
-    deber.tipo !== "ejercicio" ||
+    (deber.tipo !== "ejercicio" && deber.tipo !== "ejercicio_imagen") ||
     perfil === "papa"
   ) {
     return "";
@@ -285,7 +309,7 @@ function pintarAcciones(deber, perfil) {
   }
 
   // Los ejercicios se completan al acertar todas las preguntas.
-  if (deber.tipo === "ejercicio") {
+  if (deber.tipo === "ejercicio" || deber.tipo === "ejercicio_imagen") {
     return "";
   }
 
@@ -431,6 +455,8 @@ export function pintarDeberes(deberes, perfil) {
             `
             : ""
         }
+
+        ${pintarImagenesEjercicio(deber, perfil)}
 
         ${pintarPreguntasEjercicio(deber, perfil)}
 
