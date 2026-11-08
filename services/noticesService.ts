@@ -1,4 +1,4 @@
-import { MongoClient, Collection } from "mongodb";
+import { MongoClient, Collection, ObjectId } from "mongodb";
 
 export interface Aviso {
   autor: "papa";
@@ -25,30 +25,7 @@ async function obtenerColeccion(): Promise<Collection<Aviso>> {
 }
 
 export async function listarAvisos() {
-  const avisos = await obtenerColeccion();
-  const db = avisos.db;
-  const deberes = await db.collection("homework")
-    .find({}, { projection: { destinatario: 1, asignatura: 1 } })
-    .toArray();
-
-  // Limpia avisos antiguos (anteriores a la vinculación por ID)
-  // cuando ya no existe ningún deber con esa asignatura y destinatario.
-  const activos = new Set(
-    deberes.map((deber: any) => `${deber.destinatario}:${deber.asignatura}`)
-  );
-  const antiguos = await avisos.find({
-    mensaje: { $regex: "^__DEBER__:" },
-    deberId: { $exists: false }
-  }).toArray();
-
-  for (const aviso of antiguos) {
-    const asignatura = aviso.mensaje.slice("__DEBER__:".length);
-    if (!activos.has(`${aviso.destinatario}:${asignatura}`)) {
-      await avisos.deleteOne({ _id: (aviso as any)._id });
-    }
-  }
-
-  return avisos.find({})
+  return (await obtenerColeccion()).find({})
     .sort({ creadoEn: -1 }).limit(200).toArray();
 }
 
@@ -91,4 +68,25 @@ export async function sincronizarAvisoDeber(
 
 export async function eliminarAvisoDeber(deberId: string) {
   await (await obtenerColeccion()).deleteMany({ deberId });
+}
+
+export async function actualizarAviso(
+  id: string,
+  destinatario: Aviso["destinatario"],
+  mensaje: string
+) {
+  if (!ObjectId.isValid(id)) return false;
+  const resultado = await (await obtenerColeccion()).updateOne(
+    { _id: new ObjectId(id) } as any,
+    { $set: { destinatario, mensaje: mensaje.trim() } }
+  );
+  return resultado.matchedCount > 0;
+}
+
+export async function eliminarAviso(id: string) {
+  if (!ObjectId.isValid(id)) return false;
+  const resultado = await (await obtenerColeccion()).deleteOne(
+    { _id: new ObjectId(id) } as any
+  );
+  return resultado.deletedCount > 0;
 }
