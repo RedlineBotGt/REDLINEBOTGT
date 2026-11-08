@@ -1,102 +1,134 @@
-import { Client, TextChannel, EmbedBuilder } from 'discord.js';
+import { Client, EmbedBuilder, TextChannel } from 'discord.js';
 import { MongoClient as MongoDriver } from 'mongodb';
 
-const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL || process.env.MONGO_URL || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
-const clientMongo = new MongoDriver(uri);
+const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL || process.env.MONGO_URL;
+if (!uri) throw new Error('No se encontró una variable de entorno para MongoDB en el worker de mensajes programados.');
 
+const clientMongo = new MongoDriver(uri);
 let collection: any = null;
+let workerStarted = false;
+let cycleRunning = false;
 
 async function getCollection() {
     if (!collection) {
         await clientMongo.connect();
         collection = clientMongo.db('redline_bot').collection('scheduled_messages');
+        console.log('⏰ [Worker] Conexión MongoDB lista para mensajes programados.');
     }
     return collection;
 }
 
-export function startScheduledWorker(client: Client) {
-    console.log('⏰ [Worker] Sistema de mensajes programados iniciado en segundo plano.');
+function formatMadridDateTime(date: Date): { date: string; time: string } {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/Madrid',
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+    }).formatToParts(date);
+    const get = (type: string) => parts.find(p => p.type === type)?.value || '';
+    return {
+        date: `${get('day')}/${get('month')}/${get('year')}`,
+        time: `${get('hour')}:${get('minute')}`
+    };
+}
 
-    // Se ejecuta cada 60 segundos
-    setInterval(async () => {
-        try {
-            const col = await getCollection();
-            const now = new Date();
+async function processDueMessages(client: Client): Promise<void> {
+    if (cycleRunning) return;
+    cycleRunning = true;
 
-            // Buscamos mensajes pendientes cuya fecha de envío ya haya llegado o pasado
-            const pendingMessages = await col.find({
-                status: 'pending',
-                scheduledAt: { $lte: now }
-            }).toArray();
+    try {
+        const col = await getCollection();
 
-            if (pendingMessages.length === 0) return;
+        // Recupera trabajos cuyo proceso quedó interrumpido hace más de 10 minutos.
+        // El estado processing evita que dos ciclos/instancias reclamen el mismo trabajo a la vez.
+        await col.updateMany(
+            { status: 'processing', processingAt: { $lte: new Date(Date.now() - 10 * 60 * 1000) } },
+            { $set: { status: 'pending' }, $unset: { processingAt: '' } }
+        );
 
-            for (const msg of pendingMessages) {
-                try {
-                    const guild = await client.guilds.fetch(msg.guildId).catch(() => null);
-                    if (!guild) {
-                        await col.updateOne({ _id: msg._id }, { $set: { status: 'guild_not_found' } });
-                        continue;
-                    }
+        for (let i = 0; i < 25; i++) {
+            const claimResult = await col.findOneAndUpdate(
+                { status: 'pending', scheduledAt: { $lte: new Date() } },
+                { $set: { status: 'processing', processingAt: new Date() } },
+                { sort: { scheduledAt: 1 }, returnDocument: 'after' }
+            );
+            const msg: any = (claimResult as any)?.value ?? claimResult;
+            if (!msg) break;
 
-                    const channel = await guild.channels.fetch(msg.channelId).catch(() => null) as TextChannel;
-                    if (!channel || !channel.isTextBased()) {
-                        await col.updateOne({ _id: msg._id }, { $set: { status: 'channel_not_found' } });
-                        continue;
-                    }
-
-                    // Construimos la mención del rol si existe
-                    let finalContent = msg.text;
-                    if (msg.roleId) {
-                        finalContent = `<@&${msg.roleId}>\n\n${finalContent}`;
-                    }
-
-                    // Si hay imagen, construimos el embed
-                    let messageOptions: any = { content: finalContent };
-                    if (msg.image) {
-                        const embed = new EmbedBuilder()
-                            .setDescription(finalContent)
-                            .setImage(msg.image)
-                            .setColor(0xED4245);
-
-                        messageOptions = { content: msg.roleId ? `<@&${msg.roleId}>` : undefined, embeds: [embed] };
-                    }
-
-                    // Enviamos el mensaje al canal de Discord
-                    await channel.send(messageOptions);
-
-                    // Actualizamos el estado en MongoDB según si es repetitivo y quedan envíos
-                    const remainingTimes = msg.remainingTimes !== undefined ? msg.remainingTimes : msg.totalRepetitions;
-                    if (msg.repeats && remainingTimes > 1) {
-                        const currentScheduled = new Date(msg.scheduledAt);
-                        const addDays = (msg.repeatIntervalDays || msg.repeatDays || 0) * 24 * 60 * 60 * 1000;
-                        const addHours = (msg.repeatIntervalHours || msg.repeatHours || 0) * 60 * 60 * 1000;
-                        const nextDate = new Date(currentScheduled.getTime() + addDays + addHours);
-
-                        await col.updateOne(
-                            { _id: msg._id },
-                            { 
-                                $set: { scheduledAt: nextDate },
-                                $inc: { remainingTimes: -1, repetitionsDone: 1 } 
-                            }
-                        );
-                        console.log(`🔄 [Worker] Mensaje repetitivo reprogramado para: ${nextDate}. Quedan envíos.`);
-                    } else {
-                        // Marcamos como enviado definitivo si ya no se repite o se agotaron las repeticiones
-                        await col.updateOne(
-                            { _id: msg._id },
-                            { $set: { status: 'sent', sentAt: new Date() } }
-                        );
-                        console.log(`✅ [Worker] Mensaje programado finalizado con éxito en el servidor ${guild.name}`);
-                    }
-
-                } catch (err) {
-                    console.error(`❌ [Worker] Error enviando mensaje programado ID ${msg._id}:`, err);
+            try {
+                const guild = await client.guilds.fetch(msg.guildId).catch(() => null);
+                if (!guild) {
+                    await col.updateOne({ _id: msg._id, status: 'processing' }, { $set: { status: 'guild_not_found' }, $unset: { processingAt: '' } });
+                    continue;
                 }
-            }
 
-        } catch (error) {
-            console.error('❌ [Worker] Error general en el bucle de mensajes programados:', error);
+                const fetchedChannel = await guild.channels.fetch(msg.channelId).catch(() => null);
+                if (!fetchedChannel || !fetchedChannel.isTextBased() || !('send' in fetchedChannel)) {
+                    await col.updateOne({ _id: msg._id, status: 'processing' }, { $set: { status: 'channel_not_found' }, $unset: { processingAt: '' } });
+                    continue;
+                }
+
+                const channel = fetchedChannel as TextChannel;
+                const mention = msg.roleId ? `<@&${msg.roleId}>` : '';
+                const text = String(msg.text || '');
+                const content = [mention, text].filter(Boolean).join('\n\n');
+                const options: any = { content: content || undefined, allowedMentions: { roles: msg.roleId ? [msg.roleId] : [] } };
+
+                if (msg.image) {
+                    const embed = new EmbedBuilder().setColor(0xED4245).setImage(msg.image);
+                    if (text) embed.setDescription(text.slice(0, 4096));
+                    options.content = mention || undefined;
+                    options.embeds = [embed];
+                }
+
+                await channel.send(options);
+
+                const remaining = Number(msg.remainingTimes ?? msg.totalRepetitions ?? 1);
+                if (msg.repeats && remaining > 1) {
+                    const days = Number(msg.repeatIntervalDays ?? msg.repeatDays ?? 0);
+                    const hours = Number(msg.repeatIntervalHours ?? msg.repeatHours ?? 0);
+                    const intervalMs = (days * 24 + hours) * 60 * 60 * 1000;
+                    if (intervalMs <= 0) {
+                        await col.updateOne({ _id: msg._id, status: 'processing' }, {
+                            $set: { status: 'sent', sentAt: new Date(), lastError: 'Intervalo de repetición no válido.' },
+                            $unset: { processingAt: '' }
+                        });
+                        continue;
+                    }
+
+                    const nextDate = new Date(new Date(msg.scheduledAt).getTime() + intervalMs);
+                    const madrid = formatMadridDateTime(nextDate);
+                    await col.updateOne({ _id: msg._id, status: 'processing' }, {
+                        $set: { scheduledAt: nextDate, date: madrid.date, time: madrid.time, status: 'pending' },
+                        $inc: { remainingTimes: -1, repetitionsDone: 1 },
+                        $unset: { processingAt: '' }
+                    });
+                    console.log(`🔄 [Worker] Mensaje ${msg._id} enviado; siguiente envío: ${madrid.date} ${madrid.time} (Madrid).`);
+                } else {
+                    await col.updateOne({ _id: msg._id, status: 'processing' }, {
+                        $set: { status: 'sent', sentAt: new Date() },
+                        $unset: { processingAt: '' }
+                    });
+                    console.log(`✅ [Worker] Mensaje ${msg._id} enviado correctamente a ${guild.name}.`);
+                }
+            } catch (error) {
+                console.error(`❌ [Worker] Error enviando el mensaje ${msg._id}:`, error);
+                await col.updateOne({ _id: msg._id, status: 'processing' }, {
+                    $set: { status: 'pending', lastError: error instanceof Error ? error.message : String(error) },
+                    $unset: { processingAt: '' }
+                }).catch(updateError => console.error('[Worker] No se pudo liberar el trabajo:', updateError));
+            }
         }
-    }, 60000); // 60.000 ms = 1 minuto
+    } catch (error) {
+        console.error('❌ [Worker] Error general del ciclo:', error);
+    } finally {
+        cycleRunning = false;
+    }
+}
+
+export function startScheduledWorker(client: Client): void {
+    if (workerStarted) return;
+    workerStarted = true;
+    console.log('⏰ [Worker] Sistema de mensajes programados iniciado (intervalo de 60 segundos).');
+    void processDueMessages(client);
+    setInterval(() => { void processDueMessages(client); }, 60_000);
 }
