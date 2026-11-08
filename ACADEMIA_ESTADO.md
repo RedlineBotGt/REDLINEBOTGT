@@ -836,3 +836,21 @@ El usuario solicita mostrar en el menú principal, separada de los perfiles por 
 - Archivos modificados: `public/index.html` y `public/styles.css`; versión CSS incrementada a `styles.css?v=8`.
 - Commits: `0c3e19fcd741421a4874007629d6eb2af88b3a69` (HTML), `b5e11802c2d0c5bb9114770fc5cb0dcab4a1b339` (CSS).
 - Pendiente: confirmar AutoDeploy LIVE y comprobar visualmente en móvil que aparece debajo de los perfiles, separado sutilmente, sin ser interactivo.
+
+
+## 25. Accesos del perfil: IA y cuadrícula 2×2 (8-11-2026)
+
+El usuario pide un cuarto acceso llamado **🤖 IA** dentro de su perfil (perfil de Papá), con apariencia igual a Avisos y Chat. Por ahora el botón es únicamente visual y permanece desactivado; esperar instrucciones del usuario antes de asignarle comportamiento.
+
+### Diseño acordado
+- Cuatro botones organizados en cuadrícula de dos columnas: dos arriba y dos abajo.
+- «Consultar deberes» deja de usar el fondo azul y comparte el fondo `var(--panel-light)` con Avisos y Chat.
+- Cada botón ocupa una sola columna (aproximadamente la mitad del ancho total disponible).
+- IA visible pero desactivado, sin navegación ni acción.
+- No implementar todavía ninguna función de IA.
+
+### Código y despliegue
+- El botón IA ya estaba añadido en `public/index.html` por el commit `c91ed385ead3380d97b924e38c4e93243c5d394a`.
+- La cuadrícula y estilos unificados están en `public/styles.css`, commit `19cfde411c8f55d8e72c0f67292ee5ed6b2ca542`.
+- El commit de estilos compiló correctamente; el despliegue Render `dep-dbo8g20qr7gs73ap24gg` seguía en `update_in_progress` en la última consulta.
+- Pendiente: confirmar Render LIVE y comprobar en móvil la distribución 2×2, el color común y el botón IA desactivado.
