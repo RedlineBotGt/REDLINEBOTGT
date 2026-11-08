@@ -49,36 +49,36 @@
       </section>
     </section>
 
+    <!-- ACCESO EXCLUSIVO DE PAPÁ: PASO PREVIO A TODO EL PERFIL -->
+    <section id="papa-auth-screen" class="screen hidden" aria-labelledby="papa-auth-title">
+      <h2 id="papa-auth-title">Acceso de Papá</h2>
+      <p>Introduce el PIN para acceder a tu perfil.</p>
+
+      <div id="homework-login">
+        <label for="homework-pin">PIN</label>
+        <input
+          type="password"
+          id="homework-pin"
+          inputmode="numeric"
+          autocomplete="current-password"
+          placeholder="Introduce tu PIN"
+        >
+        <button type="button" id="homework-login-btn" onclick="iniciarSesionDeberes()">
+          Entrar
+        </button>
+        <p id="homework-login-message" role="status" aria-live="polite"></p>
+      </div>
+
+      <button type="button" onclick="volverPerfiles()">← Volver a perfiles</button>
+    </section>
+
     <!-- SELECCIÓN DE ASIGNATURA -->
     <section id="subjects-screen" class="screen hidden" aria-labelledby="subjects-title">
       <h2 id="subjects-title">
         ¡Hola, <span id="profile-name"></span>!
       </h2>
 
-      <!-- ACCESO DE PAPÁ -->
-            <div id="homework-login" class="hidden">
-      
-              <h3>Acceso de Papá</h3>
-              <p>Introduce el PIN para gestionar los deberes.</p>
-      
-              <label for="homework-pin">PIN</label>
-      
-              <input
-                type="password"
-                id="homework-pin"
-                inputmode="numeric"
-                autocomplete="current-password"
-                placeholder="Introduce tu PIN"
-              >
-      
-              <button type="button" id="homework-login-btn" onclick="iniciarSesionDeberes()">
-                Entrar
-              </button>
-      
-              <p id="homework-login-message" role="status" aria-live="polite"></p>
-            </div>
-      
-      
+
 
       <button
         type="button"
@@ -457,7 +457,7 @@
 
   </main>
 
-  <script type="module" src="/app.js?v=6"></script>
+  <script type="module" src="/app.js?v=7"></script>
 
 </body>
 </html>
