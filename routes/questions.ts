@@ -77,6 +77,7 @@ function validarPerfil(valor: unknown): valor is Perfil {
  * geografia: Geografía.
  * english: English.
  * lengua: Lengua.
+ * science: Science.
  */
 function obtenerAsignatura(
   valor: unknown
@@ -126,6 +127,10 @@ function obtenerAsignatura(
     return "lenguaje_musical";
   }
 
+  if (asignatura === "science") {
+    return "science";
+  }
+
   return null;
 }
 
@@ -148,6 +153,8 @@ function nombreAsignatura(
       return "Lengua";
     case "lenguaje_musical":
       return "Lenguaje Musical";
+    case "science":
+      return "Science";
   }
 }
 
@@ -174,7 +181,7 @@ router.post("/question", async (req, res) => {
   if (!materia) {
     return res.status(400).json({
       ok: false,
-      error: "Por ahora están disponibles Cultura general, Retos Imposibles, Matemáticas, Geografía, English, Lengua y Lenguaje Musical."
+      error: "Por ahora están disponibles Cultura general, Retos Imposibles, Matemáticas, Geografía, English, Lengua, Lenguaje Musical y Science."
     });
   }
 
