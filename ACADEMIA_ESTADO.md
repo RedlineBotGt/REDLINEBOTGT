@@ -823,3 +823,16 @@ El usuario aprueba incorporar **Science** como una única asignatura nueva. El n
 - Probar Science en Leo, Papá y Mamá; generar preguntas diferentes, pedir pistas, evaluar respuestas correctas e incorrectas y avanzar al siguiente ejercicio.
 - Confirmar que el nombre visible sea «Science» y que las otras asignaturas y funciones no cambien.
 - No declarar Science validada hasta completar pruebas funcionales reales.
+
+
+## 24. Etiqueta futura BATALLA DE GENIOS (8-11-2026)
+
+El usuario solicita mostrar en el menú principal, separada de los perfiles por una línea sutil, la etiqueta **🏆 BATALLA DE GENIOS**. Será el futuro ranking/competición.
+
+- La etiqueta queda visible debajo de las tarjetas de Leo, Papá y Mamá.
+- Es solo informativa y está desactivada: no tiene enlace, botón ni acción, por lo que no abre ninguna pantalla ni modifica datos.
+- Separación con línea horizontal tenue y estilo visual atenuado.
+- No implementar todavía ranking, puntuaciones, clasificaciones, tablas ni persistencia.
+- Archivos modificados: `public/index.html` y `public/styles.css`; versión CSS incrementada a `styles.css?v=8`.
+- Commits: `0c3e19fcd741421a4874007629d6eb2af88b3a69` (HTML), `b5e11802c2d0c5bb9114770fc5cb0dcab4a1b339` (CSS).
+- Pendiente: confirmar AutoDeploy LIVE y comprobar visualmente en móvil que aparece debajo de los perfiles, separado sutilmente, sin ser interactivo.
