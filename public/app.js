@@ -28,6 +28,7 @@ import {
 
 import { iniciarAvisos } from "./js/notices.js?v=3";
 import { iniciarHistorialIA } from "./js/aiHistory.js?v=1";
+import { iniciarMusicStudio } from "./js/musicStudio.js?v=1";
 
 import {
   iniciarChat,
@@ -101,6 +102,7 @@ function iniciarAcademia() {
     iniciarChat();
     iniciarAvisos();
     iniciarHistorialIA();
+    iniciarMusicStudio();
 
     console.log("[ACADEMIA] Todos los módulos iniciados.");
 

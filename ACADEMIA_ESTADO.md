@@ -960,3 +960,30 @@ El usuario aprueba activar el acceso **🤖 IA** como una vista de consulta para
 - Render Academia Campos comprobado antes del cambio: rama `backup-antes-limpieza`, `autoDeploy=yes`, disparador `commit`. El guardado en GitHub inicia despliegue automático; no se lanza deploy manual.
 - La compilación TypeScript y la prueba funcional de extremo a extremo quedan pendientes de resultado de Render y de prueba con dos perfiles.
 - Prueba necesaria: enviar desde un perfil, comprobar en Avisos el texto genérico con el nombre del emisor y verificar que el contenido del mensaje nunca aparece en el aviso; repetir con los tres perfiles y comprobar que no se generan duplicados.
+
+
+
+## 29. Estudio musical libre y metrónomo (8-11-2026)
+
+### Alcance implementado
+- Dentro de la asignatura existente «Lenguaje Musical», antes de las preguntas se ofrecen dos opciones: «¿Quieres tocar?» y «¿Quieres preguntas?».
+- «Preguntas» conserva el motor actual y su historial; la nueva opción de tocar no genera ejercicios ni altera datos de progreso.
+- Estudio musical independiente con cinco instrumentos exactos: piano, clarinete, trompeta, guitarra y batería.
+- Piano con dos octavas de teclas blancas y negras, nombres de notas en las teclas y desplazamiento horizontal adaptado a móvil.
+- Batería con cuatro pads táctiles: bombo, caja, charles y tom.
+- Sonido generado localmente mediante Web Audio API; no se añaden proveedores, claves, APIs ni dependencias de pago.
+- Metrónomo integrado: velocidad regulable de 40 a 200 BPM (inicial 100), compases 2/4, 3/4, 4/4 y 6/8, indicador visual y acentos en el primer pulso y en el cuarto pulso de 6/8.
+- El metrónomo se puede iniciar/detener y reinicia su conteo al cambiar de compás.
+- No se modifica el backend, Gemini, MongoDB, Deberes, chat, avisos, perfiles ni PIN.
+
+### Archivos
+- Nuevo: `public/js/musicStudio.js`.
+- Modificados: `public/index.html`, `public/styles.css`, `public/js/menu.js`, `public/app.js`.
+- Caché: estilos `v=12`, aplicación `v=11`, módulo musical `v=1`.
+- Este estado vivo actualizado.
+
+### Verificación pendiente
+- Revisar que Render compile y despliegue automáticamente el commit.
+- Probar desde tablet y móvil: entrada en Lenguaje Musical, acceso a preguntas y regreso; abrir piano, cambiar los cinco instrumentos, tocar notas/pads; comprobar metrónomo en los cuatro compases y cambiar BPM mientras funciona.
+- La síntesis de audio está generada por navegador y no son grabaciones de instrumentos reales; comprobar que el timbre resulta adecuado en el dispositivo de Leo.
+- No declarar validación funcional hasta prueba real del usuario.

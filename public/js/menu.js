@@ -87,6 +87,11 @@ export function abrirAsignatura(asignatura) {
     return;
   }
 
+  if (asignatura === "lenguaje_musical") {
+    mostrarPantalla("music-choice-screen");
+    return;
+  }
+
   mostrarPantalla("challenge-screen");
 
   document.dispatchEvent(

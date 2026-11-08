@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="https://res.cloudinary.com/iir4vyqc/image/upload/f_png,q_auto,w_192,h_192,c_fit/1000110742">
   <link rel="apple-touch-icon" href="https://res.cloudinary.com/iir4vyqc/image/upload/f_png,q_auto,w_192,h_192,c_fit/1000110742">
   <title>Academia Campos</title>
-  <link rel="stylesheet" href="/styles.css?v=11">
+  <link rel="stylesheet" href="/styles.css?v=12">
 </head>
 
 <body>
@@ -209,6 +209,87 @@
       <p id="ai-history-summary" class="ai-history-summary" aria-live="polite"></p>
       <div id="ai-history-list" class="ai-history-list" aria-live="polite">
         <p>Cargando historial...</p>
+      </div>
+    </section>
+
+    <!-- INICIO DE LENGUAJE MUSICAL -->
+    <section id="music-choice-screen" class="screen hidden" aria-labelledby="music-choice-title">
+      <button type="button" class="music-back" id="music-choice-back">← Volver a asignaturas</button>
+      <h2 id="music-choice-title">🎼 Lenguaje Musical</h2>
+      <p>¿Qué te apetece hacer hoy?</p>
+      <div class="music-choice-actions">
+        <button type="button" id="music-play-btn" class="music-choice-card">
+          <span aria-hidden="true">🎹</span>
+          <strong>¿Quieres tocar?</strong>
+          <small>Entra en los instrumentos y toca libremente.</small>
+        </button>
+        <button type="button" id="music-questions-btn" class="music-choice-card">
+          <span aria-hidden="true">🎼</span>
+          <strong>¿Quieres preguntas?</strong>
+          <small>Continúa con los ejercicios de Lenguaje Musical.</small>
+        </button>
+      </div>
+    </section>
+
+    <section id="music-play-screen" class="screen hidden" aria-labelledby="music-play-title">
+      <button type="button" class="music-back" id="music-play-back">← Volver</button>
+      <h2 id="music-play-title">🎹 Toca a tu ritmo</h2>
+      <div class="music-studio">
+        <div class="music-instruments" role="group" aria-label="Seleccionar instrumento">
+          <button type="button" data-instrument="piano" class="active" aria-pressed="true">🎹 Piano</button>
+          <button type="button" data-instrument="clarinete" aria-pressed="false">🎵 Clarinete</button>
+          <button type="button" data-instrument="trompeta" aria-pressed="false">🎺 Trompeta</button>
+          <button type="button" data-instrument="guitarra" aria-pressed="false">🎸 Guitarra</button>
+          <button type="button" data-instrument="bateria" aria-pressed="false">🥁 Batería</button>
+        </div>
+
+        <section id="music-keyboard-panel" class="music-instrument-panel" aria-label="Teclado de piano">
+          <p class="music-instrument-hint">Toca las teclas para escuchar las notas.</p>
+          <div class="music-keyboard-scroll">
+            <div id="music-keyboard" class="music-keyboard"></div>
+          </div>
+        </section>
+
+        <section id="music-drums-panel" class="music-instrument-panel hidden" aria-label="Batería">
+          <p class="music-instrument-hint">Pulsa los pads para tocar la batería.</p>
+          <div class="music-drum-pads">
+            <button type="button" data-drum="kick"><span>🥁</span><strong>Bombo</strong></button>
+            <button type="button" data-drum="snare"><span>◉</span><strong>Caja</strong></button>
+            <button type="button" data-drum="hat"><span>✧</span><strong>Charles</strong></button>
+            <button type="button" data-drum="tom"><span>◉</span><strong>Tom</strong></button>
+          </div>
+        </section>
+
+        <section class="music-metronome" aria-labelledby="music-metronome-title">
+          <div class="music-metronome-heading">
+            <h3 id="music-metronome-title">Metrónomo</h3>
+            <span id="music-metronome-status" aria-live="polite">Detenido</span>
+          </div>
+          <div class="music-metronome-controls">
+            <label for="music-tempo">Velocidad</label>
+            <div class="music-tempo-control">
+              <input id="music-tempo" type="range" min="40" max="200" step="1" value="100">
+              <strong><span id="music-tempo-value">100</span> BPM</strong>
+            </div>
+            <label for="music-meter">Compás</label>
+            <select id="music-meter">
+              <option value="2/4">2/4</option>
+              <option value="3/4">3/4</option>
+              <option value="4/4" selected>4/4</option>
+              <option value="6/8">6/8</option>
+            </select>
+          </div>
+          <div id="music-beat-indicator" class="music-beat-indicator" aria-label="Pulso del compás">
+            <span class="music-beat-dot active"></span><span class="music-beat-dot"></span>
+            <span class="music-beat-dot"></span><span class="music-beat-dot"></span>
+            <span class="music-beat-dot hidden"></span><span class="music-beat-dot hidden"></span>
+          </div>
+          <p id="music-beat-count" class="music-beat-count">Compás 4/4 · Pulso 1 de 4</p>
+          <div class="music-metronome-actions">
+            <button type="button" id="music-metronome-start">▶ Iniciar</button>
+            <button type="button" id="music-metronome-stop" disabled>■ Detener</button>
+          </div>
+        </section>
       </div>
     </section>
 
@@ -493,7 +574,7 @@
 
   </main>
 
-  <script type="module" src="/app.js?v=10"></script>
+  <script type="module" src="/app.js?v=11"></script>
 
 </body>
 </html>
