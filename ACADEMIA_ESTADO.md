@@ -920,8 +920,10 @@ El usuario aprueba activar el acceso **🤖 IA** como una vista de consulta para
 - `public/app.js`, `public/index.html`, `public/styles.css`.
 - Este estado vivo.
 
-### Verificación pendiente
-- Cambios agrupados para guardarse en un único commit atómico y evitar despliegues consecutivos.
-- Build TypeScript y despliegue automático: pendiente.
+### Verificación y despliegue
+- Commit único de implementación: `6666545893dd1d83d8bc36405eae3eed0f193eda`.
+- Build TypeScript de Render: **correcto**, evento `build_ended` con `buildStatus=succeeded` el 8-11-2026 a las 15:06 UTC.
+- Despliegue automático: **LIVE**, `dep-dbo8vkq9lscs73co80l0`, finalizado el 8-11-2026 a las 15:06:32 UTC.
+- Logs de arranque: `[OK] ACADEMIA CAMPOS ARRANCADA`, servidor HTTP escuchando y rutas de Deberes registradas.
 - Prueba funcional pendiente desde Android: crear un ejercicio con imágenes, comprobar su visualización y corrección, editarlo y eliminarlo.
 - No declarar la función validada hasta completar esas pruebas.
