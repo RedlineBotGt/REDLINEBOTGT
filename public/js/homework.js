@@ -93,10 +93,13 @@ export function mostrarAccesoPapa() {
     return;
   }
 
-  const pantalla = document.getElementById("homework-screen");
-  const asignaturas = document.getElementById("subjects-screen");
-  if (pantalla) pantalla.classList.add("hidden");
-  if (asignaturas) asignaturas.classList.remove("hidden");
+  // El PIN es una pantalla independiente: oculta asignaturas, chat y cualquier otra sección.
+  document.querySelectorAll(".screen").forEach(pantalla => {
+    pantalla.classList.add("hidden");
+  });
+  const pantallaPin = document.getElementById("papa-auth-screen");
+  if (pantallaPin) pantallaPin.classList.remove("hidden");
+
   if (acceso) acceso.classList.remove("hidden");
   if (gestion) gestion.classList.add("hidden");
 
@@ -149,6 +152,12 @@ export async function iniciarSesionDeberes() {
     if (acceso) acceso.classList.add("hidden");
 
     if (mensaje) mensaje.textContent = "";
+
+    // Solo tras validar el PIN se abre el perfil completo de Papá.
+    document.querySelectorAll(".screen").forEach(pantalla => {
+      pantalla.classList.add("hidden");
+    });
+    document.getElementById("subjects-screen")?.classList.remove("hidden");
 
     window.dispatchEvent(new Event("academia:papa-authenticated"));
   } catch (error) {
