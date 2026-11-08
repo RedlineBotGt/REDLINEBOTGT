@@ -242,3 +242,25 @@ Comportamiento:
 - Revisar que Render complete el despliegue automático de estos commits.
 - Probar en Discord un programado repetido: antes del primer envío debe mostrar el total; tras cada envío debe reducirse; después del último debe mostrar 0 y estado `sent`.
 - No se han modificado documentos de MongoDB ni se han enviado mensajes de prueba.
+
+## 13. Corrección real del selector de imágenes — 8/11/2026
+
+### Incidencia confirmada en Render
+
+- A las 22:58:51 UTC y 22:59:00 UTC, al seleccionar canal en «usr mensaje» de /dashstaff, Render registró: TypeError: ...setFileTypes is not a function en dashadmin/msn/msnmanager.ts:70.
+- La interacción quedó sin reclamar y el modal no llegó a abrirse. Esto explica que el usuario no viera el selector.
+- Discord.js se declara como ^14.27.0. La documentación específica de discord.js 14.27.0 no incluye setFileTypes() en FileUploadBuilder; el método aparece en documentación posterior. No usarlo con la versión actual.
+
+### Correcciones aplicadas
+
+- Quitado setFileTypes('image') de commands/msn.ts y dashadmin/msn/msnmanager.ts.
+- El componente queda opcional, con mínimo 0 y máximo 1 archivo. La validación real del tipo MIME, CDN de Discord y tamaño se realiza después en handlers/modalImageUpload.ts.
+- commands/msn.ts y el flujo de panel usan el mismo customId/modal; el router del panel procesa el submit y llama a buildModalImageAttachment() para adjuntar la foto al mensaje.
+- handlers/msnModal.ts también queda actualizado para procesar el archivo, aunque el flujo principal modal_msn_ se atiende por el gestor de DashAdmin.
+- Se conserva la opción de pegar URL.
+- Commits: e6f7475 (selector /msn y submit), acf9f3b (selector /dashstaff).
+
+### Estado
+
+- Los cambios se han guardado en main.
+- Despliegue automático solicitado a Render; pendiente confirmar LIVE y probar los dos flujos desde Discord.
