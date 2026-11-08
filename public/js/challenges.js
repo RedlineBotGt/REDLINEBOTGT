@@ -146,6 +146,10 @@ function obtenerAsignaturaValida() {
     return "lenguaje_musical";
   }
 
+  if (asignatura === "science") {
+    return "science";
+  }
+
   throw new Error(
     "Selecciona una asignatura válida."
   );
