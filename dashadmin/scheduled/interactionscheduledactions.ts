@@ -275,13 +275,20 @@ export async function handleScheduledActions(interaction: any): Promise<boolean>
                     return true;
                 }
                 const status = String(job.status || 'pending');
+                const totalRepetitions = Number(job.totalRepetitions ?? 0);
+                const repetitionsDone = Number(job.repetitionsDone ?? 0);
+                const remainingRepetitions = job.remainingTimes !== undefined && job.remainingTimes !== null
+                    ? Math.max(0, Number(job.remainingTimes))
+                    : job.repeats
+                        ? Math.max(0, totalRepetitions - repetitionsDone)
+                        : (status === 'sent' ? 0 : 1);
                 const description = [
                     `**Estado:** ${status}`,
                     `**Fecha/hora:** ${job.date || 'N/D'} · ${job.time || 'N/D'} (Madrid)`,
                     `**Canal:** <#${job.channelId}>`,
                     `**Rol:** ${job.roleId ? '<@&' + job.roleId + '>' : 'Ninguno'}`,
                     `**Repetición:** ${job.repeats ? 'Sí' : 'No'} · intervalo ${job.repeatIntervalDays || 0} días / ${job.repeatIntervalHours || 0} horas`,
-                    `**Envíos restantes:** ${job.remainingTimes ?? job.totalRepetitions ?? (job.repeats ? 'N/D' : 1)} · realizados: ${job.repetitionsDone || 0}`,
+                    `**Repeticiones pendientes por enviar:** ${remainingRepetitions} · envíos realizados: ${repetitionsDone}`,
                     '',
                     '**Texto:**',
                     String(job.text || '[Sin texto]').slice(0, 2500)
