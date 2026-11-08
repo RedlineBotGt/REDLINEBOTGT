@@ -20,6 +20,7 @@ export function initializeMenu({
     const clasificacionSection = document.getElementById("clasificacion-section");
     const chatSection = document.getElementById("chat-section");
     const twitchSection = document.getElementById("twitch-section");
+    const calendarioSection = document.getElementById("calendario-section");
     const welcomeScreen = document.getElementById("welcome-screen");
 
     if (
@@ -32,7 +33,8 @@ export function initializeMenu({
         !infoSection ||
         !clasificacionSection ||
         !chatSection ||
-        !twitchSection
+        !twitchSection ||
+        !calendarioSection
     ) {
         console.error("[MENU] No se encontraron los elementos.");
         return;
@@ -77,7 +79,8 @@ export function initializeMenu({
             section !== "info" &&
             section !== "clasificacion" &&
             section !== "chat" &&
-            section !== "twitch"
+            section !== "twitch" &&
+            section !== "calendario"
         ) {
             return;
         }
@@ -90,6 +93,7 @@ export function initializeMenu({
         clasificacionSection.hidden = section !== "clasificacion";
         chatSection.hidden = section !== "chat";
         twitchSection.hidden = section !== "twitch";
+        calendarioSection.hidden = section !== "calendario";
 
         // La bienvenida solo desaparece cuando
         // el usuario selecciona un apartado.
