@@ -1,5 +1,5 @@
 import { obtenerPerfilActual } from "./users.js";
-import { solicitarAPI } from "./homework/api.js";
+import { solicitarAPI, obtenerToken } from "./homework/api.js";
 
 const nombres = { papa: "Papá", leo: "Leo", mama: "Mamá", todos: "Todos" };
 
@@ -241,17 +241,24 @@ async function publicarAviso(event) {
 }
 
 export function iniciarAvisos() {
-  document.addEventListener("academia:perfil-cambiado", event => {
+  const actualizarAccesoAvisos = () => {
     const botonPerfil = document.getElementById("open-notices-btn");
-    const perfil = event.detail?.perfil;
-    if (botonPerfil) botonPerfil.classList.toggle("hidden", perfil !== "papa");
-  });
+    const autorizado = obtenerPerfilActual() === "papa" && Boolean(obtenerToken());
+    if (botonPerfil) botonPerfil.classList.toggle("hidden", !autorizado);
+    if (!autorizado) {
+      document.getElementById("notices-admin")?.classList.add("hidden");
+    }
+  };
+
+  document.addEventListener("academia:perfil-cambiado", actualizarAccesoAvisos);
+  window.addEventListener("academia:papa-authenticated", actualizarAccesoAvisos);
+  window.addEventListener("academia:papa-session-expired", actualizarAccesoAvisos);
 
   const boton = document.getElementById("open-notices-btn");
   const panel = document.getElementById("notices-admin");
   const formulario = document.getElementById("notice-form");
 
-  if (boton) boton.classList.toggle("hidden", obtenerPerfilActual() !== "papa");
+  if (boton) boton.classList.toggle("hidden", obtenerPerfilActual() !== "papa" || !obtenerToken());
   if (panel) panel.classList.add("hidden");
 
   if (boton && !boton.dataset.bound) {
