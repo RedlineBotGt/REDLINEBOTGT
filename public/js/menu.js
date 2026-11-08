@@ -51,10 +51,12 @@ export function abrirPerfil(perfil) {
   }
 
   mostrarPantalla("subjects-screen");
+
+  // Cierra cualquier autorización anterior antes de notificar el cambio.
+  cerrarSesionDeberes();
   document.dispatchEvent(new CustomEvent("academia:perfil-cambiado", { detail: { perfil } }));
 
   // El selector activa directamente la protección, sin depender del listener.
-  cerrarSesionDeberes();
   if (perfil === "papa") {
     mostrarAccesoPapa();
   }
