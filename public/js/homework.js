@@ -304,7 +304,7 @@ export function iniciarDeberes() {
     mostrarAccesoPapa
   );
 
-  window.addEventListener("academia:perfil-cambiado", event => {
+  document.addEventListener("academia:perfil-cambiado", event => {
     if (event.detail?.perfil === "papa") {
       // Cada entrada al perfil de Papá solicita una confirmación con PIN.
       cerrarSesion();
