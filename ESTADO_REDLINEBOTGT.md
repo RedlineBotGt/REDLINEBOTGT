@@ -1,6 +1,6 @@
 # Estado del proyecto — REDLINEBOTGT
 
-**Última actualización:** 8 de noviembre de 2026 (corrección de fecha en recurrencias)  
+**Última actualización:** 8 de noviembre de 2026 (panel y worker de mensajes programados)  
 **Repositorio:** [RedlineBotGt/REDLINEBOTGT](https://github.com/RedlineBotGt/REDLINEBOTGT)  
 **Rama de trabajo:** `main`  
 **Servicio Render principal:** `REDLINEBOTGT` — Frankfurt  
@@ -11,7 +11,7 @@
 ## 1. Estado operativo conocido
 
 - El bot principal se ejecuta en Render, Frankfurt, desde la rama `main`.
-- El despliegue es **manual**: `autoDeploy=no`. Los commits en GitHub no activan por sí solos una nueva versión en Render.
+- El servicio Render tiene **Auto Deploy activado** (`autoDeploy=yes`) para commits en `main`. Cada cambio en GitHub puede iniciar un despliegue automáticamente; comprobar el estado del último deploy antes de considerar una versión activa.
 - Comando de arranque: `npx tsx Index.ts`.
 - Build configurado: `npm install && npx tsx register-commands.ts`.
 - El servicio expone `/` y `/health` mediante Express.
@@ -140,3 +140,44 @@ Se mantiene intacta la lógica existente de recurrencia: intervalo, `scheduledAt
 **Último cambio:** corrección de la fecha visible de las publicaciones recurrentes. El worker actualiza el campo `date` al programar la siguiente edición, formateándolo en la zona horaria de Madrid. También se conserva la corrección de presentación de menciones descrita en la sección 4.
 
 **Estado:** cambios guardados en GitHub; revisión estática realizada; compilación integral y prueba real en Discord pendientes; Render sin desplegar.
+
+
+## 10. Mensajes programados: panel de edición y worker — 8/11/2026
+
+### Cambios guardados en GitHub
+
+Archivos modificados:
+- `Index.ts`: importa e inicia `startScheduledWorker(client)` al recibir `ready`, junto al worker de eventos.
+- `dashadmin/scheduled/interactionscheduled.ts`: el historial ordena los registros más recientes primero y permite seleccionar un registro para consultar/editar. El menú muestra hasta 25 registros más recientes por vista.
+- `dashadmin/scheduled/interactionscheduledactions.ts`: incorpora detalle del registro y edición de mensajes pendientes:
+  - Texto, imagen, fecha y hora (zona horaria Madrid).
+  - Canal de destino.
+  - Rol mencionado o quitar la mención.
+  - Intervalo en días/horas y número de envíos restantes.
+  - Los registros con estado distinto de `pending` son consultables y borrables, pero no editables.
+  - Las actualizaciones filtran por `_id`, servidor y `status: 'pending'` para no sobrescribir un mensaje que ya haya cambiado de estado.
+  - Validación estricta de fecha real y hora.
+- `dashadmin/scheduled/scheduledworker.ts`: reclama cada trabajo pendiente mediante cambio atómico a `processing`, evitando que dos ciclos/instancias reclamen el mismo documento simultáneamente; procesa hasta 25 vencidos por ciclo; al repetir actualiza `scheduledAt`, `date` y `time` en hora de Madrid y conserva correctamente el contador de envíos restantes, incluidos documentos antiguos sin `remainingTimes`.
+
+### Seguridad operativa y límites
+
+- El usuario indicó que eliminará los mensajes pendientes antiguos y creará mensajes nuevos para probar. No se ha accedido ni modificado la colección MongoDB desde estos cambios.
+- El worker consulta cada 60 segundos y también realiza un primer ciclo al arrancar.
+- Un trabajo pasa temporalmente a `processing`; si el proceso cae y permanece en ese estado más de 10 minutos, vuelve a `pending`. Como con cualquier envío a Discord, si el proceso cae justo después de que Discord acepte el mensaje pero antes de confirmar MongoDB, una recuperación posterior podría repetir ese envío; no existe garantía de entrega exactamente una vez con el flujo actual.
+- El historial presenta los 25 registros más recientes. Si hay más de 25, el panel informa de ello; la paginación adicional queda pendiente.
+- Se retiró el fallback de URI MongoDB incrustado en los dos módulos de mensajes programados: estos módulos requieren una de las variables de entorno Mongo ya admitidas por el proyecto.
+
+### Commits de esta intervención
+
+- `7248e70`: arranque del worker desde `Index.ts`.
+- `5f7f237`: worker con reclamación y actualización de recurrencias.
+- `cd720bb`, `14a64e7`, `243e562`, `bec85de`: flujo de edición y validación.
+- `ee3fecdf`: historial consultable.
+- `4991c0b`: contador compatible con documentos antiguos.
+
+### Pruebas y despliegue
+
+- Revisión estática de los archivos modificados: realizada.
+- Compilación TypeScript integral: pendiente de confirmar mediante el build de Render.
+- Prueba funcional en Discord: pendiente; requiere crear un mensaje futuro de prueba y verificar edición, envío y recurrencia.
+- Render tiene Auto Deploy activo. Los commits ya generaron despliegues automáticos; el último estado consultado estaba en cola/en actualización, por lo que no se considera todavía verificado en producción.
