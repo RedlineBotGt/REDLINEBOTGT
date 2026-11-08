@@ -78,9 +78,17 @@ export async function handleScheduledInteractions(interaction: any): Promise<boo
                     if (job.status === 'sent') statusEmoji = '✅ Enviado';
                     else if (job.status) statusEmoji = `📌 ${job.status}`;
 
+                    const totalRepetitions = Number(job.totalRepetitions ?? 0);
+                    const repetitionsDone = Number(job.repetitionsDone ?? 0);
+                    const remainingRepetitions = job.remainingTimes !== undefined && job.remainingTimes !== null
+                        ? Math.max(0, Number(job.remainingTimes))
+                        : job.repeats
+                            ? Math.max(0, totalRepetitions - repetitionsDone)
+                            : (job.status === 'sent' ? 0 : 1);
+
                     embed.addFields({
                         name: `🆔 Trabajo #${index + 1} [${statusEmoji}]`,
-                        value: `📢 Canal: <#${job.channelId}>\n📅 Fecha: **${job.date || 'N/A'} a las ${job.time || 'N/A'}**\n💬 Texto: *${previewText}*\n🔄 Repite: ${job.repeats ? 'Sí' : 'No'}`,
+                        value: `📢 Canal: <#${job.channelId}>\n📅 Fecha: **${job.date || 'N/A'} a las ${job.time || 'N/A'}**\n💬 Texto: *${previewText}*\n🔄 Repite: ${job.repeats ? 'Sí' : 'No'}\n📨 Repeticiones pendientes: **${remainingRepetitions}**`,
                         inline: false
                     });
                 });
