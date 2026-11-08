@@ -1,8 +1,10 @@
 import { MongoClient, Collection, ObjectId } from "mongodb";
 
 export interface Aviso {
-  autor: "papa";
+  autor: "papa" | "chat";
   destinatario: "leo" | "mama" | "todos";
+  tipo?: "chat";
+  chatMessageId?: string;
   mensaje: string;
   deberId?: string;
   creadoEn: Date;
@@ -43,6 +45,28 @@ export async function crearAviso(
   };
   const resultado = await (await obtenerColeccion()).insertOne(aviso);
   return { ...aviso, _id: resultado.insertedId };
+}
+
+export async function crearAvisoChat(
+  perfil: "leo" | "papa" | "mama",
+  chatMessageId: string
+) {
+  const aviso = {
+    autor: "chat" as const,
+    destinatario: "todos" as const,
+    tipo: "chat" as const,
+    chatMessageId,
+    mensaje: "__CHAT__:" + perfil,
+    creadoEn: new Date()
+  };
+
+  await (await obtenerColeccion()).updateOne(
+    { chatMessageId },
+    { $setOnInsert: aviso },
+    { upsert: true }
+  );
+
+  return aviso;
 }
 
 export async function sincronizarAvisoDeber(

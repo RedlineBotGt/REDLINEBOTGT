@@ -937,3 +937,26 @@ El usuario aprueba activar el acceso **🤖 IA** como una vista de consulta para
 - Build TypeScript de Render correcto y servidor arrancado.
 - Despliegue LIVE: `dep-dbo9n0vj2his73f96so0`, commit `5c222641aec0ef2b848eac4ea126fa185a4fe783`, 8-11-2026 15:57:03 UTC.
 - Pendiente prueba manual desde Android de selección de imagen, guardado, visualización y corrección de preguntas.
+
+
+## 28. Avisos automáticos de mensajes nuevos del chat (8-11-2026)
+
+### Decisión funcional
+- Cada mensaje nuevo guardado en el chat familiar genera un aviso persistente en la colección `family_notices`.
+- El aviso no incluye vista previa ni texto del mensaje: solo «Nuevo mensaje de Leo», «Nuevo mensaje de Papá» o «Nuevo mensaje de Mamá».
+- Se muestra como aviso familiar compacto con icono de chat y fecha; no se presenta como aviso manual de Papá.
+- El aviso se crea al guardar el mensaje, no depende de que el destinatario tenga abierto el chat ni de su sondeo cada 7 segundos.
+- Se usa el identificador del mensaje para que la creación del aviso sea idempotente y no duplique el mismo aviso si se repite la operación.
+- Los avisos automáticos de chat no se pueden editar desde la gestión de Papá, pero sí borrar.
+- Se conservan intactos los mensajes y la visualización del chat, los avisos manuales y los avisos automáticos de deberes.
+
+### Archivos modificados
+- `routes/chat.ts`: al guardar cada mensaje, solicita crear su aviso automático.
+- `services/noticesService.ts`: añade la creación idempotente de avisos de chat.
+- `public/js/notices.js`: representa el aviso sin vista previa y lo distingue en la gestión.
+- `public/app.js`: renueva la caché del módulo de avisos.
+
+### Verificación y despliegue
+- Render Academia Campos comprobado antes del cambio: rama `backup-antes-limpieza`, `autoDeploy=yes`, disparador `commit`. El guardado en GitHub inicia despliegue automático; no se lanza deploy manual.
+- La compilación TypeScript y la prueba funcional de extremo a extremo quedan pendientes de resultado de Render y de prueba con dos perfiles.
+- Prueba necesaria: enviar desde un perfil, comprobar en Avisos el texto genérico con el nombre del emisor y verificar que el contenido del mensaje nunca aparece en el aviso; repetir con los tres perfiles y comprobar que no se generan duplicados.

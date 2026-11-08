@@ -43,10 +43,24 @@ function pintarAvisos(avisos) {
   for (const aviso of avisos) {
     const fila = document.createElement("p");
     fila.className = "notice-row";
+    const esChat = typeof aviso.mensaje === "string" &&
+      aviso.mensaje.startsWith("__CHAT__:");
     const esDeber = typeof aviso.mensaje === "string" &&
       aviso.mensaje.startsWith("__DEBER__:");
 
-    if (esDeber) {
+    if (esChat) {
+      const codigo = aviso.mensaje.slice("__CHAT__:".length);
+      const icono = document.createElement("span");
+      icono.className = "notice-subject-icon";
+      icono.textContent = "💬";
+      icono.setAttribute("aria-hidden", "true");
+
+      const mensaje = document.createElement("strong");
+      mensaje.className = "notice-subject";
+      mensaje.textContent = "Nuevo mensaje de " + (nombres[codigo] || "un usuario");
+
+      fila.append(icono, mensaje, crearFecha(aviso));
+    } else if (esDeber) {
       fila.classList.add("notice-row-homework");
       const codigo = aviso.mensaje.slice("__DEBER__:".length);
       const asignatura = asignaturas[codigo] || {
@@ -109,21 +123,30 @@ function pintarGestionAvisos(avisos) {
   for (const aviso of avisos) {
     const item = document.createElement("article");
     item.className = "notice-admin-item";
+    const esChat = typeof aviso.mensaje === "string" && aviso.mensaje.startsWith("__CHAT__:");
     const esDeber = typeof aviso.mensaje === "string" && aviso.mensaje.startsWith("__DEBER__:");
     const resumen = document.createElement("p");
     resumen.className = "notice-admin-summary";
-    resumen.textContent = (esDeber ? "📚 Aviso de deber · " : "🔔 Aviso manual · ") +
-      (nombres[aviso.destinatario] || "Familia") + " · " +
-      (esDeber ? (asignaturas[aviso.mensaje.slice(10)]?.nombre || aviso.mensaje.slice(10)) : aviso.mensaje);
+    if (esChat) {
+      const codigo = aviso.mensaje.slice("__CHAT__:".length);
+      resumen.textContent = "💬 Mensaje nuevo del chat · Nuevo mensaje de " + (nombres[codigo] || "un usuario");
+    } else {
+      resumen.textContent = (esDeber ? "📚 Aviso de deber · " : "🔔 Aviso manual · ") +
+        (nombres[aviso.destinatario] || "Familia") + " · " +
+        (esDeber ? (asignaturas[aviso.mensaje.slice(10)]?.nombre || aviso.mensaje.slice(10)) : aviso.mensaje);
+    }
     item.appendChild(resumen);
 
     const acciones = document.createElement("div");
     acciones.className = "notice-admin-actions";
-    const editar = document.createElement("button");
-    editar.type = "button";
-    editar.className = "notice-edit-btn";
-    editar.textContent = "✏️ Editar";
-    editar.addEventListener("click", () => mostrarEditorAviso(item, aviso));
+    if (!esChat) {
+      const editar = document.createElement("button");
+      editar.type = "button";
+      editar.className = "notice-edit-btn";
+      editar.textContent = "✏️ Editar";
+      editar.addEventListener("click", () => mostrarEditorAviso(item, aviso));
+      acciones.appendChild(editar);
+    }
     const borrar = document.createElement("button");
     borrar.type = "button";
     borrar.className = "notice-delete-btn";
@@ -139,7 +162,7 @@ function pintarGestionAvisos(avisos) {
         borrar.disabled = false;
       }
     });
-    acciones.append(editar, borrar);
+    acciones.appendChild(borrar);
     item.appendChild(acciones);
     lista.appendChild(item);
   }

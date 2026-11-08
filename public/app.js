@@ -26,7 +26,7 @@ import {
   iniciarDeberes
 } from "./js/homework.js?v=3";
 
-import { iniciarAvisos } from "./js/notices.js?v=2";
+import { iniciarAvisos } from "./js/notices.js?v=3";
 import { iniciarHistorialIA } from "./js/aiHistory.js?v=1";
 
 import {

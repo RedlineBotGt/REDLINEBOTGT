@@ -3,6 +3,7 @@ import {
   listarMensajesChat,
   guardarMensajeChat
 } from "../services/chatService.ts";
+import { crearAvisoChat } from "../services/noticesService.ts";
 
 const router = Router();
 
@@ -54,6 +55,8 @@ router.post("/chat/messages", async (req: Request, res: Response) => {
       perfil as typeof PERFILES[number],
       texto
     );
+
+    await crearAvisoChat(perfil as typeof PERFILES[number], mensaje.id);
 
     return res.status(201).json({ ok: true, mensaje });
   } catch (error) {
