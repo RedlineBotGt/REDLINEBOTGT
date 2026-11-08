@@ -16,7 +16,7 @@ import {
 import {
   cerrarSesionDeberes,
   mostrarAccesoPapa
-} from "./homework.js";
+} from "./homework.js?v=2";
 
 // ========================================
 // UTILIDADES DE INTERFAZ
@@ -50,15 +50,15 @@ export function abrirPerfil(perfil) {
     return;
   }
 
-  mostrarPantalla("subjects-screen");
-
-  // Cierra cualquier autorización anterior antes de notificar el cambio.
+  // Cierra siempre la sesión anterior antes de abrir cualquier perfil.
   cerrarSesionDeberes();
   document.dispatchEvent(new CustomEvent("academia:perfil-cambiado", { detail: { perfil } }));
 
-  // El selector activa directamente la protección, sin depender del listener.
   if (perfil === "papa") {
+    // Papá ve únicamente el paso de PIN; nada del perfil queda accesible aún.
     mostrarAccesoPapa();
+  } else {
+    mostrarPantalla("subjects-screen");
   }
 }
 
@@ -109,6 +109,7 @@ export function volverAsignaturas() {
 // ========================================
 
 export function volverPerfiles() {
+  cerrarSesionDeberes();
   cerrarAsignatura();
   cerrarPerfil();
 
