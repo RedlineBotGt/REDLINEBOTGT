@@ -1,6 +1,6 @@
 # Estado del proyecto — REDLINEBOTGT
 
-**Última actualización:** 8 de noviembre de 2026  
+**Última actualización:** 8 de noviembre de 2026 (corrección de fecha en recurrencias)  
 **Repositorio:** [RedlineBotGt/REDLINEBOTGT](https://github.com/RedlineBotGt/REDLINEBOTGT)  
 **Rama de trabajo:** `main`  
 **Servicio Render principal:** `REDLINEBOTGT` — Frankfurt  
@@ -94,7 +94,30 @@ Después de autorizar y realizar un despliegue controlado:
 
 Si Discord no representa correctamente las menciones dentro del embed, revertir únicamente el cambio de presentación en `eventosmanager.ts`, sin deshacer los demás arreglos del sistema de eventos.
 
-## 6. Riesgos y tareas pendientes
+## 5. Fecha visible en eventos recurrentes — 8/11/2026
+
+### Incidencia detectada
+
+La recurrencia avanzaba correctamente la fecha interna `scheduledAt` sumando `intervalMs`, pero mantenía el campo de texto `date` con la fecha original. Como el embed utiliza `ev.date`, las siguientes publicaciones podían mostrar la fecha inicial aunque la ejecución estuviera programada para otra semana.
+
+### Corrección aplicada
+
+Archivos:
+- `dashadmin/eventos/eventosutils.ts`: nueva función `formatMadridDate(date)`, que devuelve `DD/MM/YYYY` usando explícitamente la zona horaria `Europe/Madrid`.
+- `dashadmin/eventos/eventosworker.ts`: al cerrar una edición y programar la siguiente, guarda también `date: formatMadridDate(nextScheduledAt)`.
+
+Se mantiene intacta la lógica existente de recurrencia: intervalo, `scheduledAt`, `publishAt`, contador de envíos, estado, reinicio de RSVP, recordatorios, roles y promociones. El embed de cada repetición tomará la nueva fecha del documento y la mostrará automáticamente.
+
+**Ejemplo:** con 6 envíos totales y un intervalo de 7 días, las tarjetas mostrarán la fecha inicial y, después, +7, +14, +21, +28 y +35 días. El total incluye la primera publicación.
+
+### Verificación y despliegue
+
+- Revisión estática del flujo de recurrencia y del campo utilizado por el embed: realizada.
+- Compilación integral y prueba en Discord real: pendientes.
+- Render: **sin desplegar**; el cambio solo estará activo tras un despliegue manual autorizado.
+- No se ha modificado ningún documento de evento ya guardado directamente en MongoDB. La nueva fecha se actualizará cuando el worker cierre el evento actual y programe la siguiente repetición.
+
+## 7. Riesgos y tareas pendientes
 
 - En una revisión anterior se detectaron credenciales sensibles incluidas en el repositorio público (incluyendo un archivo de credenciales y copias de claves/URI en código). **No consta que se hayan rotado o revocado.** Prioridad de seguridad: rotar credenciales expuestas y después retirar los secretos del historial/repositorio de forma controlada. Nunca copiar secretos a este documento.
 - Revisar la salud real del bot: actualmente `/health` puede responder aunque el cliente Discord no haya conectado.
@@ -102,7 +125,7 @@ Si Discord no representa correctamente las menciones dentro del embed, revertir 
 - Verificar en ejecución la ruta de estado de Academia Campos antes de dar por garantizado que el ping la mantiene activa.
 - No implementar un ping a WEBLINEGT sin decisión expresa.
 
-## 7. Normas de trabajo
+## 8. Normas de trabajo
 
 - Revisar el estado actual de GitHub antes de editar.
 - Mantener cambios acotados y explicar exactamente qué archivos se modifican.
@@ -112,8 +135,8 @@ Si Discord no representa correctamente las menciones dentro del embed, revertir 
 - Después de cada cambio, actualizar este documento con commit, archivos, pruebas, despliegue y pendientes.
 - Si una prueba falla, revertir solo el cambio concreto cuando sea posible y dejar constancia.
 
-## 8. Último punto de trabajo
+## 9. Último punto de trabajo
 
-**Tarea actual:** recuperar la apariencia de mención para participantes de las tarjetas de evento, manteniendo la resolución de nombres como fallback.
+**Último cambio:** corrección de la fecha visible de las publicaciones recurrentes. El worker actualiza el campo `date` al programar la siguiente edición, formateándolo en la zona horaria de Madrid. También se conserva la corrección de presentación de menciones descrita en la sección 4.
 
-**Estado de esta actualización:** código y documento actualizados en GitHub; pruebas estáticas aisladas superadas; prueba visual real pendiente; Render sin desplegar.
+**Estado:** cambios guardados en GitHub; revisión estática realizada; compilación integral y prueba real en Discord pendientes; Render sin desplegar.
