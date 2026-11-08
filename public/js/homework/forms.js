@@ -2,13 +2,16 @@
 import {
   crearDeber,
   editarDeber,
-  obtenerToken
+  obtenerToken,
+  subirImagenDeber
 } from "./api.js";
 
 import { obtenerPerfilActual } from "../users.js";
 
 let deberEditando = null;
 let contadorPreguntas = 0;
+let imagenesSeleccionadas = [];
+let urlsPrevisualizacion = [];
 
 /**
  * Comprueba que el usuario puede gestionar deberes.
@@ -63,22 +66,26 @@ function actualizarApartadoPreguntas() {
     "homework-content-label"
   );
   const contenido = document.getElementById("homework-content");
+  const grupoImagenes = document.getElementById("homework-images-group");
 
   if (!tipo || !contenedor) return;
 
-  const esEjercicio = tipo.value === "ejercicio";
+  const esEjercicio = tipo.value === "ejercicio" || tipo.value === "ejercicio_imagen";
+  const esEjercicioImagen = tipo.value === "ejercicio_imagen";
 
   contenedor.classList.toggle("hidden", !esEjercicio);
+  grupoImagenes?.classList.toggle("hidden", !esEjercicioImagen);
 
   if (etiquetaContenido) {
-    etiquetaContenido.textContent = esEjercicio
-      ? "Enunciado o instrucciones"
-      : "Enlace o instrucciones";
+    etiquetaContenido.textContent = esEjercicioImagen
+      ? "Descripción del ejercicio"
+      : esEjercicio ? "Enunciado o instrucciones" : "Enlace o instrucciones";
   }
 
   if (contenido) {
-    contenido.placeholder = esEjercicio
-      ? "Explica brevemente qué debe hacer..."
+    contenido.placeholder = esEjercicioImagen
+      ? "Explica qué debe hacer el alumno y cómo utilizar las imágenes..."
+      : esEjercicio ? "Explica brevemente qué debe hacer..."
       : "Pega aquí el enlace...";
   }
 }
@@ -208,6 +215,74 @@ function limpiarPreguntasFormulario() {
   contadorPreguntas = 0;
 }
 
+function limpiarImagenesSeleccionadas() {
+  urlsPrevisualizacion.forEach(url => URL.revokeObjectURL(url));
+  urlsPrevisualizacion = [];
+  imagenesSeleccionadas = [];
+  const input = document.getElementById("homework-images");
+  const preview = document.getElementById("homework-images-preview");
+  if (input) input.value = "";
+  if (preview) preview.replaceChildren();
+}
+
+function actualizarPrevisualizacionImagenes() {
+  const preview = document.getElementById("homework-images-preview");
+  if (!preview) return;
+  urlsPrevisualizacion.forEach(url => URL.revokeObjectURL(url));
+  urlsPrevisualizacion = [];
+  preview.replaceChildren();
+
+  (Array.isArray(deberEditando?.imagenes) ? deberEditando.imagenes : []).forEach(imagen => {
+    const guardada = document.createElement("div");
+    guardada.className = "homework-image-saved";
+    guardada.textContent = "Imagen guardada: " + (imagen.nombre || "imagen");
+    preview.appendChild(guardada);
+  });
+
+  imagenesSeleccionadas.forEach((archivo, indice) => {
+    const url = URL.createObjectURL(archivo);
+    urlsPrevisualizacion.push(url);
+    const item = document.createElement("div");
+    item.className = "homework-image-preview-item";
+    const img = document.createElement("img");
+    img.src = url;
+    img.alt = archivo.name;
+    const nombre = document.createElement("span");
+    nombre.textContent = archivo.name;
+    const quitar = document.createElement("button");
+    quitar.type = "button";
+    quitar.textContent = "Quitar";
+    quitar.addEventListener("click", () => {
+      imagenesSeleccionadas.splice(indice, 1);
+      actualizarPrevisualizacionImagenes();
+    });
+    item.append(img, nombre, quitar);
+    preview.appendChild(item);
+  });
+}
+
+function gestionarSeleccionImagenes(event) {
+  const input = event.currentTarget;
+  const nuevas = Array.from(input.files || []);
+  input.value = "";
+  const guardadas = Array.isArray(deberEditando?.imagenes) ? deberEditando.imagenes.length : 0;
+
+  if (guardadas + imagenesSeleccionadas.length + nuevas.length > 5) {
+    mostrarErrorPermisos("Cada ejercicio admite un máximo de 5 imágenes.");
+    return;
+  }
+  const invalida = nuevas.find(file =>
+    !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
+    file.size === 0 || file.size > 5 * 1024 * 1024
+  );
+  if (invalida) {
+    mostrarErrorPermisos("Usa imágenes JPG, PNG o WebP de hasta 5 MB cada una.");
+    return;
+  }
+  imagenesSeleccionadas.push(...nuevas);
+  actualizarPrevisualizacionImagenes();
+}
+
 /**
  * Inicializa los controles del formulario.
  */
@@ -216,6 +291,7 @@ function inicializarFormulario() {
   const botonAgregar = document.getElementById(
     "homework-add-question-btn"
   );
+  const campoImagenes = document.getElementById("homework-images");
 
   if (tipo && !tipo.dataset.listenerAdded) {
     tipo.addEventListener("change", actualizarApartadoPreguntas);
@@ -225,6 +301,11 @@ function inicializarFormulario() {
   if (botonAgregar && !botonAgregar.dataset.listenerAdded) {
     botonAgregar.addEventListener("click", agregarPreguntaDeber);
     botonAgregar.dataset.listenerAdded = "true";
+  }
+
+  if (campoImagenes && !campoImagenes.dataset.listenerAdded) {
+    campoImagenes.addEventListener("change", gestionarSeleccionImagenes);
+    campoImagenes.dataset.listenerAdded = "true";
   }
 }
 
@@ -259,6 +340,7 @@ export function mostrarFormularioDeber(deber = null) {
 
   formulario.reset();
   limpiarPreguntasFormulario();
+  limpiarImagenesSeleccionadas();
 
   const campoId = document.getElementById("homework-id");
   const campoTitulo = document.getElementById("homework-title-input");
@@ -298,7 +380,7 @@ export function mostrarFormularioDeber(deber = null) {
     }
 
     if (
-      deber.tipo === "ejercicio" &&
+      (deber.tipo === "ejercicio" || deber.tipo === "ejercicio_imagen") &&
       Array.isArray(deber.preguntas)
     ) {
       deber.preguntas.forEach((pregunta) => {
@@ -322,6 +404,7 @@ export function mostrarFormularioDeber(deber = null) {
   }
 
   actualizarApartadoPreguntas();
+  actualizarPrevisualizacionImagenes();
 
   contenedor.classList.remove("hidden");
   formulario.classList.remove("hidden");
@@ -359,6 +442,7 @@ export function ocultarFormularioDeber() {
   }
 
   limpiarPreguntasFormulario();
+  limpiarImagenesSeleccionadas();
 
   deberEditando = null;
 }
@@ -411,7 +495,7 @@ export async function guardarFormularioDeber() {
     fechaLimite: campoFecha?.value || null
   };
 
-  if (deber.tipo === "ejercicio") {
+  if (deber.tipo === "ejercicio" || deber.tipo === "ejercicio_imagen") {
     const preguntas = obtenerPreguntasFormulario();
 
     if (preguntas.length === 0) {
@@ -472,10 +556,19 @@ export async function guardarFormularioDeber() {
       boton.disabled = true;
     }
 
+    let idDeber = deberEditando?._id ? String(deberEditando._id) : "";
     if (deberEditando?._id) {
       await editarDeber(deberEditando._id, deber);
     } else {
-      await crearDeber(deber);
+      const creado = await crearDeber(deber);
+      idDeber = String(creado.deber?._id || "");
+      if (!idDeber) throw new Error("No se recibió el identificador del deber.");
+    }
+
+    if (deber.tipo === "ejercicio_imagen") {
+      for (const archivo of imagenesSeleccionadas) {
+        await subirImagenDeber(idDeber, archivo);
+      }
     }
 
     ocultarFormularioDeber();
