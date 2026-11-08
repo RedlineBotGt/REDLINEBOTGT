@@ -1,8 +1,9 @@
 import { 
     ModalSubmitInteraction, 
     TextChannel,
-    EmbedBuilder 
+    EmbedBuilder
 } from 'discord.js';
+import { buildModalImageAttachment } from './modalImageUpload';
 
 export async function handleMsnModalSubmit(interaction: ModalSubmitInteraction) {
     if (!interaction.customId.startsWith('modal_msn_')) return false;
@@ -14,12 +15,7 @@ export async function handleMsnModalSubmit(interaction: ModalSubmitInteraction) 
     const guild = interaction.guild!;
     let texto = interaction.fields.getTextInputValue('input_msn_texto');
     const imagen = interaction.fields.getTextInputValue('input_msn_imagen').trim();
-
-    // Respondemos de forma privada al emisor
-    await interaction.reply({
-        content: `✅ ¡Mensaje enviado con éxito al canal seleccionado!`,
-        ephemeral: true
-    });
+    const uploadedFile = interaction.fields.getUploadedFiles('input_msn_archivo')?.first() ?? null;
 
     try {
         const canalDestino = await guild.channels.fetch(canalId) as TextChannel;
@@ -68,10 +64,15 @@ export async function handleMsnModalSubmit(interaction: ModalSubmitInteraction) 
             }
             texto = texto.replace(/https?:\/\/\S*cdn\.discordapp\.com\S*/gi, '').trim();
 
-            // Preparamos las opciones de envío con el texto limpio
+            // Preparamos las opciones de envío con el texto limpio y la foto opcional.
             const mensajeOptions: any = {
                 content: texto
             };
+
+            const imagenAdjunta = await buildModalImageAttachment(uploadedFile);
+            if (imagenAdjunta) {
+                mensajeOptions.files = [imagenAdjunta];
+            }
 
             // Si hay una imagen válida, la añadimos mediante un Embed limpio sin URLs de texto plano
             if (imagen) {
@@ -87,9 +88,24 @@ export async function handleMsnModalSubmit(interaction: ModalSubmitInteraction) 
             }
 
             await canalDestino.send(mensajeOptions);
+            await interaction.reply({
+                content: '✅ ¡Mensaje enviado con éxito al canal seleccionado!',
+                ephemeral: true
+            });
+        } else {
+            await interaction.reply({
+                content: '❌ No se encontró el canal de destino.',
+                ephemeral: true
+            });
         }
     } catch (error) {
         console.error('❌ Error al enviar el mensaje personalizado:', error);
+        await interaction.reply({
+            content: error instanceof Error
+                ? `❌ No se pudo enviar el mensaje: ${error.message}`
+                : '❌ No se pudo enviar el mensaje o la imagen.',
+            ephemeral: true
+        });
     }
 
     return true;
