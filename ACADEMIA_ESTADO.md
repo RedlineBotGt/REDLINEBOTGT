@@ -776,3 +776,16 @@ El usuario aprueba comenzar la implementación de Lenguaje Musical como asignatu
 - Se renovó la caché de `app.js` y del módulo `menu.js` (`app.js?v=6`, `menu.js?v=2`) para evitar reutilizar el selector anterior en el navegador.
 - Commits de esta corrección: `3f03d67cb76742353598ad16218e99a3bf402d64`, `2e9ba11dab0c5e122f11bd8e1746c8afe1ca92bf`, `fe1dc0d2bda6514920ed0638a6acee08dfe4e919`, `5d9a449032d58c99cd28c018fd6c37d1eb8322bb`.
 - Pendiente: esperar el despliegue automático de estos últimos commits y probar en navegador real; no considerar cerrada la incidencia hasta que el PIN aparezca al seleccionar Papá y las funciones administrativas queden ocultas antes de autenticar.
+
+
+### Rediseño del acceso PIN como paso independiente (8-11-2026)
+- Incidencia observada por el usuario: el PIN aparecía mezclado con asignaturas; era posible entrar en asignaturas antes de autenticar; el botón Deberes no respondía como se esperaba y Avisos no aparecía hasta después de una secuencia confusa; Chat quedaba accesible.
+- Decisión funcional confirmada: al seleccionar Papá, la aplicación muestra exclusivamente una pantalla de PIN. No deben aparecer asignaturas, Consultar deberes, Avisos ni Chat antes de validar.
+- Se ha movido el formulario PIN a una pantalla propia `#papa-auth-screen`, fuera de `#subjects-screen`. Tiene botón «Volver a perfiles».
+- `menu.js`: al seleccionar cualquier perfil cierra primero la sesión previa; para Papá muestra solo la pantalla PIN; para Leo/Mamá muestra directamente sus asignaturas. Al volver a perfiles se cierra la sesión.
+- `homework.js`: `mostrarAccesoPapa()` oculta todas las pantallas y muestra solo la pantalla PIN. Tras recibir un token válido, oculta el PIN y muestra `#subjects-screen`; entonces se emite `academia:papa-authenticated` para que aparezca Avisos. El flujo de Deberes comprueba el token antes de habilitar gestión.
+- Se actualizaron versiones de caché: `app.js?v=7`, `menu.js?v=3`, `homework.js?v=2`.
+- Commits de código: `a258e14c53385c0fb233118981b64b2df7f682a4`, `d87b60674b5ca05eafd1ddc94edde096e293a9ee`, `b6c93420bad85e6e7e5a34e901836a2ab694e885`, `ae182e37b21e00298d26ad730ced22d77f379b21`.
+- Verificación estática tras releer GitHub: una sola pantalla PIN, un solo formulario, el formulario ya no está dentro de asignaturas, y las versiones nuevas de módulos están referenciadas correctamente.
+- Render: AutoDeploy activado. El deploy del commit `a258e14c53385c0fb233118981b64b2df7f682a4` estaba en `update_in_progress` y el commit final de versiones `ae182e37b21e00298d26ad730ced22d77f379b21` estaba en cola al registrar esta nota.
+- Pendiente obligatorio: esperar a que el último código quede LIVE y probar en navegador real la secuencia Papá → solo PIN → PIN correcto → perfil completo con Deberes, Avisos y Chat; PIN incorrecto → permanecer en pantalla PIN; volver a perfiles → sesión cerrada. No declarar resuelta la incidencia hasta completar estas pruebas.
