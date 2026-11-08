@@ -57,7 +57,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         .setCustomId('input_msn_archivo')
         .setMinValues(0)
         .setMaxValues(1)
-        .setFileTypes('image');
+        .setRequired(false);
 
     modal.addLabelComponents(
         new LabelBuilder()
