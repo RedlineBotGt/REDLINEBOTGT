@@ -5,8 +5,9 @@ import {
     ModalBuilder, 
     TextInputBuilder, 
     TextInputStyle, 
-    ActionRowBuilder, 
-    ChannelType 
+    ChannelType,
+    FileUploadBuilder,
+    LabelBuilder 
 } from 'discord.js';
 
 export const data = new SlashCommandBuilder()
@@ -52,9 +53,24 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         .setPlaceholder('Pega aquí el enlace o ID de la imagen si procede...')
         .setRequired(false);
 
-    modal.addComponents(
-        new ActionRowBuilder<TextInputBuilder>().addComponents(inputTexto),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(inputImagen)
+    const inputArchivo = new FileUploadBuilder()
+        .setCustomId('input_msn_archivo')
+        .setMinValues(0)
+        .setMaxValues(1)
+        .setFileTypes('image');
+
+    modal.addLabelComponents(
+        new LabelBuilder()
+            .setLabel('💬 Contenido del mensaje')
+            .setTextInputComponent(inputTexto),
+        new LabelBuilder()
+            .setLabel('🖼️ URL de imagen (opcional)')
+            .setDescription('Puedes dejarlo vacío si adjuntas una foto desde tu dispositivo.')
+            .setTextInputComponent(inputImagen),
+        new LabelBuilder()
+            .setLabel('📷 Foto desde la galería (opcional)')
+            .setDescription('Selecciona una imagen de tu móvil o dispositivo. Máximo 1 imagen.')
+            .setFileUploadComponent(inputArchivo)
     );
 
     await interaction.showModal(modal);
