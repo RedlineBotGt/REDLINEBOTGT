@@ -55,6 +55,31 @@
         ¡Hola, <span id="profile-name"></span>!
       </h2>
 
+      <!-- ACCESO DE PAPÁ -->
+            <div id="homework-login" class="hidden">
+      
+              <h3>Acceso de Papá</h3>
+              <p>Introduce el PIN para gestionar los deberes.</p>
+      
+              <label for="homework-pin">PIN</label>
+      
+              <input
+                type="password"
+                id="homework-pin"
+                inputmode="numeric"
+                autocomplete="current-password"
+                placeholder="Introduce tu PIN"
+              >
+      
+              <button type="button" id="homework-login-btn" onclick="iniciarSesionDeberes()">
+                Entrar
+              </button>
+      
+              <p id="homework-login-message" role="status" aria-live="polite"></p>
+            </div>
+      
+      
+
       <button
         type="button"
         onclick="volverPerfiles()"
@@ -211,29 +236,6 @@
       <p id="homework-description">
         Aquí encontrarás tus tareas pendientes.
       </p>
-
-      <!-- ACCESO DE PAPÁ -->
-      <div id="homework-login" class="hidden">
-
-        <h3>Acceso de Papá</h3>
-        <p>Introduce el PIN para gestionar los deberes.</p>
-
-        <label for="homework-pin">PIN</label>
-
-        <input
-          type="password"
-          id="homework-pin"
-          inputmode="numeric"
-          autocomplete="current-password"
-          placeholder="Introduce tu PIN"
-        >
-
-        <button type="button" id="homework-login-btn" onclick="iniciarSesionDeberes()">
-          Entrar
-        </button>
-
-        <p id="homework-login-message" role="status" aria-live="polite"></p>
-      </div>
 
       <!-- GESTIÓN DE PAPÁ -->
       <div id="homework-management" class="hidden">
