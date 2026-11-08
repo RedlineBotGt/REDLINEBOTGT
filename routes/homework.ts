@@ -16,7 +16,7 @@ import type {
   DestinatarioDeber,
   EstadoDeber
 } from "../services/homeworkService.ts";
-import { crearAviso } from "../services/noticesService.ts";
+import { crearAviso, sincronizarAvisoDeber, eliminarAvisoDeber } from "../services/noticesService.ts";
 
 const router = Router();
 
@@ -481,7 +481,8 @@ router.post(
       try {
         await crearAviso(
           deber.destinatario,
-          "__DEBER__:" + deber.asignatura
+          "__DEBER__:" + deber.asignatura,
+          String(deber._id)
         );
       } catch (error) {
         console.error("[AVISOS] No se pudo crear el aviso del deber:", error);
@@ -657,6 +658,18 @@ router.patch(
 
       const deber = await editarDeber(req.params.id, datos);
 
+      // Mantiene el aviso ligado al deber y refleja cambios de asignatura
+      // o destinatario sin crear avisos duplicados.
+      try {
+        await sincronizarAvisoDeber(
+          String(deber?._id || req.params.id),
+          deber!.destinatario,
+          deber!.asignatura
+        );
+      } catch (error) {
+        console.error("[AVISOS] No se pudo actualizar el aviso del deber:", error);
+      }
+
       return res.json({ ok: true, deber });
 
     } catch (error) {
@@ -686,6 +699,12 @@ router.delete(
           ok: false,
           error: "No se ha encontrado el deber."
         });
+      }
+
+      try {
+        await eliminarAvisoDeber(req.params.id);
+      } catch (error) {
+        console.error("[AVISOS] No se pudo eliminar el aviso del deber:", error);
       }
 
       return res.json({
