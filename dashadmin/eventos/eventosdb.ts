@@ -367,7 +367,7 @@ export async function handleBdEventosEditModalSubmit(interaction: ModalSubmitInt
                     });
 
                     if (updatedEv) {
-                        const { embed, components } = buildEventEmbedAndRows(updatedEv);
+                        const { embed, components } = await buildEventEmbedAndRows(updatedEv, interaction.guild);
                         await message.edit({ embeds: [embed], components }).catch(() => {});
                     }
                 }

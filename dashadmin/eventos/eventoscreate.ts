@@ -336,7 +336,7 @@ export async function handleEventPublishNowButton(interaction: ButtonInteraction
             }
         };
 
-        const { embed, components } = buildEventEmbedAndRows(dummyEventDoc);
+        const { embed, components } = await buildEventEmbedAndRows(dummyEventDoc, guild);
 
         const sentMessage = await channel.send({
             content: `<@&${session.roleId}>`,

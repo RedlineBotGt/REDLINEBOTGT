@@ -150,7 +150,7 @@ export function setupEventWorker(client: Client) {
                         rsvps: ev.rsvps
                     };
 
-                    const { embed, components } = buildEventEmbedAndRows(dummyEventDoc);
+                    const { embed, components } = await buildEventEmbedAndRows(dummyEventDoc, guild);
 
                     const sentMessage = await channel.send({
                         content: `<@&${ev.roleId}>`,
@@ -270,7 +270,7 @@ export function setupEventWorker(client: Client) {
                         const message = await channel.messages.fetch(ev.messageId).catch(() => null);
 
                         if (message) {
-                            const { embed, components } = buildEventEmbedAndRows(ev);
+                            const { embed, components } = await buildEventEmbedAndRows(ev, guild);
 
                             await message.edit({
                                 embeds: [embed],

@@ -358,7 +358,7 @@ export async function handleEventAdminConfirmButton(interaction: ButtonInteracti
         const message = await channel.messages.fetch(messageId).catch(() => null);
 
         if (message) {
-            const { embed, components } = buildEventEmbedAndRows(eventDoc);
+            const { embed, components } = await buildEventEmbedAndRows(eventDoc, guild);
             await message.edit({ embeds: [embed], components }).catch(() => {});
         }
     }
@@ -556,7 +556,7 @@ export async function handleEventRsvpButton(interaction: ButtonInteraction): Pro
         { $set: { rsvps: eventDoc.rsvps } }
     );
 
-    const { embed, components } = buildEventEmbedAndRows(eventDoc);
+    const { embed, components } = await buildEventEmbedAndRows(eventDoc, guild);
     await interaction.message.edit({ embeds: [embed], components }).catch(() => {});
 
     if (promotedUserId) {
