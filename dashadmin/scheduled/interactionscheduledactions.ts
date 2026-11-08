@@ -20,7 +20,7 @@ function parseMadridDateTime(dateStr: string, timeStr: string): Date | null {
         const [day, month, year] = dateStr.split('/').map(Number);
         const [hour, minute] = timeStr.split(':').map(Number);
 
-        if (!/^\\d{2}\\/\\d{2}\\/\\d{4}$/.test(dateStr) || !/^\\d{2}:\\d{2}$/.test(timeStr)) return null;
+        if (!/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr) || !/^\d{2}:\d{2}$/.test(timeStr)) return null;
         if (!day || month < 1 || month > 12 || year < 2000 || hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
         const calendarCheck = new Date(Date.UTC(year, month - 1, day));
         if (calendarCheck.getUTCFullYear() !== year || calendarCheck.getUTCMonth() !== month - 1 || calendarCheck.getUTCDate() !== day) return null;
