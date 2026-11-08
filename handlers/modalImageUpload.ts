@@ -29,8 +29,9 @@ export async function buildModalImageAttachment(
         throw new Error('La imagen no procede de un servidor CDN válido de Discord.');
     }
 
-    if (!uploadedFile.contentType?.toLowerCase().startsWith('image/')) {
-        throw new Error('El archivo seleccionado no es una imagen válida.');
+    const uploadedContentType = (uploadedFile.contentType || '').toLowerCase();
+    if (!Object.prototype.hasOwnProperty.call(EXTENSIONS, uploadedContentType)) {
+        throw new Error('Solo se admiten imágenes JPG, PNG, GIF, WEBP o AVIF.');
     }
 
     if (uploadedFile.size > MAX_IMAGE_SIZE) {
@@ -56,8 +57,8 @@ export async function buildModalImageAttachment(
             .trim()
             .toLowerCase();
 
-        if (!contentType.startsWith('image/')) {
-            throw new Error('El contenido descargado no es una imagen.');
+        if (!Object.prototype.hasOwnProperty.call(EXTENSIONS, contentType)) {
+            throw new Error('El contenido descargado no es una imagen compatible.');
         }
 
         const contentLength = Number(response.headers.get('content-length') || 0);
