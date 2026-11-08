@@ -12,8 +12,7 @@ import {
 import { MongoClient as MongoDriver } from 'mongodb';
 import { handleScheduledActions } from './interactionscheduledactions';
 
-const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL || process.env.MONGO_URL;
-if (!uri) throw new Error("No se encontró una variable de entorno para MongoDB en mensajes programados.");
+const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL || process.env.MONGO_URL || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
 const client = new MongoDriver(uri);
 
 let schedTemplatesCollection: any = null;
