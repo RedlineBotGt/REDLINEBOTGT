@@ -1,5 +1,6 @@
 
 import { Router } from "express";
+import { requierePapa } from "./homework.ts";
 import { randomUUID } from "crypto";
 
 import {
@@ -165,7 +166,7 @@ function nombreAsignatura(
 
 // ========================================
 // HISTORIAL DE EJERCICIOS IA DE LEO
-router.get("/ai-history", async (_req, res) => {
+router.get("/ai-history", requierePapa, async (_req, res) => {
   try {
     const ejercicios = await obtenerHistorialEjerciciosIA("leo");
     return res.json({ ok: true, ejercicios });
