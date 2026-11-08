@@ -41,14 +41,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     const inputTexto = new TextInputBuilder()
         .setCustomId('input_msn_texto')
-        .setLabel('💬 Contenido del mensaje')
         .setStyle(TextInputStyle.Paragraph)
         .setPlaceholder('Escribe aquí tu mensaje (admite emojis y Markdown)...')
         .setRequired(true);
 
     const inputImagen = new TextInputBuilder()
         .setCustomId('input_msn_imagen')
-        .setLabel('🖼️ ID / URL de la imagen (Opcional)')
         .setStyle(TextInputStyle.Short)
         .setPlaceholder('Pega aquí el enlace o ID de la imagen si procede...')
         .setRequired(false);
