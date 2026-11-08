@@ -854,3 +854,46 @@ El usuario pide un cuarto acceso llamado **🤖 IA** dentro de su perfil (perfil
 - La cuadrícula y estilos unificados están en `public/styles.css`, commit `19cfde411c8f55d8e72c0f67292ee5ed6b2ca542`.
 - El commit de estilos compiló correctamente; el despliegue Render `dep-dbo8g20qr7gs73ap24gg` seguía en `update_in_progress` en la última consulta.
 - Pendiente: confirmar Render LIVE y comprobar en móvil la distribución 2×2, el color común y el botón IA desactivado.
+
+
+## 26. Historial de ejercicios IA de Leo (8-11-2026)
+
+El usuario aprueba activar el acceso **🤖 IA** como una vista de consulta para llevar el recuento de ejercicios que Leo resuelve mediante el motor de IA. No es un chat ni modifica la generación de ejercicios.
+
+### Diseño y reglas
+- El acceso IA se muestra únicamente dentro del perfil de Papá, después de superar el PIN.
+- Abre una pantalla independiente titulada «Historial de IA · Leo», con botón para volver al perfil.
+- Cada fila representa un ejercicio IA que Leo ha resuelto correctamente: asignatura, enunciado y número de intentos.
+- Acierto en el primer envío = 1; segundo envío = 2; tercero = 3, etc.
+- Cada ejercicio tiene su propio registro, aunque se repita el mismo enunciado en otro momento.
+- Los intentos se cuentan cuando el servidor ha evaluado una respuesta. Los errores de conexión/evaluación no cuentan.
+- Solo se muestran ejercicios IA de Leo. No aparecen Mamá, Papá ni ejercicios/deberes creados desde el panel de Deberes.
+- Los registros se guardan en MongoDB, colección independiente `ai_exercise_history`, base `academia_campos` (o `MONGODB_DB`).
+- Solo se muestra el registro cuando el ejercicio se acierta; un ejercicio abandonado no aparece en la lista.
+- El endpoint de consulta requiere el mismo token de sesión de Papá utilizado por Deberes y Avisos.
+- Se muestran hasta 500 ejercicios, del más reciente al más antiguo.
+
+### Archivos
+- Nuevo: `services/aiExerciseHistoryService.ts`, `public/js/aiHistory.js`.
+- Modificados: `routes/questions.ts`, `public/index.html`, `public/styles.css`, `public/app.js`, `public/js/menu.js` y este estado vivo.
+- La versión de caché de estilos pasa a `styles.css?v=10`; la aplicación a `app.js?v=9`; el módulo del menú a `menu.js?v=4`; nuevo módulo `aiHistory.js?v=1`.
+
+### Commits de implementación
+- `9932e6ca92efcea801680719dbabb8826fc55690`: persistencia de intentos e historial.
+- `bc741ff19226e4878c65ea11fcc308b895e14370`: integración con evaluación IA.
+- `6ac537679718f38472d798fd917320c47cca528c`: protección del endpoint con PIN de Papá.
+- `a56829529d728ef4c37cd6c88179c57421b008eb`: pantalla de historial.
+- `c394d41bff3ca07c70d49fdab06562efe2cba9d0`: inicialización del módulo.
+- `c316cb41f177d0bb36fa78c870cad5ab79939090`: visibilidad del acceso solo para Papá.
+- `fe1d19444c75abf6fcf750174a68f7be1fe565dc`: estilos de la lista.
+- `68d31a0b693db486070001c5043bae8bc4f15020`: módulo de interfaz.
+- `64499f44de4ee7778d4c62f965e1a6aa785fa12e`: renovación de caché del menú.
+- `85695e79246cea32de12bd1077942fbe292db213`: consulta del historial con token de Papá.
+
+### Verificación pendiente
+- Confirmar AutoDeploy y build LIVE de Render.
+- Probar un ejercicio de Leo acertado a la primera (1), otro tras un fallo (2) y otro tras dos fallos (3).
+- Comprobar que los registros aparecen una sola vez y permanecen tras recargar.
+- Verificar que Papá ve el acceso después del PIN, que Leo/Mamá no lo ven y que el endpoint rechaza peticiones sin sesión.
+- Confirmar que Deberes, Science, chat, avisos, PIN y navegación siguen funcionando.
+- El historial empieza a contar desde esta implementación; no se reconstruyen ejercicios anteriores porque el sistema previo no guardaba un registro persistente de intentos por pregunta.
