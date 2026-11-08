@@ -699,3 +699,13 @@ El usuario aprueba comenzar la implementación de Lenguaje Musical como asignatu
 - Commits de código: `b282e46c6fca0ae173456447ee54c2ba0191c625`, `dfc9c0f60b05384cd511be5d0462f97357028ff7`, `920b004453237f52087b7f00d74f1d81bf04e3fc` y los commits posteriores de caché.
 - Pendiente: confirmar build y despliegue final de Render; probar creando un deber de cada asignatura relevante y comprobar icono, nombre, destinatario y presentación en móvil.
 - Pendiente de decisión: el aviso independiente «🆕 Nueva asignatura: …» no tiene todavía un flujo de publicación; confirmar si Papá lo publicará desde el panel o si debe generarse al incorporar una asignatura nueva al catálogo.
+
+
+### Sincronización de avisos con edición y borrado de deberes (8-11-2026)
+- Cada aviso automático de deber queda vinculado al identificador del deber mediante `deberId`.
+- Al editar un deber, el aviso asociado se actualiza (asignatura y destinatario) en lugar de crear otro aviso.
+- Al borrar un deber, se elimina el aviso vinculado.
+- Se conserva el comportamiento de avisos manuales y la creación automática al crear deberes.
+- Para avisos antiguos que aún no tenían identificador, la lectura limpia los avisos huérfanos cuando ya no existe ningún deber con la misma asignatura y destinatario. Si hay varios deberes antiguos iguales, no es posible atribuir inequívocamente cada aviso legado a uno concreto.
+- Archivos modificados: `services/noticesService.ts`, `routes/homework.ts`.
+- Pendiente: confirmar build y despliegue automático; probar editar asignatura/destinatario y borrar un deber desde el panel de Papá.
