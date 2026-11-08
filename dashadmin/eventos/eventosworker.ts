@@ -10,6 +10,7 @@ import {
 
 import { getEventsCollection } from './eventosstorage';
 import { buildEventEmbedAndRows } from './eventosmanager';
+import { formatMadridDate } from './eventosutils';
 
 /**
  * Obtiene o crea el rol 'asistente' asegurándose de que esté disponible y sea mencionable.
@@ -446,6 +447,7 @@ export function setupEventWorker(client: Client) {
                             {
                                 $set: {
                                     scheduledAt: nextScheduledAt,
+                                    date: formatMadridDate(nextScheduledAt),
                                     publishAt: nextPublishAt,
                                     status: 'pending_publish',
                                     messageId: null,
