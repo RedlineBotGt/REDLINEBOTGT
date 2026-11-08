@@ -1,6 +1,6 @@
 # Academia Campos — Estado vivo del proyecto
 
-**Última consolidación:** 7 de noviembre de 2026  
+**Última consolidación:** 8 de noviembre de 2026  
 **Repositorio:** `RedlineBotGt/REDLINEBOTGT`  
 **Rama de trabajo de Academia:** `backup-antes-limpieza` (también denominada por el usuario `backupantesdelimpieza`)  
 **Rama `main`:** pertenece a REDLINE BOT GT y debe permanecer separada e intacta.  
@@ -18,7 +18,7 @@ Este documento es la referencia de continuidad del proyecto. Debe actualizarse a
 4. Conservar las funciones que ya funcionan. Si una modificación puede afectar a otra función, detenerse y comprobar antes.
 5. El usuario trabaja principalmente desde Android: cuando tenga que pegar código, entregar archivos completos, con ruta exacta y listos para copiar. Si superan aproximadamente 400 líneas, dividirlos en partes ordenadas.
 6. Avanzar paso a paso. No dar por hecho que un archivo está cambiado porque se haya propuesto el código; distinguir entre propuesto, guardado en GitHub, probado y desplegado.
-7. No hacer deploy, ni activar despliegues, ni modificar Render sin autorización expresa del usuario.
+7. No iniciar deploy manual ni modificar la configuración de Render sin autorización expresa. Antes de cada commit, comprobar el `autoDeploy` actual: si está activo, el commit dispara el despliegue automáticamente; informar al usuario y verificar su resultado.
 8. No pedir al usuario que repita datos que ya constan aquí o en el historial recuperable.
 9. No cambiar diseño, navegación, perfiles, progreso, persistencia, Deberes o ranking cuando la tarea sea el motor de ejercicios, salvo petición expresa.
 10. Mantener este documento actualizado con arquitectura, inventario, decisiones, cambios, errores, pruebas y siguiente paso.
@@ -70,7 +70,7 @@ El `server.ts` consultado:
 
 ### Render (configuración histórica acordada; verificar antes de cambiar)
 
-Se había acordado un servicio independiente `academia-campos`, conectado a `backup-antes-limpieza`, región Frankfurt y plan gratuito. Build `npm install && npm run build`; Start `npm start`. El usuario indicó que su despliegue en Render es manual. No asumir que la configuración actual sigue idéntica sin comprobarla.
+Se había acordado un servicio independiente `academia-campos`, conectado a `backup-antes-limpieza`, región Frankfurt y plan gratuito. Build `npm install && npm run build`; Start `npm start`. Configuración comprobada el 8/11/2026: `autoDeploy=yes`, disparador `commit`, rama `backup-antes-limpieza`. Por tanto, cada commit en esta rama inicia un despliegue automático. No lanzar deploy manual adicional.
 
 Variables utilizadas por el servidor:
 - `GEMINI_API_KEY` (también se reconocen alias en el motor).
@@ -733,3 +733,33 @@ El usuario aprueba comenzar la implementación de Lenguaje Musical como asignatu
 - Verificación de código: el HTML contiene el contenedor y `public/js/notices.js` contiene el render de la lista y las acciones PATCH/DELETE. El build de Render terminó con «Build successful» y la instancia nueva arrancó con «ACADEMIA CAMPOS ARRANCADA» y «Archivos web disponibles».
 - Commit de corrección: `d9fe53b83d67e962f97e17b644e33489509899f9`.
 - Pendiente de prueba desde la interfaz autenticada: confirmar que se muestra el listado, borrar el aviso antiguo y comprobar que desaparece también del listado público. No se ha borrado ningún aviso desde el backend ni se ha alterado la colección.
+
+
+## 11. Acceso de Papá mediante PIN (8 de noviembre de 2026)
+
+### Decisión funcional
+- La confirmación del PIN se solicita al seleccionar el perfil **Papá**, no al entrar en «Consultar deberes».
+- La sesión autenticada habilita tanto «Consultar deberes» como «📢 Avisos».
+- Cambiar a Leo o Mamá cierra la sesión administrativa de Papá.
+- Cada nueva selección del perfil Papá vuelve a pedir PIN; navegar entre funciones dentro de la misma selección conserva la sesión.
+- El botón «📢 Avisos» solo se muestra cuando el perfil actual es Papá y el PIN se ha validado.
+
+### Cambios guardados en GitHub
+- `public/index.html`: se trasladó el bloque de PIN desde la pantalla de Deberes a la pantalla de asignaturas/perfil. El formulario conserva sus IDs y el mismo endpoint.
+- `public/js/homework.js`: al cambiar al perfil Papá, cierra cualquier token anterior y muestra el acceso PIN; al validar, oculta el acceso y emite `academia:papa-authenticated`, sin forzar la navegación a Deberes. Si la sesión expira, devuelve a la pantalla del perfil y vuelve a pedir PIN.
+- `public/js/notices.js`: muestra el acceso a gestión de avisos únicamente con perfil Papá autenticado; oculta el panel al cambiar de perfil o expirar la sesión.
+- Commits:
+  - `88004afd4ef7f710d82eaadc7df7209783957c90` — mueve el formulario PIN a la pantalla del perfil.
+  - `cfaf7cf8fdab30df40dd7a4401141a85a910137a` — centraliza la autenticación al seleccionar Papá.
+  - `36597b76e8e686f32e931eac7ba7df13ab44caab` — protege el botón de Avisos con la sesión autenticada.
+
+### Comprobaciones realizadas
+- El HTML contiene una única instancia de `#homework-login`, situada dentro de `#subjects-screen`.
+- El módulo de Deberes escucha el cambio de perfil y el evento de autenticación.
+- El módulo de Avisos consulta el token y escucha autenticación y expiración.
+- Servicio Render comprobado: rama `backup-antes-limpieza`, `autoDeploy=yes`, disparador `commit`, Frankfurt. Los commits anteriores han activado el flujo automático; no se ha iniciado un deploy manual.
+
+### Pendiente
+- Esperar/verificar el deploy automático del último commit.
+- Probar en navegador móvil: seleccionar Papá → introducir PIN → comprobar que aparecen «Consultar deberes» y «📢 Avisos» sin volver a pedir PIN; cambiar a Leo/Mamá y volver a Papá debe solicitarlo de nuevo.
+- Verificar también que un PIN incorrecto mantiene el aviso de error y no habilita las funciones administrativas.
