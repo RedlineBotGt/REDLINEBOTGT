@@ -88,7 +88,13 @@ async function processDueMessages(client: Client): Promise<void> {
                     const intervalMs = (days * 24 + hours) * 60 * 60 * 1000;
                     if (intervalMs <= 0) {
                         await col.updateOne({ _id: msg._id, status: 'processing' }, {
-                            $set: { status: 'sent', sentAt: new Date(), lastError: 'Intervalo de repetición no válido.' },
+                            $set: {
+                                status: 'sent',
+                                sentAt: new Date(),
+                                remainingTimes: 0,
+                                lastError: 'Intervalo de repetición no válido.'
+                            },
+                            $inc: { repetitionsDone: 1 },
                             $unset: { processingAt: '' }
                         });
                         continue;
@@ -97,15 +103,25 @@ async function processDueMessages(client: Client): Promise<void> {
                     const nextDate = new Date(new Date(msg.scheduledAt).getTime() + intervalMs);
                     const madrid = formatMadridDateTime(nextDate);
                     await col.updateOne({ _id: msg._id, status: 'processing' }, {
-                        $set: { scheduledAt: nextDate, date: madrid.date, time: madrid.time, status: 'pending' },
-                        $set: { remainingTimes: remaining - 1 },
+                        $set: {
+                            scheduledAt: nextDate,
+                            date: madrid.date,
+                            time: madrid.time,
+                            status: 'pending',
+                            remainingTimes: remaining - 1
+                        },
                         $inc: { repetitionsDone: 1 },
                         $unset: { processingAt: '' }
                     });
                     console.log(`🔄 [Worker] Mensaje ${msg._id} enviado; siguiente envío: ${madrid.date} ${madrid.time} (Madrid).`);
                 } else {
                     await col.updateOne({ _id: msg._id, status: 'processing' }, {
-                        $set: { status: 'sent', sentAt: new Date() },
+                        $set: {
+                            status: 'sent',
+                            sentAt: new Date(),
+                            ...(msg.repeats ? { remainingTimes: 0 } : {})
+                        },
+                        ...(msg.repeats ? { $inc: { repetitionsDone: 1 } } : {}),
                         $unset: { processingAt: '' }
                     });
                     console.log(`✅ [Worker] Mensaje ${msg._id} enviado correctamente a ${guild.name}.`);
