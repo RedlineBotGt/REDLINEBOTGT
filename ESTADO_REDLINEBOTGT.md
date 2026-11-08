@@ -264,3 +264,26 @@ Comportamiento:
 
 - Los cambios se han guardado en main.
 - Despliegue automático solicitado a Render; pendiente confirmar LIVE y probar los dos flujos desde Discord.
+
+
+## 14. Corrección de etiquetas de los modales — 9/11/2026
+
+### Segundo error detectado en producción
+
+- Tras quedar LIVE el commit `9d90c6e`, los logs de Render mostraron un error nuevo al abrir el formulario de `/dashstaff`: DiscordAPIError[50035] / Invalid Form Body.
+- Mensaje concreto: `Cannot set label on a TextInput in a Label component`.
+- La causa era que los `TextInputBuilder` mantenían `.setLabel()` aunque ya estaban envueltos por `LabelBuilder`. Discord no permite ambas etiquetas a la vez.
+
+### Corrección aplicada
+
+- Eliminado `.setLabel()` de los dos `TextInputBuilder` en `dashadmin/msn/msnmanager.ts`.
+- Aplicado lo mismo en `commands/msn.ts` para mantener ambos formularios coherentes.
+- Las etiquetas visibles siguen definidas en los `LabelBuilder`; no se elimina el texto que ve el usuario.
+- Commits: `7f2fabd` (gestor /dashstaff) y `666935e` (/msn).
+
+### Estado
+
+- Render recibió ambos commits y creó los despliegues automáticos.
+- En la última consulta, el despliegue del commit `7f2fabd` estaba construyéndose y el de `666935e` estaba en cola.
+- Pendiente confirmar el último despliegue como LIVE, revisar logs posteriores y probar en Discord los dos formularios y la carga de una imagen real.
+- No declarar la funcionalidad como verificada hasta completar esa prueba.
