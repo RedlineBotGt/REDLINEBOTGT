@@ -709,3 +709,17 @@ El usuario aprueba comenzar la implementación de Lenguaje Musical como asignatu
 - Para avisos antiguos que aún no tenían identificador, la lectura limpia los avisos huérfanos cuando ya no existe ningún deber con la misma asignatura y destinatario. Si hay varios deberes antiguos iguales, no es posible atribuir inequívocamente cada aviso legado a uno concreto.
 - Archivos modificados: `services/noticesService.ts`, `routes/homework.ts`.
 - Pendiente: confirmar build y despliegue automático; probar editar asignatura/destinatario y borrar un deber desde el panel de Papá.
+
+
+### Gestión de avisos familiares (8-11-2026)
+
+- El panel de Papá incluye ahora un listado de avisos publicados, con identificación de avisos manuales y avisos automáticos de deberes.
+- Se puede editar el destinatario de cualquier aviso y el texto de los avisos manuales; también se puede borrar individualmente cualquier aviso, incluidos los antiguos sin `deberId`.
+- El contenido de un aviso automático de deber se deriva de la asignatura del propio deber: para cambiar esa asignatura se debe editar el deber desde Deberes. Desde este panel se puede cambiar su destinatario o borrar el aviso.
+- Nuevas rutas protegidas por `requierePapa`: PATCH y DELETE `/notices/:id`. El servidor valida destinatario, longitud del mensaje e identificador MongoDB.
+- El listado público sigue siendo el mismo y continúa mostrando los 200 avisos más recientes.
+- Se ha eliminado la limpieza automática de avisos antiguos basada en coincidencias de asignatura/destinatario: podía borrar avisos sin identificar con certeza su deber. La limpieza de avisos queda bajo control explícito de Papá.
+- No se borran ni modifican avisos al cargar el listado.
+- Archivos modificados: `services/noticesService.ts`, `routes/notices.ts`, `public/js/notices.js`, `public/index.html`, `public/styles.css`.
+- Commits de implementación: `f06225307dd5df98fd47456137c4b70f6c917dc9`, `f74d246943576101b629a7038ad1b2c55d1caae3`, `6d8ef3ec309fdf335d524db2b8535d5b149973f4`, `d22e9b671a042e94f710e4788c0bb1e8a97ad7f2`, `0594bda7ee039eb0a486c98bf1119b441b638450`.
+- Pendiente: confirmar compilación y despliegue automático en Render; probar edición/borrado de aviso manual, edición de destinatario de aviso automático y borrado de un aviso legado sin ID. No se ha realizado todavía una prueba funcional con MongoDB.
