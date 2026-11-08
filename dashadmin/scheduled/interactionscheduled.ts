@@ -12,7 +12,8 @@ import {
 import { MongoClient as MongoDriver } from 'mongodb';
 import { handleScheduledActions } from './interactionscheduledactions';
 
-const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL || process.env.MONGO_URL || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
+const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL || process.env.MONGO_URL;
+if (!uri) throw new Error("No se encontró una variable de entorno para MongoDB en mensajes programados.");
 const client = new MongoDriver(uri);
 
 let schedTemplatesCollection: any = null;
@@ -56,7 +57,7 @@ export async function handleScheduledInteractions(interaction: any): Promise<boo
                 if (!interaction.guildId) return true;
 
                 const { jobs } = await getSchedCollections();
-                const allJobs = await jobs.find({ guildId: interaction.guildId }).toArray();
+                const allJobs = await jobs.find({ guildId: interaction.guildId }).sort({ scheduledAt: -1, createdAt: -1 }).toArray();
 
                 if (allJobs.length === 0) {
                     await interaction.reply({
@@ -69,10 +70,10 @@ export async function handleScheduledInteractions(interaction: any): Promise<boo
                 const embed = new EmbedBuilder()
                     .setColor(0x00AAFF)
                     .setTitle('📋 Historial Completo de Mensajes Programados')
-                    .setDescription(`Se encontraron **${allJobs.length}** registro(s) en total:`)
+                    .setDescription(`Se encontraron **${allJobs.length}** registro(s). Selecciona uno para consultar sus datos y editarlo.\n${allJobs.length > 25 ? 'Mostrando los 25 más recientes; hay más registros guardados.' : ''}`)
                     .setTimestamp();
 
-                allJobs.forEach((job: any, index: number) => {
+                allJobs.slice(0, 25).forEach((job: any, index: number) => {
                     const previewText = job.text ? job.text.substring(0, 45) + '...' : '[Sin texto]';
                     let statusEmoji = '⏳ Pendiente';
                     if (job.status === 'sent') statusEmoji = '✅ Enviado';
@@ -86,10 +87,10 @@ export async function handleScheduledInteractions(interaction: any): Promise<boo
                 });
 
                 const selectMenu = new StringSelectMenuBuilder()
-                    .setCustomId('sched_delete_job_select')
-                    .setPlaceholder('🗑️ Selecciona un registro para borrarlo...')
-                    .addOptions(allJobs.map((job: any, index: number) => ({
-                        label: `Borrar #${index + 1} (${job.date || 'S/F'} - ${job.status || 'pend.'})`,
+                    .setCustomId('sched_job_select')
+                    .setPlaceholder('📋 Selecciona un mensaje para consultar/editar...')
+                    .addOptions(allJobs.slice(0, 25).map((job: any, index: number) => ({
+                        label: `#${index + 1} ${job.date || 'S/F'} · ${job.status || 'pendiente'}`.slice(0, 100),
                         description: (job.text ? job.text.substring(0, 75) : 'Sin texto'),
                         value: job._id.toString()
                     })));
