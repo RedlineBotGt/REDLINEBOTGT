@@ -927,3 +927,13 @@ El usuario aprueba activar el acceso **🤖 IA** como una vista de consulta para
 - Logs de arranque: `[OK] ACADEMIA CAMPOS ARRANCADA`, servidor HTTP escuchando y rutas de Deberes registradas.
 - Prueba funcional pendiente desde Android: crear un ejercicio con imágenes, comprobar su visualización y corrección, editarlo y eliminarlo.
 - No declarar la función validada hasta completar esas pruebas.
+
+
+### Corrección del formulario de ejercicios con imágenes (8-11-2026)
+- Se detectó que el HTML incluía el selector de archivos, pero `actualizarApartadoPreguntas()` seguía tratando únicamente el tipo `ejercicio`; por eso el grupo de imágenes permanecía oculto y el texto seguía indicando «Enlace o instrucciones».
+- Corregido `public/js/homework/forms.js`: al seleccionar `ejercicio_imagen` se muestran el selector múltiple de imágenes y las preguntas, y el campo de texto pasa a ser «Descripción del ejercicio».
+- Añadida selección desde galería, validación de máximo 5 imágenes de hasta 5 MB, vista previa y subida a la ruta de imágenes del deber al guardar.
+- Actualizada la versión de importación de `forms.js` para invalidar caché del navegador.
+- Build TypeScript de Render correcto y servidor arrancado.
+- Despliegue LIVE: `dep-dbo9n0vj2his73f96so0`, commit `5c222641aec0ef2b848eac4ea126fa185a4fe783`, 8-11-2026 15:57:03 UTC.
+- Pendiente prueba manual desde Android de selección de imagen, guardado, visualización y corrección de preguntas.
