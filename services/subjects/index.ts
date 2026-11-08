@@ -49,6 +49,12 @@ export type {
   EvaluacionReto
 } from "../ai/schemas.js";
 
+// Science
+export {
+  generarRetoScience,
+  evaluarRespuestaScience
+} from "./science.js";
+
 // Lenguaje Musical
 export {
   generarRetoLenguajeMusical,
