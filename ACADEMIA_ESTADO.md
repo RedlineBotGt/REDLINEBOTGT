@@ -759,6 +759,11 @@ El usuario aprueba comenzar la implementación de Lenguaje Musical como asignatu
 - El módulo de Avisos consulta el token y escucha autenticación y expiración.
 - Servicio Render comprobado: rama `backup-antes-limpieza`, `autoDeploy=yes`, disparador `commit`, Frankfurt. Los commits anteriores han activado el flujo automático; no se ha iniciado un deploy manual.
 
+### Incidencia detectada y corrección adicional
+- El usuario informó que el PIN no aparecía al seleccionar Papá.
+- Causa raíz: `menu.js` emite `academia:perfil-cambiado` sobre `document`, pero `homework.js` escuchaba ese evento sobre `window`. El evento no llegaba al listener, por eso no se mostraba el PIN.
+- Corregido en commit `7761cf2defdbe6cdd348eb707a9ad21f75ac9e7c`: el listener ahora está registrado en `document`, igual que el emisor.
+
 ### Pendiente
 - Esperar/verificar el deploy automático del último commit.
 - Probar en navegador móvil: seleccionar Papá → introducir PIN → comprobar que aparecen «Consultar deberes» y «📢 Avisos» sin volver a pedir PIN; cambiar a Leo/Mamá y volver a Papá debe solicitarlo de nuevo.
