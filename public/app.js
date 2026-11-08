@@ -28,7 +28,7 @@ import {
 
 import { iniciarAvisos } from "./js/notices.js?v=3";
 import { iniciarHistorialIA } from "./js/aiHistory.js?v=1";
-import { iniciarMusicStudio } from "./js/musicStudio.js?v=1";
+import { iniciarMusicStudio } from "./js/musicStudio.js?v=2";
 
 import {
   iniciarChat,

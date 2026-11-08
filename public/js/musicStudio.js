@@ -74,7 +74,7 @@ function crearTeclado() {
       const frecuencia = nota.frecuencia * Math.pow(2, octava);
       boton.type = "button";
       boton.className = "music-key music-key-black";
-      boton.style.left = `calc((100% / 7) * ${posiciones[indice] + 1} - 14px)`;
+      boton.style.left = `calc((100% / 7) * ${posiciones[indice] + 1})`;
       boton.dataset.frequency = String(frecuencia);
       boton.setAttribute("aria-label", `${nota.nombre} ${octava + 4}`);
       const etiqueta = document.createElement("span");

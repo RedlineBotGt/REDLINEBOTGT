@@ -969,7 +969,7 @@ El usuario aprueba activar el acceso **🤖 IA** como una vista de consulta para
 - Dentro de la asignatura existente «Lenguaje Musical», antes de las preguntas se ofrecen dos opciones: «¿Quieres tocar?» y «¿Quieres preguntas?».
 - «Preguntas» conserva el motor actual y su historial; la nueva opción de tocar no genera ejercicios ni altera datos de progreso.
 - Estudio musical independiente con cinco instrumentos exactos: piano, clarinete, trompeta, guitarra y batería.
-- Piano con dos octavas de teclas blancas y negras, nombres de notas en las teclas y desplazamiento horizontal adaptado a móvil.
+- Piano con dos octavas de teclas blancas y negras, nombres de notas en las teclas; la distribución se adapta al ancho sin desplazamiento horizontal (una octava en móvil vertical y dos en horizontal/tablet).
 - Batería con cuatro pads táctiles: bombo, caja, charles y tom.
 - Sonido generado localmente mediante Web Audio API; no se añaden proveedores, claves, APIs ni dependencias de pago.
 - Metrónomo integrado: velocidad regulable de 40 a 200 BPM (inicial 100), compases 2/4, 3/4, 4/4 y 6/8, indicador visual y acentos en el primer pulso y en el cuarto pulso de 6/8.
@@ -979,7 +979,7 @@ El usuario aprueba activar el acceso **🤖 IA** como una vista de consulta para
 ### Archivos
 - Nuevo: `public/js/musicStudio.js`.
 - Modificados: `public/index.html`, `public/styles.css`, `public/js/menu.js`, `public/app.js`.
-- Caché: estilos `v=12`, aplicación `v=11`, módulo musical `v=1`.
+- Caché inicial: estilos `v=12`, aplicación `v=11`, módulo musical `v=1`.
 - Este estado vivo actualizado.
 
 ### Verificación pendiente
@@ -987,3 +987,16 @@ El usuario aprueba activar el acceso **🤖 IA** como una vista de consulta para
 - Probar desde tablet y móvil: entrada en Lenguaje Musical, acceso a preguntas y regreso; abrir piano, cambiar los cinco instrumentos, tocar notas/pads; comprobar metrónomo en los cuatro compases y cambiar BPM mientras funciona.
 - La síntesis de audio está generada por navegador y no son grabaciones de instrumentos reales; comprobar que el timbre resulta adecuado en el dispositivo de Leo.
 - No declarar validación funcional hasta prueba real del usuario.
+
+
+## 30. Piano adaptable sin desplazamiento horizontal (8-11-2026)
+
+- Se elimina el desplazamiento horizontal del teclado: las teclas se ajustan al ancho disponible.
+- En móvil en vertical se muestra una octava completa, con teclas amplias y notas visibles.
+- En horizontal y en tablet/desktop se muestran las dos octavas completas simultáneamente.
+- Las teclas negras se centran sobre los límites correctos entre teclas blancas, independientemente del ancho.
+- En horizontal se compactan los márgenes y la altura del teclado para aprovechar mejor la pantalla; el metrónomo permanece debajo.
+- Se conserva el diseño, los cinco instrumentos, sus sonidos y el funcionamiento del metrónomo. No se modifica el motor de preguntas ni ningún otro módulo.
+- Archivos modificados: `public/styles.css`, `public/js/musicStudio.js`, `public/index.html`, `public/app.js` y este estado.
+- Caché: estilos `v=13`, módulo musical `v=2`.
+- Pendiente comprobar visual y táctilmente en el dispositivo real de Leo; el despliegue/build no sustituye esa prueba.

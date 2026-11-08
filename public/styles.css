@@ -1507,16 +1507,16 @@ p {
 }
 .music-instruments button.active { border-color:var(--primary); background:var(--primary); color:#082033; }
 .music-instrument-hint { margin:0 0 12px; color:var(--muted); text-align:center; }
-.music-keyboard-scroll { width:100%; overflow-x:auto; overscroll-behavior-x:contain; padding:5px 2px 14px; }
-.music-keyboard { display:flex; width:max-content; min-width:100%; gap:0; user-select:none; touch-action:pan-x; }
-.music-octave { position:relative; display:flex; flex:0 0 350px; height:clamp(190px,32vw,270px); }
+.music-keyboard-scroll { width:100%; overflow:hidden; padding:5px 2px 14px; }
+.music-keyboard { display:flex; width:100%; min-width:0; gap:0; user-select:none; touch-action:manipulation; }
+.music-octave { position:relative; display:flex; flex:1 1 50%; min-width:0; height:clamp(190px,32vw,270px); }
 .music-key { position:relative; display:flex; align-items:flex-end; justify-content:center; padding:0 0 13px; border-radius:0 0 7px 7px; cursor:pointer; touch-action:manipulation; user-select:none; }
 .music-key-white { z-index:1; flex:1; min-width:0; height:100%; margin:0 1px; border:1px solid #9ca3af; background:linear-gradient(180deg,#fff 0%,#e8edf2 100%); color:#172033; box-shadow:0 4px 5px #0003; }
 .music-key-white span { font-size:clamp(.7rem,1.8vw,.9rem); font-weight:800; }
-.music-key-black { position:absolute; z-index:2; top:0; width:28px; height:63%; padding:0 0 9px; border:1px solid #05070b; background:linear-gradient(110deg,#303744,#080b12 70%); color:#fff; box-shadow:0 5px 7px #0008; }
-.music-key-black span { font-size:.58rem; font-weight:700; }
+.music-key-black { position:absolute; z-index:2; top:0; width:clamp(17px,3.4vw,30px); height:63%; padding:0 0 9px; border:1px solid #05070b; background:linear-gradient(110deg,#303744,#080b12 70%); color:#fff; box-shadow:0 5px 7px #0008; transform:translateX(-50%); }
+.music-key-black span { font-size:clamp(.48rem,.8vw,.62rem); font-weight:700; }
 .music-key.pressed { filter:brightness(.78); transform:translateY(2px); }
-.music-key-black.pressed { filter:brightness(1.5); }
+.music-key-black.pressed { filter:brightness(1.5); transform:translate(-50%,2px); }
 .music-drum-pads { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; max-width:520px; margin:18px auto 24px; }
 .music-drum-pads button {
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
@@ -1546,11 +1546,22 @@ p {
 @media (max-width:600px) {
   .music-choice-actions { grid-template-columns:1fr; }
   .music-choice-card { min-height:125px; }
-  .music-octave { flex-basis:315px; height:205px; }
-  .music-key-black { width:25px; }
+  .music-octave { height:205px; }
+  .music-key-black { width:clamp(16px,5vw,25px); }
   .music-metronome-controls { grid-template-columns:78px minmax(0,1fr); gap:9px; }
   .music-tempo-control { gap:7px; }
   .music-tempo-control strong { min-width:66px; font-size:.85rem; }
   .music-instruments { justify-content:flex-start; }
   .music-instruments button { flex:1 1 auto; padding:9px 11px; }
+}
+@media (max-width:600px) and (orientation:portrait) {
+  .music-octave:not(:first-child) { display:none; }
+  .music-octave:first-child { flex-basis:100%; }
+}
+@media (orientation:landscape) and (min-width:601px) {
+  #music-play-screen { padding:14px; }
+  .music-studio { margin:8px auto; padding:12px; }
+  .music-instruments { margin-bottom:10px; }
+  .music-octave { height:clamp(150px,38vh,235px); }
+  .music-metronome { margin-top:10px; padding:12px; }
 }
