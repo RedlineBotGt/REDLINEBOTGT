@@ -54,7 +54,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const inputArchivo = new FileUploadBuilder()
         .setCustomId('input_msn_archivo')
         .setMinValues(0)
-        .setMaxValues(1)
+        .setMaxValues(10)
         .setRequired(false);
 
     modal.addLabelComponents(
@@ -67,7 +67,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             .setTextInputComponent(inputImagen),
         new LabelBuilder()
             .setLabel('📷 Foto desde la galería (opcional)')
-            .setDescription('Selecciona una imagen de tu móvil o dispositivo. Máximo 1 imagen.')
+            .setDescription('Selecciona una imagen de tu móvil o dispositivo. Máximo 10 imágenes.')
             .setFileUploadComponent(inputArchivo)
     );
 
