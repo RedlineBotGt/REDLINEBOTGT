@@ -768,3 +768,11 @@ El usuario aprueba comenzar la implementación de Lenguaje Musical como asignatu
 - Esperar/verificar el deploy automático del último commit.
 - Probar en navegador móvil: seleccionar Papá → introducir PIN → comprobar que aparecen «Consultar deberes» y «📢 Avisos» sin volver a pedir PIN; cambiar a Leo/Mamá y volver a Papá debe solicitarlo de nuevo.
 - Verificar también que un PIN incorrecto mantiene el aviso de error y no habilita las funciones administrativas.
+
+
+### Segunda corrección del acceso PIN (8/11/2026)
+- El usuario comprobó que seguía pudiendo entrar sin PIN. Se confirmó que el evento de cambio de perfil no era una protección suficientemente robusta para el selector.
+- `menu.js` importa directamente `cerrarSesionDeberes()` y `mostrarAccesoPapa()`. Cada selección de perfil cierra primero cualquier token anterior; después notifica el cambio para actualizar la visibilidad de Avisos; si el perfil es Papá, muestra el PIN directamente.
+- Se renovó la caché de `app.js` y del módulo `menu.js` (`app.js?v=6`, `menu.js?v=2`) para evitar reutilizar el selector anterior en el navegador.
+- Commits de esta corrección: `3f03d67cb76742353598ad16218e99a3bf402d64`, `2e9ba11dab0c5e122f11bd8e1746c8afe1ca92bf`, `fe1dc0d2bda6514920ed0638a6acee08dfe4e919`, `5d9a449032d58c99cd28c018fd6c37d1eb8322bb`.
+- Pendiente: esperar el despliegue automático de estos últimos commits y probar en navegador real; no considerar cerrada la incidencia hasta que el PIN aparezca al seleccionar Papá y las funciones administrativas queden ocultas antes de autenticar.
