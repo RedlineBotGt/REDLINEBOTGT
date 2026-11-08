@@ -214,9 +214,31 @@ Comportamiento:
 - `259c939`: selector y procesamiento de imagen en el panel/gestor común.
 - `7c2e16b`: validación estricta del tipo de imagen.
 
-### Verificación pendiente
+### Verificación y despliegue
 
 - La revisión del código y del flujo de enrutamiento está realizada.
 - La documentación oficial de discord.js 14.27.0 confirma los componentes de carga y el método para recuperar adjuntos de un modal.
-- Falta confirmar el build/deploy de Render y probar en Discord real los dos accesos (`/msn` y «usr mensaje» de `/dashstaff`), incluida una imagen de galería, una URL y el caso sin imagen.
-- No considerar la función validada en producción hasta que el despliegue esté en estado LIVE y se complete la prueba funcional.
+- Render completó el despliegue del commit `6bdb4aa56eae6b9a48a7d7a928a82d669dadebe3` en estado **LIVE** el 8/11/2026 a las 22:46 UTC.
+- Sigue pendiente la prueba funcional en Discord de los dos accesos (`/msn` y «usr mensaje» de `/dashstaff`), incluida una imagen de galería, una URL y el caso sin imagen. No confundir despliegue LIVE con prueba funcional completada.
+
+## 12. Contador visible de repeticiones pendientes — 8/11/2026
+
+### Cambios aplicados
+
+- `dashadmin/scheduled/interactionscheduled.ts`: el historial general muestra ahora **Repeticiones pendientes** en cada registro, además de canal, fecha, texto y estado.
+- `dashadmin/scheduled/interactionscheduledactions.ts`: el detalle individual utiliza la etiqueta **Repeticiones pendientes por enviar** y muestra los envíos realizados.
+- Para documentos antiguos sin `remainingTimes`, el panel calcula el saldo con `totalRepetitions - repetitionsDone`. En mensajes únicos muestra 1 si sigue pendiente y 0 si ya se envió.
+- `dashadmin/scheduled/scheduledworker.ts`: se corrigió la actualización MongoDB de la recurrencia, que contenía dos propiedades `$set` en el mismo objeto. Ahora fecha, hora, estado y contador se guardan en una única operación `$set`.
+- Cuando se realiza el último envío, el contador se establece en 0 y el registro pasa a `sent`. También se actualiza el contador si se completa un mensaje repetido cuyo intervalo resulta inválido.
+
+### Commits
+
+- `225e347`: contador en el historial general.
+- `9abe2bf`: corrección del contador y de la actualización del worker.
+- `4e16b8d`: etiqueta y cálculo del contador en el detalle individual.
+
+### Verificación pendiente
+
+- Revisar que Render complete el despliegue automático de estos commits.
+- Probar en Discord un programado repetido: antes del primer envío debe mostrar el total; tras cada envío debe reducirse; después del último debe mostrar 0 y estado `sent`.
+- No se han modificado documentos de MongoDB ni se han enviado mensajes de prueba.
