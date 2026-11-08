@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="https://res.cloudinary.com/iir4vyqc/image/upload/f_png,q_auto,w_192,h_192,c_fit/1000110742">
   <link rel="apple-touch-icon" href="https://res.cloudinary.com/iir4vyqc/image/upload/f_png,q_auto,w_192,h_192,c_fit/1000110742">
   <title>Academia Campos</title>
-  <link rel="stylesheet" href="/styles.css?v=9">
+  <link rel="stylesheet" href="/styles.css?v=10">
 </head>
 
 <body>
@@ -170,8 +170,7 @@
         <button
           type="button"
           id="open-ai-btn"
-          disabled
-          aria-disabled="true"
+          class="hidden"
         >
           🤖 IA
         </button>
@@ -202,6 +201,17 @@
     </section>
 
     <!-- PANTALLA DE RETOS -->
+    <!-- HISTORIAL DE EJERCICIOS IA DE LEO -->
+    <section id="ai-history-screen" class="screen hidden" aria-labelledby="ai-history-title">
+      <button type="button" id="ai-history-back-btn">← Volver</button>
+      <h2 id="ai-history-title">🤖 Historial de IA · Leo</h2>
+      <p>Ejercicios resueltos con IA. El número indica cuántos intentos necesitó para acertar.</p>
+      <p id="ai-history-summary" class="ai-history-summary" aria-live="polite"></p>
+      <div id="ai-history-list" class="ai-history-list" aria-live="polite">
+        <p>Cargando historial...</p>
+      </div>
+    </section>
+
     <section id="challenge-screen" class="screen hidden" aria-labelledby="challenge-title">
 
       <button type="button" onclick="volverAsignaturas()">
@@ -475,7 +485,7 @@
 
   </main>
 
-  <script type="module" src="/app.js?v=8"></script>
+  <script type="module" src="/app.js?v=9"></script>
 
 </body>
 </html>
