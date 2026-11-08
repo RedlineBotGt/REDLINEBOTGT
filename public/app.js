@@ -9,7 +9,7 @@ import {
   abrirAsignatura,
   volverAsignaturas,
   volverPerfiles
-} from "./js/menu.js?v=2";
+} from "./js/menu.js?v=3";
 
 import {
   enviarRespuesta,
@@ -24,7 +24,7 @@ import {
 
 import {
   iniciarDeberes
-} from "./js/homework.js";
+} from "./js/homework.js?v=2";
 
 import { iniciarAvisos } from "./js/notices.js?v=2";
 
