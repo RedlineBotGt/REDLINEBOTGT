@@ -99,7 +99,8 @@ async function processDueMessages(client: Client): Promise<void> {
                     const madrid = formatMadridDateTime(nextDate);
                     await col.updateOne({ _id: msg._id, status: 'processing' }, {
                         $set: { scheduledAt: nextDate, date: madrid.date, time: madrid.time, status: 'pending' },
-                        $inc: { remainingTimes: -1, repetitionsDone: 1 },
+                        $set: { remainingTimes: remaining - 1 },
+                        $inc: { repetitionsDone: 1 },
                         $unset: { processingAt: '' }
                     });
                     console.log(`🔄 [Worker] Mensaje ${msg._id} enviado; siguiente envío: ${madrid.date} ${madrid.time} (Madrid).`);
