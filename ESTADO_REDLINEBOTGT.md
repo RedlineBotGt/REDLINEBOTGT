@@ -94,7 +94,7 @@ Después de autorizar y realizar un despliegue controlado:
 
 Si Discord no representa correctamente las menciones dentro del embed, revertir únicamente el cambio de presentación en `eventosmanager.ts`, sin deshacer los demás arreglos del sistema de eventos.
 
-## 5. Fecha visible en eventos recurrentes — 8/11/2026
+## 6. Fecha visible en eventos recurrentes — 8/11/2026
 
 ### Incidencia detectada
 
