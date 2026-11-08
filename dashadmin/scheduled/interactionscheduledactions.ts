@@ -338,6 +338,17 @@ export async function handleScheduledActions(interaction: any): Promise<boolean>
         }
 
         if (interaction.isChannelSelectMenu()) {
+            if (interaction.customId === 'sched_job_channel_select') {
+                const session = scheduledSessions.get(interaction.user.id);
+                if (!session?.editJobId || !session.guildId) return true;
+                const { jobs } = await getSchedCollections();
+                const result = await jobs.updateOne(
+                    { _id: new ObjectId(session.editJobId), guildId: session.guildId, status: 'pending' },
+                    { $set: { channelId: interaction.values[0] } }
+                );
+                await interaction.update({ content: result.modifiedCount ? '✅ Canal actualizado.' : '⚠️ El mensaje ya no está pendiente; no se modificó.', components: [] });
+                return true;
+            }
             if (interaction.customId === 'sched_select_channel') {
                 const session = scheduledSessions.get(interaction.user.id);
                 if (!session) return true;
@@ -354,6 +365,17 @@ export async function handleScheduledActions(interaction: any): Promise<boolean>
         }
 
         if (interaction.isRoleSelectMenu()) {
+            if (interaction.customId === 'sched_job_role_select') {
+                const session = scheduledSessions.get(interaction.user.id);
+                if (!session?.editJobId || !session.guildId) return true;
+                const { jobs } = await getSchedCollections();
+                const result = await jobs.updateOne(
+                    { _id: new ObjectId(session.editJobId), guildId: session.guildId, status: 'pending' },
+                    { $set: { roleId: interaction.values[0] } }
+                );
+                await interaction.update({ content: result.modifiedCount ? '✅ Rol actualizado.' : '⚠️ El mensaje ya no está pendiente; no se modificó.', components: [] });
+                return true;
+            }
             if (interaction.customId === 'sched_select_role') {
                 const session = scheduledSessions.get(interaction.user.id);
                 if (!session) return true;
@@ -372,6 +394,68 @@ export async function handleScheduledActions(interaction: any): Promise<boolean>
 
         if (interaction.isModalSubmit()) {
             const customId = interaction.customId;
+
+            if (customId === 'modal_sched_job_content') {
+                const session = scheduledSessions.get(interaction.user.id);
+                if (!session?.editJobId || !session.guildId || session.guildId !== interaction.guildId) {
+                    await interaction.reply({ content: '⚠️ La sesión de edición ha caducado.', flags: [MessageFlags.Ephemeral] });
+                    return true;
+                }
+                const date = interaction.fields.getTextInputValue('job_date').trim();
+                const time = interaction.fields.getTextInputValue('job_time').trim();
+                const parsed = parseMadridDateTime(date, time);
+                if (!parsed) {
+                    await interaction.reply({ content: '❌ Fecha u hora no válida. Usa una fecha real DD/MM/AAAA y hora HH:MM.', flags: [MessageFlags.Ephemeral] });
+                    return true;
+                }
+                const text = interaction.fields.getTextInputValue('job_text').trim();
+                const image = interaction.fields.getTextInputValue('job_image').trim() || null;
+                const { jobs } = await getSchedCollections();
+                const result = await jobs.updateOne(
+                    { _id: new ObjectId(session.editJobId), guildId: session.guildId, status: 'pending' },
+                    { $set: { text, image, date, time, scheduledAt: parsed } }
+                );
+                await interaction.reply({ content: result.modifiedCount ? '✅ Texto, imagen y fecha/hora actualizados.' : '⚠️ El mensaje ya no está pendiente; no se modificó.', flags: [MessageFlags.Ephemeral] });
+                return true;
+            }
+
+            if (customId === 'modal_sched_job_repeat') {
+                const session = scheduledSessions.get(interaction.user.id);
+                if (!session?.editJobId || !session.guildId || session.guildId !== interaction.guildId) {
+                    await interaction.reply({ content: '⚠️ La sesión de edición ha caducado.', flags: [MessageFlags.Ephemeral] });
+                    return true;
+                }
+                const daysRaw = interaction.fields.getTextInputValue('job_repeat_days').trim();
+                const hoursRaw = interaction.fields.getTextInputValue('job_repeat_hours').trim();
+                const remainingRaw = interaction.fields.getTextInputValue('job_remaining').trim();
+                const days = Number(daysRaw);
+                const hours = Number(hoursRaw);
+                const remaining = Number(remainingRaw);
+                if (!/^\d+$/.test(daysRaw) || !/^\d+$/.test(hoursRaw) || !/^\d+$/.test(remainingRaw) ||
+                    !Number.isSafeInteger(days) || !Number.isSafeInteger(hours) || !Number.isSafeInteger(remaining) ||
+                    days < 0 || hours < 0 || remaining < 1 || (remaining > 1 && days + hours === 0)) {
+                    await interaction.reply({ content: '❌ Valores no válidos. Días y horas deben ser 0 o más; los envíos restantes al menos 1. Si quedan varios envíos, el intervalo debe ser mayor que 0.', flags: [MessageFlags.Ephemeral] });
+                    return true;
+                }
+                const { jobs } = await getSchedCollections();
+                const existing = await jobs.findOne({ _id: new ObjectId(session.editJobId), guildId: session.guildId, status: 'pending' });
+                if (!existing) {
+                    await interaction.reply({ content: '⚠️ El mensaje ya no está pendiente; no se modificó.', flags: [MessageFlags.Ephemeral] });
+                    return true;
+                }
+                const result = await jobs.updateOne(
+                    { _id: new ObjectId(session.editJobId), guildId: session.guildId, status: 'pending' },
+                    { $set: {
+                        repeats: remaining > 1,
+                        repeatIntervalDays: days,
+                        repeatIntervalHours: hours,
+                        remainingTimes: remaining,
+                        totalRepetitions: remaining + Number(existing.repetitionsDone || 0)
+                    } }
+                );
+                await interaction.reply({ content: result.modifiedCount ? '✅ Repetición y número de envíos restantes actualizados.' : '⚠️ No hubo cambios o el mensaje ya no está pendiente.', flags: [MessageFlags.Ephemeral] });
+                return true;
+            }
 
             if (customId === 'modal_sched_new' || customId === 'modal_sched_edit') {
                 const title = interaction.fields.getTextInputValue('sched_title_input').trim();
