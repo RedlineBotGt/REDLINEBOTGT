@@ -42,6 +42,7 @@
     <link rel="stylesheet" href="/css/info.css">
     <link rel="stylesheet" href="/css/clasificacion.css">
     <link rel="stylesheet" href="/css/twitch.css">
+    <link rel="stylesheet" href="/css/calendario.css">
 </head>
 
 <body>
@@ -286,6 +287,20 @@
 
         </section>
 
+        <!-- APARTADO CALENDARIO -->
+        <section id="calendario-section" hidden>
+            <h1 class="page-title">📅 CALENDARIO</h1>
+
+            <div class="calendario-image-container">
+                <img
+                    class="calendario-image"
+                    src="https://ik.imagekit.io/6sq2dy54h/s2_calendario_gtline_green2.psd-1.png"
+                    alt="Calendario de REDLINE GTCUP"
+                    loading="lazy"
+                >
+            </div>
+        </section>
+
         <!-- APARTADO CHAT -->
         <section id="chat-section" hidden>
             <h1 class="page-title">CHAT</h1>
@@ -411,6 +426,14 @@
                 data-section="twitch"
             >
                 📺 TWITCH
+            </button>
+
+            <button
+                type="button"
+                class="menu-button"
+                data-section="calendario"
+            >
+                📅 CALENDARIO
             </button>
 
             <button
