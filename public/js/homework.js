@@ -15,7 +15,7 @@ import {
   mostrarFormularioDeber,
   ocultarFormularioDeber,
   guardarFormularioDeber
-} from "./homework/forms.js?v=1";
+} from "./homework/forms.js?v=2?v=1";
 
 import {
   establecerDeberesActuales,
