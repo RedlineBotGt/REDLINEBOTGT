@@ -1225,3 +1225,62 @@ p {
 }
 #notice-form-message { margin:8px 0 0; }
 #notice-form-message.error { color:var(--danger); }
+
+
+/* GESTIÓN INDIVIDUAL DE AVISOS */
+.notices-admin-management {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.notices-admin-management h4 {
+  margin: 0 0 10px;
+  color: var(--text);
+}
+.notice-admin-item {
+  padding: 10px;
+  margin: 8px 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.notice-admin-summary {
+  margin: 0 0 8px;
+  color: var(--text);
+  font-size: .9rem;
+  overflow-wrap: anywhere;
+}
+.notice-admin-actions {
+  display: flex;
+  gap: 8px;
+}
+.notices-admin .notice-admin-actions button,
+.notices-admin .notice-edit-form button {
+  flex: 1;
+  width: auto;
+  min-height: 40px;
+  margin: 0;
+  padding: 8px;
+}
+.notices-admin .notice-edit-btn { background: var(--panel-light); color: var(--text); border: 1px solid var(--primary); }
+.notices-admin .notice-delete-btn { background: #7f1d1d; color: #fff; }
+.notice-edit-form {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+.notice-edit-form label { margin: 4px 0 0; }
+.notice-edit-form select,
+.notice-edit-form textarea {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+}
+.notice-edit-form textarea { resize: vertical; }
+.notices-admin .notice-edit-form button[type="submit"] { background: var(--success); color: #052e24; }
+.notices-admin .notice-edit-form button[type="button"] { background: var(--panel-light); color: var(--text); border: 1px solid var(--border); }
