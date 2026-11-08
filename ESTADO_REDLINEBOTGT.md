@@ -181,3 +181,42 @@ Archivos modificados:
 - Compilación TypeScript integral: pendiente de confirmar mediante el build de Render.
 - Prueba funcional en Discord: pendiente; requiere crear un mensaje futuro de prueba y verificar edición, envío y recurrencia.
 - Render tiene Auto Deploy activo. Los despliegues de los commits intermedios fallaron primero por una expresión regular con escape incorrecto y después por la ausencia de variables MongoDB en Render; ambas causas se corrigieron/restauraron en commits posteriores. El commit más reciente está en cola/en despliegue; producción aún no se considera verificada.
+
+## 11. Imágenes desde la galería en mensajes oficiales — 8/11/2026
+
+### Funcionalidad aplicada
+
+Se ha añadido la posibilidad de adjuntar una imagen directamente desde el dispositivo en los formularios de mensajes oficiales, tanto desde `/msn` como desde el botón «usr mensaje» de `/dashstaff`.
+
+Comprobación de enrutamiento:
+- El comando `/msn` y el formulario del panel utilizan el mismo identificador de modal (`modal_msn_...`).
+- El enrutador `handleDashAdminInteractions` deriva ambos envíos a `dashadmin/msn/msnmanager.ts`.
+- Por tanto, el gestor común recibe ambos formularios; no se ha duplicado la lógica de envío.
+
+Archivos modificados:
+- `package.json`: actualizada la dependencia de `discord.js` de `^14.14.1` a `^14.27.0`, que incluye `FileUploadBuilder`, `LabelBuilder` y `ModalSubmitFields.getUploadedFiles()`.
+- `commands/msn.ts`: el modal de `/msn` ahora muestra un selector opcional de una imagen, además del campo de URL existente.
+- `dashadmin/msn/msnmanager.ts`: el modal del panel incorpora el mismo selector y el envío procesa el archivo cargado junto con las menciones existentes.
+- `handlers/modalImageUpload.ts` (nuevo): descarga el adjunto desde el CDN de Discord y lo prepara para reenviarlo al canal. Comprueba el host HTTPS, el tipo real de imagen, el tamaño máximo de 8 MB y aplica un timeout de descarga de 15 segundos.
+
+Comportamiento:
+- Se puede enviar una imagen desde la galería sin pegar ninguna URL.
+- El selector admite una imagen como máximo y está marcado como opcional.
+- Se conservan el texto, la conversión de menciones, los permisos y el campo de URL.
+- Si se rellenan tanto el selector como la URL, se envían ambos adjuntos.
+- Se admiten imágenes JPG, PNG, GIF, WEBP y AVIF. Otros tipos se rechazan con un error controlado.
+
+### Commits
+
+- `fc547c7`: helper de descarga segura de imagen.
+- `0fa0f7c`: actualización de discord.js.
+- `cd47eab`: selector de imagen en `/msn`.
+- `259c939`: selector y procesamiento de imagen en el panel/gestor común.
+- `7c2e16b`: validación estricta del tipo de imagen.
+
+### Verificación pendiente
+
+- La revisión del código y del flujo de enrutamiento está realizada.
+- La documentación oficial de discord.js 14.27.0 confirma los componentes de carga y el método para recuperar adjuntos de un modal.
+- Falta confirmar el build/deploy de Render y probar en Discord real los dos accesos (`/msn` y «usr mensaje» de `/dashstaff`), incluida una imagen de galería, una URL y el caso sin imagen.
+- No considerar la función validada en producción hasta que el despliegue esté en estado LIVE y se complete la prueba funcional.
