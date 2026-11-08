@@ -287,3 +287,12 @@ Comportamiento:
 - En la última consulta, el despliegue del commit `7f2fabd` estaba construyéndose y el de `666935e` estaba en cola.
 - Pendiente confirmar el último despliegue como LIVE, revisar logs posteriores y probar en Discord los dos formularios y la carga de una imagen real.
 - No declarar la funcionalidad como verificada hasta completar esa prueba.
+
+
+## 15. Múltiples imágenes en mensajes oficiales — 9/11/2026
+
+- Se amplió el selector de archivos de `/msn` y `/dashstaff` de 1 a un máximo de 10 imágenes.
+- El envío recoge todos los archivos seleccionados, los valida individualmente y los adjunta junto al texto y la URL opcional.
+- El helper `handlers/modalImageUpload.ts` ahora prepara una colección de adjuntos, conserva la validación de CDN, MIME y 8 MB por imagen, y asigna nombres únicos a los archivos.
+- Commits: `508f485` (helper múltiple), `b772ef5` (gestor /dashstaff), `5def492` (/msn).
+- Pendiente: confirmar Render LIVE y probar en Discord varias fotos junto con una URL en ambos formularios. No declarar la prueba funcional completada antes de esa comprobación.
