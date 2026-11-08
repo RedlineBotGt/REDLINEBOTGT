@@ -789,3 +789,37 @@ El usuario aprueba comenzar la implementación de Lenguaje Musical como asignatu
 - Verificación estática tras releer GitHub: una sola pantalla PIN, un solo formulario, el formulario ya no está dentro de asignaturas, y las versiones nuevas de módulos están referenciadas correctamente.
 - Render: AutoDeploy activado. El deploy del commit `a258e14c53385c0fb233118981b64b2df7f682a4` estaba en `update_in_progress` y el commit final de versiones `ae182e37b21e00298d26ad730ced22d77f379b21` estaba en cola al registrar esta nota.
 - Pendiente obligatorio: esperar a que el último código quede LIVE y probar en navegador real la secuencia Papá → solo PIN → PIN correcto → perfil completo con Deberes, Avisos y Chat; PIN incorrecto → permanecer en pantalla PIN; volver a perfiles → sesión cerrada. No declarar resuelta la incidencia hasta completar estas pruebas.
+
+
+## 23. Nueva asignatura Science (8-11-2026)
+
+El usuario aprueba incorporar **Science** como una única asignatura nueva. El nombre visible será exclusivamente «Science»; no se añade una tarjeta llamada «Ciencias Naturales».
+
+### Alcance
+- Nuevo motor independiente `services/subjects/science.ts` para ciencias naturales, con enunciados sencillos en inglés y explicaciones/feedback en español.
+- Contenidos alternados: seres vivos, plantas, animales, cuerpo humano, sentidos, salud, alimentación, materia, agua, aire, clima, Tierra y espacio, fuerzas, luz, sonido, energía y ecosistemas.
+- Generación, pista, evaluación y siguiente pregunta mediante el flujo común de Academia.
+- Clave propia `science`, con historial aislado por perfil y asignatura (`leo:science`, `papa:science`, `mama:science`).
+- Disponible en los tres perfiles; cada perfil conserva su propio historial.
+- No se añade Science al selector de Deberes: esta solicitud incorpora una asignatura de ejercicios, no una categoría nueva de deberes.
+- No se modifican Deberes, avisos, chat, PIN, perfiles, niveles ni ranking.
+
+### Archivos modificados
+- Nuevo: `services/subjects/science.ts`.
+- Modificados: `services/subjects/index.ts`, `services/aiService.ts`, `routes/questions.ts`, `public/js/subjects.js`, `public/js/challenges.js`, `public/index.html` y este estado vivo.
+- Se actualizó la caché de la aplicación en `public/index.html` de `app.js?v=7` a `app.js?v=8`.
+
+### Commits de implementación
+- `4f9f5e181b8f0067982a73caf01143b3df0ff2db`: motor Science.
+- `3c471f792928af580a7db53b5089c5f1f11adaa8`: índice de asignaturas.
+- `ac5019fe63b81407f0f0b1eadd1e040ba53b5694`: servicio principal de IA.
+- `e3b3cbb99cf2f10a46f015abb3bc1df55547bd75`: API de preguntas.
+- `66b912d26bbf5373399c88ea9966cafba8bbe898`: catálogo de asignaturas del navegador.
+- `e1546367bc333b29b896d3831ac697bfe0beda65`: validación de asignatura en ejercicios.
+- `1d45c3fe4f8043ecdbe5034882a2161151e75fe1`: tarjeta Science y caché.
+
+### Verificación pendiente
+- Confirmar build TypeScript y despliegue automático de Render.
+- Probar Science en Leo, Papá y Mamá; generar preguntas diferentes, pedir pistas, evaluar respuestas correctas e incorrectas y avanzar al siguiente ejercicio.
+- Confirmar que el nombre visible sea «Science» y que las otras asignaturas y funciones no cambien.
+- No declarar Science validada hasta completar pruebas funcionales reales.
