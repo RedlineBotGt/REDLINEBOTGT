@@ -22,6 +22,7 @@ import {
 } from './dashadmin/encuestas/encuestasmanager';
 
 import { setupEventWorker } from './dashadmin/eventos/eventosworker';
+import { startScheduledWorker } from './dashadmin/scheduled/scheduledworker';
 
 import express from 'express';
 
@@ -310,6 +311,7 @@ client.once('ready', () => {
     setupAvisosSystem(client);
     setupPollSystem(client);
     setupEventWorker(client);
+    startScheduledWorker(client);
 });
 
 // =====================================================
