@@ -9,7 +9,8 @@ export const asignaturas = {
   geografia: "Geografía",
   english: "English",
   lengua: "Lengua",
-  lenguaje_musical: "Lenguaje Musical"
+  lenguaje_musical: "Lenguaje Musical",
+  science: "Science"
 };
 
 // Clave antigua conservada como alias de Cultura general.
