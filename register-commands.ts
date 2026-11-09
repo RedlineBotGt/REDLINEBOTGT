@@ -6,6 +6,7 @@ import { data as dashstaffCommand } from './commands/dashstaff';
 import { data as msnCommand } from './commands/msn';
 import { data as borrarCommand } from './commands/borrar';
 import { data as dashsheetsCommand } from './dashsheet/dashsheet';
+import { data as clasificacionCommand } from './commands/clasificacion';
 import { data as dadoCommand } from './commands/dado';
 import { data as draftCommand } from './commands/draft';
 import { data as listaCommand } from './commands/lista';
@@ -27,6 +28,7 @@ const globalCommands = [
     msnCommand,
     borrarCommand,
     dashsheetsCommand,
+    clasificacionCommand,
     dadoCommand,
     draftCommand,
     listaCommand,
