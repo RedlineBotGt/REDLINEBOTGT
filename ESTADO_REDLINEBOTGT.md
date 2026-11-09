@@ -555,3 +555,14 @@ Comportamiento:
 - Se conserva el título REDLINE GTCUP · 2ª Temporada, el embed general y el origen de datos Tabla2!B8:N.
 - Archivo: commands/clasificacion.ts. Commit: 251a3ed2927722d622173b29329ec41d22b6716d.
 - Pendiente confirmar Render LIVE y revisar el resultado real en Discord/móvil.
+
+
+## 30. Clasificación en columnas sin embed ni medallas — 10/11/2026
+
+- Se elimina el embed de `/clasificacion`; el comando responde con un mensaje normal para aprovechar el ancho disponible.
+- Se mantiene el título **REDLINE GTCUP · 2ª Temporada** y la tabla monoespaciada con columnas independientes: posición numérica, piloto, puntos, VR, PP y sanciones.
+- Se eliminan las medallas. La posición se muestra como número.
+- Los contadores se muestran con sus círculos de color únicamente cuando son mayores que cero; las celdas sin valor quedan vacías.
+- Se conserva la lectura de `Tabla2!B8:N` y el orden de los pilotos. Los nombres de más de 18 caracteres se recortan para proteger la alineación.
+- Archivo: `commands/clasificacion.ts`. Commit de código: `93889768e74e52bff97162887a15c480b2abb8fe`.
+- Pendiente: confirmar el despliegue de Render y comprobar visualmente la tabla en Discord, especialmente desde móvil.
