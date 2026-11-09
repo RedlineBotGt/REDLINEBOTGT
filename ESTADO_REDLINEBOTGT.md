@@ -316,3 +316,23 @@ Comportamiento:
 - Render ha iniciado el despliegue automático del commit `1a69cecb66691452e6643f33909b64ca016bbaa7`; en la última consulta estaba en `build_in_progress`.
 - Pendiente confirmar LIVE y probar en Discord un texto largo con emojis, saltos de línea, negritas y menciones reales.
 - No declarar la prueba funcional completada hasta que el usuario la confirme.
+
+## 17. Despertador HTTP de WEBLINEGT — 9/11/2026
+
+### Cambio aplicado en `Index.ts`
+
+- Se retiró el despertador HTTP de Academia Campos.
+- Se sustituyó por una comprobación HTTP de WEBLINEGT en `https://weblinegt.onrender.com/health`, ruta confirmada en `WEBLINEGT/src/server.ts`.
+- Se conserva la frecuencia anterior: primera petición al arrancar y después cada 10 minutos.
+- Se conserva el timeout de 60 segundos, el segundo intento tras 15 segundos y la protección para impedir comprobaciones simultáneas.
+- La respuesta de `/health` de WEBLINEGT es texto plano (`WEBLINEGT activo`), por lo que ahora se lee como texto y no como JSON.
+- Se añade la variable opcional `WEBLINE_HEALTH_URL`; si no está definida, se usa la URL de producción indicada arriba.
+- Los mensajes de registro identifican el servicio como `[WEBLINEGT]`.
+
+### Commit y verificación
+
+- Commit de código: `3b2e13c3398b657045af5dfcfd26161ae604845f`.
+- Rama: `BOTGT7`.
+- Revisión estática: confirmada la ruta `/health` en la rama `WEBLINEGT` y adaptada la lectura a texto plano.
+- Pendiente: confirmar el despliegue del bot REDLINE en Render y comprobar en sus logs una respuesta correcta de WEBLINEGT. No se ha realizado una llamada de prueba externa ni se declara todavía que WEBLINEGT permanezca despierta en producción.
+- No se han modificado archivos de WEBLINEGT ni de Academia Campos.
