@@ -511,3 +511,15 @@ Comportamiento:
 - Archivo: `commands/dash.ts`.
 - Commit: `dbab7d1cc32f25d1ab4c8ee4eebd032a8187fcb1`.
 - Revisión estática y prueba funcional en Discord: pendientes de completar; comprobar el despliegue automático de Render antes de probar /dash.
+
+
+## 26. Nuevo comando independiente /clasificacion — 9/11/2026
+
+- Se añade `commands/clasificacion.ts`, comando público `/clasificacion` que lee `Tabla2!B8:N` y muestra solo la clasificación general.
+- Cada fila muestra posición, piloto, puntos totales y contadores: 🟣 VR (columna L), 🟡 PP (columna K) y 🔴 sanciones (columna M). Los puntos totales proceden de la columna N.
+- No incluye resumen inferior, puntos de jornada, asistencia ni botones.
+- No se modifica `dashsheet`, sus consultas, sus botones ni sus gestores.
+- Se registra el comando en `Index.ts` y en `register-commands.ts`.
+- Commits: `32a004a4ed4acbd69e199fe4b60e545f9e8e6178` (nuevo comando), `770ec1fe43b5c7217fef49e13571d5e997e6be21` (registro en cliente) y `0d67549afde5df612f399952737aec45255b9ef9` (registro global).
+- Render: despliegues automáticos iniciados; el último estado consultado era `update_in_progress` para el código y `queued` para el commit de registro global. Pendiente confirmar LIVE.
+- Pendiente prueba en Discord: ejecutar `/clasificacion` y comprobar que las columnas K/L/M/N corresponden a PP/VR/sanciones/puntos como se espera en la hoja.
