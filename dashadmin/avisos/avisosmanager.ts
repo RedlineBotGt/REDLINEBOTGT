@@ -101,16 +101,8 @@ export function setupAvisosSystem(client: Client) {
                 const origin = await getRoleOriginLabel(newMember, role.id);
                 const notice = `👤 Usuario: ${newMember.displayName}\n🏷️ Rol: ${role.name}\n📍 Canal: ${origin}`;
 
-                const embed = new EmbedBuilder()
-                    .setColor(0x00AAFF)
-                    .setTitle('🏷️ Rol Asignado')
-                    .setDescription(notice)
-                    .setFooter({ text: newMember.guild.name, iconURL: newMember.guild.iconURL() || undefined })
-                    .setTimestamp();
-
-                // El contenido también lleva los datos para que el push del móvil
-                // muestre los nombres aunque Discord no despliegue el embed.
-                await channel.send({ content: notice, embeds: [embed] });
+                // Mensaje normal: el mismo texto se muestra en Discord y en la notificación móvil.
+                await channel.send({ content: notice });
             }
         } catch (error) {
             console.error('❌ Error en avisos guildMemberUpdate:', error);
