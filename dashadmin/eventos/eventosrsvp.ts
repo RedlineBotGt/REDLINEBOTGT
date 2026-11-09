@@ -320,7 +320,7 @@ export async function handleEventAdminConfirmButton(interaction: ButtonInteracti
     if (targetStatus === 'yes') {
         eventDoc.rsvps.yes.push(targetUserId);
         if (asistenteRole && member) {
-            await member.roles.add(asistenteRole).catch(() => {});
+            await member.roles.add(asistenteRole, `Manual por: ${interaction.user.globalName || interaction.user.username} · Canal ID: ${interaction.channelId}`).catch(() => {});
         }
     } else if (targetStatus === 'reserve') {
         eventDoc.rsvps.reserve.push(targetUserId);
