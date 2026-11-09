@@ -74,9 +74,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             })
             .setTitle('🏆 Clasificación General')
             .setDescription(
-                '**REDLINE GTCUP · 2ª Temporada**\n\n' +
-                '**Piloto** · **Puntos** · 🟣 VR · 🟡 PP · 🔴 Sanciones\n\n' +
-                lines.join('\n')
+                '**REDLINE GTCUP · 2ª Temporada**\\n\\n' +
+                '```text\\n' + lines.join('\\n') + '\\n```'
             )
             .setFooter({ text: 'REDLINE GT · Clasificación' });
 
