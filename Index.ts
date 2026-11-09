@@ -3,7 +3,8 @@ import {
     Client,
     GatewayIntentBits,
     Collection,
-    Interaction
+    Interaction,
+    EmbedBuilder
 } from 'discord.js';
 
 import {
@@ -302,6 +303,45 @@ client.once('ready', () => {
     console.log(
         `🤖 [DISCORDBOT] Bot conectado como ${client.user?.tag}`
     );
+
+    // Actualización puntual del pie del panel de reportes ya publicado.
+    // Se conserva el contenido y los botones originales del mensaje.
+    void (async () => {
+        try {
+            const channel = await client.channels.fetch('1463095951492386888');
+            if (!channel || !channel.isTextBased() || !('messages' in channel)) {
+                console.warn('⚠️ [Reportes] No se pudo acceder al canal del panel antiguo.');
+                return;
+            }
+
+            const message = await channel.messages.fetch('1555166534576382016');
+            const embeds = message.embeds.map(embed => {
+                const footerText = embed.footer?.text?.trim().toLowerCase();
+                if (footerText !== 'discord bot' && footerText !== 'discordbot') {
+                    return EmbedBuilder.from(embed);
+                }
+
+                const updated = EmbedBuilder.from(embed);
+                updated.setFooter({
+                    text: 'REDLINE BOT GT',
+                    ...(embed.footer?.iconURL ? { iconURL: embed.footer.iconURL } : {})
+                });
+                return updated;
+            });
+
+            if (embeds.every((embed, index) =>
+                JSON.stringify(embed.toJSON()) === JSON.stringify(message.embeds[index].toJSON())
+            )) {
+                console.log('ℹ️ [Reportes] El panel existente no tiene un pie Discord bot que actualizar.');
+                return;
+            }
+
+            await message.edit({ embeds });
+            console.log('✅ [Reportes] Pie del panel existente actualizado a REDLINE BOT GT; botones conservados.');
+        } catch (error) {
+            console.error('❌ [Reportes] No se pudo actualizar el pie del panel existente:', error);
+        }
+    })();
 
     setupNicknameSystem(client);
     setupWelcomeSystem(client);
