@@ -95,17 +95,29 @@ export async function buildEventEmbedAndRows(ev: any, guild?: Guild | null) {
 
     const isClosed = ev.status === 'completed' || ev.status === 'cancelled';
 
+    const updatedTime = new Intl.DateTimeFormat('es-ES', {
+        timeZone: 'Europe/Madrid',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    }).format(new Date());
+
     const embed = new EmbedBuilder()
         .setColor(isClosed ? 0x808080 : 0x0055FF)
         .setTitle(isClosed ? `🔒 [FINALIZADO] ${ev.title}` : `🏁 ${ev.title}`)
         .setDescription(`📅 **Fecha:** ${ev.date || 'Por determinar'} a las ${ev.time || '00:00'} CET\n\n${ev.description || 'Sin descripción'}`)
-        .setTimestamp();
+;
 
     if (ev.image && typeof ev.image === 'string' && ev.image.startsWith('http')) {
         embed.setImage(ev.image);
     }
 
     embed.addFields(
+        {
+            name: '\u200B',
+            value: `**🕒 ACTUALIZADO · HOY A LAS ${updatedTime}**`,
+            inline: false
+        },
         {
             name: `✅ Titulares (${yesList.length}/15)`,
             value: formatVerticalList(yesList),
