@@ -4,8 +4,6 @@ import {
     GatewayIntentBits,
     Collection,
     Interaction,
-    EmbedBuilder,
-    TextChannel
 } from 'discord.js';
 
 import {
@@ -304,46 +302,6 @@ client.once('ready', () => {
     console.log(
         `🤖 [DISCORDBOT] Bot conectado como ${client.user?.tag}`
     );
-
-    // Actualiza el pie y el botón de los paneles de reportes ya publicados.
-    // No depende del texto anterior del footer y conserva el resto del mensaje.
-    void (async () => {
-        const channelId = '1463095951492386888';
-        const messageIds = [
-            '1555166534576382016',
-            '1555166688008208417'
-        ];
-
-        try {
-            const channel = await client.channels.fetch(channelId);
-            if (!channel || !channel.isTextBased()) {
-                console.warn('⚠️ [Reportes] No se pudo acceder al canal de los paneles existentes.');
-                return;
-            }
-
-            const textChannel = channel as TextChannel;
-
-            for (const messageId of messageIds) {
-                try {
-                    const message = await textChannel.messages.fetch(messageId);
-                    const embeds = message.embeds.map(embed =>
-                        EmbedBuilder.from(embed).setFooter({
-                            text: 'REDLINE BOT GT',
-                            ...(embed.footer?.iconURL ? { iconURL: embed.footer.iconURL } : {})
-                        })
-                    );
-
-                    // Solo se actualiza el pie; los botones conservan su color original.
-                    await message.edit({ embeds });
-                    console.log(`✅ [Reportes] Mensaje ${messageId}: pie REDLINE BOT GT actualizado; botones sin cambios.`);
-                } catch (error) {
-                    console.error(`❌ [Reportes] No se pudo actualizar el mensaje ${messageId}:`, error);
-                }
-            }
-        } catch (error) {
-            console.error('❌ [Reportes] No se pudo acceder al canal de los paneles existentes:', error);
-        }
-    })();
 
     setupNicknameSystem(client);
     setupWelcomeSystem(client);
