@@ -45,11 +45,11 @@ export function setupAvisosSystem(client: Client) {
                 .setColor(0x00FF00)
                 .setTitle('📥 Nuevo Piloto en el Paddock')
                 .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
-                .setDescription(`• **Piloto:** <@${member.id}> (${member.user.tag})\n• **Cuenta creada:** <t:${createdTimestamp}:R>`)
+                .setDescription(`• **Piloto:** <@${member.id}> (${member.user.tag})\n• **ID usuario:** ${member.id}\n• **ID canal:** ${channel.id}\n• **Cuenta creada:** <t:${createdTimestamp}:R>`)
                 .setFooter({ text: member.guild.name, iconURL: member.guild.iconURL() || undefined })
                 .setTimestamp();
 
-            await channel.send({ embeds: [embed] });
+            await channel.send({ content: `👤 Usuario ID: ${member.id} | 📍 Canal ID: ${channel.id}`, embeds: [embed] });
         } catch (error) {
             console.error('❌ Error en avisos guildMemberAdd:', error);
         }
@@ -69,11 +69,11 @@ export function setupAvisosSystem(client: Client) {
                 .setColor(0xFF0000)
                 .setTitle('📤 Un Piloto ha abandonado el Servidor')
                 .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
-                .setDescription(`• **Piloto:** <@${member.id}> (${member.user.tag})`)
+                .setDescription(`• **Piloto:** <@${member.id}> (${member.user.tag})\n• **ID usuario:** ${member.id}\n• **ID canal:** ${channel.id}`)
                 .setFooter({ text: member.guild.name, iconURL: member.guild.iconURL() || undefined })
                 .setTimestamp();
 
-            await channel.send({ embeds: [embed] });
+            await channel.send({ content: `👤 Usuario ID: ${member.id} | 📍 Canal ID: ${channel.id}`, embeds: [embed] });
         } catch (error) {
             console.error('❌ Error en avisos guildMemberRemove:', error);
         }
@@ -100,11 +100,11 @@ export function setupAvisosSystem(client: Client) {
                 const embed = new EmbedBuilder()
                     .setColor(0x00AAFF)
                     .setTitle('🏷️ Rol Asignado')
-                    .setDescription(`• **Piloto:** <@${newMember.id}>\n• **Rol recibido:** **${role.name}**`)
+                    .setDescription(`• **Piloto:** <@${newMember.id}>\n• **ID usuario:** ${newMember.id}\n• **Rol recibido:** **${role.name}**\n• **ID rol:** ${role.id}\n• **ID canal:** ${channel.id}`)
                     .setFooter({ text: newMember.guild.name, iconURL: newMember.guild.iconURL() || undefined })
                     .setTimestamp();
 
-                await channel.send({ embeds: [embed] });
+                await channel.send({ content: `👤 Usuario ID: ${newMember.id} | 🏷️ Rol ID: ${role.id} | 📍 Canal ID: ${channel.id}`, embeds: [embed] });
             }
         } catch (error) {
             console.error('❌ Error en avisos guildMemberUpdate:', error);
