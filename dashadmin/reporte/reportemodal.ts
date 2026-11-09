@@ -274,14 +274,14 @@ export async function handleReportModalSubmit(interaction: ModalSubmitInteractio
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder()
-                .setCustomId(\`report_attach_\${reportId}\`)
+                .setCustomId(`report_attach_${reportId}`)
                 .setLabel('Adjuntar pruebas')
                 .setEmoji('📎')
                 .setStyle(ButtonStyle.Primary)
         );
 
         await interaction.reply({
-            content: \`📝 **Reporte \${reportId} preparado.**\nPulsa **Adjuntar pruebas** para añadir un enlace o archivos. Debes incluir al menos uno para poder enviar el reporte.\`,
+            content: `📝 **Reporte ${reportId} preparado.**\nPulsa **Adjuntar pruebas** para añadir un enlace o archivos. Debes incluir al menos uno para poder enviar el reporte.`,
             components: [row],
             ephemeral: true
         });
@@ -324,7 +324,7 @@ export async function handleReportAttachButton(interaction: ButtonInteraction) {
         .setRequired(false);
 
     const modal = new ModalBuilder()
-        .setCustomId(\`modal_reporte_archivos_\${reportId}\`)
+        .setCustomId(`modal_reporte_archivos_${reportId}`)
         .setTitle('Adjuntar pruebas al reporte')
         .addLabelComponents(
             new LabelBuilder()
@@ -363,7 +363,7 @@ export async function handleReportFilesModalSubmit(interaction: ModalSubmitInter
     if (!enlace && uploadedFiles.length === 0) {
         const retryRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder()
-                .setCustomId(\`report_attach_\${reportId}\`)
+                .setCustomId(`report_attach_${reportId}`)
                 .setLabel('Adjuntar pruebas')
                 .setEmoji('📎')
                 .setStyle(ButtonStyle.Primary)
