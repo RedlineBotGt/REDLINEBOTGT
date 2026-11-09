@@ -456,3 +456,31 @@ Comportamiento:
 - Commits: `51a24ca597432bb5a52f647f4f0663e0cad8ee15` (función) y `cb06d2e9625a6f1dbd7896c7131c7971b76f1f2a` (ajuste de formato).
 - Retirada del bloque temporal de footer en `Index.ts`: despliegue `dep-dbp3bh95efls73anok8g` confirmado LIVE antes de los cambios visuales del embed.
 - Despliegue del nuevo embed: pendiente de confirmar LIVE y de comprobarlo en Discord.
+
+## 23. Unificación visual de /dash y ampliación de IDs en avisos — 9/11/2026
+
+### Panel /dash
+- commands/dash.ts: se conservan los mismos customId y funciones de los 16 botones; solo se ajustan distribución, etiquetas y estilos.
+- Etiquetas: «Crear Form», «Editar Form», «Colocar Formulario» y «Enviar Veredicto».
+- «Colocar Formulario» pasa a rojo (Danger); «Editar Defensa» pasa a azul (Primary); «Crear Botón» pasa a verde (Success).
+- «Enviar Veredicto» queda en rojo (Danger), como el botón anterior de Veredicto.
+- «Colocar Formulario» y «Enviar Veredicto» comparten una fila de dos botones para que cada uno ocupe media fila.
+- Se mantiene el panel sin embed ni texto descriptivo. /dashstaff no se modifica.
+- Commit de la distribución inicial: d70e13a8eef48788e8e746a429df7703b5d8af8f.
+- Commit de etiquetas/colores/distribución revisada: 581dbbca2eb776d93ed61aa73e0741448ba52b7f.
+
+### IDs en notificaciones
+- En los sistemas activos de dashadmin/avisos/avisosmanager.ts y dashadmin/welcome/welcomemanager.ts, los avisos incluyen IDs numéricos completos, además de las menciones/nombres:
+  - Entradas y salidas: ID de usuario e ID del canal de destino.
+  - Roles asignados y retirados: ID de usuario, ID de rol e ID del canal de destino.
+- Los IDs aparecen tanto en el embed como en el contenido del mensaje para que sean visibles en la notificación push de Discord.
+- El módulo activo de Avisos se inicializa desde Index.ts mediante setupAvisosSystem importado de dashadmin/avisos/avisosmanager.ts. El gestor de Bienvenidas/Despedidas también se inicializa desde Index.ts.
+- La copia antigua handlers/avisosSystem.ts no es la ruta activa de inicialización identificada en Index.ts; no se ha modificado.
+- Commits: 0f8f5d261ab144fc7b072bac133739b22dfd0a3a (Avisos) y c6402ee49c1f9a63d0034a1e9e2811adf998e982 (Bienvenidas/Despedidas y roles).
+
+### Estado de verificación
+- Revisión estática de los nombres, customId, colores y filas de /dash: realizada.
+- Revisión estática de IDs en entradas, salidas, asignación y retirada de roles: realizada.
+- /dashstaff no se ha tocado.
+- Despliegue automático de Render para los commits de este bloque: en cola/en curso al registrar este estado; falta confirmar LIVE.
+- Pendiente probar en Discord el panel y recibir notificaciones push reales para verificar cómo las presenta el móvil.
