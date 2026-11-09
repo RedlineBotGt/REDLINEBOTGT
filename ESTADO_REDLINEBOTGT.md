@@ -396,3 +396,14 @@ Comportamiento:
 - Build de Render y comprobación de arranque.
 - Pruebas en Discord: solo link; solo archivo; link y archivo; y ambos vacíos (debe impedir el envío).
 - No se considera verificada la carga real hasta completar esas pruebas.
+
+
+## 19. Flujo de reportes: quinto campo informativo y formulario de pruebas
+
+- Primer formulario: jornada, piloto que reporta, piloto denunciado, descripción y un quinto campo **Nota (opcional)** cuyo placeholder indica «Pulsa ENVIAR para adjuntar tus archivos o enlaces».
+- Al enviar el primer formulario se conserva un único borrador de reporte y aparece un mensaje efímero informativo **ADJUNTAR PRUEBAS**, sin pregunta, con el botón **Continuar**.
+- Continuar abre el segundo formulario con Link y Archivo opcionales. Para finalizar se exige al menos uno; si ambos están vacíos, el borrador se conserva y se puede reabrir el formulario.
+- Link, archivos y datos del primer formulario se integran en el mismo reporte/hilo privado. Si el campo Nota contiene texto, también se muestra en el embed.
+- En `commands/reporte.ts`, los nuevos paneles de reportes y pasos de configuración usarán el pie «REDLINE BOT GT» en lugar de «DISCORDBOT».
+- **Pendiente:** el panel ya publicado no se puede editar desde el código fuente solamente: hace falta localizar el mensaje existente (canal y mensaje) para editar su embed conservando el botón. El cambio de footer del código solo afecta a los paneles que se publiquen después.
+- Revisión estática de cambios: pendiente de completar; pruebas en Discord y despliegue: pendientes.
