@@ -333,19 +333,9 @@ client.once('ready', () => {
                         })
                     );
 
-                    const components = message.components.map(row => ({
-                        ...row.toJSON(),
-                        components: row.components.map(component => {
-                            if (component.type !== 2) return component.toJSON();
-                            return {
-                                ...component.toJSON(),
-                                style: 1
-                            };
-                        })
-                    }));
-
-                    await message.edit({ embeds, components });
-                    console.log(`✅ [Reportes] Mensaje ${messageId}: pie REDLINE BOT GT y botones azules aplicados.`);
+                    // Solo se actualiza el pie; los botones conservan su color original.
+                    await message.edit({ embeds });
+                    console.log(`✅ [Reportes] Mensaje ${messageId}: pie REDLINE BOT GT actualizado; botones sin cambios.`);
                 } catch (error) {
                     console.error(`❌ [Reportes] No se pudo actualizar el mensaje ${messageId}:`, error);
                 }
