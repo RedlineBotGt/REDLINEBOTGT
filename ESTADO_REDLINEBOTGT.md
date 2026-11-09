@@ -370,3 +370,29 @@ Comportamiento:
 - Pendiente confirmar que el build de Render termina en LIVE.
 - Pendiente probar en Discord desde móvil: enviar sin adjuntos; adjuntar una foto; adjuntar un vídeo; y confirmar que ambos tipos aparecen dentro del hilo privado de revisión.
 - No declarar la carga funcional como verificada hasta completar esas pruebas reales.
+
+
+## 19. Segundo formulario obligatorio para las pruebas del reporte — 9/11/2026
+
+### Ajuste solicitado
+
+- El primer formulario queda con cuatro campos obligatorios: jornada, piloto que reporta, piloto a reportar y descripción. Se elimina el quinto campo de enlace.
+- Después aparece un único botón: **Adjuntar pruebas**.
+- El segundo formulario incluye dos campos opcionales: **Link** (enlace web) y **Archivo** (selector de hasta 10 fotos o vídeos).
+- La validación exige al menos uno de los dos campos. Si ambos están vacíos, no se procesa el reporte y se ofrece volver a abrir el segundo formulario.
+- Se puede enviar solo con enlace, solo con archivos o con ambos.
+- Se elimina la opción anterior «Omitir y enviar».
+- Se conserva el destino de revisión privada y el aviso/resumen en el canal de avisos.
+
+### Archivos modificados
+
+- `dashadmin/reporte/reportemodal.ts`: primer formulario de cuatro campos; botón único «Adjuntar pruebas»; segundo formulario con Link y Archivo; validación de al menos una prueba.
+- `dashadmin/reporte/interactionreporte.ts`: retirado el enrutamiento del botón antiguo «Omitir y enviar».
+- `dashadmin/reporte/reportFileUpload.ts`: admite cero archivos cuando se ha proporcionado un enlace y mantiene las validaciones de los archivos adjuntos.
+
+### Verificación pendiente
+
+- Revisión estática de los cambios.
+- Build de Render y comprobación de arranque.
+- Pruebas en Discord: solo link; solo archivo; link y archivo; y ambos vacíos (debe impedir el envío).
+- No se considera verificada la carga real hasta completar esas pruebas.
