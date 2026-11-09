@@ -65,12 +65,12 @@ export function setupWelcomeSystem(client: Client) {
             const embed = new EmbedBuilder()
                 .setColor(0x00FF00)
                 .setTitle('🏁 ¡Nuevo Piloto en la Pista!')
-                .setDescription(formattedText)
+                .setDescription(`${formattedText}\n\n**ID usuario:** ${member.id}\n**ID canal:** ${channel.id}`)
                 .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
                 .setFooter({ text: member.guild.name, iconURL: member.guild.iconURL() || undefined })
                 .setTimestamp();
 
-            await channel.send({ content: `<@${member.id}>`, embeds: [embed] });
+            await channel.send({ content: `<@${member.id}> | Usuario ID: ${member.id} | Canal ID: ${channel.id}`, embeds: [embed] });
         } catch (error) {
             console.error('❌ Error en el evento guildMemberAdd:', error);
         }
@@ -95,12 +95,12 @@ export function setupWelcomeSystem(client: Client) {
             const embed = new EmbedBuilder()
                 .setColor(0xFF0000)
                 .setTitle('🏁 Un piloto ha abandonado el paddock')
-                .setDescription(formattedText)
+                .setDescription(`${formattedText}\n\n**ID usuario:** ${member.id}\n**ID canal:** ${channel.id}`)
                 .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
                 .setFooter({ text: member.guild.name, iconURL: member.guild.iconURL() || undefined })
                 .setTimestamp();
 
-            await channel.send({ embeds: [embed] });
+            await channel.send({ content: `Usuario ID: ${member.id} | Canal ID: ${channel.id}`, embeds: [embed] });
         } catch (error) {
             console.error('❌ Error en el evento guildMemberRemove:', error);
         }
@@ -127,18 +127,18 @@ export function setupWelcomeSystem(client: Client) {
                 const embed = new EmbedBuilder()
                     .setColor(0x00FF99)
                     .setTitle('🛡️ Rol Asignado')
-                    .setDescription(`El piloto <@${newMember.id}> ha recibido el rol **${role.name}**.`)
+                    .setDescription(`El piloto <@${newMember.id}> ha recibido el rol **${role.name}**.\n\n**ID usuario:** ${newMember.id}\n**ID rol:** ${role.id}\n**ID canal:** ${channel.id}`)
                     .setTimestamp();
-                await channel.send({ embeds: [embed] });
+                await channel.send({ content: `Usuario ID: ${newMember.id} | Rol ID: ${role.id} | Canal ID: ${channel.id}`, embeds: [embed] });
             }
 
             for (const [_, role] of removedRoles) {
                 const embed = new EmbedBuilder()
                     .setColor(0xFF5555)
                     .setTitle('🛡️ Rol Retirado')
-                    .setDescription(`Al piloto <@${newMember.id}> se le ha retirado el rol **${role.name}**.`)
+                    .setDescription(`Al piloto <@${newMember.id}> se le ha retirado el rol **${role.name}**.\n\n**ID usuario:** ${newMember.id}\n**ID rol:** ${role.id}\n**ID canal:** ${channel.id}`)
                     .setTimestamp();
-                await channel.send({ embeds: [embed] });
+                await channel.send({ content: `Usuario ID: ${newMember.id} | Rol ID: ${role.id} | Canal ID: ${channel.id}`, embeds: [embed] });
             }
         } catch (error) {
             console.error('❌ Error en el evento guildMemberUpdate:', error);
