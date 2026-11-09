@@ -38,7 +38,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         .setTitle('⚙️ CONFIGURACIÓN DE REPORTES (1/4)')
         .setDescription('Paso 1: Selecciona el **Canal Destino 1** (Opcional, o pulsa "Saltar").')
         .setColor(0xFF0000)
-        .setFooter({ text: 'DISCORDBOT' });
+        .setFooter({ text: 'REDLINE BOT GT' });
 
     const row = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(
         new ChannelSelectMenuBuilder()
@@ -76,7 +76,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 .setTitle('⚙️ CONFIGURACIÓN DE REPORTES (2/4)')
                 .setDescription('Paso 2: Selecciona la **Mención 1** (Rol que se alertará en el Canal 1. Opcional).')
                 .setColor(0xFF0000)
-                .setFooter({ text: 'DISCORDBOT' });
+                .setFooter({ text: 'REDLINE BOT GT' });
 
             const row2 = new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(
                 new RoleSelectMenuBuilder()
@@ -100,7 +100,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 .setTitle('⚙️ CONFIGURACIÓN DE REPORTES (3/4)')
                 .setDescription('Paso 3: Selecciona el **Canal Destino 2** (Donde se creará el hilo automático).')
                 .setColor(0xFF0000)
-                .setFooter({ text: 'DISCORDBOT' });
+                .setFooter({ text: 'REDLINE BOT GT' });
 
             const row3 = new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(
                 new ChannelSelectMenuBuilder()
@@ -118,7 +118,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 .setTitle('⚙️ CONFIGURACIÓN DE REPORTES (4/4)')
                 .setDescription('Paso 4: Selecciona la **Mención 2** (Rol que se alertará en el Canal 2).')
                 .setColor(0xFF0000)
-                .setFooter({ text: 'DISCORDBOT' });
+                .setFooter({ text: 'REDLINE BOT GT' });
 
             const row4 = new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(
                 new RoleSelectMenuBuilder()
@@ -139,7 +139,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 .setTitle('🚨 REPORTES DE CARRERA')
                 .setDescription('¿Quieres reportar una acción en carrera?\nPincha en el botón rojo y rellena el formulario.')
                 .setColor(0xFF0000)
-                .setFooter({ text: 'DISCORDBOT' });
+                .setFooter({ text: 'REDLINE BOT GT' });
 
             const botonReporte = new ButtonBuilder()
                 .setCustomId('btn_abrir_reporte')
