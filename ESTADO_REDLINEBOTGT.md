@@ -407,3 +407,14 @@ Comportamiento:
 - En `commands/reporte.ts`, los nuevos paneles de reportes y pasos de configuración usarán el pie «REDLINE BOT GT» en lugar de «DISCORDBOT».
 - **Pendiente:** el panel ya publicado no se puede editar desde el código fuente solamente: hace falta localizar el mensaje existente (canal y mensaje) para editar su embed conservando el botón. El cambio de footer del código solo afecta a los paneles que se publiquen después.
 - Revisión estática de cambios: pendiente de completar; pruebas en Discord y despliegue: pendientes.
+
+
+## 20. Flujo de defensas con pruebas adjuntas — 9/11/2026
+
+- Se conservan los cuatro primeros campos originales del formulario de defensa: ID del reporte, piloto que reportó, piloto en defensa y explicación/alegación.
+- Se añade un quinto campo **Nota (opcional)** con la indicación «Pulsa ENVIAR para adjuntar tus archivos o enlaces».
+- Tras el primer envío se guarda un borrador en MongoDB `redline_bot.defensaPending` y aparece el mensaje informativo **ADJUNTAR PRUEBAS**, con botón **Continuar**.
+- El segundo formulario permite **Link** y **Archivo** (hasta 10 fotos/vídeos), opcionales individualmente; se exige al menos uno para completar la defensa.
+- La defensa completa y sus pruebas se publican en el hilo del reporte correspondiente; si no se encuentra, se usa el Canal Destino 2. El Canal Destino 1 recibe el aviso/resumen, sin duplicar archivos.
+- Se reutiliza el validador seguro de archivos del módulo de reportes y la conexión MongoDB existente del módulo de defensas.
+- Pendiente: build/deploy Render y pruebas reales en Discord (solo link, solo archivo, ambos y ninguno).
