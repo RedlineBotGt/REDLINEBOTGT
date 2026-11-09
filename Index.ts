@@ -305,43 +305,56 @@ client.once('ready', () => {
         `🤖 [DISCORDBOT] Bot conectado como ${client.user?.tag}`
     );
 
-    // Actualización puntual del pie del panel de reportes ya publicado.
-    // Se conserva el contenido y los botones originales del mensaje.
+    // Actualiza el pie de los paneles de reportes ya publicados.
+    // Se conservan el contenido, los botones y el resto de los embeds.
     void (async () => {
+        const channelId = '1463095951492386888';
+        const messageIds = [
+            '1555166534576382016',
+            '1555166688008208417'
+        ];
+
         try {
-            const channel = await client.channels.fetch('1463095951492386888');
+            const channel = await client.channels.fetch(channelId);
             if (!channel || !channel.isTextBased()) {
-                console.warn('⚠️ [Reportes] No se pudo acceder al canal del panel antiguo.');
+                console.warn('⚠️ [Reportes] No se pudo acceder al canal de los paneles existentes.');
                 return;
             }
 
             const textChannel = channel as TextChannel;
-            const message = await textChannel.messages.fetch('1555166534576382016');
-            let footerUpdated = false;
-            const embeds = message.embeds.map(embed => {
-                const footerText = embed.footer?.text?.trim().toLowerCase();
-                if (footerText !== 'discord bot' && footerText !== 'discordbot') {
-                    return EmbedBuilder.from(embed);
+
+            for (const messageId of messageIds) {
+                try {
+                    const message = await textChannel.messages.fetch(messageId);
+                    let footerUpdated = false;
+                    const embeds = message.embeds.map(embed => {
+                        const footerText = embed.footer?.text?.trim().toLowerCase();
+                        if (footerText !== 'discord bot' && footerText !== 'discordbot') {
+                            return EmbedBuilder.from(embed);
+                        }
+
+                        footerUpdated = true;
+                        const updated = EmbedBuilder.from(embed);
+                        updated.setFooter({
+                            text: 'REDLINE BOT GT',
+                            ...(embed.footer?.iconURL ? { iconURL: embed.footer.iconURL } : {})
+                        });
+                        return updated;
+                    });
+
+                    if (!footerUpdated) {
+                        console.log(`ℹ️ [Reportes] El mensaje ${messageId} no tiene un pie Discord bot que actualizar.`);
+                        continue;
+                    }
+
+                    await message.edit({ embeds });
+                    console.log(`✅ [Reportes] Pie del mensaje ${messageId} actualizado a REDLINE BOT GT; botones conservados.`);
+                } catch (error) {
+                    console.error(`❌ [Reportes] No se pudo actualizar el mensaje ${messageId}:`, error);
                 }
-
-                footerUpdated = true;
-                const updated = EmbedBuilder.from(embed);
-                updated.setFooter({
-                    text: 'REDLINE BOT GT',
-                    ...(embed.footer?.iconURL ? { iconURL: embed.footer.iconURL } : {})
-                });
-                return updated;
-            });
-
-            if (!footerUpdated) {
-                console.log('ℹ️ [Reportes] El panel existente no tiene un pie Discord bot que actualizar.');
-                return;
             }
-
-            await message.edit({ embeds });
-            console.log('✅ [Reportes] Pie del panel existente actualizado a REDLINE BOT GT; botones conservados.');
         } catch (error) {
-            console.error('❌ [Reportes] No se pudo actualizar el pie del panel existente:', error);
+            console.error('❌ [Reportes] No se pudo acceder al canal de los paneles existentes:', error);
         }
     })();
 
