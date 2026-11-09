@@ -535,3 +535,13 @@ Comportamiento:
 - Commits de esta intervención: `3037c6c1`, `a483f972` y `52a4a475` (ajuste incremental del mismo archivo).
 - Revisión estática: realizada. Prueba visual en Discord y comprobación de anchura en móvil: pendientes.
 - Render: no se ha iniciado ni verificado manualmente ningún despliegue; comprobar el estado antes de considerar el cambio activo.
+
+
+## 28. Avisos de roles sin embed — 10/11/2026
+
+- En los dos manejadores activos de asignación de roles (dashadmin/avisos/avisosmanager.ts y dashadmin/welcome/welcomemanager.ts), el aviso se envía como mensaje normal, sin embed.
+- El contenido del mensaje y de la notificación push móvil es idéntico: Usuario, Rol y Canal de origen; cuando corresponda, Canal indica Manual y el responsable.
+- Se conservan los embeds de entradas y salidas de los sistemas de bienvenida/avisos y el aviso de retirada de rol; este cambio afecta al aviso de rol asignado solicitado.
+- No se han cambiado los canales configurados, los permisos ni la detección del origen.
+- Commits de código: b187ce3d2e128b3add6ae997689b8f8a109d7ebf y 644b8cbd022f78836bcc106aa99e75521d34b385 (rama BOTGT7).
+- Pendiente: confirmar Render LIVE y probar una asignación real para comprobar el mensaje en Discord y la notificación móvil.
