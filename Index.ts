@@ -4,7 +4,8 @@ import {
     GatewayIntentBits,
     Collection,
     Interaction,
-    EmbedBuilder
+    EmbedBuilder,
+    TextChannel
 } from 'discord.js';
 
 import {
@@ -309,18 +310,21 @@ client.once('ready', () => {
     void (async () => {
         try {
             const channel = await client.channels.fetch('1463095951492386888');
-            if (!channel || !channel.isTextBased() || !('messages' in channel)) {
+            if (!channel || !channel.isTextBased()) {
                 console.warn('⚠️ [Reportes] No se pudo acceder al canal del panel antiguo.');
                 return;
             }
 
-            const message = await channel.messages.fetch('1555166534576382016');
+            const textChannel = channel as TextChannel;
+            const message = await textChannel.messages.fetch('1555166534576382016');
+            let footerUpdated = false;
             const embeds = message.embeds.map(embed => {
                 const footerText = embed.footer?.text?.trim().toLowerCase();
                 if (footerText !== 'discord bot' && footerText !== 'discordbot') {
                     return EmbedBuilder.from(embed);
                 }
 
+                footerUpdated = true;
                 const updated = EmbedBuilder.from(embed);
                 updated.setFooter({
                     text: 'REDLINE BOT GT',
@@ -329,9 +333,7 @@ client.once('ready', () => {
                 return updated;
             });
 
-            if (embeds.every((embed, index) =>
-                JSON.stringify(embed.toJSON()) === JSON.stringify(message.embeds[index].toJSON())
-            )) {
+            if (!footerUpdated) {
                 console.log('ℹ️ [Reportes] El panel existente no tiene un pie Discord bot que actualizar.');
                 return;
             }
