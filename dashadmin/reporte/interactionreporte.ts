@@ -4,7 +4,6 @@ import {
     handleReportButton,
     handleReportModalSubmit,
     handleReportAttachButton,
-    handleReportSkipButton,
     handleReportFilesModalSubmit
 } from './reportemodal';
 
@@ -23,10 +22,6 @@ export async function handleReporteInteractions(interaction: Interaction): Promi
 
         if (interaction.isButton() && interaction.customId.startsWith('report_attach_')) {
             return await handleReportAttachButton(interaction);
-        }
-
-        if (interaction.isButton() && interaction.customId.startsWith('report_skip_')) {
-            return await handleReportSkipButton(interaction);
         }
 
         if (interaction.isModalSubmit() && interaction.customId.startsWith('modal_reporte_archivos_')) {
