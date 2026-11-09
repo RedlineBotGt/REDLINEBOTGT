@@ -105,8 +105,10 @@ async function downloadReportFile(
 export async function buildReportAttachments(
     uploadedFiles: Attachment[] = []
 ): Promise<AttachmentBuilder[]> {
-    if (uploadedFiles.length < 1 || uploadedFiles.length > MAX_FILES) {
-        throw new Error('Selecciona entre 1 y 10 archivos.');
+    if (uploadedFiles.length === 0) return [];
+
+    if (uploadedFiles.length > MAX_FILES) {
+        throw new Error('Selecciona como máximo 10 archivos.');
     }
 
     const results: Array<{ file: AttachmentBuilder; size: number }> = [];
