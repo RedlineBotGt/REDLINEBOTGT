@@ -126,7 +126,7 @@ export function setupWelcomeSystem(client: Client) {
 
             for (const [_, role] of addedRoles) {
                 const origin = await getRoleOriginLabel(newMember, role.id);
-                const notice = `👤 **Usuario:** ${newMember.displayName}\n🏷️ **Rol:** ${role.name}\n📍 **Canal:** ${origin}`;
+                const notice = `👤 Usuario: ${newMember.displayName}\n🏷️ Rol: ${role.name}\n📍 Canal: ${origin}`;
                 const embed = new EmbedBuilder()
                     .setColor(0x00FF99)
                     .setTitle('🛡️ Rol Asignado')
