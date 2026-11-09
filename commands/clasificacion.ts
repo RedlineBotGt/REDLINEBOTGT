@@ -1,7 +1,6 @@
 import {
     ChatInputCommandInteraction,
-    SlashCommandBuilder,
-    EmbedBuilder
+    SlashCommandBuilder
 } from 'discord.js';
 import { getSheetData } from '../utils/sheetsService';
 
@@ -50,32 +49,32 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             return;
         }
 
-        // Cada piloto ocupa una línea; los contadores solo aparecen cuando son mayores que cero.
+        // Tabla monoespaciada en mensaje normal para aprovechar todo el ancho disponible.
+        // Se mantienen las columnas separadas y se ocultan los contadores con valor cero.
+        const pad = (value: string, width: number) => value.length > width
+            ? value.slice(0, width - 1) + '…'
+            : value.padEnd(width, ' ');
+
         const lines = pilots.map((pilot, index) => {
             const position = pilot.position || String(index + 1);
-            const medal = position === '1' ? '🥇' : position === '2' ? '🥈' : position === '3' ? '🥉' : `**${position}.**`;
-            const counters = [
-                Number(pilot.vr) > 0 ? `🟣 ${pilot.vr}` : '',
-                Number(pilot.pp) > 0 ? `🟡 ${pilot.pp}` : '',
-                Number(pilot.sanctions) > 0 ? `🔴 ${pilot.sanctions}` : ''
-            ].filter(Boolean);
+            const name = pad(pilot.pilot, 18);
+            const points = pad(pilot.points, 5);
+            const vr = pad(Number(pilot.vr) > 0 ? `🟣 ${pilot.vr}` : '', 7);
+            const pp = pad(Number(pilot.pp) > 0 ? `🟡 ${pilot.pp}` : '', 7);
+            const sanctions = Number(pilot.sanctions) > 0 ? `🔴 ${pilot.sanctions}` : '';
 
-            return `${medal} **${pilot.pilot}** · **${pilot.points} pts**${counters.length ? ` · ${counters.join(' · ')}` : ''}`;
+            return `${pad(position, 3)}  ${name}  ${points}  ${vr}  ${pp}  ${sanctions}`.trimEnd();
         });
 
-        const embed = new EmbedBuilder()
-            .setColor(0x7027C8)
-            .setAuthor({
-                name: 'REDLINE BOT GT',
-                iconURL: interaction.guild.iconURL({ dynamic: true }) || undefined
-            })
-            .setTitle('🏆 Clasificación General')
-            .setDescription(
-                '**REDLINE GTCUP · 2ª Temporada**\\n\\n' + lines.join('\\n')
-            )
-            .setFooter({ text: 'REDLINE GT · Clasificación' });
+        const message = [
+            '**REDLINE GTCUP · 2ª Temporada**',
+            '',
+            '```',
+            ...lines,
+            '```'
+        ].join('\\n');
 
-        await interaction.editReply({ embeds: [embed] });
+        await interaction.editReply(message);
     } catch (error) {
         console.error('❌ Error al cargar /clasificacion:', error);
         await interaction.editReply('No se ha podido cargar la clasificación. Inténtalo de nuevo más tarde.');
