@@ -99,7 +99,7 @@ export function setupAvisosSystem(client: Client) {
 
             for (const role of addedRoles.values()) {
                 const origin = await getRoleOriginLabel(newMember, role.id);
-                const notice = `👤 **Usuario:** ${newMember.displayName}\n🏷️ **Rol:** ${role.name}\n📍 **Canal:** ${origin}`;
+                const notice = `👤 Usuario: ${newMember.displayName}\n🏷️ Rol: ${role.name}\n📍 Canal: ${origin}`;
 
                 const embed = new EmbedBuilder()
                     .setColor(0x00AAFF)
