@@ -114,7 +114,7 @@ export async function handleDefensaButton(interaction: ButtonInteraction) {
     const inputReporta = new TextInputBuilder().setCustomId('input_def_reporta').setLabel('Piloto que Reportó').setStyle(TextInputStyle.Short).setPlaceholder('Nombre del denunciante').setRequired(true);
     const inputPilotoDefensa = new TextInputBuilder().setCustomId('input_def_piloto').setLabel('Piloto en Defensa').setStyle(TextInputStyle.Short).setPlaceholder('Tu nombre o ID de piloto').setRequired(true);
     const inputExplicacion = new TextInputBuilder().setCustomId('input_def_explicacion').setLabel('Explicación / Alegación').setStyle(TextInputStyle.Paragraph).setPlaceholder('Explica tu versión de los hechos...').setRequired(true);
-    const inputNota = new TextInputBuilder().setCustomId('input_def_nota').setLabel('Nota (opcional)').setStyle(TextInputStyle.Short).setPlaceholder('Pulsa ENVIAR para adjuntar tus archivos o enlaces').setRequired(false);
+    const inputNota = new TextInputBuilder().setCustomId('input_def_nota').setLabel('Nota').setStyle(TextInputStyle.Short).setPlaceholder('Pulsa ENVIAR para adjuntar tus archivos o enlaces').setRequired(false);
 
     modal.addComponents(
         new ActionRowBuilder<TextInputBuilder>().addComponents(inputReportId),
