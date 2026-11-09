@@ -17,6 +17,7 @@ import {
     MessageFlags 
 } from 'discord.js';
 import { MongoClient as MongoDriver } from 'mongodb';
+import { getRoleOriginLabel } from '../avisos/roleOrigin';
 
 const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
 let clientMongo: MongoDriver | null = null;
@@ -124,12 +125,15 @@ export function setupWelcomeSystem(client: Client) {
             if (!channel) return;
 
             for (const [_, role] of addedRoles) {
+                const origin = await getRoleOriginLabel(newMember, role.id);
+                const notice = `👤 **Usuario:** ${newMember.displayName}\n🏷️ **Rol:** ${role.name}\n📍 **Canal:** ${origin}`;
                 const embed = new EmbedBuilder()
                     .setColor(0x00FF99)
                     .setTitle('🛡️ Rol Asignado')
-                    .setDescription(`El piloto <@${newMember.id}> ha recibido el rol **${role.name}**.\n\n**ID usuario:** ${newMember.id}\n**ID rol:** ${role.id}\n**ID canal:** ${channel.id}`)
+                    .setDescription(notice)
                     .setTimestamp();
-                await channel.send({ content: `Usuario ID: ${newMember.id} | Rol ID: ${role.id} | Canal ID: ${channel.id}`, embeds: [embed] });
+
+                await channel.send({ content: notice, embeds: [embed] });
             }
 
             for (const [_, role] of removedRoles) {
