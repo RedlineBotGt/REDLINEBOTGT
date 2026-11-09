@@ -17,46 +17,84 @@ export const data = new SlashCommandBuilder()
         option.setName('texto')
             .setDescription('Texto que quieres traducir')
             .setRequired(true)
+            .setMaxLength(6000)
     );
 
+const LIMITE_TRADUCCION = 450;
+const LIMITE_DISCORD = 2000;
+
+function dividirTexto(texto: string, limite: number): string[] {
+    const partes: string[] = [];
+    let restante = texto;
+
+    while (restante.length > limite) {
+        let corte = restante.lastIndexOf('\n', limite);
+        if (corte < limite * 0.5) corte = restante.lastIndexOf('. ', limite);
+        if (corte < limite * 0.5) corte = restante.lastIndexOf('! ', limite);
+        if (corte < limite * 0.5) corte = restante.lastIndexOf('? ', limite);
+        if (corte < limite * 0.5) corte = restante.lastIndexOf(' ', limite);
+        if (corte <= 0) corte = limite;
+
+        // Mantener el separador en el fragmento para no perder espacios ni saltos.
+        if (restante[corte] === ' ' || restante[corte] === '\n') corte += 1;
+        else if (restante[corte] === '.' || restante[corte] === '!' || restante[corte] === '?') corte += 1;
+
+        partes.push(restante.slice(0, corte));
+        restante = restante.slice(corte);
+    }
+
+    if (restante.length > 0) partes.push(restante);
+    return partes;
+}
+
+function dividirMensajeDiscord(texto: string): string[] {
+    return dividirTexto(texto, LIMITE_DISCORD);
+}
+
 async function obtenerTraduccion(texto: string, idiomaDestino: string) {
-    const mentionRegex = /<@[!&]?\d+>|<#\d+>/g;
-    const mentions: string[] = [];
-    
-    // Proteger menciones
-    const textoProtegido = texto.replace(mentionRegex, (match) => {
-        mentions.push(match);
-        return `__TAG${mentions.length - 1}__`;
+    // Se protegen menciones, emojis personalizados, enlaces y marcas Markdown.
+    const patronesProtegidos = /<@[!&]?\d+>|<#\d+>|<a?:[a-zA-Z0-9_]+:\d+>|https?:\/\/[^\s<>]+|\[[^\]]+\]\(https?:\/\/[^)]+\)|\*\*|__|~~|\|\||`{1,3}/g;
+    const elementosProtegidos: string[] = [];
+    const textoProtegido = texto.replace(patronesProtegidos, (elemento) => {
+        const indice = elementosProtegidos.push(elemento) - 1;
+        return `ZXQPROTECTEDTOKEN${indice}QXZ`;
     });
 
-    // Endpoint MyMemory (Autodetect -> idiomaDestino)
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(textoProtegido)}&langpair=autodetect|${idiomaDestino}`;
-
-    const res = await fetch(url);
-    if (!res.ok) {
-        throw new Error(`HTTP Error: ${res.status}`);
-    }
-
-    const data = await res.json();
-
-    if (!data.responseData || !data.responseData.translatedText) {
-        throw new Error('No se pudo obtener la traducción.');
-    }
-
-    let textoTraducido = data.responseData.translatedText;
-    
-    // Detectar idioma desde los datos de MyMemory o defecto
+    const fragmentos = dividirTexto(textoProtegido, LIMITE_TRADUCCION);
+    const traducciones: string[] = [];
     let idiomaDetectado = 'es';
-    if (data.matches && data.matches.length > 0 && data.matches[0].created_by) {
-        idiomaDetectado = data.responseData.detectedLanguage || 'es';
+
+    // Consultas secuenciales para evitar saturar el servicio gratuito.
+    for (const fragmento of fragmentos) {
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(fragmento)}&langpair=autodetect|${idiomaDestino}`;
+        const res = await fetch(url);
+
+        if (!res.ok) {
+            throw new Error(`HTTP Error: ${res.status}`);
+        }
+
+        const data = await res.json() as {
+            responseData?: { translatedText?: string; detectedLanguage?: string };
+            matches?: Array<{ created_by?: string }>;
+        };
+
+        if (!data.responseData?.translatedText) {
+            throw new Error('No se pudo obtener la traducción.');
+        }
+
+        traducciones.push(data.responseData.translatedText);
+
+        if (traducciones.length === 1) {
+            idiomaDetectado = data.responseData.detectedLanguage || 'es';
+        }
     }
 
-    // Restaurar menciones
-    if (mentions.length > 0) {
-        mentions.forEach((mention, index) => {
-            textoTraducido = textoTraducido.replace(new RegExp(`__TAG${index}__`, 'gi'), mention);
-        });
-    }
+    let textoTraducido = traducciones.join('');
+
+    // Restaurar exactamente las menciones, emojis personalizados, enlaces y formato.
+    elementosProtegidos.forEach((elemento, indice) => {
+        textoTraducido = textoTraducido.replaceAll(`ZXQPROTECTEDTOKEN${indice}QXZ`, elemento);
+    });
 
     return { textoTraducido: textoTraducido.trim(), idiomaDetectado };
 }
@@ -64,9 +102,7 @@ async function obtenerTraduccion(texto: string, idiomaDestino: string) {
 export async function execute(interaction: ChatInputCommandInteraction) {
     try {
         await interaction.deferReply({
-            allowedMentions: {
-                parse: [AllowedMentionsTypes.User, AllowedMentionsTypes.Role, AllowedMentionsTypes.Everyone]
-            }
+            allowedMentions: { parse: [] }
         });
 
         const idiomaDestino = interaction.options.getString('idioma', true);
@@ -83,15 +119,24 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
         const banderaOrigen = obtenerBandera(idiomaDetectado);
         const banderaDestino = obtenerBandera(idiomaDestino);
-
         const mensajeFinal = `${banderaOrigen} **Original:** ${textoOriginal}\n${banderaDestino} **Traducción:** ${textoTraducido}`;
+        const mensajes = dividirMensajeDiscord(mensajeFinal);
 
-        await interaction.editReply({ 
-            content: mensajeFinal,
+        await interaction.editReply({
+            content: mensajes[0],
             allowedMentions: {
                 parse: [AllowedMentionsTypes.User, AllowedMentionsTypes.Role, AllowedMentionsTypes.Everyone]
             }
         });
+
+        for (const mensaje of mensajes.slice(1)) {
+            await interaction.followUp({
+                content: mensaje,
+                allowedMentions: {
+                    parse: [AllowedMentionsTypes.User, AllowedMentionsTypes.Role, AllowedMentionsTypes.Everyone]
+                }
+            });
+        }
     } catch (error) {
         console.error('❌ Error al traducir el texto:', error);
         if (interaction.deferred || interaction.replied) {
