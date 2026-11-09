@@ -8,23 +8,32 @@ export async function getRoleOriginLabel(
     roleId: string
 ): Promise<string> {
     try {
-        const logs = await member.guild.fetchAuditLogs({
-            type: AuditLogEvent.MemberRoleUpdate,
-            limit: 10
-        });
+        let entry: any = null;
 
-        const entry = logs.entries.find(item => {
-            if (item.target?.id !== member.id) return false;
-            if (Date.now() - item.createdTimestamp > 20000) return false;
+        // Discord puede tardar un instante en publicar la entrada de auditoría.
+        for (let attempt = 0; attempt < 3 && !entry; attempt++) {
+            const logs = await member.guild.fetchAuditLogs({
+                type: AuditLogEvent.MemberRoleUpdate,
+                limit: 10
+            });
 
-            const added = item.changes?.some(change =>
-                change.key === '$add' &&
-                Array.isArray(change.new) &&
-                change.new.some((role: any) => role.id === roleId)
-            );
+            entry = logs.entries.find(item => {
+                if (item.target?.id !== member.id) return false;
+                if (Date.now() - item.createdTimestamp > 20000) return false;
 
-            return Boolean(added);
-        });
+                const added = item.changes?.some(change =>
+                    change.key === '$add' &&
+                    Array.isArray(change.new) &&
+                    change.new.some((role: any) => role.id === roleId)
+                );
+
+                return Boolean(added);
+            }) || null;
+
+            if (!entry && attempt < 2) {
+                await new Promise(resolve => setTimeout(resolve, 700));
+            }
+        }
 
         if (!entry) return 'Manual · responsable no disponible';
 
@@ -40,7 +49,9 @@ export async function getRoleOriginLabel(
             return 'Automático';
         }
 
-        const executor = await member.guild.members.fetch(entry.executor!.id).catch(() => null);
+        if (!entry.executor) return 'Manual · responsable no disponible';
+
+        const executor = await member.guild.members.fetch(entry.executor.id).catch(() => null);
         const name = executor?.displayName || entry.executor?.globalName || entry.executor?.username;
 
         return name ? `Manual · ${name}` : 'Manual · responsable no disponible';
