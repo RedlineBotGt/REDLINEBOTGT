@@ -173,6 +173,7 @@ import * as titularesCommand from './commands/titulares';
 import * as reservasCommand from './commands/reservas';
 import * as eloCommand from './commands/elo';
 import * as dashSheetsCommand from './dashsheet/dashsheet';
+import * as clasificacionCommand from './commands/clasificacion';
 import * as dashAdminCommand from './dashadmin/dashadmin';
 
 // =====================================================
@@ -264,6 +265,7 @@ const commandsList = [
     reservasCommand,
     eloCommand,
     dashSheetsCommand,
+    clasificacionCommand,
     dashAdminCommand
 ];
 
