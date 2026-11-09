@@ -418,3 +418,15 @@ Comportamiento:
 - La defensa completa y sus pruebas se publican en el hilo del reporte correspondiente; si no se encuentra, se usa el Canal Destino 2. El Canal Destino 1 recibe el aviso/resumen, sin duplicar archivos.
 - Se reutiliza el validador seguro de archivos del módulo de reportes y la conexión MongoDB existente del módulo de defensas.
 - Pendiente: build/deploy Render y pruebas reales en Discord (solo link, solo archivo, ambos y ninguno).
+
+
+## 21. Actualización del pie de dos paneles de reportes — 9/11/2026
+
+- Se amplió la actualización automática al iniciar el bot para revisar los dos mensajes existentes del canal `1463095951492386888`:
+  - `1555166534576382016`
+  - `1555166688008208417`
+- Si el pie del embed es `Discord bot` o `DISCORDBOT`, se sustituye por **REDLINE BOT GT**.
+- Se conserva el contenido de cada embed, su icono de pie y los botones/componentes originales.
+- El proceso registra por separado si cada mensaje no necesita cambios o si no se pudo actualizar.
+- Commit: `6cbc1a3983c3aa8070ce00268382242a7a59a4d8` (`Index.ts`, rama `BOTGT7`).
+- Pendiente: confirmar despliegue LIVE y comprobar en Discord que ambos mensajes muestran el nuevo pie. La actualización se ejecuta al conectar el bot; guardar el cambio en GitHub no modifica los mensajes publicados hasta que el nuevo código arranque.
