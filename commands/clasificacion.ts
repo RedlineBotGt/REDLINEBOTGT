@@ -50,12 +50,21 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             return;
         }
 
-        const lines = pilots.map((pilot, index) => {
-            const position = pilot.position || String(index + 1);
-            const medal = position === '1' ? '🥇' : position === '2' ? '🥈' : position === '3' ? '🥉' : `**${position}.**`;
+        // Tabla monoespaciada: las columnas se mantienen alineadas en Discord.
+        // Se limita el nombre para evitar que una fila ensanche demasiado el bloque en móvil.
+        const columnWidth = 18;
+        const lines = [
+            `${'POS'.padEnd(4)}${'PILOTO'.padEnd(columnWidth + 1)}${'PTS'.padStart(5)}  ${'VR'.padStart(2)}  ${'PP'.padStart(2)}  ${'SAN'.padStart(3)}`,
+            ...pilots.map((pilot, index) => {
+                const position = pilot.position || String(index + 1);
+                const medal = position === '1' ? '🥇' : position === '2' ? '🥈' : position === '3' ? '🥉' : `${position}.`;
+                const pilotName = pilot.pilot.length > columnWidth
+                    ? `${pilot.pilot.slice(0, columnWidth - 1)}…`
+                    : pilot.pilot;
 
-            return `${medal} **${pilot.pilot}** · **${pilot.points} pts** · 🟣 ${pilot.vr} · 🟡 ${pilot.pp} · 🔴 ${pilot.sanctions}`;
-        });
+                return `${medal.padEnd(4)}${pilotName.padEnd(columnWidth + 1)}${pilot.points.padStart(5)}  ${pilot.vr.padStart(2)}  ${pilot.pp.padStart(2)}  ${pilot.sanctions.padStart(3)}`;
+            })
+        ];
 
         const embed = new EmbedBuilder()
             .setColor(0x7027C8)
