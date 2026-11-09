@@ -50,6 +50,15 @@ export async function getDefensaConfigFromDB(guildId: string) {
     }
 }
 
+// Colección de borradores para el flujo de defensa en dos formularios.
+export async function getDefensaPendingCollection() {
+    if (!defensaCollection) {
+        await client.connect();
+        defensaCollection = client.db('redline_bot').collection('defensaConfig');
+    }
+    return client.db('redline_bot').collection('defensaPending');
+}
+
 // Iniciar el asistente de 4 pasos al pulsar el botón de setup en el dash
 export async function handleDashDefensaButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_setup_defensa') return false;
