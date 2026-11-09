@@ -14,21 +14,11 @@ import {
     Attachment,
     Guild
 } from 'discord.js';
-import { MongoClient } from 'mongodb';
-import { getDefensaConfigFromDB } from './defensewizard';
+import { getDefensaConfigFromDB, getDefensaPendingCollection } from './defensewizard';
 import { buildReportAttachments } from '../reporte/reportFileUpload';
 
-const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL || process.env.MONGO_URL;
-const client = uri ? new MongoClient(uri) : null;
-let pendingCollection: any = null;
-
 async function getPendingCollection() {
-    if (!client) throw new Error('No está configurada la conexión de MongoDB para guardar defensas pendientes.');
-    if (!pendingCollection) {
-        await client.connect();
-        pendingCollection = client.db('redline_bot').collection('defensaPending');
-    }
-    return pendingCollection;
+    return getDefensaPendingCollection();
 }
 
 async function findPendingDefense(defenseId: string, guildId: string, userId: string) {
