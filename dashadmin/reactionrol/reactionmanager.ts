@@ -494,7 +494,7 @@ export async function handleRrRoleAction(
 
         } else {
 
-            await member.roles.add(config.roleId);
+            await member.roles.add(config.roleId, `Reaction Role · Canal ID: ${interaction.channelId}`);
 
             await interaction.editReply({
                 content: `✅ ¡Se te ha **asignado** el rol **${role.name}** correctamente!`
