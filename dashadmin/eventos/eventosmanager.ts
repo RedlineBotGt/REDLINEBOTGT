@@ -105,8 +105,7 @@ export async function buildEventEmbedAndRows(ev: any, guild?: Guild | null) {
     const embed = new EmbedBuilder()
         .setColor(isClosed ? 0x808080 : 0x0055FF)
         .setTitle(isClosed ? `🔒 [FINALIZADO] ${ev.title}` : `🏁 ${ev.title}`)
-        .setDescription(`📅 **Fecha:** ${ev.date || 'Por determinar'} a las ${ev.time || '00:00'} CET\n\n${ev.description || 'Sin descripción'}`)
-;
+        .setDescription(`📅 **Fecha:** ${ev.date || 'Por determinar'} a las ${ev.time || '00:00'} CET\n\n${ev.description || 'Sin descripción'}`);
 
     if (ev.image && typeof ev.image === 'string' && ev.image.startsWith('http')) {
         embed.setImage(ev.image);
