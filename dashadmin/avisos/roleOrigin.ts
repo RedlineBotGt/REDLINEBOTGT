@@ -40,6 +40,9 @@ export async function getRoleOriginLabel(
         // Las asignaciones realizadas por el bot incluyen el canal de origen
         // en el motivo de auditoría.
         if (entry.executor?.id === member.client.user?.id) {
+            const manualMatch = entry.reason?.match(/Manual por:\s*(.+?)(?:\s*·\s*Canal ID:|$)/i);
+            if (manualMatch) return `Manual · ${manualMatch[1].trim()}`;
+
             const match = entry.reason?.match(/Canal ID:\s*(\d+)/i);
             if (match) {
                 const channel = await member.guild.channels.fetch(match[1]).catch(() => null);
