@@ -72,7 +72,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             '```',
             ...lines,
             '```'
-        ].join('\\n');
+        ].join('\n');
 
         await interaction.editReply(message);
     } catch (error) {
