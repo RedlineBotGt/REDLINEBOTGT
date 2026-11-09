@@ -497,3 +497,17 @@ Comportamiento:
 - Se conservan todos los customId, handlers, permisos y comportamiento; /dashstaff no se toca.
 - Revisión estática: cinco filas, 16 customId preservados y estilos solicitados comprobados.
 - Deploy Render dep-dbp3u8e7bikc73d3mg0g estaba en build_in_progress al registrar el cambio; falta confirmar LIVE y probar en Discord.
+
+## 25. Distribución acordada de /dash — 9/11/2026
+
+- Se sustituye la distribución anterior de cinco filas por el orden especificado por el usuario:
+  1. Edit Hola/Adiós + Configurar Avisos + Crear Sorteo + Crear Botón.
+  2. Reaction Role + Encuesta + Crear evento + BD Eventos.
+  3. Crear Form + Editar Form + Colocar Formulario.
+  4. Editar Reporte + Editar Defensa + Enviar Veredicto.
+  5. Enviar mensaje + Programar mensaje.
+- Las filas 3 y 4 quedan con tres botones cada una para darles más espacio horizontal que a las filas de cuatro botones.
+- Se conservan los 16 customId y sus estilos/funciones existentes. No se modifican handlers, permisos ni /dashstaff.
+- Archivo: `commands/dash.ts`.
+- Commit: `dbab7d1cc32f25d1ab4c8ee4eebd032a8187fcb1`.
+- Revisión estática y prueba funcional en Discord: pendientes de completar; comprobar el despliegue automático de Render antes de probar /dash.
