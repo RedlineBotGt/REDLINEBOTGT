@@ -127,13 +127,8 @@ export function setupWelcomeSystem(client: Client) {
             for (const [_, role] of addedRoles) {
                 const origin = await getRoleOriginLabel(newMember, role.id);
                 const notice = `👤 Usuario: ${newMember.displayName}\n🏷️ Rol: ${role.name}\n📍 Canal: ${origin}`;
-                const embed = new EmbedBuilder()
-                    .setColor(0x00FF99)
-                    .setTitle('🛡️ Rol Asignado')
-                    .setDescription(notice)
-                    .setTimestamp();
-
-                await channel.send({ content: notice, embeds: [embed] });
+                // Mensaje normal: el mismo texto se muestra en Discord y en la notificación móvil.
+                await channel.send({ content: notice });
             }
 
             for (const [_, role] of removedRoles) {
