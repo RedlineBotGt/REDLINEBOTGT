@@ -81,36 +81,36 @@ server.on('error', (error) => {
 });
 
 // =====================================================
-// DESPERTADOR DE ACADEMIA CAMPOS (HTTP, SIN DISCORD)
+// DESPERTADOR DE WEBLINEGT (HTTP, SIN DISCORD)
 // =====================================================
 
-const ACADEMIA_HEALTH_URL =
-    process.env.ACADEMIA_HEALTH_URL ||
-    'https://academia-campos.onrender.com/api/academia/status';
+const WEBLINE_HEALTH_URL =
+    process.env.WEBLINE_HEALTH_URL ||
+    'https://weblinegt.onrender.com/health';
 
-const ACADEMIA_CHECK_INTERVAL_MS = 10 * 60 * 1000;
-const ACADEMIA_REQUEST_TIMEOUT_MS = 60 * 1000;
-const ACADEMIA_RETRY_DELAY_MS = 15 * 1000;
+const WEBLINE_CHECK_INTERVAL_MS = 10 * 60 * 1000;
+const WEBLINE_REQUEST_TIMEOUT_MS = 60 * 1000;
+const WEBLINE_RETRY_DELAY_MS = 15 * 1000;
 
-let academiaCheckInProgress = false;
+let weblineCheckInProgress = false;
 
-async function checkAcademiaStatus(): Promise<void> {
-    if (academiaCheckInProgress) return;
+async function checkWeblineStatus(): Promise<void> {
+    if (weblineCheckInProgress) return;
 
-    academiaCheckInProgress = true;
+    weblineCheckInProgress = true;
 
     try {
         for (let attempt = 1; attempt <= 2; attempt++) {
             const controller = new AbortController();
             const timeout = setTimeout(
                 () => controller.abort(),
-                ACADEMIA_REQUEST_TIMEOUT_MS
+                WEBLINE_REQUEST_TIMEOUT_MS
             );
 
             try {
-                const response = await fetch(ACADEMIA_HEALTH_URL, {
+                const response = await fetch(WEBLINE_HEALTH_URL, {
                     method: 'GET',
-                    headers: { Accept: 'application/json' },
+                    headers: { Accept: 'text/plain' },
                     signal: controller.signal
                 });
 
@@ -118,24 +118,21 @@ async function checkAcademiaStatus(): Promise<void> {
                     throw new Error(`HTTP ${response.status}`);
                 }
 
-                const data = await response.json() as {
-                    estado?: string;
-                    servicio?: string;
-                };
+                const statusText = (await response.text()).trim();
 
                 console.log(
-                    `🟢 [Academia] Comprobación correcta: ${data.estado || 'activa'}.`
+                    `🟢 [WEBLINEGT] Comprobación correcta: ${statusText || 'activa'}.`
                 );
                 return;
             } catch (error) {
                 console.warn(
-                    `⚠️ [Academia] Falló la comprobación ${attempt}/2:`,
+                    `⚠️ [WEBLINEGT] Falló la comprobación ${attempt}/2:`,
                     error instanceof Error ? error.message : error
                 );
 
                 if (attempt === 1) {
                     await new Promise(resolve =>
-                        setTimeout(resolve, ACADEMIA_RETRY_DELAY_MS)
+                        setTimeout(resolve, WEBLINE_RETRY_DELAY_MS)
                     );
                 }
             } finally {
@@ -144,18 +141,18 @@ async function checkAcademiaStatus(): Promise<void> {
         }
 
         console.error(
-            '❌ [Academia] No respondió tras dos intentos. Se volverá a comprobar en el siguiente ciclo.'
+            '❌ [WEBLINEGT] No respondió tras dos intentos. Se volverá a comprobar en el siguiente ciclo.'
         );
     } finally {
-        academiaCheckInProgress = false;
+        weblineCheckInProgress = false;
     }
 }
 
 // Primera petición al arrancar y después una comprobación cada 10 minutos.
-void checkAcademiaStatus();
+void checkWeblineStatus();
 setInterval(() => {
-    void checkAcademiaStatus();
-}, ACADEMIA_CHECK_INTERVAL_MS);
+    void checkWeblineStatus();
+}, WEBLINE_CHECK_INTERVAL_MS);
 
 // =====================================================
 // COMANDOS SLASH
