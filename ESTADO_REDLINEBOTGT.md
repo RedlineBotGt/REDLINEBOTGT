@@ -446,3 +446,13 @@ Comportamiento:
 - El color actual del embed es azul (`0x0055FF`) mientras el evento está activo y gris al finalizar/cancelarse.
 - Discord permite el color lateral del embed y campos/pie, pero no una caja con fondo de color independiente dentro del embed.
 - Propuesta visual pendiente de aprobación: sustituir el timestamp automático por un pie explícito **🕒 ACTUALIZADO · hoy a las HH:mm** (hora de Madrid), manteniendo el color lateral azul. No modificar todavía el embed hasta acordar la presentación.
+
+### Actualización visual del embed de eventos — 9/11/2026
+
+- En `dashadmin/eventos/eventosmanager.ts` se ha sustituido el timestamp automático del pie por un primer campo justo después de la imagen.
+- Texto: **🕒 ACTUALIZADO · HOY A LAS HH:mm**, todo en negrita y mayúsculas, en una sola línea.
+- La hora se genera con `Intl.DateTimeFormat` y zona horaria `Europe/Madrid`; se recalcula cada vez que se reconstruye el embed tras una interacción.
+- Se mantiene el color azul del embed activo, el gris de eventos finalizados y todos los campos/listas existentes.
+- Commits: `51a24ca597432bb5a52f647f4f0663e0cad8ee15` (función) y `cb06d2e9625a6f1dbd7896c7131c7971b76f1f2a` (ajuste de formato).
+- Retirada del bloque temporal de footer en `Index.ts`: despliegue `dep-dbp3bh95efls73anok8g` confirmado LIVE antes de los cambios visuales del embed.
+- Despliegue del nuevo embed: pendiente de confirmar LIVE y de comprobarlo en Discord.
