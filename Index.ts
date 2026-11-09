@@ -305,8 +305,8 @@ client.once('ready', () => {
         `🤖 [DISCORDBOT] Bot conectado como ${client.user?.tag}`
     );
 
-    // Actualiza el pie de los paneles de reportes ya publicados.
-    // Se conservan el contenido, los botones y el resto de los embeds.
+    // Actualiza el pie y el botón de los paneles de reportes ya publicados.
+    // No depende del texto anterior del footer y conserva el resto del mensaje.
     void (async () => {
         const channelId = '1463095951492386888';
         const messageIds = [
@@ -326,29 +326,26 @@ client.once('ready', () => {
             for (const messageId of messageIds) {
                 try {
                     const message = await textChannel.messages.fetch(messageId);
-                    let footerUpdated = false;
-                    const embeds = message.embeds.map(embed => {
-                        const footerText = embed.footer?.text?.trim().toLowerCase();
-                        if (footerText !== 'discord bot' && footerText !== 'discordbot') {
-                            return EmbedBuilder.from(embed);
-                        }
-
-                        footerUpdated = true;
-                        const updated = EmbedBuilder.from(embed);
-                        updated.setFooter({
+                    const embeds = message.embeds.map(embed =>
+                        EmbedBuilder.from(embed).setFooter({
                             text: 'REDLINE BOT GT',
                             ...(embed.footer?.iconURL ? { iconURL: embed.footer.iconURL } : {})
-                        });
-                        return updated;
-                    });
+                        })
+                    );
 
-                    if (!footerUpdated) {
-                        console.log(`ℹ️ [Reportes] El mensaje ${messageId} no tiene un pie Discord bot que actualizar.`);
-                        continue;
-                    }
+                    const components = message.components.map(row => ({
+                        ...row.toJSON(),
+                        components: row.components.map(component => {
+                            if (component.type !== 2) return component.toJSON();
+                            return {
+                                ...component.toJSON(),
+                                style: 1
+                            };
+                        })
+                    }));
 
-                    await message.edit({ embeds });
-                    console.log(`✅ [Reportes] Pie del mensaje ${messageId} actualizado a REDLINE BOT GT; botones conservados.`);
+                    await message.edit({ embeds, components });
+                    console.log(`✅ [Reportes] Mensaje ${messageId}: pie REDLINE BOT GT y botones azules aplicados.`);
                 } catch (error) {
                     console.error(`❌ [Reportes] No se pudo actualizar el mensaje ${messageId}:`, error);
                 }
