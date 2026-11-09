@@ -91,7 +91,7 @@ async function promocionarPrimerReserva(
             }
 
             if (asistenteRole && !member.roles.cache.has(asistenteRole.id)) {
-                await member.roles.add(asistenteRole).catch(() => {});
+                await member.roles.add(asistenteRole, `Promoción automática · Canal ID: ${eventDoc.channelId}`).catch(() => {});
             }
         }
 
