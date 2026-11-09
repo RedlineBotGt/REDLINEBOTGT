@@ -72,6 +72,10 @@ function buildReportEmbed(report: any, serverName: string): EmbedBuilder {
         { name: '📝 Descripción', value: report.descripcion, inline: false }
     ];
 
+    if (report.nota) {
+        fields.push({ name: '📌 Nota', value: report.nota, inline: false });
+    }
+
     if (report.enlace) {
         fields.push({
             name: '🔗 Pruebas / Enlace',
@@ -213,11 +217,19 @@ export async function handleReportButton(interaction: ButtonInteraction) {
         .setPlaceholder('Explica brevemente qué ha sucedido...')
         .setRequired(true);
 
+    const inputNota = new TextInputBuilder()
+        .setCustomId('input_nota')
+        .setLabel('Nota (opcional)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Pulsa ENVIAR para adjuntar tus archivos o enlaces')
+        .setRequired(false);
+
     modal.addComponents(
         new ActionRowBuilder<TextInputBuilder>().addComponents(inputJornada),
         new ActionRowBuilder<TextInputBuilder>().addComponents(inputReporta),
         new ActionRowBuilder<TextInputBuilder>().addComponents(inputAReportar),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(inputDescripcion)
+        new ActionRowBuilder<TextInputBuilder>().addComponents(inputDescripcion),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(inputNota)
     );
 
     await interaction.showModal(modal);
@@ -262,6 +274,7 @@ export async function handleReportModalSubmit(interaction: ModalSubmitInteractio
             pilotoReporta: interaction.fields.getTextInputValue('input_reporta').trim(),
             pilotoAReportar: interaction.fields.getTextInputValue('input_a_reportar').trim(),
             descripcion: interaction.fields.getTextInputValue('input_descripcion').trim(),
+            nota: interaction.fields.getTextInputValue('input_nota').trim(),
             enlace: '',
             createdAt: new Date(),
             expiresAt: new Date(Date.now() + 30 * 60 * 1000),
@@ -274,14 +287,13 @@ export async function handleReportModalSubmit(interaction: ModalSubmitInteractio
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder()
-                .setCustomId(`report_attach_${reportId}`)
-                .setLabel('Adjuntar pruebas')
-                .setEmoji('📎')
+                .setCustomId(`report_continue_${reportId}`)
+                .setLabel('Continuar')
                 .setStyle(ButtonStyle.Primary)
         );
 
         await interaction.reply({
-            content: `📝 **Reporte ${reportId} preparado.**\nPulsa **Adjuntar pruebas** para añadir un enlace o archivos. Debes incluir al menos uno para poder enviar el reporte.`,
+            content: `📎 **ADJUNTAR PRUEBAS**\nPuedes adjuntar tus pruebas mediante un enlace o subir directamente tus archivos.`,
             components: [row],
             ephemeral: true
         });
@@ -297,10 +309,10 @@ export async function handleReportModalSubmit(interaction: ModalSubmitInteractio
 }
 
 // 3. Abrir el selector de fotos y vídeos.
-export async function handleReportAttachButton(interaction: ButtonInteraction) {
-    if (!interaction.customId.startsWith('report_attach_')) return false;
+export async function handleReportContinueButton(interaction: ButtonInteraction) {
+    if (!interaction.customId.startsWith('report_continue_')) return false;
 
-    const reportId = interaction.customId.slice('report_attach_'.length);
+    const reportId = interaction.customId.slice('report_continue_'.length);
     const report = await findPendingReport(reportId, interaction.guildId || '', interaction.user.id);
 
     if (!report) {
@@ -363,9 +375,8 @@ export async function handleReportFilesModalSubmit(interaction: ModalSubmitInter
     if (!enlace && uploadedFiles.length === 0) {
         const retryRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder()
-                .setCustomId(`report_attach_${reportId}`)
-                .setLabel('Adjuntar pruebas')
-                .setEmoji('📎')
+                .setCustomId(`report_continue_${reportId}`)
+                .setLabel('Continuar')
                 .setStyle(ButtonStyle.Primary)
         );
 
