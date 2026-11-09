@@ -430,3 +430,19 @@ Comportamiento:
 - El proceso registra por separado si cada mensaje no necesita cambios o si no se pudo actualizar.
 - Commit: `6cbc1a3983c3aa8070ce00268382242a7a59a4d8` (`Index.ts`, rama `BOTGT7`).
 - Pendiente: confirmar despliegue LIVE y comprobar en Discord que ambos mensajes muestran el nuevo pie. La actualización se ejecuta al conectar el bot; guardar el cambio en GitHub no modifica los mensajes publicados hasta que el nuevo código arranque.
+
+## 22. Retirada de la actualización temporal del pie de reportes y revisión visual del embed de eventos — 9/11/2026
+
+- `Index.ts`: retirado el bloque temporal que editaba al arrancar los mensajes de reportes `1555166534576382016` y `1555166688008208417` del canal `1463095951492386888`.
+- También se retiraron los imports `EmbedBuilder` y `TextChannel` que solo se utilizaban en ese bloque.
+- Los pies ya corregidos permanecen guardados en los mensajes de Discord; no necesitan que el bot los vuelva a editar en cada arranque.
+- Commit: `a670cf7a8e30c69b55530f0c872627b9bd50fbbc`.
+- Despliegue Render: pendiente de confirmar LIVE.
+
+### Embed de eventos: diagnóstico visual
+
+- `dashadmin/eventos/eventosmanager.ts` construye el embed de eventos y actualmente llama a `.setTimestamp()`.
+- Cada interacción RSVP vuelve a construir el embed mediante `buildEventEmbedAndRows()`, por lo que ese timestamp se renueva y es el indicador temporal que cambia con cada interacción.
+- El color actual del embed es azul (`0x0055FF`) mientras el evento está activo y gris al finalizar/cancelarse.
+- Discord permite el color lateral del embed y campos/pie, pero no una caja con fondo de color independiente dentro del embed.
+- Propuesta visual pendiente de aprobación: sustituir el timestamp automático por un pie explícito **🕒 ACTUALIZADO · hoy a las HH:mm** (hora de Madrid), manteniendo el color lateral azul. No modificar todavía el embed hasta acordar la presentación.
