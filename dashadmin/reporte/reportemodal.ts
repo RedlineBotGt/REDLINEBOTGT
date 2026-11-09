@@ -1,20 +1,28 @@
-import { 
-    ModalBuilder, 
-    TextInputBuilder, 
-    TextInputStyle, 
-    ActionRowBuilder, 
-    ButtonInteraction, 
+import {
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle,
+    ActionRowBuilder,
+    FileUploadBuilder,
+    LabelBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    ButtonInteraction,
     ModalSubmitInteraction,
     EmbedBuilder,
-    TextChannel
+    TextChannel,
+    Attachment,
+    Guild
 } from 'discord.js';
 import { MongoClient } from 'mongodb';
+import { buildReportAttachments } from './reportFileUpload';
 
-// Configuración de MongoDB
+// Se conserva la conexión MongoDB que ya utiliza el módulo de reportes.
 const uri = process.env.MONGODB_URI || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
 const client = new MongoClient(uri);
 
 let reportCollection: any = null;
+let pendingCollection: any = null;
 
 async function getReportCollection() {
     if (!reportCollection) {
@@ -24,7 +32,14 @@ async function getReportCollection() {
     return reportCollection;
 }
 
-// Función para obtener la configuración del servidor desde MongoDB
+async function getPendingCollection() {
+    if (!pendingCollection) {
+        await client.connect();
+        pendingCollection = client.db('redline_bot').collection('reportPending');
+    }
+    return pendingCollection;
+}
+
 async function getConfigFromDB(guildId: string) {
     try {
         const col = await getReportCollection();
@@ -35,27 +50,134 @@ async function getConfigFromDB(guildId: string) {
     }
 }
 
-// Función para generar y actualizar el ID correlativo de forma persistente en MongoDB
 async function getNextReportIdFromDB(guildId: string): Promise<string> {
-    try {
-        const col = await getReportCollection();
-        const doc = await col.findOne({ guildId });
-        let currentCounter = doc?.counter ? doc.counter + 1 : 1;
+    const col = await getReportCollection();
+    const doc = await col.findOne({ guildId });
+    const currentCounter = doc?.counter ? doc.counter + 1 : 1;
 
-        await col.updateOne(
-            { guildId },
-            { $set: { counter: currentCounter } },
-            { upsert: true }
-        );
+    await col.updateOne(
+        { guildId },
+        { $set: { counter: currentCounter } },
+        { upsert: true }
+    );
 
-        return String(currentCounter).padStart(3, '0');
-    } catch (error) {
-        console.error('❌ Error al generar el ID correlativo en MongoDB:', error);
-        return '001';
-    }
+    return String(currentCounter).padStart(3, '0');
 }
 
-// 1. Mostrar el Modal al pulsar el botón REPORTE del panel público
+function buildReportEmbed(report: any, serverName: string): EmbedBuilder {
+    const fields: any[] = [
+        { name: '📅 Jornada', value: report.jornada, inline: true },
+        { name: '👤 Reporta', value: report.pilotoReporta, inline: true },
+        { name: '🎯 A Reportar', value: report.pilotoAReportar, inline: true },
+        { name: '📝 Descripción', value: report.descripcion, inline: false }
+    ];
+
+    if (report.enlace) {
+        fields.push({
+            name: '🔗 Pruebas / Enlace',
+            value: report.enlace,
+            inline: false
+        });
+    }
+
+    return new EmbedBuilder()
+        .setTitle(`🚨 NUEVO REPORTE - 🆔 ${report.reportId}`)
+        .setColor(0xFF0000)
+        .addFields(fields)
+        .setFooter({ text: serverName })
+        .setTimestamp(new Date(report.createdAt));
+}
+
+async function findPendingReport(reportId: string, guildId: string, userId: string) {
+    const col = await getPendingCollection();
+    const now = new Date();
+
+    await col.deleteMany({ expiresAt: { $lte: now } });
+
+    return await col.findOne({
+        reportId,
+        guildId,
+        userId,
+        status: 'pending',
+        expiresAt: { $gt: now }
+    });
+}
+
+async function claimPendingReport(reportId: string, guildId: string, userId: string) {
+    const col = await getPendingCollection();
+    const now = new Date();
+
+    const result = await col.updateOne(
+        {
+            reportId,
+            guildId,
+            userId,
+            status: 'pending',
+            expiresAt: { $gt: now }
+        },
+        { $set: { status: 'processing' } }
+    );
+
+    if (!result.modifiedCount) return null;
+
+    return await col.findOne({ reportId, guildId, userId, status: 'processing' });
+}
+
+async function releasePendingReport(report: any) {
+    const col = await getPendingCollection();
+    await col.updateOne(
+        { _id: report._id, status: 'processing' },
+        { $set: { status: 'pending' } }
+    );
+}
+
+async function finishReport(guild: Guild, report: any, files: any[] = []): Promise<void> {
+    const config = report.config;
+    const embedReporte = buildReportEmbed(report, guild.name);
+
+    // El expediente privado se crea primero y recibe todas las pruebas adjuntas.
+    const canal2 = await guild.channels.fetch(config.canal2) as TextChannel | null;
+    if (!canal2 || !canal2.isTextBased()) {
+        throw new Error('No se encuentra el canal privado de revisión o no admite mensajes.');
+    }
+
+    const thread = await canal2.threads.create({
+        name: `Reporte-${report.reportId}`,
+        autoArchiveDuration: 1440
+    });
+
+    await thread.send({
+        content: `📢 <@&${config.rol2}> Expediente abierto para revisión.`,
+        embeds: [embedReporte],
+        files,
+        allowedMentions: { parse: ['roles'] }
+    });
+
+    // El canal de avisos recibe el resumen, sin duplicar los archivos.
+    if (config.canal1) {
+        try {
+            const canal1 = await guild.channels.fetch(config.canal1) as TextChannel | null;
+            if (canal1 && canal1.isTextBased()) {
+                const mentionText = config.rol1
+                    ? `📢 <@&${config.rol1}> Nuevo reporte registrado.`
+                    : '📢 Nuevo reporte registrado.';
+
+                await canal1.send({
+                    content: mentionText,
+                    embeds: [embedReporte],
+                    allowedMentions: { parse: ['roles'] }
+                });
+            }
+        } catch (error) {
+            console.error('❌ Error al enviar el aviso al Canal Destino 1:', error);
+        }
+    }
+
+    const col = await getPendingCollection();
+    await col.deleteOne({ _id: report._id });
+}
+
+// 1. Formulario principal: se mantienen los cinco campos actuales.
 export async function handleReportButton(interaction: ButtonInteraction) {
     if (interaction.customId !== 'btn_abrir_reporte') return false;
 
@@ -110,87 +232,185 @@ export async function handleReportButton(interaction: ButtonInteraction) {
     return true;
 }
 
-// 2. Procesar el formulario del modal y ejecutar la Salida Dual completa
+// 2. Guardar el formulario y preguntar si quiere adjuntar fotos o vídeos.
 export async function handleReportModalSubmit(interaction: ModalSubmitInteraction) {
     if (interaction.customId !== 'modal_envio_reporte') return false;
 
-    const guildId = interaction.guildId!;
-    const config = await getConfigFromDB(guildId);
-
-    if (!config || !config.canal2 || !config.rol2) {
+    const guildId = interaction.guildId;
+    if (!guildId || !interaction.guild) {
         await interaction.reply({
-            content: '❌ Error: El sistema de reportes no está completamente configurado (falta el Canal Destino 2 o su rol). Vuelve a configurarlo desde el panel de admin.',
+            content: '❌ No se pudo identificar el servidor del reporte.',
             ephemeral: true
         });
         return true;
     }
 
-    const reportId = await getNextReportIdFromDB(guildId);
-
-    const jornada = interaction.fields.getTextInputValue('input_jornada');
-    const pilotoReporta = interaction.fields.getTextInputValue('input_reporta');
-    const pilotoAReportar = interaction.fields.getTextInputValue('input_a_reportar');
-    const descripcion = interaction.fields.getTextInputValue('input_descripcion');
-    const enlace = interaction.fields.getTextInputValue('input_enlace').trim();
-
-    await interaction.reply({
-        content: `✅ ¡Reporte enviado con éxito! Identificador generado: **🆔 ${reportId}**`,
-        ephemeral: true
-    });
-
-    const guild = interaction.guild!;
-    const serverName = guild.name;
-
-    const embedFields: any[] = [
-        { name: '📅 Jornada', value: jornada, inline: true },
-        { name: '👤 Reporta', value: pilotoReporta, inline: true },
-        { name: '🎯 A Reportar', value: pilotoAReportar, inline: true },
-        { name: '📝 Descripción', value: descripcion, inline: false }
-    ];
-
-    if (enlace) {
-        embedFields.push({ name: '🔗 Pruebas / Enlace', value: enlace, inline: false });
+    const config = await getConfigFromDB(guildId);
+    if (!config || !config.canal2 || !config.rol2) {
+        await interaction.reply({
+            content: '❌ El sistema de reportes no está completamente configurado. Vuelve a configurarlo desde el panel de administración.',
+            ephemeral: true
+        });
+        return true;
     }
 
-    const embedReporte = new EmbedBuilder()
-        .setTitle(`🚨 NUEVO REPORTE - 🆔 ${reportId}`)
-        .setColor(0xFF0000)
-        .addFields(embedFields)
-        .setFooter({ text: serverName })
-        .setTimestamp();
-
-    // --- SALIDA 1: Canal Destino 1 (Opcional, con o sin mención) ---
-    if (config.canal1) {
-        try {
-            const canal1 = await guild.channels.fetch(config.canal1) as TextChannel;
-            if (canal1) {
-                const mentionText = config.rol1 ? `📢 <@&${config.rol1}> Nuevo reporte registrado.` : `📢 Nuevo reporte registrado.`;
-                await canal1.send({
-                    content: mentionText,
-                    embeds: [embedReporte]
-                });
-            }
-        } catch (error) {
-            console.error('❌ Error al enviar al Canal Destino 1:', error);
-        }
-    }
-
-    // --- SALIDA 2: Canal Destino 2 (Crea hilo directamente y manda el embed dentro) ---
     try {
-        const canal2 = await guild.channels.fetch(config.canal2) as TextChannel;
-        if (canal2) {
-            const thread = await canal2.threads.create({
-                name: `Reporte-${reportId}`,
-                autoArchiveDuration: 1440 // 24 horas
-            });
+        const reportId = await getNextReportIdFromDB(guildId);
+        const report = {
+            reportId,
+            guildId,
+            userId: interaction.user.id,
+            config: {
+                canal1: config.canal1 || null,
+                rol1: config.rol1 || null,
+                canal2: config.canal2,
+                rol2: config.rol2
+            },
+            jornada: interaction.fields.getTextInputValue('input_jornada').trim(),
+            pilotoReporta: interaction.fields.getTextInputValue('input_reporta').trim(),
+            pilotoAReportar: interaction.fields.getTextInputValue('input_a_reportar').trim(),
+            descripcion: interaction.fields.getTextInputValue('input_descripcion').trim(),
+            enlace: interaction.fields.getTextInputValue('input_enlace').trim(),
+            createdAt: new Date(),
+            expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+            status: 'pending'
+        };
 
-            await thread.send({
-                content: `📢 <@&${config.rol2}> Expediente abierto para revisión.`,
-                embeds: [embedReporte]
-            });
-        }
+        const col = await getPendingCollection();
+        await col.deleteMany({ expiresAt: { $lte: new Date() } });
+        await col.insertOne(report);
+
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder()
+                .setCustomId(`report_attach_${reportId}`)
+                .setLabel('Adjuntar fotos / vídeos')
+                .setEmoji('📎')
+                .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
+                .setCustomId(`report_skip_${reportId}`)
+                .setLabel('Omitir y enviar')
+                .setStyle(ButtonStyle.Secondary)
+        );
+
+        await interaction.reply({
+            content: `📝 **Reporte ${reportId} preparado.**\n¿Quieres adjuntar fotos o vídeos desde tu móvil? Es opcional. Puedes omitir este paso y el reporte se enviará igualmente.`,
+            components: [row],
+            ephemeral: true
+        });
     } catch (error) {
-        console.error('❌ Error al crear el hilo en el Canal Destino 2:', error);
+        console.error('❌ Error al preparar el reporte:', error);
+        await interaction.reply({
+            content: '❌ No se pudo preparar el reporte. No se ha enviado; inténtalo de nuevo.',
+            ephemeral: true
+        }).catch(() => {});
+    }
+
+    return true;
+}
+
+// 3. Abrir el selector de fotos y vídeos.
+export async function handleReportAttachButton(interaction: ButtonInteraction) {
+    if (!interaction.customId.startsWith('report_attach_')) return false;
+
+    const reportId = interaction.customId.slice('report_attach_'.length);
+    const report = await findPendingReport(reportId, interaction.guildId || '', interaction.user.id);
+
+    if (!report) {
+        await interaction.reply({
+            content: '⏰ Este reporte ha caducado o no pertenece a tu usuario. Vuelve a rellenar el formulario.',
+            ephemeral: true
+        });
+        return true;
+    }
+
+    const fileUpload = new FileUploadBuilder()
+        .setCustomId('input_reporte_archivos')
+        .setMinValues(1)
+        .setMaxValues(10)
+        .setRequired(true);
+
+    const modal = new ModalBuilder()
+        .setCustomId(`modal_reporte_archivos_${reportId}`)
+        .setTitle('Adjuntar pruebas al reporte')
+        .addLabelComponents(
+            new LabelBuilder()
+                .setLabel('📷 Fotos y 🎥 vídeos')
+                .setDescription('Selecciona entre 1 y 10 archivos desde tu dispositivo.')
+                .setFileUploadComponent(fileUpload)
+        );
+
+    await interaction.showModal(modal);
+    return true;
+}
+
+// 4. Opción para enviar el reporte sin adjuntos.
+export async function handleReportSkipButton(interaction: ButtonInteraction) {
+    if (!interaction.customId.startsWith('report_skip_')) return false;
+
+    const reportId = interaction.customId.slice('report_skip_'.length);
+    const report = await claimPendingReport(reportId, interaction.guildId || '', interaction.user.id);
+
+    if (!report || !interaction.guild) {
+        await interaction.reply({
+            content: '⏰ Este reporte ya se ha enviado, ha caducado o no se puede recuperar.',
+            ephemeral: true
+        });
+        return true;
+    }
+
+    await interaction.deferReply({ ephemeral: true });
+
+    try {
+        await finishReport(interaction.guild, report);
+        await interaction.editReply({
+            content: `✅ Reporte **${reportId}** enviado correctamente, sin archivos adjuntos.`
+        });
+    } catch (error) {
+        console.error('❌ Error al finalizar el reporte sin archivos:', error);
+        await releasePendingReport(report);
+        await interaction.editReply({
+            content: '❌ No se pudo enviar el reporte al hilo privado. Los datos siguen guardados durante 30 minutos; vuelve a intentarlo.'
+        });
+    }
+
+    return true;
+}
+
+// 5. Recibir los archivos y enviarlos al hilo privado de revisión.
+export async function handleReportFilesModalSubmit(interaction: ModalSubmitInteraction) {
+    if (!interaction.customId.startsWith('modal_reporte_archivos_')) return false;
+
+    const reportId = interaction.customId.slice('modal_reporte_archivos_'.length);
+    const report = await claimPendingReport(reportId, interaction.guildId || '', interaction.user.id);
+
+    if (!report || !interaction.guild) {
+        await interaction.reply({
+            content: '⏰ Este reporte ya se ha enviado, ha caducado o no se puede recuperar.',
+            ephemeral: true
+        });
+        return true;
+    }
+
+    const uploadedFiles = Array.from(
+        interaction.fields.getUploadedFiles('input_reporte_archivos')?.values() ?? []
+    ) as Attachment[];
+
+    await interaction.deferReply({ ephemeral: true });
+
+    try {
+        const files = await buildReportAttachments(uploadedFiles);
+        await finishReport(interaction.guild, report, files);
+        await interaction.editReply({
+            content: `✅ Reporte **${reportId}** enviado correctamente con ${files.length} archivo(s). Las pruebas están en el hilo privado de revisión.`
+        });
+    } catch (error) {
+        console.error('❌ Error al procesar los archivos del reporte:', error);
+        await releasePendingReport(report);
+        await interaction.editReply({
+            content: error instanceof Error
+                ? `❌ No se pudo completar el envío: ${error.message}\nEl reporte sigue guardado durante 30 minutos; puedes volver a intentarlo.`
+                : '❌ No se pudo completar el envío. El reporte sigue guardado durante 30 minutos; puedes volver a intentarlo.'
+        });
     }
 
     return true;
