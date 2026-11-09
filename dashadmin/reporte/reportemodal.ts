@@ -219,7 +219,7 @@ export async function handleReportButton(interaction: ButtonInteraction) {
 
     const inputNota = new TextInputBuilder()
         .setCustomId('input_nota')
-        .setLabel('Nota (opcional)')
+        .setLabel('Nota')
         .setStyle(TextInputStyle.Short)
         .setPlaceholder('Pulsa ENVIAR para adjuntar tus archivos o enlaces')
         .setRequired(false);
