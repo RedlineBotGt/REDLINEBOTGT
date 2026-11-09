@@ -4,6 +4,9 @@ import {
     GatewayIntentBits,
     Collection,
     Interaction,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
 } from 'discord.js';
 
 import {
@@ -309,6 +312,37 @@ client.once('ready', () => {
     setupPollSystem(client);
     setupEventWorker(client);
     startScheduledWorker(client);
+
+    // Corrección puntual del botón REPORTE en el panel ya publicado.
+    void (async () => {
+        try {
+            const channel = await client.channels.fetch('1463095951492386888');
+            if (!channel || !channel.isTextBased() || !('messages' in channel)) {
+                console.warn('[REPORTE] No se pudo acceder al canal del panel.');
+                return;
+            }
+
+            const message = await channel.messages.fetch('1555166534576382016');
+            const rows = message.components.map(row => {
+                const updatedRow = new ActionRowBuilder<ButtonBuilder>();
+                for (const component of row.components) {
+                    if (component.type === 2 && 'customId' in component && component.customId === 'btn_abrir_reporte') {
+                        updatedRow.addComponents(
+                            ButtonBuilder.from(component as any).setStyle(ButtonStyle.Danger)
+                        );
+                    } else if (component.type === 2) {
+                        updatedRow.addComponents(ButtonBuilder.from(component as any));
+                    }
+                }
+                return updatedRow;
+            });
+
+            await message.edit({ components: rows });
+            console.log('[REPORTE] Botón del panel existente actualizado a rojo.');
+        } catch (error) {
+            console.error('[REPORTE] No se pudo actualizar el botón existente:', error);
+        }
+    })();
 });
 
 // =====================================================
