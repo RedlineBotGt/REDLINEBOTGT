@@ -296,3 +296,23 @@ Comportamiento:
 - El helper `handlers/modalImageUpload.ts` ahora prepara una colección de adjuntos, conserva la validación de CDN, MIME y 8 MB por imagen, y asigna nombres únicos a los archivos.
 - Commits: `508f485` (helper múltiple), `b772ef5` (gestor /dashstaff), `5def492` (/msn).
 - Pendiente: confirmar Render LIVE y probar en Discord varias fotos junto con una URL en ambos formularios. No declarar la prueba funcional completada antes de esa comprobación.
+
+
+## 16. Traducción de textos largos en /trans — 9/11/2026
+
+### Incidencia
+- MyMemory rechazaba las traducciones largas con `QUERY LENGTH LIMIT EXCEEDED. MAX ALLOWED QUERY: 500 CHARS`.
+- El límite procedía del servicio de traducción, no de Discord.
+
+### Cambio aplicado
+- `commands/trans.ts`: el texto de entrada admite hasta 6.000 caracteres.
+- El comando divide automáticamente el texto en fragmentos de hasta 450 caracteres, priorizando saltos de línea y finales de frase para ajustarse al límite de MyMemory.
+- Las consultas se realizan secuencialmente y se unen las traducciones.
+- Se protegen durante la traducción las menciones de usuarios/roles/canales, emojis personalizados, enlaces y delimitadores Markdown habituales (`**`, `__`, `~~`, `||` y backticks), restaurándolos después.
+- Si el resultado completo supera los 2.000 caracteres de Discord, se entrega en varios mensajes.
+- Commit: `1a69cecb66691452e6643f33909b64ca016bbaa7`.
+
+### Verificación pendiente
+- Render ha iniciado el despliegue automático del commit `1a69cecb66691452e6643f33909b64ca016bbaa7`; en la última consulta estaba en `build_in_progress`.
+- Pendiente confirmar LIVE y probar en Discord un texto largo con emojis, saltos de línea, negritas y menciones reales.
+- No declarar la prueba funcional completada hasta que el usuario la confirme.
