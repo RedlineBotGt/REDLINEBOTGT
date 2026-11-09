@@ -11,6 +11,7 @@ import {
     MessageFlags 
 } from 'discord.js';
 import { MongoClient as MongoDriver } from 'mongodb';
+import { getRoleOriginLabel } from './roleOrigin';
 
 const uri = process.env.MONGODB_URI || "mongodb+srv://REDLINEBOTGT:347Hh9743%23@cluster0.xo8znuv.mongodb.net/?appName=Cluster0&tls=true";
 const clientMongo = new MongoDriver(uri);
@@ -97,14 +98,19 @@ export function setupAvisosSystem(client: Client) {
             if (!channel) return;
 
             for (const role of addedRoles.values()) {
+                const origin = await getRoleOriginLabel(newMember, role.id);
+                const notice = `👤 **Usuario:** ${newMember.displayName}\n🏷️ **Rol:** ${role.name}\n📍 **Canal:** ${origin}`;
+
                 const embed = new EmbedBuilder()
                     .setColor(0x00AAFF)
                     .setTitle('🏷️ Rol Asignado')
-                    .setDescription(`• **Piloto:** <@${newMember.id}>\n• **ID usuario:** ${newMember.id}\n• **Rol recibido:** **${role.name}**\n• **ID rol:** ${role.id}\n• **ID canal:** ${channel.id}`)
+                    .setDescription(notice)
                     .setFooter({ text: newMember.guild.name, iconURL: newMember.guild.iconURL() || undefined })
                     .setTimestamp();
 
-                await channel.send({ content: `👤 Usuario ID: ${newMember.id} | 🏷️ Rol ID: ${role.id} | 📍 Canal ID: ${channel.id}`, embeds: [embed] });
+                // El contenido también lleva los datos para que el push del móvil
+                // muestre los nombres aunque Discord no despliegue el embed.
+                await channel.send({ content: notice, embeds: [embed] });
             }
         } catch (error) {
             console.error('❌ Error en avisos guildMemberUpdate:', error);
