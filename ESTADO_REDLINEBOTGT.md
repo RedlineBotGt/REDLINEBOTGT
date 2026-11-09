@@ -2,7 +2,7 @@
 
 **Última actualización:** 8 de noviembre de 2026 (panel y worker de mensajes programados)  
 **Repositorio:** [RedlineBotGt/REDLINEBOTGT](https://github.com/RedlineBotGt/REDLINEBOTGT)  
-**Rama de trabajo:** `main`  
+**Rama de trabajo:** `BOTGT7`  
 **Servicio Render principal:** `REDLINEBOTGT` — Frankfurt  
 **URL:** https://redlinebotgt.onrender.com
 
@@ -336,3 +336,37 @@ Comportamiento:
 - Revisión estática: confirmada la ruta `/health` en la rama `WEBLINEGT` y adaptada la lectura a texto plano.
 - Pendiente: confirmar el despliegue del bot REDLINE en Render y comprobar en sus logs una respuesta correcta de WEBLINEGT. No se ha realizado una llamada de prueba externa ni se declara todavía que WEBLINEGT permanezca despierta en producción.
 - No se han modificado archivos de WEBLINEGT ni de Academia Campos.
+
+
+## 18. Adjuntar fotos y vídeos en los reportes — 9/11/2026
+
+### Cambio aplicado en el flujo activo
+
+- Se confirmó que el flujo público de reportes utilizado por el bot pasa por `dashadmin/interactiondashadmin.ts` → `dashadmin/reporte/interactionreporte.ts` → `dashadmin/reporte/reportemodal.ts`.
+- No se modificó la copia antigua `handlers/reportModal.ts`, porque no es la ruta activa del panel de reportes.
+- El formulario principal conserva sus cinco campos actuales, incluido el enlace opcional.
+- Después de enviar el formulario aparece un segundo paso efímero con dos opciones:
+  - **Adjuntar fotos / vídeos**: abre un modal con selector de archivos.
+  - **Omitir y enviar**: tramita el reporte sin archivos.
+- Los datos del formulario se guardan temporalmente en MongoDB, colección `redline_bot.reportPending`, vinculados al servidor y al usuario que los creó. Caducan a los 30 minutos y se eliminan oportunistamente al crear/consultar borradores.
+- Se evita que el mismo borrador se procese dos veces mediante un estado `pending/processing`.
+- Los archivos se envían al hilo privado de revisión (Canal Destino 2). El Canal Destino 1 recibe el aviso y el embed, sin duplicar los adjuntos.
+- Se admiten hasta 10 archivos por reporte y 25 MB en total: fotos JPG, PNG, GIF, WEBP y AVIF; vídeos MP4, WEBM, MOV y 3GP.
+- La descarga valida HTTPS, host CDN de Discord, MIME declarado y MIME de la respuesta, tamaño y timeout.
+
+### Archivos y commits
+
+- `dashadmin/reporte/reportemodal.ts`: conserva el formulario y añade el paso opcional, persistencia temporal, carga y envío al hilo.
+- `dashadmin/reporte/interactionreporte.ts`: enruta los dos botones y el modal de archivos.
+- `dashadmin/reporte/reportFileUpload.ts` (nuevo): validación y descarga segura de fotos/vídeos.
+- Commits:
+  - `53cb89558f5472b4c2c69011563a038c924652ff`: lógica del paso opcional.
+  - `cd522debaf01a024af32ce5b528463e2bd79b22b`: enrutamiento.
+  - `a44eaca0e0b38ecad94bbad0cc7ecf89a08b1e22`: helper de archivos.
+
+### Verificación pendiente
+
+- Render tiene Auto Deploy activo en la rama `BOTGT7`; los tres commits han entrado en esa rama y deben desplegarse automáticamente.
+- Pendiente confirmar que el build de Render termina en LIVE.
+- Pendiente probar en Discord desde móvil: enviar sin adjuntos; adjuntar una foto; adjuntar un vídeo; y confirmar que ambos tipos aparecen dentro del hilo privado de revisión.
+- No declarar la carga funcional como verificada hasta completar esas pruebas reales.
