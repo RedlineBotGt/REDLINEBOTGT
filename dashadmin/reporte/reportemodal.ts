@@ -177,7 +177,7 @@ async function finishReport(guild: Guild, report: any, files: any[] = []): Promi
     await col.deleteOne({ _id: report._id });
 }
 
-// 1. Formulario principal: se mantienen los cinco campos actuales.
+// 1. Formulario principal: cuatro campos obligatorios, sin enlace ni pruebas.
 export async function handleReportButton(interaction: ButtonInteraction) {
     if (interaction.customId !== 'btn_abrir_reporte') return false;
 
@@ -213,19 +213,11 @@ export async function handleReportButton(interaction: ButtonInteraction) {
         .setPlaceholder('Explica brevemente qué ha sucedido...')
         .setRequired(true);
 
-    const inputEnlace = new TextInputBuilder()
-        .setCustomId('input_enlace')
-        .setLabel('Enlace web (Video / Clip / Pruebas)')
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('https://youtube.com/... (Opcional)')
-        .setRequired(false);
-
     modal.addComponents(
         new ActionRowBuilder<TextInputBuilder>().addComponents(inputJornada),
         new ActionRowBuilder<TextInputBuilder>().addComponents(inputReporta),
         new ActionRowBuilder<TextInputBuilder>().addComponents(inputAReportar),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(inputDescripcion),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(inputEnlace)
+        new ActionRowBuilder<TextInputBuilder>().addComponents(inputDescripcion)
     );
 
     await interaction.showModal(modal);
@@ -270,7 +262,7 @@ export async function handleReportModalSubmit(interaction: ModalSubmitInteractio
             pilotoReporta: interaction.fields.getTextInputValue('input_reporta').trim(),
             pilotoAReportar: interaction.fields.getTextInputValue('input_a_reportar').trim(),
             descripcion: interaction.fields.getTextInputValue('input_descripcion').trim(),
-            enlace: interaction.fields.getTextInputValue('input_enlace').trim(),
+            enlace: '',
             createdAt: new Date(),
             expiresAt: new Date(Date.now() + 30 * 60 * 1000),
             status: 'pending'
@@ -282,18 +274,14 @@ export async function handleReportModalSubmit(interaction: ModalSubmitInteractio
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder()
-                .setCustomId(`report_attach_${reportId}`)
-                .setLabel('Adjuntar fotos / vídeos')
+                .setCustomId(\`report_attach_\${reportId}\`)
+                .setLabel('Adjuntar pruebas')
                 .setEmoji('📎')
-                .setStyle(ButtonStyle.Primary),
-            new ButtonBuilder()
-                .setCustomId(`report_skip_${reportId}`)
-                .setLabel('Omitir y enviar')
-                .setStyle(ButtonStyle.Secondary)
+                .setStyle(ButtonStyle.Primary)
         );
 
         await interaction.reply({
-            content: `📝 **Reporte ${reportId} preparado.**\n¿Quieres adjuntar fotos o vídeos desde tu móvil? Es opcional. Puedes omitir este paso y el reporte se enviará igualmente.`,
+            content: \`📝 **Reporte \${reportId} preparado.**\nPulsa **Adjuntar pruebas** para añadir un enlace o archivos. Debes incluir al menos uno para poder enviar el reporte.\`,
             components: [row],
             ephemeral: true
         });
@@ -323,19 +311,28 @@ export async function handleReportAttachButton(interaction: ButtonInteraction) {
         return true;
     }
 
+    const inputEnlace = new TextInputBuilder()
+        .setCustomId('input_reporte_enlace')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Pega aquí el enlace de vídeo o pruebas (opcional)')
+        .setRequired(false);
+
     const fileUpload = new FileUploadBuilder()
         .setCustomId('input_reporte_archivos')
-        .setMinValues(1)
+        .setMinValues(0)
         .setMaxValues(10)
-        .setRequired(true);
+        .setRequired(false);
 
     const modal = new ModalBuilder()
-        .setCustomId(`modal_reporte_archivos_${reportId}`)
+        .setCustomId(\`modal_reporte_archivos_\${reportId}\`)
         .setTitle('Adjuntar pruebas al reporte')
         .addLabelComponents(
             new LabelBuilder()
-                .setLabel('📷 Fotos y 🎥 vídeos')
-                .setDescription('Selecciona entre 1 y 10 archivos desde tu dispositivo.')
+                .setLabel('🔗 Link (opcional)')
+                .setTextInputComponent(inputEnlace),
+            new LabelBuilder()
+                .setLabel('📎 Archivo (opcional)')
+                .setDescription('Puedes seleccionar hasta 10 fotos o vídeos.')
                 .setFileUploadComponent(fileUpload)
         );
 
@@ -343,47 +340,14 @@ export async function handleReportAttachButton(interaction: ButtonInteraction) {
     return true;
 }
 
-// 4. Opción para enviar el reporte sin adjuntos.
-export async function handleReportSkipButton(interaction: ButtonInteraction) {
-    if (!interaction.customId.startsWith('report_skip_')) return false;
-
-    const reportId = interaction.customId.slice('report_skip_'.length);
-    const report = await claimPendingReport(reportId, interaction.guildId || '', interaction.user.id);
-
-    if (!report || !interaction.guild) {
-        await interaction.reply({
-            content: '⏰ Este reporte ya se ha enviado, ha caducado o no se puede recuperar.',
-            ephemeral: true
-        });
-        return true;
-    }
-
-    await interaction.deferReply({ ephemeral: true });
-
-    try {
-        await finishReport(interaction.guild, report);
-        await interaction.editReply({
-            content: `✅ Reporte **${reportId}** enviado correctamente, sin archivos adjuntos.`
-        });
-    } catch (error) {
-        console.error('❌ Error al finalizar el reporte sin archivos:', error);
-        await releasePendingReport(report);
-        await interaction.editReply({
-            content: '❌ No se pudo enviar el reporte al hilo privado. Los datos siguen guardados durante 30 minutos; vuelve a intentarlo.'
-        });
-    }
-
-    return true;
-}
-
-// 5. Recibir los archivos y enviarlos al hilo privado de revisión.
+// 4. Validar el enlace/archivos y enviar las pruebas al hilo privado.
 export async function handleReportFilesModalSubmit(interaction: ModalSubmitInteraction) {
     if (!interaction.customId.startsWith('modal_reporte_archivos_')) return false;
 
     const reportId = interaction.customId.slice('modal_reporte_archivos_'.length);
-    const report = await claimPendingReport(reportId, interaction.guildId || '', interaction.user.id);
+    const pendingReport = await findPendingReport(reportId, interaction.guildId || '', interaction.user.id);
 
-    if (!report || !interaction.guild) {
+    if (!pendingReport || !interaction.guild) {
         await interaction.reply({
             content: '⏰ Este reporte ya se ha enviado, ha caducado o no se puede recuperar.',
             ephemeral: true
@@ -391,9 +355,38 @@ export async function handleReportFilesModalSubmit(interaction: ModalSubmitInter
         return true;
     }
 
+    const enlace = interaction.fields.getTextInputValue('input_reporte_enlace').trim();
     const uploadedFiles = Array.from(
         interaction.fields.getUploadedFiles('input_reporte_archivos')?.values() ?? []
     ) as Attachment[];
+
+    if (!enlace && uploadedFiles.length === 0) {
+        const retryRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder()
+                .setCustomId(\`report_attach_\${reportId}\`)
+                .setLabel('Adjuntar pruebas')
+                .setEmoji('📎')
+                .setStyle(ButtonStyle.Primary)
+        );
+
+        await interaction.reply({
+            content: '⚠️ Debes añadir al menos un **Link** o un **Archivo** para poder enviar el reporte. Vuelve a intentarlo.',
+            components: [retryRow],
+            ephemeral: true
+        });
+        return true;
+    }
+
+    const report = await claimPendingReport(reportId, interaction.guildId || '', interaction.user.id);
+    if (!report) {
+        await interaction.reply({
+            content: '⏰ Este reporte ya se ha enviado o está siendo procesado.',
+            ephemeral: true
+        });
+        return true;
+    }
+
+    report.enlace = enlace;
 
     await interaction.deferReply({ ephemeral: true });
 
