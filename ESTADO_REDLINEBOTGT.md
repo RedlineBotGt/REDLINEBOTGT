@@ -523,3 +523,15 @@ Comportamiento:
 - Commits: `32a004a4ed4acbd69e199fe4b60e545f9e8e6178` (nuevo comando), `770ec1fe43b5c7217fef49e13571d5e997e6be21` (registro en cliente) y `0d67549afde5df612f399952737aec45255b9ef9` (registro global).
 - Render: despliegues automáticos iniciados; el último estado consultado era `update_in_progress` para el código y `queued` para el commit de registro global. Pendiente confirmar LIVE.
 - Pendiente prueba en Discord: ejecutar `/clasificacion` y comprobar que las columnas K/L/M/N corresponden a PP/VR/sanciones/puntos como se espera en la hoja.
+
+
+## 27. Columnas alineadas en /clasificacion — 9/11/2026
+
+- Se mantiene el encabezado actual **REDLINE GTCUP · 2ª Temporada** y el título del embed; no se añade logo ni imagen.
+- La tabla pasa a un bloque de texto monoespaciado para alinear las columnas POS, PILOTO, PTS, VR, PP y SAN.
+- Se retira la negrita de los nombres. Los nombres que superen 18 caracteres se acortan con puntos suspensivos para proteger el ancho en móvil.
+- Se mantienen el origen de datos `Tabla2!B8:N`, el orden de clasificación, las medallas de los tres primeros y los contadores existentes. No se modifica `dashsheet`.
+- Archivo: `commands/clasificacion.ts`.
+- Commits de esta intervención: `3037c6c1`, `a483f972` y `52a4a475` (ajuste incremental del mismo archivo).
+- Revisión estática: realizada. Prueba visual en Discord y comprobación de anchura en móvil: pendientes.
+- Render: no se ha iniciado ni verificado manualmente ningún despliegue; comprobar el estado antes de considerar el cambio activo.
