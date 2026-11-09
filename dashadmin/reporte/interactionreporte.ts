@@ -3,7 +3,7 @@ import { handleDashReporteButton } from './reportewizard';
 import {
     handleReportButton,
     handleReportModalSubmit,
-    handleReportAttachButton,
+    handleReportContinueButton,
     handleReportFilesModalSubmit
 } from './reportemodal';
 
@@ -20,8 +20,8 @@ export async function handleReporteInteractions(interaction: Interaction): Promi
             return await handleReportButton(interaction);
         }
 
-        if (interaction.isButton() && interaction.customId.startsWith('report_attach_')) {
-            return await handleReportAttachButton(interaction);
+        if (interaction.isButton() && interaction.customId.startsWith('report_continue_')) {
+            return await handleReportContinueButton(interaction);
         }
 
         if (interaction.isModalSubmit() && interaction.customId.startsWith('modal_reporte_archivos_')) {
