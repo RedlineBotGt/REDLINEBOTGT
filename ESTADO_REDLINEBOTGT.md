@@ -545,3 +545,13 @@ Comportamiento:
 - No se han cambiado los canales configurados, los permisos ni la detección del origen.
 - Commits de código: b187ce3d2e128b3add6ae997689b8f8a109d7ebf y 644b8cbd022f78836bcc106aa99e75521d34b385 (rama BOTGT7).
 - Pendiente: confirmar Render LIVE y probar una asignación real para comprobar el mensaje en Discord y la notificación móvil.
+
+
+## 29. Formato compacto de /clasificacion — 10/11/2026
+
+- Se elimina la fila de encabezados Piloto/Puntos/VR/PP/Sanciones.
+- Cada piloto se muestra en una línea: posición o medalla, nombre en negrita y puntos en negrita.
+- Los contadores de VR (🟣), PP (🟡) y sanciones (🔴) solo se añaden cuando su valor es mayor que cero; los valores cero no aparecen.
+- Se conserva el título REDLINE GTCUP · 2ª Temporada, el embed general y el origen de datos Tabla2!B8:N.
+- Archivo: commands/clasificacion.ts. Commit: 251a3ed2927722d622173b29329ec41d22b6716d.
+- Pendiente confirmar Render LIVE y revisar el resultado real en Discord/móvil.
