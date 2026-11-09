@@ -484,3 +484,16 @@ Comportamiento:
 - /dashstaff no se ha tocado.
 - Despliegue automático de Render para los commits de este bloque: en cola/en curso al registrar este estado; falta confirmar LIVE.
 - Pendiente probar en Discord el panel y recibir notificaciones push reales para verificar cómo las presenta el móvil.
+
+## 24. Reordenación final de /dash — 9/11/2026
+- Commit: bbbae37d10b8cff705dc9c25605c642ae551754f.
+- Se respeta el orden solicitado agrupando secciones consecutivas en 5 filas físicas, límite máximo de Discord:
+  1. Edit Hola/Adiós + Configurar Avisos.
+  2. Crear Sorteo + Crear Botón + Reaction Role + Encuesta.
+  3. Enviar mensaje + Progr. Mensaje + Editar Reporte + Editar Defensa.
+  4. Enviar Veredicto + Crear Form + Editar Form.
+  5. Colocar Formulario + Crear evento + BD Eventos.
+- Crear Form y Editar Form están en azul (Primary); Crear evento está en verde (Success).
+- Se conservan todos los customId, handlers, permisos y comportamiento; /dashstaff no se toca.
+- Revisión estática: cinco filas, 16 customId preservados y estilos solicitados comprobados.
+- Deploy Render dep-dbp3u8e7bikc73d3mg0g estaba en build_in_progress al registrar el cambio; falta confirmar LIVE y probar en Discord.
