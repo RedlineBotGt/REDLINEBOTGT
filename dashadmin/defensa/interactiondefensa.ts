@@ -1,6 +1,6 @@
 import { Interaction } from 'discord.js';
 import { handleDashDefensaButton } from './defensewizard';
-import { handleDefensaButton, handleDefensaModalSubmit } from './defensemodal';
+import { handleDefensaButton, handleDefensaModalSubmit, handleDefensaContinueButton, handleDefensaFilesModalSubmit } from './defensemodal';
 
 /**
  * Enrutador de interacciones específico para el submódulo de Defensas.
@@ -21,9 +21,19 @@ export async function handleDefensaInteractions(interaction: Interaction): Promi
             if (handled) return true;
         }
 
-        // 3. Procesar el formulario enviado a través del modal de defensas
+        // 3. Paso informativo para adjuntar las pruebas
+        if (interaction.isButton() && interaction.customId.startsWith('defense_continue_')) {
+            const handled = await handleDefensaContinueButton(interaction);
+            if (handled) return true;
+        }
+
+        // 4. Procesar el formulario principal y el formulario de pruebas
         if (interaction.isModalSubmit() && interaction.customId === 'modal_envio_defensa') {
             const handled = await handleDefensaModalSubmit(interaction);
+            if (handled) return true;
+        }
+        if (interaction.isModalSubmit() && interaction.customId.startsWith('modal_defensa_archivos_')) {
+            const handled = await handleDefensaFilesModalSubmit(interaction);
             if (handled) return true;
         }
 
