@@ -17,7 +17,7 @@ export async function buildEventEmbedAndRows(ev: any, guild?: Guild | null) {
     // Las menciones dentro del embed no generan avisos individuales.
     const formatVerticalList = (ids: string[]) => {
         if (!ids || ids.length === 0) return 'Ninguno';
-        return ids.map(id => `<@${id}>`).join('\\n');
+        return ids.map(id => `<@${id}>`).join('\n');
     };
 
     const isClosed = ev.status === 'completed' || ev.status === 'cancelled';
