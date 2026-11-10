@@ -6,6 +6,107 @@ import {
     Guild
 } from 'discord.js';
 
+
+const NAME_CACHE_DURATION = 60 * 60 * 1000;
+const NAME_ERROR_CACHE_DURATION = 60 * 1000;
+
+const participantNameCache = new Map<string, {
+    name: string;
+    expiresAt: number;
+}>();
+
+const participantNamePending = new Map<string, Promise<string>>();
+
+async function resolveParticipantName(
+    userId: string,
+    guild?: Guild | null
+): Promise<string> {
+    const guildId = guild?.id || "unknown";
+    const cacheKey = `${guildId}:${userId}`;
+    const cached = participantNameCache.get(cacheKey);
+
+    if (cached && cached.expiresAt > Date.now()) return cached.name;
+
+    const pending = participantNamePending.get(cacheKey);
+    if (pending) return pending;
+
+    const request = (async () => {
+        let name = "";
+
+        if (guild) {
+            // 1. Apodo del miembro en el servidor.
+            let member = guild.members.cache.get(userId) || null;
+
+            if (!member) {
+                member = await guild.members.fetch(userId).catch(() => null);
+            }
+
+            if (member) {
+                name =
+                    member.nickname ||
+                    member.user.globalName ||
+                    member.user.username ||
+                    "";
+            }
+
+            // 2. Si no se obtiene el miembro, consultar el usuario global.
+            if (!name) {
+                const user = await guild.client.users.fetch(userId).catch(() => null);
+
+                if (user) {
+                    name = user.globalName || user.username || "";
+                }
+            }
+        }
+
+        // Último recurso, igual que en WEBLINEGT.
+        return name || userId;
+    })().then(name => {
+        participantNameCache.set(cacheKey, {
+            name,
+            expiresAt: Date.now() + (
+                name === userId ? NAME_ERROR_CACHE_DURATION : NAME_CACHE_DURATION
+            )
+        });
+        return name;
+    }).catch(error => {
+        console.error(`No se pudo resolver el nombre del participante ${userId}:`, error);
+        participantNameCache.set(cacheKey, {
+            name: userId,
+            expiresAt: Date.now() + NAME_ERROR_CACHE_DURATION
+        });
+        return userId;
+    }).finally(() => {
+        participantNamePending.delete(cacheKey);
+    });
+
+    participantNamePending.set(cacheKey, request);
+    return request;
+}
+
+async function resolveParticipantNames(
+    ids: string[],
+    guild?: Guild | null
+): Promise<Map<string, string>> {
+    const uniqueIds = [...new Set(ids.map(id => String(id)))];
+    const names = new Map<string, string>();
+    let nextIndex = 0;
+
+    const worker = async () => {
+        while (nextIndex < uniqueIds.length) {
+            const index = nextIndex++;
+            const userId = uniqueIds[index];
+            names.set(userId, await resolveParticipantName(userId, guild));
+        }
+    };
+
+    await Promise.all(
+        Array.from({ length: Math.min(4, uniqueIds.length) }, () => worker())
+    );
+
+    return names;
+}
+
 export async function buildEventEmbedAndRows(ev: any, guild?: Guild | null) {
     const rsvps = ev.rsvps || {};
     const yesList: string[] = Array.isArray(rsvps.yes) ? rsvps.yes : [];
@@ -13,11 +114,26 @@ export async function buildEventEmbedAndRows(ev: any, guild?: Guild | null) {
     const maybeList: string[] = Array.isArray(rsvps.maybe) ? rsvps.maybe : [];
     const noList: string[] = Array.isArray(rsvps.no) ? rsvps.no : [];
 
-    // Discord resolverá cada mención y mostrará el nombre normal de la cuenta.
-    // Las menciones dentro del embed no generan avisos individuales.
+    const allParticipantIds = [
+        ...yesList,
+        ...reserveList,
+        ...maybeList,
+        ...noList
+    ];
+
+    const participantNames = await resolveParticipantNames(
+        allParticipantIds,
+        guild
+    );
+
+    // Mismo orden de nombres que WEBLINEGT: apodo > nombre global > username > ID.
+    // Se muestran como texto normal, sin menciones.
     const formatVerticalList = (ids: string[]) => {
         if (!ids || ids.length === 0) return 'Ninguno';
-        return ids.map(id => `<@${id}>`).join('\n');
+
+        return ids
+            .map(id => participantNames.get(String(id)) || String(id))
+            .join('\\n');
     };
 
     const isClosed = ev.status === 'completed' || ev.status === 'cancelled';
