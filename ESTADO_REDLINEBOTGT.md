@@ -614,3 +614,13 @@ Comportamiento:
 - Archivo: `dashadmin/eventos/eventosmanager.ts`.
 - Commit de código: `4bf9c9213feec1c5a7021632f2ee527633b38962` (rama `BOTGT7`).
 - Revisión estática: realizada. Compilación, despliegue Render y prueba real en Discord/móvil: pendientes de confirmar.
+
+
+## 35. Corrección de saltos de línea en listas de asistentes — 10/11/2026
+
+- Incidencia: los nombres de Titulares, Reservas, Duda y No puedo se concatenaban porque el separador estaba escrito como texto literal `\\n`.
+- Corrección acotada en `dashadmin/eventos/eventosmanager.ts`: el separador ahora es `\\n` como escape de salto de línea real en TypeScript.
+- No se modifica la prioridad de nombres, la caché, los RSVP, límites, roles ni notificaciones.
+- Commit de código: `f4cc8a47973687da9860f20fe1d1dc61eaf5a4b2` (rama `BOTGT7`).
+- Revisión del cambio: solo se sustituyó el separador de las listas.
+- Pendiente: confirmar despliegue Render y comprobar la presentación en Discord. Los mensajes de evento ya publicados no se reescriben por el mero hecho de desplegar; deben reconstruirse mediante una interacción o una actualización específica.
