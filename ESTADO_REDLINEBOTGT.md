@@ -566,3 +566,13 @@ Comportamiento:
 - Se conserva la lectura de `Tabla2!B8:N` y el orden de los pilotos. Los nombres de más de 18 caracteres se recortan para proteger la alineación.
 - Archivo: `commands/clasificacion.ts`. Commit de código: `93889768e74e52bff97162887a15c480b2abb8fe`.
 - Pendiente: confirmar el despliegue de Render y comprobar visualmente la tabla en Discord, especialmente desde móvil.
+
+
+## 31. Nombres de asistentes estables en eventos — 10/11/2026
+
+- En `dashadmin/eventos/eventosmanager.ts`, las listas de titulares, reservas, duda y no puedo muestran siempre el nombre visible, nunca el formato de mención `<@ID>`.
+- Se resuelve primero desde la caché de miembros; si no está disponible, se consulta el miembro del servidor y, como último recurso, el usuario global.
+- Si Discord no permite resolver el nombre, se muestra `Usuario no disponible`, nunca una mención rota ni un ID.
+- No se modifican los IDs almacenados en RSVP, el orden, los estados, los límites ni las notificaciones privadas.
+- Commit: `3da64365ba94e4fbb2a43272a727252d0a9619af` (rama `BOTGT7`).
+- Pendiente: confirmar Render LIVE y comprobar un evento real en Discord/móvil.
