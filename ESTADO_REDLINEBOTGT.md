@@ -569,6 +569,8 @@ Comportamiento:
 
 
 ## 31. Nombres de asistentes estables en eventos — 10/11/2026
+- Ajuste posterior: se corrigió el separador de salto de línea de las listas para conservar una línea por asistente. Commit adicional: `4df1eadde26e074ccc9f87a3aff51e7928e13fdd`.
+
 
 - En `dashadmin/eventos/eventosmanager.ts`, las listas de titulares, reservas, duda y no puedo muestran siempre el nombre visible, nunca el formato de mención `<@ID>`.
 - Se resuelve primero desde la caché de miembros; si no está disponible, se consulta el miembro del servidor y, como último recurso, el usuario global.
