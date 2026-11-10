@@ -588,3 +588,6 @@ Comportamiento:
 - Las menciones dentro de los campos del embed no generan avisos individuales; se mantiene sin cambios el sistema de notificación del evento.
 - Archivo: `dashadmin/eventos/eventosmanager.ts`. Commit: `61b0adda200f9a3aaf5171ae01ea075487147b70` (rama `BOTGT7`).
 - Pendiente: confirmar Render LIVE y comprobar visualmente los nombres en un evento real desde Discord móvil/escritorio.
+
+
+- Ajuste adicional: se asegura que los asistentes queden separados por saltos de línea reales en el embed. Commit: `344edb9288a80ed86d996d7ab4ea5e0d8cb0511c`.
