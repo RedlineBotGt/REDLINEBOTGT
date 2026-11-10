@@ -74,7 +74,7 @@ export async function buildEventEmbedAndRows(ev: any, guild?: Guild | null) {
     const formatVerticalList = (ids: string[]) => {
         if (!ids || ids.length === 0) return 'Ninguno';
 
-        return ids.map(id => participantNames.get(id) || 'Usuario no disponible').join('\\n');
+        return ids.map(id => participantNames.get(id) || 'Usuario no disponible').join('\n');
     };
 
     const isClosed = ev.status === 'completed' || ev.status === 'cancelled';
