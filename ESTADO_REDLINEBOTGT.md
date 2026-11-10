@@ -591,3 +591,13 @@ Comportamiento:
 
 
 - Ajuste adicional: se asegura que los asistentes queden separados por saltos de línea reales en el embed. Commit: `344edb9288a80ed86d996d7ab4ea5e0d8cb0511c`.
+
+
+## 33. Username normal sin menciones en listas de eventos — 10/11/2026
+
+- Se cambia de nuevo la presentación de Titulares, Reservas, Duda y No puedo: ahora se muestra el campo `user.username` de Discord como texto plano, sin `<@ID>`, sin @ y sin usar el apodo del servidor ni el nombre global.
+- Resolución: caché de miembros; consulta del miembro del servidor; y consulta global del usuario como último recurso. Las consultas pendientes se limitan a cuatro en paralelo.
+- Si Discord no permite recuperar la cuenta, se muestra `Usuario no disponible`; no se inventa ningún nombre.
+- Se conservan los IDs RSVP, el orden, estados, límites, roles, avisos y resto de lógica del evento.
+- Archivo: `dashadmin/eventos/eventosmanager.ts`. Commit: `2c3d6152c1f8b235f123f0790697752f0fc25426` (rama `BOTGT7`).
+- Pendiente: confirmar Render LIVE y comprobar en Discord móvil/escritorio que los nombres se leen como username normal.
