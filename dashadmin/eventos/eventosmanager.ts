@@ -133,7 +133,7 @@ export async function buildEventEmbedAndRows(ev: any, guild?: Guild | null) {
 
         return ids
             .map(id => participantNames.get(String(id)) || String(id))
-            .join('\\n');
+            .join('\n');
     };
 
     const isClosed = ev.status === 'completed' || ev.status === 'cancelled';
