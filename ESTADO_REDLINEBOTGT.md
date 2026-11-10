@@ -578,3 +578,13 @@ Comportamiento:
 - No se modifican los IDs almacenados en RSVP, el orden, los estados, los límites ni las notificaciones privadas.
 - Commit: `3da64365ba94e4fbb2a43272a727252d0a9619af` (rama `BOTGT7`).
 - Pendiente: confirmar Render LIVE y comprobar un evento real en Discord/móvil.
+
+
+## 32. Restauración de menciones en asistentes de eventos — 10/11/2026
+
+- A petición del usuario, se restaura el formato nativo de mención de Discord en las listas de Titulares, Reservas, Duda y No puedo.
+- Cada ID RSVP se representa como `<@ID>`; Discord mostrará el nombre normal asociado a la cuenta, sin depender de la caché ni de llamadas para resolver nombres.
+- Se elimina el fallback textual `Usuario no disponible`. Los IDs RSVP, el orden, los estados, límites y demás lógica del evento permanecen intactos.
+- Las menciones dentro de los campos del embed no generan avisos individuales; se mantiene sin cambios el sistema de notificación del evento.
+- Archivo: `dashadmin/eventos/eventosmanager.ts`. Commit: `61b0adda200f9a3aaf5171ae01ea075487147b70` (rama `BOTGT7`).
+- Pendiente: confirmar Render LIVE y comprobar visualmente los nombres en un evento real desde Discord móvil/escritorio.
