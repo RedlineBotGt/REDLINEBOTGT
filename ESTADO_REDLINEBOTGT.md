@@ -601,3 +601,16 @@ Comportamiento:
 - Se conservan los IDs RSVP, el orden, estados, límites, roles, avisos y resto de lógica del evento.
 - Archivo: `dashadmin/eventos/eventosmanager.ts`. Commit: `2c3d6152c1f8b235f123f0790697752f0fc25426` (rama `BOTGT7`).
 - Pendiente: confirmar Render LIVE y comprobar en Discord móvil/escritorio que los nombres se leen como username normal.
+
+
+## 34. Nombres de asistentes con la misma prioridad que WEBLINEGT — 10/11/2026
+
+- Se corrige la presentación de las listas de Titulares, Reservas, Duda y No puedo para replicar el comportamiento de WEBLINEGT.
+- Prioridad de resolución: apodo del miembro en el servidor (`nickname`) > nombre global de Discord (`globalName`) > username (`username`) > ID como último recurso.
+- Los nombres se muestran como texto plano: sin mención, sin `@` y sin formato de ping.
+- La resolución consulta primero la caché de miembros, después intenta recuperar el miembro del servidor y, si no está disponible, consulta el usuario global.
+- Se añade caché de nombres (1 hora), caché de fallos (1 minuto), deduplicación de consultas pendientes y un máximo de cuatro consultas simultáneas.
+- Se mantienen intactos los IDs almacenados en RSVP, el orden de las listas, estados, límites, roles, promociones, avisos y demás lógica de eventos.
+- Archivo: `dashadmin/eventos/eventosmanager.ts`.
+- Commit de código: `4bf9c9213feec1c5a7021632f2ee527633b38962` (rama `BOTGT7`).
+- Revisión estática: realizada. Compilación, despliegue Render y prueba real en Discord/móvil: pendientes de confirmar.
