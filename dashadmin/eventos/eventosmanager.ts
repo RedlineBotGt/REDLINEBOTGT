@@ -156,7 +156,7 @@ export async function buildEventEmbedAndRows(ev: any, guild?: Guild | null) {
 
     embed.addFields(
         {
-            name: '\\u200B',
+            name: '\u200B',
             value: `**🕒 ACTUALIZADO · HOY A LAS ${updatedTime}**`,
             inline: false
         },
