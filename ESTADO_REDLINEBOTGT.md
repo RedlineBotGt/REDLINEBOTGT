@@ -624,3 +624,12 @@ Comportamiento:
 - Commit de código: `f4cc8a47973687da9860f20fe1d1dc61eaf5a4b2` (rama `BOTGT7`).
 - Revisión del cambio: solo se sustituyó el separador de las listas.
 - Pendiente: confirmar despliegue Render y comprobar la presentación en Discord. Los mensajes de evento ya publicados no se reescriben por el mero hecho de desplegar; deben reconstruirse mediante una interacción o una actualización específica.
+
+
+## 36. Campo invisible del aviso de actualización — 10/11/2026
+
+- En `dashadmin/eventos/eventosmanager.ts`, se corrige el nombre del campo que precede a «🕒 ACTUALIZADO · HOY A LAS...».
+- El literal tenía doble escape y Discord mostraba `\\u200B` como texto. Ahora usa el escape Unicode correcto de un carácter de ancho cero, por lo que el encabezado queda visualmente vacío.
+- No se cambia el texto de actualización ni el contenido de las listas.
+- Commit de código: `12bb4a287e31a76a90fc45e04097d66ef6ff9f5f` (rama `BOTGT7`).
+- Pendiente confirmar Render LIVE y comprobar el mensaje reconstruido en Discord.
