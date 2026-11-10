@@ -7,35 +7,30 @@ import {
 } from 'discord.js';
 
 /**
- * Resuelve los nombres de los participantes sin modificar los IDs guardados.
- * Los miembros del servidor se mostrarán como menciones reales.
- * Si una cuenta ya no pertenece al servidor, se conserva su nombre como fallback.
+ * Resuelve los nombres visibles de los participantes.
+ * En el listado del evento se muestran nombres, nunca menciones de Discord,
+ * para que el resultado sea estable en escritorio y móvil.
  */
 async function resolveParticipantNames(
     ids: string[],
     guild?: Guild | null
-): Promise<{ names: Map<string, string>; memberIds: Set<string> }> {
+): Promise<Map<string, string>> {
     const uniqueIds = [...new Set(ids.filter(id => typeof id === 'string' && id.length > 0))];
     const names = new Map<string, string>();
-    const memberIds = new Set<string>();
     const pending: string[] = [];
 
     for (const id of uniqueIds) {
         const member = guild?.members.cache.get(id);
 
         if (member) {
-            names.set(id, member.displayName || member.user.username);
-            memberIds.add(id);
+            names.set(id, member.displayName || member.user.globalName || member.user.username);
         } else {
             pending.push(id);
         }
     }
 
-    if (!guild || pending.length === 0) {
-        return { names, memberIds };
-    }
+    if (!guild || pending.length === 0) return names;
 
-    // Limitar concurrencia para no generar una ráfaga de peticiones a Discord.
     let nextIndex = 0;
 
     const worker = async () => {
@@ -44,18 +39,17 @@ async function resolveParticipantNames(
 
             try {
                 const member = await guild.members.fetch(id);
-                names.set(id, member.displayName || member.user.username);
-                memberIds.add(id);
+                names.set(id, member.displayName || member.user.globalName || member.user.username);
                 continue;
             } catch {
-                // El usuario puede haber salido del servidor.
+                // Si no es miembro del servidor, intentamos obtener su nombre de usuario.
             }
 
             try {
                 const user = await guild.client.users.fetch(id);
                 names.set(id, user.globalName || user.username);
             } catch {
-                // Se mantiene la mención como último recurso.
+                // Si Discord no permite resolverlo, se mostrará un texto neutro.
             }
         }
     };
@@ -64,7 +58,7 @@ async function resolveParticipantNames(
         Array.from({ length: Math.min(4, pending.length) }, () => worker())
     );
 
-    return { names, memberIds };
+    return names;
 }
 
 export async function buildEventEmbedAndRows(ev: any, guild?: Guild | null) {
@@ -75,22 +69,12 @@ export async function buildEventEmbedAndRows(ev: any, guild?: Guild | null) {
     const noList: string[] = Array.isArray(rsvps.no) ? rsvps.no : [];
 
     const participantIds = [...yesList, ...reserveList, ...maybeList, ...noList];
-    const {
-        names: participantNames,
-        memberIds: guildMemberIds
-    } = await resolveParticipantNames(participantIds, guild);
+    const participantNames = await resolveParticipantNames(participantIds, guild);
 
     const formatVerticalList = (ids: string[]) => {
         if (!ids || ids.length === 0) return 'Ninguno';
 
-        return ids.map(id => {
-            // Los miembros actuales se muestran con el formato nativo de mención de Discord.
-            if (guildMemberIds.has(id)) return `<@${id}>`;
-
-            // Si la cuenta ya no está en el servidor, mostramos el nombre como fallback.
-            const name = participantNames.get(id);
-            return name ? `**@${name}**` : `<@${id}>`;
-        }).join('\n');
+        return ids.map(id => participantNames.get(id) || 'Usuario no disponible').join('\\n');
     };
 
     const isClosed = ev.status === 'completed' || ev.status === 'cancelled';
