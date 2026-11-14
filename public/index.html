@@ -140,6 +140,9 @@
         <button type="button" class="subject-card" onclick="abrirAsignatura('science')">
           🔬 Science
         </button>
+        <button type="button" class="subject-card" onclick="abrirAsignatura('enciclopedia')">
+          📚 Enciclopedia
+        </button>
       </div>
 
       <div class="homework-entry">
@@ -201,11 +204,42 @@
     </section>
 
     <!-- PANTALLA DE RETOS -->
-    <!-- HISTORIAL DE EJERCICIOS IA DE LEO -->
+    <section id="encyclopedia-screen" class="screen hidden">
+      <button type="button" data-volver-asignaturas>← Volver a asignaturas</button>
+      <h2>📚 Enciclopedia</h2>
+      <p>Pregunta, investiga y descubre. Puedes continuar una conversación anterior.</p>
+      <div class="encyclopedia-toolbar">
+        <button type="button" id="encyclopedia-new-btn">＋ Nueva investigación</button>
+        <button type="button" id="encyclopedia-history-toggle">Mis investigaciones</button>
+      </div>
+      <div id="encyclopedia-conversations" class="encyclopedia-conversations hidden"></div>
+      <div id="encyclopedia-messages" class="encyclopedia-messages" role="log" aria-live="polite"><p>¿Qué te gustaría descubrir hoy?</p></div>
+      <form id="encyclopedia-form">
+        <label for="encyclopedia-input">Tu pregunta</label>
+        <textarea id="encyclopedia-input" rows="3" maxlength="2000" required placeholder="Escribe cualquier pregunta o tema..."></textarea>
+        <button type="submit" id="encyclopedia-send-btn">Enviar pregunta</button>
+      </form>
+      <p id="encyclopedia-status" role="status" aria-live="polite"></p>
+      <style>
+        .encyclopedia-toolbar{display:flex;gap:8px;margin:14px 0}.encyclopedia-toolbar button,#encyclopedia-screen form button{padding:10px;border:1px solid var(--primary);border-radius:8px;background:var(--panel-light);color:var(--text)}
+        .encyclopedia-conversations{display:grid;gap:7px;max-height:210px;overflow:auto}.encyclopedia-conversation{padding:10px;text-align:left}
+        .encyclopedia-messages{display:flex;flex-direction:column;gap:10px;max-height:55vh;min-height:220px;overflow:auto;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:12px}
+        .encyclopedia-message{padding:12px;background:var(--panel-light);border:1px solid var(--border);border-radius:10px;white-space:pre-wrap;overflow-wrap:anywhere}.encyclopedia-message.user{align-self:flex-end}
+        .encyclopedia-sources{display:grid;gap:5px;margin-top:9px;border-top:1px solid var(--border);padding-top:8px}.encyclopedia-sources a,#ai-history-screen a{color:#60a5fa;overflow-wrap:anywhere}
+        #encyclopedia-input{box-sizing:border-box;width:100%;margin:8px 0;padding:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;font:inherit}
+        #encyclopedia-screen form button{background:var(--primary);color:#082033;font-weight:bold}#encyclopedia-send-btn:disabled{opacity:.5}
+        #ai-history-profiles{display:flex;gap:8px;margin:12px 0}#ai-history-profiles button{flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--panel-light);color:var(--text)}#ai-history-profiles button.active{background:var(--primary);color:#082033}
+        .ai-history-date{font-size:.78rem;color:var(--muted);text-align:right}.ai-history-transcript{padding:10px;margin-top:8px;background:var(--bg);border-radius:8px}
+        @media(max-width:600px){.encyclopedia-messages{max-height:52vh}}
+      </style>
+    </section>
+
+    <!-- HISTORIAL DE EJERCICIOS IA DE LA FAMILIA -->
     <section id="ai-history-screen" class="screen hidden" aria-labelledby="ai-history-title">
       <button type="button" id="ai-history-back-btn">← Volver</button>
       <h2 id="ai-history-title">🤖 Historial de IA · Leo</h2>
-      <p>Ejercicios resueltos con IA. El número indica cuántos intentos necesitó para acertar.</p>
+      <p>Consultas y ejercicios de IA, ordenados por fecha.</p>
+      <div id="ai-history-profiles"></div>
       <p id="ai-history-summary" class="ai-history-summary" aria-live="polite"></p>
       <div id="ai-history-list" class="ai-history-list" aria-live="polite">
         <p>Cargando historial...</p>
@@ -574,7 +608,7 @@
 
   </main>
 
-  <script type="module" src="/app.js?v=11"></script>
+  <script type="module" src="/app.js?v=12"></script>
 
 </body>
 </html>

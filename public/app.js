@@ -27,7 +27,8 @@ import {
 } from "./js/homework.js?v=3";
 
 import { iniciarAvisos } from "./js/notices.js?v=3";
-import { iniciarHistorialIA } from "./js/aiHistory.js?v=1";
+import { iniciarHistorialIA } from "./js/aiHistory.js?v=2";
+import { iniciarEnciclopedia } from "./js/encyclopedia.js?v=1";
 import { iniciarMusicStudio } from "./js/musicStudio.js?v=2";
 
 import {
@@ -102,6 +103,7 @@ function iniciarAcademia() {
     iniciarChat();
     iniciarAvisos();
     iniciarHistorialIA();
+iniciarEnciclopedia();
     iniciarMusicStudio();
 
     console.log("[ACADEMIA] Todos los módulos iniciados.");

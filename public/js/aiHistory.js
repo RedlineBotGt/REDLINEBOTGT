@@ -1,76 +1,10 @@
 import { obtenerPerfilActual } from "./users.js";
 import { solicitarAPI } from "./homework/api.js";
-
-function mostrarPantallaHistorial() {
-  document.querySelectorAll(".screen").forEach(pantalla => {
-    pantalla.classList.add("hidden");
-  });
-  document.getElementById("ai-history-screen")?.classList.remove("hidden");
-}
-
-function crearElemento(tag, className, texto) {
-  const elemento = document.createElement(tag);
-  if (className) elemento.className = className;
-  if (texto !== undefined) elemento.textContent = texto;
-  return elemento;
-}
-
-async function cargarHistorial() {
-  const lista = document.getElementById("ai-history-list");
-  const resumen = document.getElementById("ai-history-summary");
-  if (!lista) return;
-
-  lista.replaceChildren(crearElemento("p", "", "Cargando historial..."));
-  if (resumen) resumen.textContent = "";
-
-  try {
-    const data = await solicitarAPI("/api/academia/ai-history");
-    if (!Array.isArray(data.ejercicios)) {
-      throw new Error("No se ha podido cargar el historial.");
-    }
-
-    lista.replaceChildren();
-    if (resumen) {
-      resumen.textContent = data.ejercicios.length === 1
-        ? "1 ejercicio resuelto"
-        : `${data.ejercicios.length} ejercicios resueltos`;
-    }
-
-    if (!data.ejercicios.length) {
-      lista.appendChild(crearElemento("p", "", "Todavía no hay ejercicios resueltos con IA."));
-      return;
-    }
-
-    for (const ejercicio of data.ejercicios) {
-      const tarjeta = crearElemento("article", "ai-history-item");
-      const cabecera = crearElemento("div", "ai-history-item-top");
-      cabecera.appendChild(crearElemento("span", "ai-history-subject", ejercicio.asignatura || "Asignatura"));
-      const intentos = Math.max(1, Number(ejercicio.intentos) || 1);
-      cabecera.appendChild(crearElemento("span", "ai-history-attempts", `${intentos} ${intentos === 1 ? "intento" : "intentos"}`));
-      tarjeta.append(cabecera, crearElemento("p", "ai-history-question", ejercicio.pregunta || ""));
-      lista.appendChild(tarjeta);
-    }
-  } catch (error) {
-    lista.replaceChildren(crearElemento("p", "", error.message || "Error al cargar el historial."));
-  }
-}
-
-export function iniciarHistorialIA() {
-  const boton = document.getElementById("open-ai-btn");
-  const volver = document.getElementById("ai-history-back-btn");
-
-  if (boton) {
-    boton.addEventListener("click", () => {
-      if (obtenerPerfilActual() !== "papa") return;
-      mostrarPantallaHistorial();
-      cargarHistorial();
-    });
-  }
-
-  if (volver) {
-    volver.addEventListener("click", () => {
-      document.getElementById("ai-history-screen")?.classList.add("hidden");
-      document.getElementById("subjects-screen")?.classList.remove("hidden");
-    });
-  }
-}
+let perfilFiltro="leo";
+function el(t,c,x){const n=document.createElement(t);if(c)n.className=c;if(x!==undefined)n.textContent=x;return n;}
+function fecha(v){const d=new Date(v);return Number.isNaN(d.getTime())?"Fecha no disponible":d.toLocaleString("es-ES",{weekday:"long",day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});}
+function render(data){const list=document.getElementById("ai-history-list"),filters=document.getElementById("ai-history-profiles"),summary=document.getElementById("ai-history-summary");filters.replaceChildren();for(const[p,n]of[["leo","Leo"],["papa","Papá"],["mama","Mamá"]]){const b=el("button",p===perfilFiltro?"active":"",n);b.addEventListener("click",()=>{perfilFiltro=p;render(data);});filters.appendChild(b);}
+const rows=(data.conversaciones||[]).filter(x=>x.perfil===perfilFiltro).map(x=>({kind:"chat",date:x.updatedAt,item:x}));if(perfilFiltro==="leo")for(const x of data.ejercicios||[])rows.push({kind:"exercise",date:x.completadoEn,item:x});rows.sort((a,b)=>new Date(b.date||0).getTime()-new Date(a.date||0).getTime());list.replaceChildren();summary.textContent=rows.length+" registros";if(!rows.length)list.appendChild(el("p","","Sin consultas registradas."));
+for(const r of rows){const card=el("article","ai-history-item"),top=el("div","ai-history-item-top");top.append(el("strong","ai-history-subject",r.kind==="chat"?"📚 Enciclopedia":"🤖 Ejercicio IA"),el("time","ai-history-date",fecha(r.date)));card.appendChild(top);if(r.kind==="exercise")card.append(el("p","ai-history-question",r.item.pregunta||""),el("small","",r.item.intentos+" intentos · Resuelto"));else{card.appendChild(el("p","ai-history-question",r.item.title||"Investigación"));const detail=el("div","ai-history-transcript hidden");for(const m of r.item.messages||[]){detail.append(el("strong","",m.role==="user"?"Pregunta":"Enciclopedia"),el("p","",m.content||""));for(const s of m.sources||[]){const a=el("a","",s.title||s.url);a.href=s.url;a.target="_blank";a.rel="noopener noreferrer";detail.appendChild(a);}}const b=el("button","","Ver conversación");b.addEventListener("click",()=>detail.classList.toggle("hidden"));card.append(b,detail);}list.appendChild(card);}}
+async function cargar(){const l=document.getElementById("ai-history-list");l.textContent="Cargando...";try{render(await solicitarAPI("/api/academia/ai-history"));}catch(e){l.textContent=e.message;}}
+export function iniciarHistorialIA(){document.getElementById("open-ai-btn")?.addEventListener("click",()=>{if(obtenerPerfilActual()!=="papa")return;perfilFiltro="leo";document.querySelectorAll(".screen").forEach(x=>x.classList.add("hidden"));document.getElementById("ai-history-screen").classList.remove("hidden");cargar();});document.getElementById("ai-history-back-btn")?.addEventListener("click",()=>{document.getElementById("ai-history-screen").classList.add("hidden");document.getElementById("subjects-screen").classList.remove("hidden");});}

@@ -87,6 +87,12 @@ export function abrirAsignatura(asignatura) {
     return;
   }
 
+  if (asignatura === "enciclopedia") {
+    mostrarPantalla("encyclopedia-screen");
+    document.dispatchEvent(new CustomEvent("academia:abrir-enciclopedia"));
+    return;
+  }
+
   if (asignatura === "lenguaje_musical") {
     mostrarPantalla("music-choice-screen");
     return;
