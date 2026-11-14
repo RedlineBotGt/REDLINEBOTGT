@@ -1015,3 +1015,10 @@ El usuario aprueba activar el acceso **🤖 IA** como una vista de consulta para
 - Commit de integración de interfaz: `e6ddd14f4bb3613cd5c3fc3c3e77884c27ff247a`; corrección de tipos: `010041b5454c996980d17ca0660e67853bb02835`; conexión de historial: `17382d10d09e5ad1447268b38a82eea90de14351`.
 - El build TypeScript de Render para el commit `010041b` terminó correctamente. El deploy posterior del commit `17382d1` está pendiente de confirmación.
 - Pendiente de prueba funcional real: envío de pregunta, respuesta Gemini, grounding y fuentes, continuidad de conversación, aislamiento por perfil, historial familiar y fechas. No marcar como probado hasta verificarlo en la app.
+
+
+### Verificación adicional · 14-11-2026
+- Commit actual de corrección de fechas en el historial: `6b22f09d36b297b9378bbcad08ee5a8a7fbdc502`.
+- Render deploy `dep-dbsee5luproc73c7a3ng`: build successful y estado LIVE.
+- Navegación pública probada en navegador: seleccionar Leo, ver la tarjeta Enciclopedia, abrirla y comprobar el chat, campo de pregunta y botones de nueva investigación e historial. No se envió una consulta de prueba; la respuesta Gemini, la búsqueda y la persistencia real aún necesitan prueba funcional.
+- La vista de historial de Papá requiere PIN y no se ha probado mediante sesión de Papá.
