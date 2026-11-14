@@ -15,6 +15,7 @@ import {
   eliminarRetoPendiente,
   limpiarRetosCaducados
 } from "../services/pendingChallengeService.ts";
+import { obtenerConversacionesHistorialIA } from "../services/encyclopediaService.ts";
 import {
   registrarIntentoEjercicioIA,
   completarEjercicioIA,
@@ -168,8 +169,11 @@ function nombreAsignatura(
 // HISTORIAL DE EJERCICIOS IA DE LEO
 router.get("/ai-history", requierePapa, async (_req, res) => {
   try {
-    const ejercicios = await obtenerHistorialEjerciciosIA("leo");
-    return res.json({ ok: true, ejercicios });
+    const [ejercicios, conversaciones] = await Promise.all([
+      obtenerHistorialEjerciciosIA("leo"),
+      obtenerConversacionesHistorialIA()
+    ]);
+    return res.json({ ok: true, ejercicios, conversaciones });
   } catch (error) {
     console.error("[IA] Error al consultar el historial:", error);
     return res.status(500).json({
