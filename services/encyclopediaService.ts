@@ -70,8 +70,8 @@ export async function responderEnciclopedia(input: { perfil: PerfilEnciclopedia;
   if (!texto) throw new Error("La Enciclopedia no ha devuelto una respuesta.");
   const fuentes = buscar ? extraerFuentes(respuesta) : [];
   const mensajes: Mensaje[] = [...chat.messages,
-    { role: "user", content: input.mensaje, createdAt: ahora },
-    { role: "assistant", content: texto, createdAt: new Date(), sources: fuentes }
+    { role: "user" as const, content: input.mensaje, createdAt: ahora },
+    { role: "assistant" as const, content: texto, createdAt: new Date(), sources: fuentes }
   ].slice(-30);
   await chats.updateOne({ _id: chat._id, perfil: input.perfil }, { $set: { messages: mensajes, updatedAt: new Date() } });
   return { conversacionId: String(chat._id), title: chat.title, respuesta: texto, fuentes };
