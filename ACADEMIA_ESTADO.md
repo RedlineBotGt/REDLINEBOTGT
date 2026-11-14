@@ -1000,3 +1000,18 @@ El usuario aprueba activar el acceso **🤖 IA** como una vista de consulta para
 - Archivos modificados: `public/styles.css`, `public/js/musicStudio.js`, `public/index.html`, `public/app.js` y este estado.
 - Caché: estilos `v=13`, módulo musical `v=2`.
 - Pendiente comprobar visual y táctilmente en el dispositivo real de Leo; el despliegue/build no sustituye esa prueba.
+
+
+---
+
+## ACTUALIZACIÓN 14-11-2026 · Enciclopedia (implementación inicial)
+
+- Rama correcta: `ACADEMIA_CAMPOS`; Render está configurado en esa rama.
+- Enciclopedia se integra como asignatura independiente y su ruta no pasa por el generador de retos.
+- Servicio separado: `services/encyclopediaService.ts`; rutas: `routes/encyclopedia.ts`; interfaz: `public/js/encyclopedia.js`.
+- Conversaciones y mensajes se guardan en MongoDB, separados por perfil. La búsqueda utiliza Google Search grounding con el SDK `@google/genai` ya instalado. Se limita a 4 turnos de búsqueda por día y 80 por mes desde esta app; el límite no controla el uso externo de la misma clave.
+- Papá consulta las conversaciones de Leo, Papá y Mamá desde el botón IA. El historial de ejercicios existente de Leo se mantiene y muestra fecha de resolución. Las fechas también se muestran en cada mensaje de Enciclopedia.
+- Archivos de interfaz y servidor modificados: `server.ts`, `routes/questions.ts`, `public/index.html`, `public/js/subjects.js`, `public/js/menu.js`, `public/app.js`, `public/js/aiHistory.js`.
+- Commit de integración de interfaz: `e6ddd14f4bb3613cd5c3fc3c3e77884c27ff247a`; corrección de tipos: `010041b5454c996980d17ca0660e67853bb02835`; conexión de historial: `17382d10d09e5ad1447268b38a82eea90de14351`.
+- El build TypeScript de Render para el commit `010041b` terminó correctamente. El deploy posterior del commit `17382d1` está pendiente de confirmación.
+- Pendiente de prueba funcional real: envío de pregunta, respuesta Gemini, grounding y fuentes, continuidad de conversación, aislamiento por perfil, historial familiar y fechas. No marcar como probado hasta verificarlo en la app.
