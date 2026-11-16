@@ -32,12 +32,12 @@
 En `Index.ts`:
 - Registra protecciones globales de errores.
 - Inicia Express y las rutas de salud.
-- Ejecuta una comprobación HTTP de Academia Campos al arrancar y cada 10 minutos, con timeout de 60 segundos y un segundo intento tras 15 segundos.
+- No realiza comprobaciones HTTP automáticas a WEBLINEGT ni a Academia Campos desde `Index.ts`.
 - Registra comandos slash.
 - Centraliza la conexión a MongoDB.
 - Inicia el cliente Discord y, al recibir `ready`, activa nickname, bienvenida, avisos, encuestas y el worker de eventos.
 
-**La comprobación de Academia Campos es HTTP, no un mensaje privado ni una integración de susurros de Discord.** En el estado revisado no hay un ping equivalente a WEBLINEGT desde este archivo.
+**No hay despertadores HTTP externos en `Index.ts`.** El servidor Express conserva únicamente `/` y `/health` para comprobar la salud del propio bot.
 
 ## 3. Sistema de eventos
 
@@ -122,8 +122,7 @@ Se mantiene intacta la lógica existente de recurrencia: intervalo, `scheduledAt
 - En una revisión anterior se detectaron credenciales sensibles incluidas en el repositorio público (incluyendo un archivo de credenciales y copias de claves/URI en código). **No consta que se hayan rotado o revocado.** Prioridad de seguridad: rotar credenciales expuestas y después retirar los secretos del historial/repositorio de forma controlada. Nunca copiar secretos a este documento.
 - Revisar la salud real del bot: actualmente `/health` puede responder aunque el cliente Discord no haya conectado.
 - Revisar el manejo de `uncaughtException`: el proceso registra el error, pero no fuerza una salida controlada.
-- Verificar en ejecución la ruta de estado de Academia Campos antes de dar por garantizado que el ping la mantiene activa.
-- No implementar un ping a WEBLINEGT sin decisión expresa.
+- No añadir llamadas automáticas a WEBLINEGT ni a Academia Campos desde el bot sin autorización expresa.
 
 ## 8. Normas de trabajo
 
@@ -633,3 +632,14 @@ Comportamiento:
 - No se cambia el texto de actualización ni el contenido de las listas.
 - Commit de código: `12bb4a287e31a76a90fc45e04097d66ef6ff9f5f` (rama `BOTGT7`).
 - Pendiente confirmar Render LIVE y comprobar el mensaje reconstruido en Discord.
+
+
+## 37. Retirada del despertador de WEBLINEGT — 16/11/2026
+
+- A petición del usuario, se elimina de `Index.ts` el bloque completo que llamaba a `https://weblinegt.onrender.com/health` al arrancar y cada 10 minutos.
+- Se retiran también las constantes de URL, intervalo, timeout y reintento, la función `checkWeblineStatus()`, la llamada inicial y el `setInterval`.
+- Se conservan intactos el servidor Express del propio REDLINE BOT GT (`/` y `/health`), la conexión MongoDB, el cliente Discord, los comandos y los workers.
+- No se modifican WEBLINEGT ni Academia Campos.
+- Commit de código: 359178741e2e507ff71b964519434ac282bba8fa.
+- Revisión estática: realizada; el bloque de llamadas externas a WEBLINEGT ya no está en `Index.ts`.
+- Compilación, despliegue Render y comprobación de funcionamiento del bot: pendientes. No se debe considerar activo hasta confirmar el despliegue y la conexión Discord.
