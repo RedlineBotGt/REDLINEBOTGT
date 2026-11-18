@@ -72,7 +72,7 @@ export async function handleFormCreate5Modal(interaction: ModalSubmitInteraction
     );
 
     await interaction.reply({
-        content: `✅ ¡Formulario guardado con **${preguntas.length} preguntas**!\\n- **Título provisional:** ${provisionalTitle}\\n\\n**¿Quieres añadir el logo del equipo como una sexta pregunta?**`,
+        content: `✅ ¡Formulario guardado con **${preguntas.length} preguntas**!\n- **Título provisional:** ${provisionalTitle}\n\n**¿Quieres añadir el logo del equipo como una sexta pregunta?**`,
         components: [row],
         flags: [MessageFlags.Ephemeral]
     });
@@ -100,7 +100,7 @@ export async function handleFormLogoConfigButton(interaction: ButtonInteraction)
         new ButtonBuilder().setCustomId('dash_btn_prompt_renombrar').setLabel('Poner nombre personalizado').setStyle(ButtonStyle.Success).setEmoji('✏️')
     );
     await interaction.update({
-        content: `✅ Configuración guardada.\\n- Preguntas: **${formulario.preguntas.length}**\\n- Logo obligatorio al responder: **${solicitarLogo ? 'Sí' : 'No'}**\\n\\nAhora puedes ponerle nombre al formulario.`,
+        content: `✅ Configuración guardada.\n- Preguntas: **${formulario.preguntas.length}**\n- Logo obligatorio al responder: **${solicitarLogo ? 'Sí' : 'No'}**\n\nAhora puedes ponerle nombre al formulario.`,
         components: [row]
     });
     return true;
