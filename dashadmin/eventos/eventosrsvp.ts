@@ -21,6 +21,38 @@ export const adminAdminSessions = new Map<string, {
     eventMessageId: string
 }>();
 
+const EVENT_ADMIN_ROLE_IDS = [
+    '1553478496343429150', // Admin
+    '1555295354377998408'  // Staff
+];
+
+async function requireEventAdminStaff(interaction: any): Promise<boolean> {
+    const guild = interaction.guild;
+
+    if (!guild) {
+        await interaction.reply({
+            content: '❌ Esta gestión solo está disponible dentro del servidor.',
+            flags: [MessageFlags.Ephemeral]
+        }).catch(() => {});
+        return false;
+    }
+
+    const member = await guild.members.fetch(interaction.user.id).catch(() => null);
+    const allowed = Boolean(
+        member && EVENT_ADMIN_ROLE_IDS.some(roleId => member.roles.cache.has(roleId))
+    );
+
+    if (!allowed) {
+        await interaction.reply({
+            content: '❌ Solo el equipo **Admin** y **Staff** puede utilizar la Gestión Admin.',
+            flags: [MessageFlags.Ephemeral]
+        }).catch(() => {});
+        return false;
+    }
+
+    return true;
+}
+
 /**
  * Si el evento ya ha llegado a T-30 y un titular causa baja,
  * promociona al primer reserva disponible.
@@ -138,6 +170,7 @@ async function avisarReservaPromocionada(
 // --- 1. ABRIR PANEL ADMIN DE PILOTOS ---
 export async function handleEventAdminManageButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'event_admin_manage') return false;
+    if (!(await requireEventAdminStaff(interaction))) return true;
 
     const sessionId = `${interaction.user.id}_${interaction.message.id}`;
     adminAdminSessions.set(sessionId, { eventMessageId: interaction.message.id });
@@ -178,6 +211,7 @@ export async function handleEventAdminManageButton(interaction: ButtonInteractio
 // --- 2. CAPTURAR SELECCIÓN DE USUARIO ---
 export async function handleEventAdminUserSelect(interaction: any): Promise<boolean> {
     if (!interaction.customId.startsWith('admin_user_select_')) return false;
+    if (!(await requireEventAdminStaff(interaction))) return true;
 
     const sessionId = interaction.customId.replace('admin_user_select_', '');
     const session = adminAdminSessions.get(sessionId);
@@ -203,6 +237,7 @@ export async function handleEventAdminUserSelect(interaction: any): Promise<bool
 // --- 3. CAPTURAR SELECCIÓN DE ESTADO ---
 export async function handleEventAdminStatusSelect(interaction: any): Promise<boolean> {
     if (!interaction.customId.startsWith('admin_status_select_')) return false;
+    if (!(await requireEventAdminStaff(interaction))) return true;
 
     const sessionId = interaction.customId.replace('admin_status_select_', '');
     const session = adminAdminSessions.get(sessionId);
@@ -234,6 +269,7 @@ export async function handleEventAdminStatusSelect(interaction: any): Promise<bo
 // --- 4. CONFIRMAR Y APLICAR CAMBIOS EN LA BD Y EL MENSAJE PRINCIPAL ---
 export async function handleEventAdminConfirmButton(interaction: ButtonInteraction): Promise<boolean> {
     if (!interaction.customId.startsWith('admin_confirm_')) return false;
+    if (!(await requireEventAdminStaff(interaction))) return true;
 
     const sessionId = interaction.customId.replace('admin_confirm_', '');
     const session = adminAdminSessions.get(sessionId);
