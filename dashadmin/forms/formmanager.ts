@@ -79,6 +79,32 @@ export async function handleFormCreate5Modal(interaction: ModalSubmitInteraction
     return true;
 }
 
+// Selección opcional de logo para el formulario recién creado
+export async function handleFormLogoConfigButton(interaction: ButtonInteraction): Promise<boolean> {
+    if (interaction.customId !== 'dash_form_logo_yes' && interaction.customId !== 'dash_form_logo_no') return false;
+    const guildId = interaction.guildId;
+    const titulo = recentUserForms.get(interaction.user.id);
+    if (!guildId || !titulo) {
+        await interaction.reply({ content: '❌ No encuentro el formulario que acabas de crear. Vuelve a iniciar el proceso.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+    const formulario = await obtenerFormularioPorTitulo(guildId, titulo);
+    if (!formulario) {
+        await interaction.reply({ content: '❌ El formulario ya no está disponible.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+    const solicitarLogo = interaction.customId === 'dash_form_logo_yes';
+    await guardarFormulario(guildId, titulo, formulario.canalRespuestas || null, formulario.preguntas, solicitarLogo);
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId('dash_btn_prompt_renombrar').setLabel('Poner nombre personalizado').setStyle(ButtonStyle.Success).setEmoji('✏️')
+    );
+    await interaction.update({
+        content: `✅ Configuración guardada.\\n- Preguntas: **${formulario.preguntas.length}**\\n- Logo obligatorio al responder: **${solicitarLogo ? 'Sí' : 'No'}**\\n\\nAhora puedes ponerle nombre al formulario.`,
+        components: [row]
+    });
+    return true;
+}
+
 // 3. Botón para renombrar formulario provisional
 export async function handlePromptRenombrarButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_btn_prompt_renombrar') return false;
@@ -113,7 +139,7 @@ export async function handleRenombrarModal(interaction: ModalSubmitInteraction):
     const formActual = await obtenerFormularioPorTitulo(guildId, viejoTitulo);
     if (!formActual) return true;
 
-    await guardarFormulario(guildId, nuevoTitulo, formActual.canalRespuestas || null, formActual.preguntas);
+    await guardarFormulario(guildId, nuevoTitulo, formActual.canalRespuestas || null, formActual.preguntas, formActual.solicitarLogo);
     await eliminarFormulario(guildId, viejoTitulo);
     recentUserForms.delete(interaction.user.id);
 
@@ -238,7 +264,7 @@ export async function handleEditarFormModalSubmit(interaction: ModalSubmitIntera
         } catch {}
     }
 
-    await guardarFormulario(guildId, tituloFormulario, formulario.canalRespuestas || null, nuevasPreguntas);
+    await guardarFormulario(guildId, tituloFormulario, formulario.canalRespuestas || null, nuevasPreguntas, formulario.solicitarLogo);
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('edit_btn_titulo_si').setLabel('Cambiar título').setStyle(ButtonStyle.Primary).setEmoji('✏️'),
@@ -277,7 +303,7 @@ export async function handleEditarNuevoTituloModalSubmit(interaction: ModalSubmi
     const formulario = await obtenerFormularioPorTitulo(guildId, viejoTitulo);
     if (!formulario) return true;
 
-    await guardarFormulario(guildId, nuevoTitulo, formulario.canalRespuestas || null, formulario.preguntas);
+    await guardarFormulario(guildId, nuevoTitulo, formulario.canalRespuestas || null, formulario.preguntas, formulario.solicitarLogo);
     if (nuevoTitulo !== viejoTitulo) await eliminarFormulario(guildId, viejoTitulo);
     activeEditingForms.delete(interaction.user.id);
 
