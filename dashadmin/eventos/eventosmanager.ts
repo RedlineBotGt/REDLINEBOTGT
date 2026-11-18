@@ -212,17 +212,17 @@ export async function buildEventEmbedAndRows(ev: any, guild?: Guild | null) {
             .setDisabled(isClosed)
     );
 
-    const rowAdmin = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    // Gestión Admin ocupa el quinto y último botón de la misma fila.
+    rowRsvp.addComponents(
         new ButtonBuilder()
             .setCustomId('event_admin_manage')
             .setLabel('Gestión Admin')
             .setStyle(ButtonStyle.Secondary)
-            .setEmoji('⚙️')
             .setDisabled(isClosed)
     );
 
     return {
         embed,
-        components: isClosed ? [rowRsvp] : [rowRsvp, rowAdmin]
+        components: [rowRsvp]
     };
 }
