@@ -348,7 +348,7 @@ export async function handleEditChangeChannelSelect(interaction: ChannelSelectMe
     const formulario = await obtenerFormularioPorTitulo(guildId, tituloFormulario);
     if (!formulario) return true;
 
-    await guardarFormulario(guildId, tituloFormulario, nuevoCanalId, formulario.preguntas);
+    await guardarFormulario(guildId, tituloFormulario, nuevoCanalId, formulario.preguntas, formulario.solicitarLogo);
     activeEditingForms.delete(interaction.user.id);
 
     await interaction.update({
