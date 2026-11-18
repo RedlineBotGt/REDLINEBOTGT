@@ -7,6 +7,7 @@ import {
     ChannelSelectMenuBuilder,
     ModalBuilder,
     FileUploadBuilder,
+    LabelBuilder,
     TextInputBuilder,
     TextInputStyle,
     ActionRowBuilder, 
@@ -407,7 +408,12 @@ export async function handleFormLogoAttachButton(interaction: ButtonInteraction)
     const modal = new ModalBuilder()
         .setCustomId(`form_logo_submit_${token}`)
         .setTitle('Logo de tu equipo')
-        .addComponents(new ActionRowBuilder<FileUploadBuilder>().addComponents(upload));
+        .addLabelComponents(
+            new LabelBuilder()
+                .setLabel('Logo del equipo')
+                .setDescription('Adjunta una imagen desde tu móvil o dispositivo')
+                .setFileUploadComponent(upload)
+        );
 
     await interaction.showModal(modal);
     return true;
