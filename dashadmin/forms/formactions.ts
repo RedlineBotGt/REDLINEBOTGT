@@ -239,7 +239,8 @@ async function finalizarEnvioFormulario(
     answers: string[],
     logo?: { url: string; name: string }
 ): Promise<void> {
-    if (!formulario || !formulario.canalRespuestas || !interaction.guild) {
+    const guild = interaction.guild;
+    if (!formulario || !formulario.canalRespuestas || !guild) {
         await interaction.reply({ content: '❌ Formulario o canal de respuestas no disponible.', flags: [MessageFlags.Ephemeral] });
         return;
     }
@@ -250,7 +251,7 @@ async function finalizarEnvioFormulario(
     formulario.preguntas.forEach((pregunta, index) => {
         resumen += `> **${pregunta}**\n${answers[index] || ''}\n\n`;
     });
-    const serverName = interaction.guild.name || 'Servidor';
+    const serverName = guild.name || 'Servidor';
     resumen += `— *${serverName}*`;
 
     const tituloNormalizado = formulario.titulo
@@ -277,9 +278,9 @@ async function finalizarEnvioFormulario(
             console.log('✅ [Google Sheets] Inscripción añadida correctamente a la pestaña "Inscripción".');
 
             try {
-                const member = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+                const member = await guild.members.fetch(interaction.user.id).catch(() => null);
                 if (member) {
-                    const roleGtCup2 = interaction.guild.roles.cache.find(
+                    const roleGtCup2 = guild.roles.cache.find(
                         r => r.name.toLowerCase() === 'gtcup2' || r.name.toLowerCase() === 'gt cup 2'
                     );
                     if (roleGtCup2) {
@@ -304,7 +305,7 @@ async function finalizarEnvioFormulario(
                         listaTexto += `**${idx + 1}.** ${mencionUsuario} (${apodo}) - Dorsal: \`${dorsal}\`\n`;
                     });
                     listaTexto += `\n— *Total inscritos: ${sheetRows.length}*`;
-                    const canalRespuestas = await interaction.guild.channels.fetch(formulario.canalRespuestas) as TextChannel;
+                    const canalRespuestas = await guild.channels.fetch(formulario.canalRespuestas) as TextChannel;
                     if (canalRespuestas && canalRespuestas.isTextBased()) {
                         await canalRespuestas.send({ content: listaTexto });
                     }
@@ -447,8 +448,9 @@ export async function handleFormLogoSubmitModal(interaction: ModalSubmitInteract
         return true;
     }
 
-    const isImage = attachment.contentType?.startsWith('image/') ||
-        /\.(png|jpe?g|gif|webp|bmp|heic)$/i.test(attachment.name || '');
+    const isImage = attachment.contentType
+        ? attachment.contentType.startsWith('image/')
+        : /\.(png|jpe?g|gif|webp|bmp|heic)$/i.test(attachment.name || '');
     if (!isImage) {
         const retryRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder().setCustomId(`form_logo_attach_${token}`).setLabel('Volver a adjuntar imagen').setStyle(ButtonStyle.Primary)
