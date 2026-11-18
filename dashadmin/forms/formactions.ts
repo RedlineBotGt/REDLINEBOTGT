@@ -241,11 +241,9 @@ async function finalizarEnvioFormulario(
 ): Promise<void> {
     const guild = interaction.guild;
     if (!formulario || !formulario.canalRespuestas || !guild) {
-        await interaction.reply({ content: '❌ Formulario o canal de respuestas no disponible.', flags: [MessageFlags.Ephemeral] });
+        await interaction.editReply({ content: '❌ Formulario o canal de respuestas no disponible.' });
         return;
     }
-
-    await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
     let resumen = `📥 **Nueva Respuesta de Formulario**\n📋 **Formulario:** *${formulario.titulo}*\n👤 **Usuario:** <@${interaction.user.id}>\n\n`;
     formulario.preguntas.forEach((pregunta, index) => {
@@ -343,11 +341,13 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
         return true;
     }
 
+    await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+
     const tituloFormulario = decodeURIComponent(interaction.customId.replace('submit_form_', ''));
     const formulario = await obtenerFormularioPorTitulo(interaction.guildId, tituloFormulario);
 
     if (!formulario || !formulario.canalRespuestas) {
-        await interaction.reply({ content: '❌ Formulario o canal de respuestas no disponible.', flags: [MessageFlags.Ephemeral] });
+        await interaction.editReply({ content: '❌ Formulario o canal de respuestas no disponible.' });
         return true;
     }
 
@@ -373,10 +373,9 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
                 .setStyle(ButtonStyle.Primary)
         );
 
-        await interaction.reply({
+        await interaction.editReply({
             content: '🖼️ **Ahora adjunta el logo de tu equipo.**\n\nTus respuestas están guardadas temporalmente. El formulario no se enviará hasta que adjuntes la imagen.',
-            components: [row],
-            flags: [MessageFlags.Ephemeral]
+            components: [row]
         });
         return true;
     }
@@ -463,10 +462,11 @@ export async function handleFormLogoSubmitModal(interaction: ModalSubmitInteract
         return true;
     }
 
+    await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
     const formulario = await obtenerFormularioPorTitulo(pending.guildId, pending.titulo);
     if (!formulario || !formulario.canalRespuestas) {
         pendingFormSubmissions.delete(token);
-        await interaction.reply({ content: '❌ El formulario o su canal de respuestas ya no están disponibles.', flags: [MessageFlags.Ephemeral] });
+        await interaction.editReply({ content: '❌ El formulario o su canal de respuestas ya no están disponibles.' });
         return true;
     }
 
