@@ -26,14 +26,22 @@ const EVENT_ADMIN_ROLE_IDS = [
     '1555295354377998408'  // Staff
 ];
 
-async function requireEventAdminStaff(interaction: any): Promise<boolean> {
+async function requireEventAdminStaff(
+    interaction: any,
+    alreadyAcknowledged = false
+): Promise<boolean> {
     const guild = interaction.guild;
 
     if (!guild) {
-        await interaction.reply({
+        const response = {
             content: '❌ Esta gestión solo está disponible dentro del servidor.',
             flags: [MessageFlags.Ephemeral]
-        }).catch(() => {});
+        };
+        if (alreadyAcknowledged) {
+            await interaction.followUp(response).catch(() => {});
+        } else {
+            await interaction.reply(response).catch(() => {});
+        }
         return false;
     }
 
@@ -43,10 +51,15 @@ async function requireEventAdminStaff(interaction: any): Promise<boolean> {
     );
 
     if (!allowed) {
-        await interaction.reply({
+        const response = {
             content: '❌ Solo el equipo **Admin** y **Staff** puede utilizar la Gestión Admin.',
             flags: [MessageFlags.Ephemeral]
-        }).catch(() => {});
+        };
+        if (alreadyAcknowledged) {
+            await interaction.followUp(response).catch(() => {});
+        } else {
+            await interaction.reply(response).catch(() => {});
+        }
         return false;
     }
 
@@ -267,155 +280,193 @@ export async function handleEventAdminStatusSelect(interaction: any): Promise<bo
     return true;
 }
 // --- 4. CONFIRMAR Y APLICAR CAMBIOS EN LA BD Y EL MENSAJE PRINCIPAL ---
+const adminConfirmInProgress = new Set<string>();
+
+// --- 4. CONFIRMAR Y APLICAR CAMBIOS EN LA BD Y EL MENSAJE PRINCIPAL ---
 export async function handleEventAdminConfirmButton(interaction: ButtonInteraction): Promise<boolean> {
     if (!interaction.customId.startsWith('admin_confirm_')) return false;
-    if (!(await requireEventAdminStaff(interaction))) return true;
 
     const sessionId = interaction.customId.replace('admin_confirm_', '');
-    const session = adminAdminSessions.get(sessionId);
 
-    if (!session || !session.targetUserId || !session.status) {
+    // Evitar que dos clics simultáneos apliquen la misma operación.
+    if (adminConfirmInProgress.has(sessionId)) {
         await interaction.reply({
-            content: '❌ Debes seleccionar tanto un **usuario** como un **estado** antes de confirmar.',
+            content: '⏳ Esta gestión ya se está procesando. Espera a que termine.',
             flags: [MessageFlags.Ephemeral]
-        });
+        }).catch(() => {});
         return true;
     }
 
-    const targetUserId = session.targetUserId;
-    const targetStatus = session.status;
-    const messageId = session.eventMessageId;
+    adminConfirmInProgress.add(sessionId);
 
-    adminAdminSessions.delete(sessionId);
+    try {
+        // Reconocer el clic inmediatamente para evitar que Discord caduque la interacción.
+        await interaction.deferUpdate();
 
-    const guild = interaction.guild;
-    if (!guild) return true;
+        if (!(await requireEventAdminStaff(interaction, true))) return true;
 
-    const col = await getEventsCollection();
-    const eventDoc = await col.findOne({
-        messageId,
-        guildId: interaction.guildId
-    });
+        const session = adminAdminSessions.get(sessionId);
 
-    if (!eventDoc || eventDoc.status === 'completed' || eventDoc.status === 'cancelled') {
-        await interaction.update({
-            content: '❌ Este evento ya no está activo en este servidor.',
-            components: []
-        });
-        return true;
-    }
-
-    if (!eventDoc.rsvps) {
-        eventDoc.rsvps = { yes: [], reserve: [], maybe: [], no: [] };
-    }
-
-    if (!Array.isArray(eventDoc.rsvps.yes)) eventDoc.rsvps.yes = [];
-    if (!Array.isArray(eventDoc.rsvps.reserve)) eventDoc.rsvps.reserve = [];
-    if (!Array.isArray(eventDoc.rsvps.maybe)) eventDoc.rsvps.maybe = [];
-    if (!Array.isArray(eventDoc.rsvps.no)) eventDoc.rsvps.no = [];
-
-    const yaEraTitular = eventDoc.rsvps.yes.includes(targetUserId);
-
-    if (
-        targetStatus === 'yes' &&
-        !yaEraTitular &&
-        eventDoc.rsvps.yes.length >= MAX_PILOTOS
-    ) {
-        await interaction.update({
-            content: `❌ No se puede añadir a <@${targetUserId}> como titular. Ya están ocupadas las **${MAX_PILOTOS} plazas de titulares**. Las reservas no cuentan para este límite.`,
-            components: []
-        });
-        return true;
-    }
-
-    // Limpiar todos los estados anteriores.
-    eventDoc.rsvps.yes = eventDoc.rsvps.yes.filter((id: string) => id !== targetUserId);
-    eventDoc.rsvps.reserve = eventDoc.rsvps.reserve.filter((id: string) => id !== targetUserId);
-    eventDoc.rsvps.maybe = eventDoc.rsvps.maybe.filter((id: string) => id !== targetUserId);
-    eventDoc.rsvps.no = eventDoc.rsvps.no.filter((id: string) => id !== targetUserId);
-
-    let asistenteRole = guild.roles.cache.find(
-        r => r.name.toLowerCase() === 'asistente'
-    );
-
-    if (!asistenteRole) {
-        try {
-            asistenteRole = await guild.roles.create({
-                name: 'asistente',
-                color: 0x00FF00,
-                mentionable: true,
-                reason: 'Rol automático creado para gestión de asistencias.'
+        if (!session || !session.targetUserId || !session.status) {
+            await interaction.editReply({
+                content: '❌ Debes seleccionar tanto un **usuario** como un **estado** antes de confirmar.',
+                components: []
             });
-        } catch (e) {
-            console.error('❌ Error creando rol asistente:', e);
+            return true;
         }
-    }
 
-    const member = await guild.members.fetch(targetUserId).catch(() => null);
+        const targetUserId = session.targetUserId;
+        const targetStatus = session.status;
+        const messageId = session.eventMessageId;
 
-    if (targetStatus === 'yes') {
-        eventDoc.rsvps.yes.push(targetUserId);
-        if (asistenteRole && member) {
-            await member.roles.add(asistenteRole, `Manual por: ${interaction.user.globalName || interaction.user.username} · Canal ID: ${interaction.channelId}`).catch(() => {});
+        const guild = interaction.guild;
+        if (!guild) {
+            await interaction.editReply({
+                content: '❌ Esta gestión solo está disponible dentro del servidor.',
+                components: []
+            });
+            return true;
         }
-    } else if (targetStatus === 'reserve') {
-        eventDoc.rsvps.reserve.push(targetUserId);
-        if (asistenteRole && member) {
-            await member.roles.add(asistenteRole).catch(() => {});
+
+        const col = await getEventsCollection();
+        const eventDoc = await col.findOne({
+            messageId,
+            guildId: interaction.guildId
+        });
+
+        if (!eventDoc || eventDoc.status === 'completed' || eventDoc.status === 'cancelled') {
+            await interaction.editReply({
+                content: '❌ Este evento ya no está activo en este servidor.',
+                components: []
+            });
+            adminAdminSessions.delete(sessionId);
+            return true;
         }
-    } else if (targetStatus === 'maybe') {
-        eventDoc.rsvps.maybe.push(targetUserId);
-        if (asistenteRole && member) {
-            await member.roles.add(asistenteRole).catch(() => {});
+
+        if (!eventDoc.rsvps) {
+            eventDoc.rsvps = { yes: [], reserve: [], maybe: [], no: [] };
         }
-    } else if (targetStatus === 'no') {
-        eventDoc.rsvps.no.push(targetUserId);
 
-        if (asistenteRole && member && member.roles.cache.has(asistenteRole.id)) {
-            await member.roles.remove(asistenteRole).catch(() => {});
+        if (!Array.isArray(eventDoc.rsvps.yes)) eventDoc.rsvps.yes = [];
+        if (!Array.isArray(eventDoc.rsvps.reserve)) eventDoc.rsvps.reserve = [];
+        if (!Array.isArray(eventDoc.rsvps.maybe)) eventDoc.rsvps.maybe = [];
+        if (!Array.isArray(eventDoc.rsvps.no)) eventDoc.rsvps.no = [];
+
+        const yaEraTitular = eventDoc.rsvps.yes.includes(targetUserId);
+
+        if (
+            targetStatus === 'yes' &&
+            !yaEraTitular &&
+            eventDoc.rsvps.yes.length >= MAX_PILOTOS
+        ) {
+            await interaction.editReply({
+                content: `❌ No se puede añadir a <@${targetUserId}> como titular. Ya están ocupadas las **${MAX_PILOTOS} plazas de titulares**. Las reservas no cuentan para este límite.`,
+                components: []
+            });
+            return true;
         }
-    }
 
-    // Si el administrador da de baja a un titular, cubrir la plaza.
-    let promotedUserId: string | null = null;
+        // Limpiar todos los estados anteriores.
+        eventDoc.rsvps.yes = eventDoc.rsvps.yes.filter((id: string) => id !== targetUserId);
+        eventDoc.rsvps.reserve = eventDoc.rsvps.reserve.filter((id: string) => id !== targetUserId);
+        eventDoc.rsvps.maybe = eventDoc.rsvps.maybe.filter((id: string) => id !== targetUserId);
+        eventDoc.rsvps.no = eventDoc.rsvps.no.filter((id: string) => id !== targetUserId);
 
-    if (targetStatus === 'no' && yaEraTitular) {
-        promotedUserId = await promocionarPrimerReserva(eventDoc, guild);
-    }
+        let asistenteRole = guild.roles.cache.find(
+            r => r.name.toLowerCase() === 'asistente'
+        );
 
-    await col.updateOne(
-        { messageId, guildId: interaction.guildId },
-        { $set: { rsvps: eventDoc.rsvps } }
-    );
-
-    const channel = await guild.channels.fetch(eventDoc.channelId).catch(() => null) as TextChannel;
-
-    if (channel) {
-        const message = await channel.messages.fetch(messageId).catch(() => null);
-
-        if (message) {
-            const { embed, components } = await buildEventEmbedAndRows(eventDoc, guild);
-            await message.edit({ embeds: [embed], components }).catch(() => {});
+        if (!asistenteRole) {
+            try {
+                asistenteRole = await guild.roles.create({
+                    name: 'asistente',
+                    color: 0x00FF00,
+                    mentionable: true,
+                    reason: 'Rol automático creado para gestión de asistencias.'
+                });
+            } catch (e) {
+                console.error('❌ Error creando rol asistente:', e);
+            }
         }
+
+        const member = await guild.members.fetch(targetUserId).catch(() => null);
+
+        if (targetStatus === 'yes') {
+            eventDoc.rsvps.yes.push(targetUserId);
+            if (asistenteRole && member) {
+                await member.roles.add(asistenteRole, `Manual por: ${interaction.user.globalName || interaction.user.username} · Canal ID: ${interaction.channelId}`).catch(() => {});
+            }
+        } else if (targetStatus === 'reserve') {
+            eventDoc.rsvps.reserve.push(targetUserId);
+            if (asistenteRole && member) {
+                await member.roles.add(asistenteRole).catch(() => {});
+            }
+        } else if (targetStatus === 'maybe') {
+            eventDoc.rsvps.maybe.push(targetUserId);
+            if (asistenteRole && member) {
+                await member.roles.add(asistenteRole).catch(() => {});
+            }
+        } else if (targetStatus === 'no') {
+            eventDoc.rsvps.no.push(targetUserId);
+
+            if (asistenteRole && member && member.roles.cache.has(asistenteRole.id)) {
+                await member.roles.remove(asistenteRole).catch(() => {});
+            }
+        }
+
+        // Si el administrador da de baja a un titular, cubrir la plaza.
+        let promotedUserId: string | null = null;
+
+        if (targetStatus === 'no' && yaEraTitular) {
+            promotedUserId = await promocionarPrimerReserva(eventDoc, guild);
+        }
+
+        await col.updateOne(
+            { messageId, guildId: interaction.guildId },
+            { $set: { rsvps: eventDoc.rsvps } }
+        );
+
+        const channel = await guild.channels.fetch(eventDoc.channelId).catch(() => null) as TextChannel;
+
+        if (channel) {
+            const message = await channel.messages.fetch(messageId).catch(() => null);
+
+            if (message) {
+                const { embed, components } = await buildEventEmbedAndRows(eventDoc, guild);
+                await message.edit({ embeds: [embed], components }).catch(() => {});
+            }
+        }
+
+        if (promotedUserId) {
+            await avisarReservaPromocionada(eventDoc, guild, promotedUserId);
+        }
+
+        let confirmation =
+            `✅ Asistencia actualizada correctamente para el usuario <@${targetUserId}> como **${targetStatus}**.`;
+
+        if (promotedUserId) {
+            confirmation += `\n🔃 <@${promotedUserId}> ha sido promocionado automáticamente de reserva a titular.`;
+        }
+
+        await interaction.editReply({
+            content: confirmation,
+            components: []
+        });
+
+        adminAdminSessions.delete(sessionId);
+        return true;
+
+    } catch (error) {
+        console.error('❌ Error confirmando la Gestión Admin:', error);
+        await interaction.editReply({
+            content: '❌ Se ha producido un error al aplicar los cambios. Puedes volver a abrir la Gestión Admin e intentarlo de nuevo.',
+            components: []
+        }).catch(() => {});
+        return true;
+
+    } finally {
+        adminConfirmInProgress.delete(sessionId);
     }
-
-    if (promotedUserId) {
-        await avisarReservaPromocionada(eventDoc, guild, promotedUserId);
-    }
-
-    let confirmation =
-        `✅ Asistencia actualizada correctamente para el usuario <@${targetUserId}> como **${targetStatus}**.`;
-
-    if (promotedUserId) {
-        confirmation += `\n🔃 <@${promotedUserId}> ha sido promocionado automáticamente de reserva a titular.`;
-    }
-
-    await interaction.update({
-        content: confirmation,
-        components: []
-    });
-
-    return true;
 }
 
 // --- 5. GESTIÓN DE RSVP Y RESTRICCIÓN ESTRICTA DE ROLES ---
