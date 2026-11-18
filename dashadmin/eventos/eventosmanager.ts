@@ -212,8 +212,8 @@ export async function buildEventEmbedAndRows(ev: any, guild?: Guild | null) {
             .setDisabled(isClosed)
     );
 
-    // Gestión Admin ocupa el quinto y último botón de la misma fila.
-    rowRsvp.addComponents(
+    // Gestión Admin aparece en una segunda fila, justo debajo de los botones RSVP.
+    const rowAdmin = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
             .setCustomId('event_admin_manage')
             .setLabel('Gestión Admin')
@@ -223,6 +223,6 @@ export async function buildEventEmbedAndRows(ev: any, guild?: Guild | null) {
 
     return {
         embed,
-        components: [rowRsvp]
+        components: [rowRsvp, rowAdmin]
     };
 }
