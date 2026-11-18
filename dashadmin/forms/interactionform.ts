@@ -1,27 +1,30 @@
-import { 
-    handleDashCrearFormButton, 
-    handleFormCreate5Modal,\n    handleFormLogoConfigButton, 
-    handlePromptRenombrarButton, 
-    handleRenombrarModal, 
-    handleDashEditarFormButton, 
-    handleDashEditarFormSelect, 
-    handleEditDeleteButton, 
-    handleEditContinueButton, 
-    handleEditarFormModalSubmit, 
-    handleEditChangeTitleButton, 
-    handleEditarNuevoTituloModalSubmit, 
+import {
+    handleDashCrearFormButton,
+    handleFormCreate5Modal,
+    handleFormLogoConfigButton,
+    handlePromptRenombrarButton,
+    handleRenombrarModal,
+    handleDashEditarFormButton,
+    handleDashEditarFormSelect,
+    handleEditDeleteButton,
+    handleEditContinueButton,
+    handleEditarFormModalSubmit,
+    handleEditChangeTitleButton,
+    handleEditarNuevoTituloModalSubmit,
     handleEditChangeChannelButton,
     handleEditChangeChannelSelect,
-    handleEditFinishButton 
+    handleEditFinishButton
 } from './formmanager';
 
-import { 
-    handleDashColocarButton, 
-    handleDashColocarFormSelect, 
-    handleDashColocarPubliChannelSelect, 
-    handleDashColocarRespuestasChannelSelect, 
-    handleFormButtonClick, 
-    handleFormSubmitModal 
+import {
+    handleDashColocarButton,
+    handleDashColocarFormSelect,
+    handleDashColocarPubliChannelSelect,
+    handleDashColocarRespuestasChannelSelect,
+    handleFormButtonClick,
+    handleFormSubmitModal,
+    handleFormLogoAttachButton,
+    handleFormLogoSubmitModal
 } from './formactions';
 
 /**
@@ -30,9 +33,10 @@ import {
  */
 export async function handleFormInteractions(interaction: any): Promise<boolean> {
     try {
-        // --- 1. BOTONES ---
         if (interaction.isButton()) {
-            if (await handleDashColocarButton(interaction)) return true;\n            if (await handleFormLogoConfigButton(interaction)) return true;\n            if (await handleFormLogoAttachButton(interaction)) return true;
+            if (await handleDashColocarButton(interaction)) return true;
+            if (await handleFormLogoConfigButton(interaction)) return true;
+            if (await handleFormLogoAttachButton(interaction)) return true;
             if (await handleFormButtonClick(interaction)) return true;
             if (await handleDashCrearFormButton(interaction)) return true;
             if (await handlePromptRenombrarButton(interaction)) return true;
@@ -44,26 +48,24 @@ export async function handleFormInteractions(interaction: any): Promise<boolean>
             if (await handleEditFinishButton(interaction)) return true;
         }
 
-        // --- 2. STRING SELECT MENUS ---
         if (interaction.isStringSelectMenu()) {
             if (await handleDashColocarFormSelect(interaction)) return true;
             if (await handleDashEditarFormSelect(interaction)) return true;
         }
 
-        // --- 3. CHANNEL SELECT MENUS ---
         if (interaction.isChannelSelectMenu()) {
             if (await handleDashColocarPubliChannelSelect(interaction)) return true;
             if (await handleDashColocarRespuestasChannelSelect(interaction)) return true;
             if (await handleEditChangeChannelSelect(interaction)) return true;
         }
 
-        // --- 4. MODAL SUBMITS ---
         if (interaction.isModalSubmit()) {
             if (await handleFormCreate5Modal(interaction)) return true;
             if (await handleRenombrarModal(interaction)) return true;
             if (await handleEditarFormModalSubmit(interaction)) return true;
             if (await handleEditarNuevoTituloModalSubmit(interaction)) return true;
-            if (await handleFormSubmitModal(interaction)) return true;\n            if (await handleFormLogoSubmitModal(interaction)) return true;
+            if (await handleFormSubmitModal(interaction)) return true;
+            if (await handleFormLogoSubmitModal(interaction)) return true;
         }
 
         return false;
