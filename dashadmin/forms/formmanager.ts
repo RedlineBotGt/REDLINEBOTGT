@@ -72,7 +72,7 @@ export async function handleFormCreate5Modal(interaction: ModalSubmitInteraction
     );
 
     await interaction.reply({
-        content: `✅ ¡Formulario guardado con **${preguntas.length} preguntas**!\\n- **Título provisional:** \\`${provisionalTitle}\\`\\n\\n**¿Quieres añadir el logo del equipo como una sexta pregunta?**`,
+        content: `✅ ¡Formulario guardado con **${preguntas.length} preguntas**!\\n- **Título provisional:** ${provisionalTitle}\\n\\n**¿Quieres añadir el logo del equipo como una sexta pregunta?**`,
         components: [row],
         flags: [MessageFlags.Ephemeral]
     });
