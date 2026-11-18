@@ -319,7 +319,7 @@ async function finalizarEnvioFormulario(
     }
 
     try {
-        const canalRespuestas = await interaction.guild.channels.fetch(formulario.canalRespuestas) as TextChannel;
+        const canalRespuestas = await guild.channels.fetch(formulario.canalRespuestas) as TextChannel;
         if (!canalRespuestas || !canalRespuestas.isTextBased()) {
             await interaction.editReply({ content: '❌ No se encontró el canal de respuestas.' });
             return;
