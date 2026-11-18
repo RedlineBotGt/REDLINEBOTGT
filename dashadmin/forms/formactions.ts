@@ -334,7 +334,7 @@ async function finalizarEnvioFormulario(
 
 // 6. Envío de respuestas. Si el formulario pide logo, se retiene todo hasta recibirlo.
 export async function handleFormSubmitModal(interaction: ModalSubmitInteraction): Promise<boolean> {
-    if (!interaction.customId.startsWith('submit_form_')) return false;
+    if (!interaction.customId.startsWith('submit_form_') || interaction.customId.startsWith('submit_form_logo_')) return false;
 
     if (!interaction.guildId || !interaction.guild) {
         await interaction.reply({ content: '❌ Solo dentro de un servidor.', flags: [MessageFlags.Ephemeral] });
@@ -405,7 +405,7 @@ export async function handleFormLogoAttachButton(interaction: ButtonInteraction)
         .setRequired(true);
 
     const modal = new ModalBuilder()
-        .setCustomId(`submit_form_logo_${token}`)
+        .setCustomId(`form_logo_submit_${token}`)
         .setTitle('Logo de tu equipo')
         .addComponents(new ActionRowBuilder<FileUploadBuilder>().addComponents(upload));
 
@@ -415,9 +415,9 @@ export async function handleFormLogoAttachButton(interaction: ButtonInteraction)
 
 // 8. Recepción obligatoria del logo y envío conjunto de respuestas + imagen.
 export async function handleFormLogoSubmitModal(interaction: ModalSubmitInteraction): Promise<boolean> {
-    if (!interaction.customId.startsWith('submit_form_logo_')) return false;
+    if (!interaction.customId.startsWith('form_logo_submit_')) return false;
 
-    const token = interaction.customId.replace('submit_form_logo_', '');
+    const token = interaction.customId.replace('form_logo_submit_', '');
     const pending = pendingFormSubmissions.get(token);
 
     if (!pending || pending.expiresAt < Date.now()) {
