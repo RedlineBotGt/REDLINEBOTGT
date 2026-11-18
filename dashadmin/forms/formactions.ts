@@ -6,6 +6,7 @@ import {
     StringSelectMenuBuilder,
     ChannelSelectMenuBuilder,
     ModalBuilder,
+    FileUploadBuilder,
     TextInputBuilder,
     TextInputStyle,
     ActionRowBuilder, 
@@ -159,7 +160,7 @@ export async function handleDashColocarRespuestasChannelSelect(interaction: Chan
         return true;
     }
 
-    await guardarFormulario(interaction.guildId, context.titulo, canalRespuestasId, formulario.preguntas);
+    await guardarFormulario(interaction.guildId, context.titulo, canalRespuestasId, formulario.preguntas, formulario.solicitarLogo);
     colocationContext.delete(interaction.user.id);
 
     const serverName = interaction.guild?.name || 'Servidor';
@@ -220,34 +221,38 @@ export async function handleFormButtonClick(interaction: ButtonInteraction): Pro
     return true;
 }
 
-// 6. Envío de respuestas del usuario final al canal configurado y a Google Sheets si es el formulario de inscripción
-export async function handleFormSubmitModal(interaction: ModalSubmitInteraction): Promise<boolean> {
-    if (!interaction.customId.startsWith('submit_form_')) return false;
+// Respuestas pendientes de adjuntar el logo. Caducan a los 15 minutos.
+interface PendingFormSubmission {
+    userId: string;
+    guildId: string;
+    titulo: string;
+    answers: string[];
+    expiresAt: number;
+}
 
-    if (!interaction.guildId || !interaction.guild) {
-        await interaction.reply({ content: '❌ Solo dentro de un servidor.', flags: [MessageFlags.Ephemeral] });
-        return true;
-    }
+const pendingFormSubmissions = new Map<string, PendingFormSubmission>();
 
-    const tituloFormulario = decodeURIComponent(interaction.customId.replace('submit_form_', ''));
-    const formulario = await obtenerFormularioPorTitulo(interaction.guildId, tituloFormulario);
-
-    if (!formulario || !formulario.canalRespuestas) {
+async function finalizarEnvioFormulario(
+    interaction: ModalSubmitInteraction,
+    formulario: Awaited<ReturnType<typeof obtenerFormularioPorTitulo>>,
+    answers: string[],
+    logo?: { url: string; name: string }
+): Promise<void> {
+    if (!formulario || !formulario.canalRespuestas || !interaction.guild) {
         await interaction.reply({ content: '❌ Formulario o canal de respuestas no disponible.', flags: [MessageFlags.Ephemeral] });
-        return true;
+        return;
     }
+
+    await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
     let resumen = `📥 **Nueva Respuesta de Formulario**\n📋 **Formulario:** *${formulario.titulo}*\n👤 **Usuario:** <@${interaction.user.id}>\n\n`;
     formulario.preguntas.forEach((pregunta, index) => {
-        const respuesta = interaction.fields.getTextInputValue(`p_${index}`);
-        resumen += `> **${pregunta}**\n${respuesta}\n\n`;
+        resumen += `> **${pregunta}**\n${answers[index] || ''}\n\n`;
     });
-
-    const serverName = interaction.guild?.name || 'Servidor';
+    const serverName = interaction.guild.name || 'Servidor';
     resumen += `— *${serverName}*`;
 
-    // 📊 Validación estricta para "InscripciónCup"
-    const tituloNormalizado = tituloFormulario
+    const tituloNormalizado = formulario.titulo
         .trim()
         .toLowerCase()
         .normalize('NFD')
@@ -255,25 +260,21 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
 
     if (tituloNormalizado === 'inscripcioncup') {
         try {
-            const idPsn = interaction.fields.getTextInputValue('p_0') || '';
-            const apodoGt7 = interaction.fields.getTextInputValue('p_1') || '';
-            const rawNumero = (interaction.fields.getTextInputValue('p_2') || '').trim();
-
-            // 1️⃣ Formatear el número con '#' obligatoriamente delante y sin espacios (ej: #5)
+            const idPsn = answers[0] || '';
+            const apodoGt7 = answers[1] || '';
+            const rawNumero = (answers[2] || '').trim();
             const numeroFormateado = `#${rawNumero.replace(/^#/, '')}`;
-
             const rowData = [
-                interaction.user.username,          // Columna A: piloto discord
-                `<@${interaction.user.id}>`,        // Columna B: ID usuario (<@ID>)
-                idPsn,                              // Columna C: id PSN
-                apodoGt7,                           // Columna D: apodo Gt7
-                numeroFormateado                    // Columna E: número (#5)
+                interaction.user.username,
+                `<@${interaction.user.id}>`,
+                idPsn,
+                apodoGt7,
+                numeroFormateado
             ];
 
             await appendSheetData('Inscripción!A:E', [rowData]);
             console.log('✅ [Google Sheets] Inscripción añadida correctamente a la pestaña "Inscripción".');
 
-            // 2️⃣ Asignar automáticamente el rol @GtCup2 al usuario
             try {
                 const member = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
                 if (member) {
@@ -291,23 +292,17 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
                 console.error('❌ Error asignando el rol @GtCup2:', roleErr);
             }
 
-            // 3️⃣ Publicar la lista completa y actualizada de inscritos en orden de llegada
             try {
                 const sheetRows = await readSheetData('Inscripción!A:E');
                 if (sheetRows && sheetRows.length > 0) {
                     let listaTexto = '🏁 **LISTA OFICIAL DE INSCRITOS (GtCup2)**\n\n';
-                    
-                    // Recorremos las filas omitiendo la cabecera si la hubiera
                     sheetRows.forEach((row, idx) => {
                         const mencionUsuario = row[1] || `<@${interaction.user.id}>`;
                         const apodo = row[3] || row[0] || 'Piloto';
                         const dorsal = row[4] || '';
-                        
                         listaTexto += `**${idx + 1}.** ${mencionUsuario} (${apodo}) - Dorsal: \`${dorsal}\`\n`;
                     });
-
                     listaTexto += `\n— *Total inscritos: ${sheetRows.length}*`;
-
                     const canalRespuestas = await interaction.guild.channels.fetch(formulario.canalRespuestas) as TextChannel;
                     if (canalRespuestas && canalRespuestas.isTextBased()) {
                         await canalRespuestas.send({ content: listaTexto });
@@ -316,24 +311,158 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
             } catch (listErr) {
                 console.error('❌ Error publicando la lista de inscritos:', listErr);
             }
-
         } catch (sheetError) {
             console.error('❌ Error al guardar la inscripción en Google Sheets:', sheetError);
         }
     }
 
     try {
-        const canalRespuestas = await interaction.guild?.channels.fetch(formulario.canalRespuestas) as TextChannel;
-        if (canalRespuestas) {
-            await canalRespuestas.send({ content: resumen });
-            await interaction.reply({ content: '✅ ¡Tus respuestas se han enviado correctamente!', flags: [MessageFlags.Ephemeral] });
-        } else {
-            await interaction.reply({ content: '❌ No se encontró el canal de respuestas.', flags: [MessageFlags.Ephemeral] });
+        const canalRespuestas = await interaction.guild.channels.fetch(formulario.canalRespuestas) as TextChannel;
+        if (!canalRespuestas || !canalRespuestas.isTextBased()) {
+            await interaction.editReply({ content: '❌ No se encontró el canal de respuestas.' });
+            return;
         }
+
+        const files = logo ? [{ attachment: logo.url, name: logo.name || 'logo-equipo' }] : [];
+        await canalRespuestas.send({ content: resumen, files });
+        await interaction.editReply({ content: '✅ ¡Tus respuestas se han enviado correctamente!' });
     } catch (error) {
         console.error('❌ Error al enviar respuestas:', error);
-        await interaction.reply({ content: '❌ Ocurrió un error al enviar las respuestas.', flags: [MessageFlags.Ephemeral] });
+        await interaction.editReply({ content: '❌ Ocurrió un error al enviar las respuestas.' });
+    }
+}
+
+// 6. Envío de respuestas. Si el formulario pide logo, se retiene todo hasta recibirlo.
+export async function handleFormSubmitModal(interaction: ModalSubmitInteraction): Promise<boolean> {
+    if (!interaction.customId.startsWith('submit_form_')) return false;
+
+    if (!interaction.guildId || !interaction.guild) {
+        await interaction.reply({ content: '❌ Solo dentro de un servidor.', flags: [MessageFlags.Ephemeral] });
+        return true;
     }
 
+    const tituloFormulario = decodeURIComponent(interaction.customId.replace('submit_form_', ''));
+    const formulario = await obtenerFormularioPorTitulo(interaction.guildId, tituloFormulario);
+
+    if (!formulario || !formulario.canalRespuestas) {
+        await interaction.reply({ content: '❌ Formulario o canal de respuestas no disponible.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    const answers = formulario.preguntas.map((_, index) => interaction.fields.getTextInputValue(`p_${index}`));
+
+    if (formulario.solicitarLogo) {
+        const token = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+        pendingFormSubmissions.set(token, {
+            userId: interaction.user.id,
+            guildId: interaction.guildId,
+            titulo: tituloFormulario,
+            answers,
+            expiresAt: Date.now() + 15 * 60 * 1000
+        });
+
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder()
+                .setCustomId(`form_logo_attach_${token}`)
+                .setLabel('Adjuntar logo del equipo')
+                .setStyle(ButtonStyle.Primary)
+        );
+
+        await interaction.reply({
+            content: '🖼️ **Ahora adjunta el logo de tu equipo.**\n\nTus respuestas están guardadas temporalmente. El formulario no se enviará hasta que adjuntes la imagen.',
+            components: [row],
+            flags: [MessageFlags.Ephemeral]
+        });
+        return true;
+    }
+
+    await finalizarEnvioFormulario(interaction, formulario, answers);
+    return true;
+}
+
+// 7. Botón intermedio que abre el selector de imagen del móvil/ordenador.
+export async function handleFormLogoAttachButton(interaction: ButtonInteraction): Promise<boolean> {
+    if (!interaction.customId.startsWith('form_logo_attach_')) return false;
+
+    const token = interaction.customId.replace('form_logo_attach_', '');
+    const pending = pendingFormSubmissions.get(token);
+
+    if (!pending || pending.expiresAt < Date.now()) {
+        pendingFormSubmissions.delete(token);
+        await interaction.reply({ content: '⌛ Esta solicitud ha caducado. Vuelve a abrir el formulario y rellénalo de nuevo.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    if (pending.userId !== interaction.user.id || pending.guildId !== interaction.guildId) {
+        await interaction.reply({ content: '❌ Esta solicitud pertenece a otro usuario.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    const upload = new FileUploadBuilder()
+        .setCustomId('team_logo')
+        .setMinValues(1)
+        .setMaxValues(1)
+        .setRequired(true);
+
+    const modal = new ModalBuilder()
+        .setCustomId(`submit_form_logo_${token}`)
+        .setTitle('Logo de tu equipo')
+        .addComponents(new ActionRowBuilder<FileUploadBuilder>().addComponents(upload));
+
+    await interaction.showModal(modal);
+    return true;
+}
+
+// 8. Recepción obligatoria del logo y envío conjunto de respuestas + imagen.
+export async function handleFormLogoSubmitModal(interaction: ModalSubmitInteraction): Promise<boolean> {
+    if (!interaction.customId.startsWith('submit_form_logo_')) return false;
+
+    const token = interaction.customId.replace('submit_form_logo_', '');
+    const pending = pendingFormSubmissions.get(token);
+
+    if (!pending || pending.expiresAt < Date.now()) {
+        pendingFormSubmissions.delete(token);
+        await interaction.reply({ content: '⌛ Esta solicitud ha caducado. Vuelve a abrir el formulario y rellénalo de nuevo.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    if (pending.userId !== interaction.user.id || pending.guildId !== interaction.guildId) {
+        await interaction.reply({ content: '❌ Esta solicitud pertenece a otro usuario.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    const uploads = interaction.fields.getUploadedFiles('team_logo', true);
+    const attachment = uploads?.first();
+    if (!attachment) {
+        await interaction.reply({ content: '❌ Debes adjuntar una imagen para completar el formulario.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    const isImage = attachment.contentType?.startsWith('image/') ||
+        /\.(png|jpe?g|gif|webp|bmp|heic)$/i.test(attachment.name || '');
+    if (!isImage) {
+        const retryRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder().setCustomId(`form_logo_attach_${token}`).setLabel('Volver a adjuntar imagen').setStyle(ButtonStyle.Primary)
+        );
+        await interaction.reply({
+            content: '❌ El archivo debe ser una imagen. Pulsa el botón para seleccionar el logo correcto.',
+            components: [retryRow],
+            flags: [MessageFlags.Ephemeral]
+        });
+        return true;
+    }
+
+    const formulario = await obtenerFormularioPorTitulo(pending.guildId, pending.titulo);
+    if (!formulario || !formulario.canalRespuestas) {
+        pendingFormSubmissions.delete(token);
+        await interaction.reply({ content: '❌ El formulario o su canal de respuestas ya no están disponibles.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    pendingFormSubmissions.delete(token);
+    await finalizarEnvioFormulario(interaction, formulario, pending.answers, {
+        url: attachment.url,
+        name: attachment.name || 'logo-equipo.png'
+    });
     return true;
 }
