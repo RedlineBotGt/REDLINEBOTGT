@@ -19,6 +19,7 @@ export interface FormularioData {
     titulo: string;
     canalRespuestas: string | null;
     preguntas: string[];
+    solicitarLogo: boolean;
 }
 
 export async function obtenerFormularios(guildId: string): Promise<Record<string, FormularioData>> {
@@ -32,7 +33,8 @@ export async function obtenerFormularios(guildId: string): Promise<Record<string
                 guildId: doc.guildId,
                 titulo: doc.titulo,
                 canalRespuestas: doc.canalRespuestas || null,
-                preguntas: doc.preguntas
+                preguntas: doc.preguntas,
+                solicitarLogo: doc.solicitarLogo === true
             };
         });
         return formularios;
@@ -42,12 +44,14 @@ export async function obtenerFormularios(guildId: string): Promise<Record<string
     }
 }
 
-export async function guardarFormulario(guildId: string, titulo: string, canalRespuestas: string | null = null, preguntas: string[]) {
+export async function guardarFormulario(guildId: string, titulo: string, canalRespuestas: string | null = null, preguntas: string[], solicitarLogo?: boolean) {
     try {
         const col = await getCollection();
+        const datos: any = { guildId, titulo, canalRespuestas, preguntas };
+        if (solicitarLogo !== undefined) datos.solicitarLogo = solicitarLogo;
         await col.updateOne(
             { guildId, titulo },
-            { $set: { guildId, titulo, canalRespuestas, preguntas } },
+            { $set: datos },
             { upsert: true }
         );
     } catch (error) {
@@ -65,7 +69,8 @@ export async function obtenerFormularioPorTitulo(guildId: string, titulo: string
             guildId: doc.guildId,
             titulo: doc.titulo,
             canalRespuestas: doc.canalRespuestas || null,
-            preguntas: doc.preguntas
+            preguntas: doc.preguntas,
+            solicitarLogo: doc.solicitarLogo === true
         };
     } catch (error) {
         console.error('❌ Error al buscar formulario en MongoDB:', error);
