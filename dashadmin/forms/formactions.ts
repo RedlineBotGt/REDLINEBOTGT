@@ -335,7 +335,7 @@ async function finalizarEnvioFormulario(
 
 // 6. Envío de respuestas. Si el formulario pide logo, se retiene todo hasta recibirlo.
 export async function handleFormSubmitModal(interaction: ModalSubmitInteraction): Promise<boolean> {
-    if (!interaction.customId.startsWith('submit_form_') || interaction.customId.startsWith('submit_form_logo_')) return false;
+    if (!interaction.customId.startsWith('submit_form_')) return false;
 
     if (!interaction.guildId || !interaction.guild) {
         await interaction.reply({ content: '❌ Solo dentro de un servidor.', flags: [MessageFlags.Ephemeral] });
@@ -353,6 +353,9 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
     const answers = formulario.preguntas.map((_, index) => interaction.fields.getTextInputValue(`p_${index}`));
 
     if (formulario.solicitarLogo) {
+        for (const [oldToken, oldPending] of pendingFormSubmissions) {
+            if (oldPending.expiresAt < Date.now()) pendingFormSubmissions.delete(oldToken);
+        }
         const token = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
         pendingFormSubmissions.set(token, {
             userId: interaction.user.id,
