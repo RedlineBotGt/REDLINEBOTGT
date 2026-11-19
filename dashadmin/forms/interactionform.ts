@@ -2,7 +2,6 @@ import {
     handleDashCrearFormButton,
     handleFormCreate5Modal,
     handleFormLogoConfigButton,
-    handleFormLogoConfigModal,
     handlePromptRenombrarButton,
     handleRenombrarModal,
     handleDashEditarFormButton,
@@ -64,7 +63,6 @@ export async function handleFormInteractions(interaction: any): Promise<boolean>
 
         if (interaction.isModalSubmit()) {
             if (await handleFormCreate5Modal(interaction)) return true;
-            if (await handleFormLogoConfigModal(interaction)) return true;
             if (await handleRenombrarModal(interaction)) return true;
             if (await handleEditarFormModalSubmit(interaction)) return true;
             if (await handleEditarNuevoTituloModalSubmit(interaction)) return true;
