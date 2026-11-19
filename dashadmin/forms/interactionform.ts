@@ -22,7 +22,8 @@ import {
     handleDashColocarPubliChannelSelect,
     handleDashColocarRespuestasChannelSelect,
     handleFormButtonClick,
-    handleFormSubmitModal
+    handleFormSubmitModal,
+    handleFormPublishTextModal
 } from './formactions';
 
 /**
@@ -61,6 +62,7 @@ export async function handleFormInteractions(interaction: any): Promise<boolean>
             if (await handleRenombrarModal(interaction)) return true;
             if (await handleEditarFormModalSubmit(interaction)) return true;
             if (await handleEditarNuevoTituloModalSubmit(interaction)) return true;
+            if (await handleFormPublishTextModal(interaction)) return true;
             if (await handleFormSubmitModal(interaction)) return true;
         }
 
