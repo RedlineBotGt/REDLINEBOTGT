@@ -24,6 +24,7 @@ import {
     handleFormButtonClick,
     handleFormSubmitModal,
     handleFormLogoAttachButton,
+    handleFormLogoSkipButton,
     handleFormLogoSubmitModal
 } from './formactions';
 
@@ -37,6 +38,7 @@ export async function handleFormInteractions(interaction: any): Promise<boolean>
             if (await handleDashColocarButton(interaction)) return true;
             if (await handleFormLogoConfigButton(interaction)) return true;
             if (await handleFormLogoAttachButton(interaction)) return true;
+            if (await handleFormLogoSkipButton(interaction)) return true;
             if (await handleFormButtonClick(interaction)) return true;
             if (await handleDashCrearFormButton(interaction)) return true;
             if (await handlePromptRenombrarButton(interaction)) return true;
