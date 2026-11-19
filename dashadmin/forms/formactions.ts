@@ -353,7 +353,13 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
 
     const answers = formulario.preguntas.map((_, index) => interaction.fields.getTextInputValue(`p_${index}`));
 
-    // Todas las respuestas permiten adjuntar una imagen opcional, sin cambiar las cinco preguntas.
+    // Si el formulario no solicita foto, se envía directamente.
+    if (!formulario.solicitarLogo) {
+        await finalizarEnvioFormulario(interaction, formulario, answers);
+        return true;
+    }
+
+    // Si solicita foto, se conservan las respuestas hasta que el usuario adjunte la imagen.
     for (const [oldToken, oldPending] of pendingFormSubmissions) {
         if (oldPending.expiresAt < Date.now()) pendingFormSubmissions.delete(oldToken);
     }
@@ -370,17 +376,13 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
             .setCustomId(`form_logo_attach_${token}`)
-            .setLabel('Adjuntar imagen')
+            .setLabel('Adjuntar foto')
             .setStyle(ButtonStyle.Primary)
-            .setEmoji('🖼️'),
-        new ButtonBuilder()
-            .setCustomId(`form_logo_skip_${token}`)
-            .setLabel('Enviar sin imagen')
-            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('📷')
     );
 
     await interaction.editReply({
-        content: '✅ **Respuestas guardadas temporalmente.**\\n\\nSi quieres, puedes adjuntar una imagen desde tu móvil. También puedes enviar el formulario sin imagen.',
+        content: '📷 **Este formulario requiere una foto.** Pulsa el botón para adjuntarla desde tu móvil y completar el envío.',
         components: [row]
     });
     return true;
