@@ -6,6 +6,8 @@ import {
     StringSelectMenuBuilder,
     ChannelSelectMenuBuilder,
     ModalBuilder,
+    FileUploadBuilder,
+    LabelBuilder,
     TextInputBuilder,
     TextInputStyle,
     ActionRowBuilder, 
@@ -19,6 +21,13 @@ import { obtenerFormularios, obtenerFormularioPorTitulo, guardarFormulario, elim
 // Mapas temporales de sesión para la administración
 export const recentUserForms = new Map<string, string>();
 export const activeEditingForms = new Map<string, string>();
+
+interface PendingFormCreation {
+    guildId: string;
+    titulo: string;
+    preguntas: string[];
+}
+const pendingFormCreations = new Map<string, PendingFormCreation>();
 
 // 1. Botón "Crear F" (Abre modal de 5 preguntas)
 export async function handleDashCrearFormButton(interaction: ButtonInteraction): Promise<boolean> {
@@ -42,7 +51,7 @@ export async function handleDashCrearFormButton(interaction: ButtonInteraction):
     return true;
 }
 
-// 2. Envío del modal de 5 preguntas (Guarda borrador y pide renombrar)
+// 2. Tras las preguntas, el administrador decide si el formulario pedirá foto.
 export async function handleFormCreate5Modal(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (interaction.customId !== 'modal_crear_5_preguntas') return false;
 
@@ -62,50 +71,102 @@ export async function handleFormCreate5Modal(interaction: ModalSubmitInteraction
         return true;
     }
 
-    const provisionalTitle = `Formulario #${Math.floor(1000 + Math.random() * 9000)}`;
-    recentUserForms.set(interaction.user.id, provisionalTitle);
-    await guardarFormulario(guildId, provisionalTitle, null, preguntas, false);
+    const titulo = `Formulario #${Math.floor(1000 + Math.random() * 9000)}`;
+    pendingFormCreations.set(interaction.user.id, { guildId, titulo, preguntas });
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder()
-            .setCustomId('dash_btn_prompt_renombrar')
-            .setLabel('Poner nombre personalizado')
-            .setStyle(ButtonStyle.Success)
-            .setEmoji('✏️')
+        new ButtonBuilder().setCustomId('dash_form_logo_no').setLabel('No').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('dash_form_logo_yes').setLabel('Sí, pedir foto').setStyle(ButtonStyle.Primary).setEmoji('📷')
     );
 
     await interaction.reply({
-        content: `✅ ¡Formulario guardado con **${preguntas.length} preguntas**!\\n- **Título provisional:** ${provisionalTitle}\\n\\nPuedes ponerle un nombre personalizado. La imagen será opcional para quien responda el formulario.`,
+        content: '📋 **¿Deseas pedir una foto a las personas que rellenen este formulario?**',
         components: [row],
         flags: [MessageFlags.Ephemeral]
     });
-
     return true;
 }
 
-// Selección opcional de logo para el formulario recién creado
-export async function handleFormLogoConfigButton(interaction: ButtonInteraction): Promise<boolean> {
-    if (interaction.customId !== 'dash_form_logo_yes' && interaction.customId !== 'dash_form_logo_no') return false;
-    const guildId = interaction.guildId;
-    const titulo = recentUserForms.get(interaction.user.id);
-    if (!guildId || !titulo) {
-        await interaction.reply({ content: '❌ No encuentro el formulario que acabas de crear. Vuelve a iniciar el proceso.', flags: [MessageFlags.Ephemeral] });
-        return true;
+// Guarda el formulario después de que el administrador haya elegido la configuración de foto.
+async function guardarCreacionFormulario(interaction: ButtonInteraction | ModalSubmitInteraction, solicitarFoto: boolean): Promise<void> {
+    const pending = pendingFormCreations.get(interaction.user.id);
+    if (!pending || pending.guildId !== interaction.guildId) {
+        const message = '❌ No encuentro el formulario pendiente. Vuelve a crearlo.';
+        if (interaction.isButton()) await interaction.reply({ content: message, flags: [MessageFlags.Ephemeral] });
+        else await interaction.reply({ content: message, flags: [MessageFlags.Ephemeral] });
+        return;
     }
-    const formulario = await obtenerFormularioPorTitulo(guildId, titulo);
-    if (!formulario) {
-        await interaction.reply({ content: '❌ El formulario ya no está disponible.', flags: [MessageFlags.Ephemeral] });
-        return true;
-    }
-    const solicitarLogo = interaction.customId === 'dash_form_logo_yes';
-    await guardarFormulario(guildId, titulo, formulario.canalRespuestas || null, formulario.preguntas, solicitarLogo);
+
+    await guardarFormulario(pending.guildId, pending.titulo, null, pending.preguntas, solicitarFoto);
+    recentUserForms.set(interaction.user.id, pending.titulo);
+    pendingFormCreations.delete(interaction.user.id);
+
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('dash_btn_prompt_renombrar').setLabel('Poner nombre personalizado').setStyle(ButtonStyle.Success).setEmoji('✏️')
     );
-    await interaction.update({
-        content: `✅ Configuración guardada.\n- Preguntas: **${formulario.preguntas.length}**\n- Logo obligatorio al responder: **${solicitarLogo ? 'Sí' : 'No'}**\n\nAhora puedes ponerle nombre al formulario.`,
-        components: [row]
-    });
+
+    const message = `✅ ¡Formulario guardado con **${pending.preguntas.length} preguntas**!\\n- **Título provisional:** ${pending.titulo}\\n- **Pedir foto al responder:** **${solicitarFoto ? 'Sí' : 'No'}**\\n\\nPuedes ponerle un nombre personalizado.`;
+    if (interaction.isButton()) await interaction.update({ content: message, components: [row] });
+    else await interaction.reply({ content: message, components: [row], flags: [MessageFlags.Ephemeral] });
+}
+
+// Botones Sí/No de configuración. Sí abre un modal con una subida obligatoria.
+export async function handleFormLogoConfigButton(interaction: ButtonInteraction): Promise<boolean> {
+    if (interaction.customId !== 'dash_form_logo_yes' && interaction.customId !== 'dash_form_logo_no') return false;
+
+    const pending = pendingFormCreations.get(interaction.user.id);
+    if (!pending || pending.guildId !== interaction.guildId) {
+        await interaction.reply({ content: '❌ No encuentro el formulario pendiente. Vuelve a crearlo.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    if (interaction.customId === 'dash_form_logo_no') {
+        await guardarCreacionFormulario(interaction, false);
+        return true;
+    }
+
+    const upload = new FileUploadBuilder()
+        .setCustomId('form_creation_photo')
+        .setMinValues(1)
+        .setMaxValues(1)
+        .setRequired(true);
+
+    const modal = new ModalBuilder()
+        .setCustomId('modal_form_creation_photo')
+        .setTitle('Foto del formulario')
+        .addLabelComponents(
+            new LabelBuilder()
+                .setLabel('Adjunta tu foto')
+                .setDescription('Selecciona la imagen que deberán aportar quienes respondan')
+                .setFileUploadComponent(upload)
+        );
+
+    await interaction.showModal(modal);
+    return true;
+}
+
+// Recibe la foto de configuración y solo entonces guarda el formulario en MongoDB.
+export async function handleFormLogoConfigModal(interaction: ModalSubmitInteraction): Promise<boolean> {
+    if (interaction.customId !== 'modal_form_creation_photo') return false;
+
+    const pending = pendingFormCreations.get(interaction.user.id);
+    if (!pending || pending.guildId !== interaction.guildId) {
+        await interaction.reply({ content: '❌ El formulario pendiente ya no está disponible. Vuelve a crearlo.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    const uploads = interaction.fields.getUploadedFiles('form_creation_photo', true);
+    const attachment = uploads?.first();
+    const isImage = attachment && (attachment.contentType
+        ? attachment.contentType.startsWith('image/')
+        : /\\.(png|jpe?g|gif|webp|bmp|heic)$/i.test(attachment.name || ''));
+
+    if (!isImage) {
+        await interaction.reply({ content: '❌ Debes adjuntar un archivo de imagen.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    await guardarCreacionFormulario(interaction, true);
     return true;
 }
 
