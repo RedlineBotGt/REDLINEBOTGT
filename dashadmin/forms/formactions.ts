@@ -1,5 +1,6 @@
 import { 
     ButtonInteraction,
+    EmbedBuilder,
     StringSelectMenuInteraction, 
     ChannelSelectMenuInteraction,
     ModalSubmitInteraction,
@@ -21,7 +22,7 @@ import { obtenerFormularios, obtenerFormularioPorTitulo, guardarFormulario } fro
 import { appendSheetData, readSheetData } from '../../dashsheet/sheetsService';
 
 // Mapa temporal para recordar qué formulario y canal de publicación se están configurando durante el flujo de colocación
-export const colocationContext = new Map<string, { titulo: string; canalPublicacionId: string }>();
+export const colocationContext = new Map<string, { titulo: string; canalPublicacionId: string; canalRespuestasId?: string }>();
 
 // 1. Maneja el clic en el botón "Formulario" (Colocar) del panel
 export async function handleDashColocarButton(interaction: ButtonInteraction): Promise<boolean> {
@@ -149,35 +150,70 @@ export async function handleDashColocarRespuestasChannelSelect(interaction: Chan
         return true;
     }
 
+    context.canalRespuestasId = canalRespuestasId;
+    colocationContext.set(interaction.user.id, context);
+
+    const modal = new ModalBuilder()
+        .setCustomId('modal_texto_publicacion_formulario')
+        .setTitle('Texto del formulario');
+
+    const input = new TextInputBuilder()
+        .setCustomId('texto_embed_formulario')
+        .setLabel('Texto que aparecerá en el mensaje')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(false)
+        .setMaxLength(4000)
+        .setPlaceholder('Escribe aquí el texto que quieras mostrar...');
+
+    modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(input));
+    await interaction.showModal(modal);
+    return true;
+}
+
+// 5. Publica el embed personalizado y el botón del formulario.
+export async function handleFormPublishTextModal(interaction: ModalSubmitInteraction): Promise<boolean> {
+    if (interaction.customId !== 'modal_texto_publicacion_formulario') return false;
+    if (!interaction.guildId || !interaction.guild) {
+        await interaction.reply({ content: '❌ Acción no válida fuera de un servidor.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    const context = colocationContext.get(interaction.user.id);
+    if (!context?.canalRespuestasId) {
+        await interaction.reply({ content: '❌ Se perdió la sesión de colocación. Vuelve a iniciar.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
     const formulario = await obtenerFormularioPorTitulo(interaction.guildId, context.titulo);
     if (!formulario) {
-        await interaction.update({ content: '❌ El formulario ya no existe.', components: [] });
+        await interaction.reply({ content: '❌ El formulario ya no existe.', flags: [MessageFlags.Ephemeral] });
         return true;
     }
 
-    const canalDestinoPubli = await interaction.guild?.channels.fetch(context.canalPublicacionId) as TextChannel;
-    if (!canalDestinoPubli) {
-        await interaction.update({ content: '❌ No se encontró el canal de publicación.', components: [] });
+    const canalDestinoPubli = await interaction.guild.channels.fetch(context.canalPublicacionId) as TextChannel | null;
+    if (!canalDestinoPubli || !canalDestinoPubli.isTextBased()) {
+        await interaction.reply({ content: '❌ No se encontró el canal de publicación.', flags: [MessageFlags.Ephemeral] });
         return true;
     }
 
-    await guardarFormulario(interaction.guildId, context.titulo, canalRespuestasId, formulario.preguntas, formulario.solicitarLogo);
-    colocationContext.delete(interaction.user.id);
+    const texto = interaction.fields.getTextInputValue('texto_embed_formulario').trim();
+    const embed = new EmbedBuilder().setFooter({ text: interaction.guild.name || 'Servidor' });
+    if (texto) embed.setDescription(texto);
 
-    const serverName = interaction.guild?.name || 'Servidor';
     const botonAzul = new ButtonBuilder()
         .setCustomId(`open_form_${encodeURIComponent(context.titulo)}`)
         .setLabel(context.titulo.substring(0, 80))
         .setStyle(ButtonStyle.Primary);
-
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(botonAzul);
-    await canalDestinoPubli.send({ content: `**FORMULARIOS**\n\n— *${serverName}*`, components: [row] });
 
-    await interaction.update({
-        content: `✅ ¡Formulario **"${context.titulo}"** colocado con éxito!\n- **Botón en:** <#${context.canalPublicacionId}>\n- **Respuestas en:** <#${canalRespuestasId}>`,
-        components: []
+    await guardarFormulario(interaction.guildId, context.titulo, context.canalRespuestasId, formulario.preguntas, formulario.solicitarLogo);
+    await canalDestinoPubli.send({ embeds: [embed], components: [row] });
+    colocationContext.delete(interaction.user.id);
+
+    await interaction.reply({
+        content: `✅ ¡Formulario **"${context.titulo}"** colocado con éxito!\\n- **Botón en:** <#${context.canalPublicacionId}>\\n- **Respuestas en:** <#${context.canalRespuestasId}>`,
+        flags: [MessageFlags.Ephemeral]
     });
-
     return true;
 }
 
