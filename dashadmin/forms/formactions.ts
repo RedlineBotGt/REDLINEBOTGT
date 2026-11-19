@@ -376,7 +376,7 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
 
     const isImage = attachment.contentType
         ? attachment.contentType.startsWith('image/')
-        : /\\.(png|jpe?g|gif|webp|bmp|heic)$/i.test(attachment.name || '');
+        : /\.(png|jpe?g|gif|webp|bmp|heic)$/i.test(attachment.name || '');
 
     if (!isImage) {
         await interaction.editReply({ content: '❌ El archivo adjunto debe ser una imagen.' });
