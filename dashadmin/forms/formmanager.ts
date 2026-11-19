@@ -67,12 +67,15 @@ export async function handleFormCreate5Modal(interaction: ModalSubmitInteraction
     await guardarFormulario(guildId, provisionalTitle, null, preguntas, false);
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('dash_form_logo_yes').setLabel('Sí, pedir logo').setStyle(ButtonStyle.Success),
-        new ButtonBuilder().setCustomId('dash_form_logo_no').setLabel('No, solo preguntas').setStyle(ButtonStyle.Secondary)
+        new ButtonBuilder()
+            .setCustomId('dash_btn_prompt_renombrar')
+            .setLabel('Poner nombre personalizado')
+            .setStyle(ButtonStyle.Success)
+            .setEmoji('✏️')
     );
 
     await interaction.reply({
-        content: `✅ ¡Formulario guardado con **${preguntas.length} preguntas**!\n- **Título provisional:** ${provisionalTitle}\n\n**¿Quieres añadir el logo del equipo como una sexta pregunta?**`,
+        content: `✅ ¡Formulario guardado con **${preguntas.length} preguntas**!\\n- **Título provisional:** ${provisionalTitle}\\n\\nPuedes ponerle un nombre personalizado. La imagen será opcional para quien responda el formulario.`,
         components: [row],
         flags: [MessageFlags.Ephemeral]
     });
