@@ -234,7 +234,7 @@ interface PendingFormSubmission {
 const pendingFormSubmissions = new Map<string, PendingFormSubmission>();
 
 async function finalizarEnvioFormulario(
-    interaction: ModalSubmitInteraction,
+    interaction: ModalSubmitInteraction | ButtonInteraction,
     formulario: Awaited<ReturnType<typeof obtenerFormularioPorTitulo>>,
     answers: string[],
     logo?: { url: string; name: string }
@@ -353,34 +353,67 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
 
     const answers = formulario.preguntas.map((_, index) => interaction.fields.getTextInputValue(`p_${index}`));
 
-    if (formulario.solicitarLogo) {
-        for (const [oldToken, oldPending] of pendingFormSubmissions) {
-            if (oldPending.expiresAt < Date.now()) pendingFormSubmissions.delete(oldToken);
-        }
-        const token = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-        pendingFormSubmissions.set(token, {
-            userId: interaction.user.id,
-            guildId: interaction.guildId,
-            titulo: tituloFormulario,
-            answers,
-            expiresAt: Date.now() + 15 * 60 * 1000
-        });
+    // Todas las respuestas permiten adjuntar una imagen opcional, sin cambiar las cinco preguntas.
+    for (const [oldToken, oldPending] of pendingFormSubmissions) {
+        if (oldPending.expiresAt < Date.now()) pendingFormSubmissions.delete(oldToken);
+    }
 
-        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder()
-                .setCustomId(`form_logo_attach_${token}`)
-                .setLabel('Adjuntar logo del equipo')
-                .setStyle(ButtonStyle.Primary)
-        );
+    const token = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+    pendingFormSubmissions.set(token, {
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        titulo: tituloFormulario,
+        answers,
+        expiresAt: Date.now() + 15 * 60 * 1000
+    });
 
-        await interaction.editReply({
-            content: '🖼️ **Ahora adjunta el logo de tu equipo.**\n\nTus respuestas están guardadas temporalmente. El formulario no se enviará hasta que adjuntes la imagen.',
-            components: [row]
-        });
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+            .setCustomId(`form_logo_attach_${token}`)
+            .setLabel('Adjuntar imagen')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('🖼️'),
+        new ButtonBuilder()
+            .setCustomId(`form_logo_skip_${token}`)
+            .setLabel('Enviar sin imagen')
+            .setStyle(ButtonStyle.Secondary)
+    );
+
+    await interaction.editReply({
+        content: '✅ **Respuestas guardadas temporalmente.**\\n\\nSi quieres, puedes adjuntar una imagen desde tu móvil. También puedes enviar el formulario sin imagen.',
+        components: [row]
+    });
+    return true;
+}
+
+// Permite enviar el formulario sin imagen.
+export async function handleFormLogoSkipButton(interaction: ButtonInteraction): Promise<boolean> {
+    if (!interaction.customId.startsWith('form_logo_skip_')) return false;
+
+    const token = interaction.customId.replace('form_logo_skip_', '');
+    const pending = pendingFormSubmissions.get(token);
+
+    if (!pending || pending.expiresAt < Date.now()) {
+        pendingFormSubmissions.delete(token);
+        await interaction.reply({ content: '⌛ Esta solicitud ha caducado. Vuelve a abrir el formulario y rellénalo de nuevo.', flags: [MessageFlags.Ephemeral] });
         return true;
     }
 
-    await finalizarEnvioFormulario(interaction, formulario, answers);
+    if (pending.userId !== interaction.user.id || pending.guildId !== interaction.guildId) {
+        await interaction.reply({ content: '❌ Esta solicitud pertenece a otro usuario.', flags: [MessageFlags.Ephemeral] });
+        return true;
+    }
+
+    await interaction.deferUpdate();
+    const formulario = await obtenerFormularioPorTitulo(pending.guildId, pending.titulo);
+    pendingFormSubmissions.delete(token);
+
+    if (!formulario || !formulario.canalRespuestas) {
+        await interaction.editReply({ content: '❌ El formulario o su canal de respuestas ya no están disponibles.', components: [] });
+        return true;
+    }
+
+    await finalizarEnvioFormulario(interaction, formulario, pending.answers);
     return true;
 }
 
@@ -410,11 +443,11 @@ export async function handleFormLogoAttachButton(interaction: ButtonInteraction)
 
     const modal = new ModalBuilder()
         .setCustomId(`form_logo_submit_${token}`)
-        .setTitle('Logo de tu equipo')
+        .setTitle('Adjuntar imagen')
         .addLabelComponents(
             new LabelBuilder()
-                .setLabel('Logo del equipo')
-                .setDescription('Adjunta una imagen desde tu móvil o dispositivo')
+                .setLabel('Imagen opcional')
+                .setDescription('Selecciona una imagen desde tu móvil o dispositivo')
                 .setFileUploadComponent(upload)
         );
 
@@ -422,7 +455,7 @@ export async function handleFormLogoAttachButton(interaction: ButtonInteraction)
     return true;
 }
 
-// 8. Recepción obligatoria del logo y envío conjunto de respuestas + imagen.
+// 8. Recepción de la imagen opcional y envío conjunto de respuestas + imagen.
 export async function handleFormLogoSubmitModal(interaction: ModalSubmitInteraction): Promise<boolean> {
     if (!interaction.customId.startsWith('form_logo_submit_')) return false;
 
