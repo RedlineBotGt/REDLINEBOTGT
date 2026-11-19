@@ -211,12 +211,31 @@ export async function handleFormButtonClick(interaction: ButtonInteraction): Pro
     preguntasValidas.slice(0, 5).forEach((pregunta, index) => {
         const input = new TextInputBuilder()
             .setCustomId(`p_${index}`)
-            .setLabel(pregunta.substring(0, 45))
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
-        modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(input));
+        modal.addLabelComponents(
+            new LabelBuilder()
+                .setLabel(pregunta.substring(0, 45))
+                .setTextInputComponent(input)
+        );
     });
+
+    // El campo de foto solo aparece si el administrador lo activó al crear el formulario.
+    if (formulario.solicitarLogo) {
+        const upload = new FileUploadBuilder()
+            .setCustomId('team_logo')
+            .setMinValues(1)
+            .setMaxValues(1)
+            .setRequired(true);
+
+        modal.addLabelComponents(
+            new LabelBuilder()
+                .setLabel('Adjunta tu foto')
+                .setDescription('Este campo es obligatorio')
+                .setFileUploadComponent(upload)
+        );
+    }
 
     await interaction.showModal(modal);
     return true;
@@ -351,39 +370,33 @@ export async function handleFormSubmitModal(interaction: ModalSubmitInteraction)
         return true;
     }
 
-    const answers = formulario.preguntas.map((_, index) => interaction.fields.getTextInputValue(`p_${index}`));
+    const answers = formulario.preguntas.map((_, index) =>
+        interaction.fields.getTextInputValue(`p_${index}`)
+    );
 
-    // Si el formulario no solicita foto, se envía directamente.
     if (!formulario.solicitarLogo) {
         await finalizarEnvioFormulario(interaction, formulario, answers);
         return true;
     }
 
-    // Si solicita foto, se conservan las respuestas hasta que el usuario adjunte la imagen.
-    for (const [oldToken, oldPending] of pendingFormSubmissions) {
-        if (oldPending.expiresAt < Date.now()) pendingFormSubmissions.delete(oldToken);
+    const attachment = interaction.fields.getUploadedFiles('team_logo', true)?.first();
+    if (!attachment) {
+        await interaction.editReply({ content: '❌ Debes adjuntar una foto para enviar este formulario.' });
+        return true;
     }
 
-    const token = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-    pendingFormSubmissions.set(token, {
-        userId: interaction.user.id,
-        guildId: interaction.guildId,
-        titulo: tituloFormulario,
-        answers,
-        expiresAt: Date.now() + 15 * 60 * 1000
-    });
+    const isImage = attachment.contentType
+        ? attachment.contentType.startsWith('image/')
+        : /\\.(png|jpe?g|gif|webp|bmp|heic)$/i.test(attachment.name || '');
 
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder()
-            .setCustomId(`form_logo_attach_${token}`)
-            .setLabel('Adjuntar foto')
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('📷')
-    );
+    if (!isImage) {
+        await interaction.editReply({ content: '❌ El archivo adjunto debe ser una imagen.' });
+        return true;
+    }
 
-    await interaction.editReply({
-        content: '📷 **Este formulario requiere una foto.** Pulsa el botón para adjuntarla desde tu móvil y completar el envío.',
-        components: [row]
+    await finalizarEnvioFormulario(interaction, formulario, answers, {
+        url: attachment.url,
+        name: attachment.name || 'foto-formulario.png'
     });
     return true;
 }
