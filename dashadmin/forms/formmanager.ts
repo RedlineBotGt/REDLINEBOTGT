@@ -6,8 +6,6 @@ import {
     StringSelectMenuBuilder,
     ChannelSelectMenuBuilder,
     ModalBuilder,
-    FileUploadBuilder,
-    LabelBuilder,
     TextInputBuilder,
     TextInputStyle,
     ActionRowBuilder, 
@@ -122,47 +120,6 @@ export async function handleFormLogoConfigButton(interaction: ButtonInteraction)
 
     if (interaction.customId === 'dash_form_logo_no') {
         await guardarCreacionFormulario(interaction, false);
-        return true;
-    }
-
-    const upload = new FileUploadBuilder()
-        .setCustomId('form_creation_photo')
-        .setMinValues(1)
-        .setMaxValues(1)
-        .setRequired(true);
-
-    const modal = new ModalBuilder()
-        .setCustomId('modal_form_creation_photo')
-        .setTitle('Foto del formulario')
-        .addLabelComponents(
-            new LabelBuilder()
-                .setLabel('Adjunta tu foto')
-                .setDescription('Selecciona la imagen que deberán aportar quienes respondan')
-                .setFileUploadComponent(upload)
-        );
-
-    await interaction.showModal(modal);
-    return true;
-}
-
-// Recibe la foto de configuración y solo entonces guarda el formulario en MongoDB.
-export async function handleFormLogoConfigModal(interaction: ModalSubmitInteraction): Promise<boolean> {
-    if (interaction.customId !== 'modal_form_creation_photo') return false;
-
-    const pending = pendingFormCreations.get(interaction.user.id);
-    if (!pending || pending.guildId !== interaction.guildId) {
-        await interaction.reply({ content: '❌ El formulario pendiente ya no está disponible. Vuelve a crearlo.', flags: [MessageFlags.Ephemeral] });
-        return true;
-    }
-
-    const uploads = interaction.fields.getUploadedFiles('form_creation_photo', true);
-    const attachment = uploads?.first();
-    const isImage = attachment && (attachment.contentType
-        ? attachment.contentType.startsWith('image/')
-        : /\\.(png|jpe?g|gif|webp|bmp|heic)$/i.test(attachment.name || ''));
-
-    if (!isImage) {
-        await interaction.reply({ content: '❌ Debes adjuntar un archivo de imagen.', flags: [MessageFlags.Ephemeral] });
         return true;
     }
 
