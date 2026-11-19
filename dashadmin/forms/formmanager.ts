@@ -86,7 +86,7 @@ export async function handleFormCreate5Modal(interaction: ModalSubmitInteraction
 }
 
 // Guarda el formulario después de que el administrador haya elegido la configuración de foto.
-async function guardarCreacionFormulario(interaction: ButtonInteraction | ModalSubmitInteraction, solicitarFoto: boolean): Promise<void> {
+async function guardarCreacionFormulario(interaction: ButtonInteraction, solicitarFoto: boolean): Promise<void> {
     const pending = pendingFormCreations.get(interaction.user.id);
     if (!pending || pending.guildId !== interaction.guildId) {
         const message = '❌ No encuentro el formulario pendiente. Vuelve a crearlo.';
@@ -104,11 +104,10 @@ async function guardarCreacionFormulario(interaction: ButtonInteraction | ModalS
     );
 
     const message = `✅ ¡Formulario guardado con **${pending.preguntas.length} preguntas**!\\n- **Título provisional:** ${pending.titulo}\\n- **Pedir foto al responder:** **${solicitarFoto ? 'Sí' : 'No'}**\\n\\nPuedes ponerle un nombre personalizado.`;
-    if (interaction.isButton()) await interaction.update({ content: message, components: [row] });
-    else await interaction.reply({ content: message, components: [row], flags: [MessageFlags.Ephemeral] });
+    await interaction.update({ content: message, components: [row] });
 }
 
-// Botones Sí/No de configuración. Sí abre un modal con una subida obligatoria.
+// Botones Sí/No: activan o desactivan el campo obligatorio de foto para los usuarios.
 export async function handleFormLogoConfigButton(interaction: ButtonInteraction): Promise<boolean> {
     if (interaction.customId !== 'dash_form_logo_yes' && interaction.customId !== 'dash_form_logo_no') return false;
 
