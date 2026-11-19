@@ -22,10 +22,7 @@ import {
     handleDashColocarPubliChannelSelect,
     handleDashColocarRespuestasChannelSelect,
     handleFormButtonClick,
-    handleFormSubmitModal,
-    handleFormLogoAttachButton,
-    handleFormLogoSkipButton,
-    handleFormLogoSubmitModal
+    handleFormSubmitModal
 } from './formactions';
 
 /**
@@ -37,8 +34,6 @@ export async function handleFormInteractions(interaction: any): Promise<boolean>
         if (interaction.isButton()) {
             if (await handleDashColocarButton(interaction)) return true;
             if (await handleFormLogoConfigButton(interaction)) return true;
-            if (await handleFormLogoAttachButton(interaction)) return true;
-            if (await handleFormLogoSkipButton(interaction)) return true;
             if (await handleFormButtonClick(interaction)) return true;
             if (await handleDashCrearFormButton(interaction)) return true;
             if (await handlePromptRenombrarButton(interaction)) return true;
@@ -67,7 +62,6 @@ export async function handleFormInteractions(interaction: any): Promise<boolean>
             if (await handleEditarFormModalSubmit(interaction)) return true;
             if (await handleEditarNuevoTituloModalSubmit(interaction)) return true;
             if (await handleFormSubmitModal(interaction)) return true;
-            if (await handleFormLogoSubmitModal(interaction)) return true;
         }
 
         return false;
