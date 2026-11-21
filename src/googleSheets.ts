@@ -31,7 +31,7 @@ function getPrivateKey(): string {
     }
 
     const pemMatch = current.match(
-      /-----BEGIN ([A-Z0-9 ]*PRIVATE KEY)-----[\\s\\S]*?-----END \\1-----/
+      /-----BEGIN ([A-Z0-9 ]*PRIVATE KEY)-----[\s\S]*?-----END \\1-----/
     );
     if (pemMatch) {
       return pemMatch[0].trim();
@@ -39,7 +39,7 @@ function getPrivateKey(): string {
 
     const compact = current
       .replace(/^base64:/i, "")
-      .replace(/\\s/g, "")
+      .replace(/\s/g, "")
       .replace(/-/g, "+")
       .replace(/_/g, "/");
 
