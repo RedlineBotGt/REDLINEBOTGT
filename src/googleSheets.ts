@@ -11,43 +11,44 @@ function getPrivateKey(): string {
     throw new Error("Falta la variable GOOGLE_PRIVATE_KEY.");
   }
 
-  // Acepta PEM directo, saltos \n escapados y valores codificados en Base64.
-  // También admite una clave incluida dentro de un JSON de cuenta de servicio.
-  const candidates: string[] = [raw];
-  let current = raw.replace(/^["']|["']$/g, "").trim();
+  // Admite PEM directo, Base64 (también URL-safe), JSON de cuenta de servicio
+  // y varias capas de codificación sin registrar nunca el contenido secreto.
+  let current = raw.replace(/^[\"']|[\"']$/g, "").trim();
 
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 6; i++) {
     current = current.replace(/\\n/g, "\n").trim();
 
-    const jsonMatch = current.match(/^\s*\{[\s\S]*\}\s*$/);
-    if (jsonMatch) {
+    if (current.startsWith("{")) {
       try {
         const parsed = JSON.parse(current);
-        if (typeof parsed.private_key === "string") {
-          current = parsed.private_key;
-          candidates.push(current);
+        if (typeof parsed.private_key === "string" && parsed.private_key.trim()) {
+          current = parsed.private_key.trim();
           continue;
         }
       } catch {
-        // Si no es JSON válido, se prueba como texto/Base64 normal.
+        // Se continúa probando como PEM o Base64.
       }
     }
 
-    candidates.push(current);
-
-    const begin = current.indexOf("-----BEGIN PRIVATE KEY-----");
-    const finish = current.indexOf("-----END PRIVATE KEY-----");
-    if (begin !== -1 && finish > begin) {
-      return current
-        .slice(begin, finish + "-----END PRIVATE KEY-----".length)
-        .trim();
+    const pemMatch = current.match(
+      /-----BEGIN ([A-Z0-9 ]*PRIVATE KEY)-----[\\s\\S]*?-----END \\1-----/
+    );
+    if (pemMatch) {
+      return pemMatch[0].trim();
     }
 
-    const compact = current.replace(/\s/g, "").replace(/^base64:/i, "");
-    if (!/^[A-Za-z0-9+/]+=*$/.test(compact)) break;
+    const compact = current
+      .replace(/^base64:/i, "")
+      .replace(/\\s/g, "")
+      .replace(/-/g, "+")
+      .replace(/_/g, "/");
+
+    if (!/^[A-Za-z0-9+/]+=*$/.test(compact) || compact.length < 16) {
+      break;
+    }
 
     try {
-      const decoded = Buffer.from(compact, "base64").toString("utf8");
+      const decoded = Buffer.from(compact, "base64").toString("utf8").trim();
       if (!decoded || decoded === current) break;
       current = decoded;
     } catch {
@@ -55,19 +56,8 @@ function getPrivateKey(): string {
     }
   }
 
-  // Última comprobación de los formatos probados, sin registrar el secreto.
-  for (const candidate of candidates) {
-    const begin = candidate.indexOf("-----BEGIN PRIVATE KEY-----");
-    const finish = candidate.indexOf("-----END PRIVATE KEY-----");
-    if (begin !== -1 && finish > begin) {
-      return candidate
-        .slice(begin, finish + "-----END PRIVATE KEY-----".length)
-        .trim();
-    }
-  }
-
   throw new Error(
-    "GOOGLE_PRIVATE_KEY no contiene una clave PEM válida. Comprueba el formato de la variable en Vercel."
+    "GOOGLE_PRIVATE_KEY no contiene una clave PEM válida. Se admite PEM o Base64 de PEM/JSON."
   );
 }
 
