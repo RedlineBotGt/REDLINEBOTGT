@@ -137,13 +137,19 @@ app.get("/health", (_req, res) => {
 });
 
 // ======================================
-// ARRANCAR SERVIDOR
+// EXPORTAR APLICACIÓN
 // ======================================
 
-app.listen(PORT, () => {
-  console.log(`WEBLINEGT activo en el puerto ${PORT}`);
-  console.log("Sistema de autenticación conectado.");
-  console.log("Sistema de eventos conectado.");
-  console.log("Sistema de chat conectado.");
-  console.log("Sistema de clasificación conectado.");
-});
+// Vercel importa la aplicación como una función.
+// Render conserva el arranque tradicional mediante npm start.
+export default app;
+
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`WEBLINEGT activo en el puerto ${PORT}`);
+    console.log("Sistema de autenticación conectado.");
+    console.log("Sistema de eventos conectado.");
+    console.log("Sistema de chat conectado.");
+    console.log("Sistema de clasificación conectado.");
+  });
+}
