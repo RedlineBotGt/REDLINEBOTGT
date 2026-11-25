@@ -4,7 +4,7 @@ import { solicitarAPI, obtenerToken } from "./homework/api.js";
 const nombres = { papa: "Papá", leo: "Leo", mama: "Mamá", todos: "Todos" };
 
 const asignaturas = {
-  ciencias: { icono: "🔬", nombre: "Ciencias" },
+  ciencias: { icono: "🔬", nombre: "Science" },
   matematicas: { icono: "🔢", nombre: "Matemáticas" },
   lengua: { icono: "📖", nombre: "Lengua" },
   geografia: { icono: "🗺️", nombre: "Geografía" },
