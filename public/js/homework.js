@@ -7,7 +7,7 @@ import {
   guardarToken,
   cerrarSesion,
   obtenerToken
-} from "./homework/api.js?v=1";
+} from "./homework/api.js?v=2";
 
 import { pintarDeberes } from "./homework/render.js?v=1";
 
