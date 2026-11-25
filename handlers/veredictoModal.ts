@@ -37,9 +37,9 @@ export async function handleVeredictoModalSubmit(interaction: ModalSubmitInterac
         .setColor(0x00FF00) // Verde
         .addFields(
             { name: '👤 Reportó', value: pilotoReporta, inline: true },
-            { name: '🛡️ Defendió', value: pilotoDefendio, inline: true },
+            { name: '🛡️ Acusado', value: pilotoDefendio, inline: true },
             { name: '📋 Resolución', value: resolucion, inline: false },
-            { name: '⚠️ Sanción / Medida', value: sancion, inline: false }
+            { name: '⚠️ Sanción', value: sancion, inline: false }
         )
         .setFooter({ text: serverName })
         .setTimestamp();
