@@ -5,7 +5,7 @@ export const API_URL = "/api/academia/homework";
 export const TOKEN_KEY = "academiaPapaToken";
 
 export const ASIGNATURAS = {
-  ciencias: "Ciencias",
+  ciencias: "Science",
   matematicas: "Matemáticas",
   lengua: "Lengua",
   geografia: "Geografía",
