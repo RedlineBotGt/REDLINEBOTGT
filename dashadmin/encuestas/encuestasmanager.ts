@@ -8,7 +8,9 @@ import {
     ButtonInteraction,
     ModalBuilder, 
     TextInputBuilder, 
-    TextInputStyle, 
+    TextInputStyle,
+    LabelBuilder,
+    FileUploadBuilder,
     ModalSubmitInteraction, 
     TextChannel, 
     EmbedBuilder,
@@ -137,10 +139,21 @@ export async function handleEncuestaOpenModalButton(interaction: ButtonInteracti
         .setPlaceholder('1️⃣ Monza\n2️⃣ Spa-Francorchamps\n3️⃣ Silverstone')
         .setRequired(true);
 
-    modal.addComponents(
-        new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(descInput),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(optionsInput)
+    const imageInput = new FileUploadBuilder()
+        .setCustomId('encuesta_image')
+        .setMinValues(0)
+        .setMaxValues(1)
+        .setFileTypes('image')
+        .setRequired(false);
+
+    modal.addLabelComponents(
+        new LabelBuilder().setLabel('Título').setTextInputComponent(titleInput),
+        new LabelBuilder().setLabel('Descripción').setTextInputComponent(descInput),
+        new LabelBuilder().setLabel('Opciones (icono + opción por fila)').setTextInputComponent(optionsInput),
+        new LabelBuilder()
+            .setLabel('Imagen de la encuesta (opcional)')
+            .setDescription('Puedes elegir una imagen de la galería de tu móvil')
+            .setFileUploadComponent(imageInput)
     );
 
     await interaction.showModal(modal);
@@ -154,6 +167,7 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
     const title = interaction.fields.getTextInputValue('encuesta_title');
     const description = interaction.fields.getTextInputValue('encuesta_desc');
     const optionsRaw = interaction.fields.getTextInputValue('encuesta_options_block');
+    const uploadedImage = interaction.fields.getUploadedFiles('encuesta_image', false)?.first();
 
     const { pendingPollsCol, activePollsCol } = await getCollections();
     const pollData = await pendingPollsCol.findOne({ userId: interaction.user.id });
@@ -205,6 +219,10 @@ export async function handleEncuestaFinalSubmit(interaction: ModalSubmitInteract
             )
             .setFooter({ text: `Encuesta creada por ${interaction.guild?.name}` })
             .setTimestamp();
+
+        if (uploadedImage?.contentType?.startsWith('image/')) {
+            embed.setImage(uploadedImage.url);
+        }
 
         const pollMessage = await publishChannel.send({
             embeds: [embed]
