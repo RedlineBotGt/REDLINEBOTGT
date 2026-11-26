@@ -120,21 +120,18 @@ export async function handleEncuestaOpenModalButton(interaction: ButtonInteracti
 
     const titleInput = new TextInputBuilder()
         .setCustomId('encuesta_title')
-        .setLabel('Título')
         .setStyle(TextInputStyle.Short)
         .setPlaceholder('Ej: Qué circuito corremos la próxima semana?')
         .setRequired(true);
 
     const descInput = new TextInputBuilder()
         .setCustomId('encuesta_desc')
-        .setLabel('Descripción')
         .setStyle(TextInputStyle.Paragraph)
         .setPlaceholder('Escribe los detalles o contexto de la votación...')
         .setRequired(true);
 
     const optionsInput = new TextInputBuilder()
         .setCustomId('encuesta_options_block')
-        .setLabel('Opciones (Icono + espacio + opción por fila)')
         .setStyle(TextInputStyle.Paragraph)
         .setPlaceholder('1️⃣ Monza\n2️⃣ Spa-Francorchamps\n3️⃣ Silverstone')
         .setRequired(true);
