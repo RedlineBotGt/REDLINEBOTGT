@@ -22,8 +22,8 @@ export const adminAdminSessions = new Map<string, {
 }>();
 
 const EVENT_ADMIN_ROLE_IDS = [
-    '1553478496343429150', // Admin
-    '1555295354377998408'  // Staff
+    '1462964758071214131', // Admin
+    '1462964614844256256'  // Staff
 ];
 
 async function requireEventAdminStaff(
